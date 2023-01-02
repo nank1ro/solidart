@@ -1,0 +1,303 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:solidart/src/core/base_signal.dart';
+import 'package:solidart/src/core/signal.dart';
+import 'package:solidart/src/utils/diagnostic_properties_for_generic.dart';
+
+/// Reacts to the [signal] calling the [builder] each time.
+///
+/// The [signal] and [builder] arguments must not be null.
+/// The [child] is optional but is good practice to use if part of the widget
+/// subtree does not depend on the value of the [signal].
+class SignalBuilder<T> extends StatefulWidget {
+  const SignalBuilder({
+    super.key,
+    required this.signal,
+    required this.builder,
+    this.child,
+  });
+
+  /// The [Signal] whose value you depend on in order to build.
+  ///
+  /// This widget does not ensure that the [Signal]'s value is not
+  /// null, therefore your [builder] may need to handle null values.
+  ///
+  /// This [signal] itself must not be null.
+  final BaseSignal<T> signal;
+
+  /// A [SignalBuilder] which builds a widget depending on the
+  /// [signal]'s value.
+  ///
+  /// Can incorporate a [signal] value-independent widget subtree
+  /// from the [child] parameter into the returned widget tree.
+  ///
+  /// Must not be null.
+  final ValueWidgetBuilder<T> builder;
+
+  /// A [signal]-independent widget which is passed back to the [builder].
+  ///
+  /// This argument is optional and can be null if the entire widget subtree
+  /// the [builder] builds depends on the value of the [signal]. For
+  /// example, if the [signal] is a [String] and the [builder] simply
+  /// returns a [Text] widget with the [String] value.
+  final Widget? child;
+
+  @override
+  State<StatefulWidget> createState() => _SignalBuilderState<T>();
+}
+
+class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
+  late T value;
+
+  @override
+  void initState() {
+    super.initState();
+    value = widget.signal.value;
+    widget.signal.addListener(_valueChanged);
+  }
+
+  @override
+  void didUpdateWidget(SignalBuilder<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.signal != widget.signal) {
+      oldWidget.signal.removeListener(_valueChanged);
+      value = widget.signal.value;
+      widget.signal.addListener(_valueChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.signal.removeListener(_valueChanged);
+    super.dispose();
+  }
+
+  void _valueChanged() {
+    setState(() {
+      value = widget.signal.value;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context, value, widget.child);
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    DiagnosticPropertiesForGeneric(
+      value: value,
+      name: 'signal',
+      properties: properties,
+    );
+  }
+}
+
+typedef DualValueWidgetBuilder<T, U> = Widget Function(
+  BuildContext context,
+  T firstValue,
+  U secondValue,
+  Widget? child,
+);
+
+class DualSignalBuilder<T, U> extends StatefulWidget {
+  const DualSignalBuilder({
+    super.key,
+    required this.firstSignal,
+    required this.secondSignal,
+    required this.builder,
+    this.child,
+  });
+
+  final Signal<T> firstSignal;
+
+  final Signal<U> secondSignal;
+
+  final DualValueWidgetBuilder<T, U> builder;
+
+  final Widget? child;
+
+  @override
+  State<StatefulWidget> createState() => _DualSignalBuilderState<T, U>();
+}
+
+class _DualSignalBuilderState<T, U> extends State<DualSignalBuilder<T, U>> {
+  late T firstValue;
+  late U secondValue;
+
+  @override
+  void initState() {
+    super.initState();
+    firstValue = widget.firstSignal.value;
+    widget.firstSignal.addListener(_valueChanged);
+    secondValue = widget.secondSignal.value;
+    widget.secondSignal.addListener(_valueChanged);
+  }
+
+  @override
+  void didUpdateWidget(DualSignalBuilder<T, U> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.firstSignal != widget.firstSignal) {
+      oldWidget.firstSignal.removeListener(_valueChanged);
+      firstValue = widget.firstSignal.value;
+      widget.firstSignal.addListener(_valueChanged);
+    }
+    if (oldWidget.secondSignal != widget.secondSignal) {
+      oldWidget.secondSignal.removeListener(_valueChanged);
+      secondValue = widget.secondSignal.value;
+      widget.secondSignal.addListener(_valueChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.firstSignal.removeListener(_valueChanged);
+    widget.secondSignal.removeListener(_valueChanged);
+    super.dispose();
+  }
+
+  void _valueChanged() {
+    setState(() {
+      firstValue = widget.firstSignal.value;
+      secondValue = widget.secondSignal.value;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context, firstValue, secondValue, widget.child);
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    DiagnosticPropertiesForGeneric(
+      value: firstValue,
+      name: 'firstSignal',
+      properties: properties,
+    );
+    DiagnosticPropertiesForGeneric(
+      value: secondValue,
+      name: 'secondSignal',
+      properties: properties,
+    );
+  }
+}
+
+typedef TripleValueWidgetBuilder<T, U, R> = Widget Function(
+  BuildContext context,
+  T firstValue,
+  U secondValue,
+  R thirdValue,
+  Widget? child,
+);
+
+class TripleSignalBuilder<T, U, R> extends StatefulWidget {
+  const TripleSignalBuilder({
+    super.key,
+    required this.firstSignal,
+    required this.secondSignal,
+    required this.thirdSignal,
+    required this.builder,
+    this.child,
+  });
+
+  final Signal<T> firstSignal;
+
+  final Signal<U> secondSignal;
+
+  final Signal<R> thirdSignal;
+
+  final TripleValueWidgetBuilder<T, U, R> builder;
+
+  final Widget? child;
+
+  @override
+  State<StatefulWidget> createState() => _TripleSignalBuilderState<T, U, R>();
+}
+
+class _TripleSignalBuilderState<T, U, R>
+    extends State<TripleSignalBuilder<T, U, R>> {
+  late T firstValue;
+  late U secondValue;
+  late R thirdValue;
+
+  @override
+  void initState() {
+    super.initState();
+    firstValue = widget.firstSignal.value;
+    widget.firstSignal.addListener(_valueChanged);
+    secondValue = widget.secondSignal.value;
+    widget.secondSignal.addListener(_valueChanged);
+    thirdValue = widget.thirdSignal.value;
+    widget.thirdSignal.addListener(_valueChanged);
+  }
+
+  @override
+  void didUpdateWidget(TripleSignalBuilder<T, U, R> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.firstSignal != widget.firstSignal) {
+      oldWidget.firstSignal.removeListener(_valueChanged);
+      firstValue = widget.firstSignal.value;
+      widget.firstSignal.addListener(_valueChanged);
+    }
+    if (oldWidget.secondSignal != widget.secondSignal) {
+      oldWidget.secondSignal.removeListener(_valueChanged);
+      secondValue = widget.secondSignal.value;
+      widget.secondSignal.addListener(_valueChanged);
+    }
+    if (oldWidget.thirdSignal != widget.thirdSignal) {
+      oldWidget.thirdSignal.removeListener(_valueChanged);
+      thirdValue = widget.thirdSignal.value;
+      widget.thirdSignal.addListener(_valueChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.firstSignal.removeListener(_valueChanged);
+    widget.secondSignal.removeListener(_valueChanged);
+    widget.thirdSignal.removeListener(_valueChanged);
+    super.dispose();
+  }
+
+  void _valueChanged() {
+    setState(() {
+      firstValue = widget.firstSignal.value;
+      secondValue = widget.secondSignal.value;
+      thirdValue = widget.thirdSignal.value;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(
+      context,
+      firstValue,
+      secondValue,
+      thirdValue,
+      widget.child,
+    );
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    DiagnosticPropertiesForGeneric(
+      value: firstValue,
+      name: 'firstSignal',
+      properties: properties,
+    );
+    DiagnosticPropertiesForGeneric(
+      value: secondValue,
+      name: 'secondSignal',
+      properties: properties,
+    );
+    DiagnosticPropertiesForGeneric(
+      value: thirdValue,
+      name: 'thirdSignal',
+      properties: properties,
+    );
+  }
+}
