@@ -52,19 +52,16 @@ class Solid extends StatefulWidget {
     final t = typeOf<S>();
     final isTypeReadable = t.toString().startsWith('ReadableSignal');
     final isSignalReadable = state.isReadableSignal(id: id);
-    if (isTypeReadable != isSignalReadable) {
-      // ignore: avoid_positional_boolean_parameters
-      String typeString(bool isReadable) {
-        return isReadable ? 'ReadableSignal' : 'Signal';
-      }
 
-      throw Exception(
-        '''
+    // ignore: avoid_positional_boolean_parameters
+    String typeString(bool isReadable) {
+      return isReadable ? 'ReadableSignal' : 'Signal';
+    }
+
+    assert(isTypeReadable == isSignalReadable, '''
 You trying to access a ${typeString(isSignalReadable)} as a ${typeString(isTypeReadable)}
 The signal id that caused this issue is $id
-''',
-      );
-    }
+''');
   }
 
   /// Obtains the [Signal] of the given type and [id] corresponding to the
