@@ -1,12 +1,15 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:solidart/src/core/base_signal.dart';
+import 'package:solidart/src/core/readable_signal.dart';
 import 'package:solidart/src/core/signal.dart';
 
+/// Provides [signals] to descendants.
 class Solid extends StatefulWidget {
   const Solid({
     super.key,
-    required this.signals,
+    this.signals = const {},
     required this.child,
   });
 
@@ -14,15 +17,15 @@ class Solid extends StatefulWidget {
 
   /// All the signals provided to all the descendants of [Solid].
   ///
-  /// The key is the Signal identifier.
-  /// The function must return a Signal
+  /// The key is the signal identifier.
+  /// The function must return a signal.
   /// The value is a function in order to create signals lazily only when needed
-  final Map<Object, Signal<dynamic> Function()> signals;
+  final Map<Object, SignalBase<dynamic> Function()> signals;
 
   @override
   State<Solid> createState() => SolidState();
 
-  static SolidState? _findState(
+  static SolidState _findState(
     BuildContext context, {
     required Object id,
     bool listen = false,
@@ -38,18 +41,45 @@ class Solid extends StatefulWidget {
     return state;
   }
 
+  // Checks that the signal type correspondes to the given type provided.
+  // If you created a [Signal] you cannot get it as a [ReadableSignal], and
+  // vice versa.
+  static void _checkSignalType<S>({
+    required SolidState state,
+    required Object id,
+  }) {
+    Type typeOf<X>() => X;
+    final t = typeOf<S>();
+    final isTypeReadable = t.toString().startsWith('ReadableSignal');
+    final isSignalReadable = state.isReadableSignal(id: id);
+    if (isTypeReadable != isSignalReadable) {
+      // ignore: avoid_positional_boolean_parameters
+      String typeString(bool isReadable) {
+        return isReadable ? 'ReadableSignal' : 'Signal';
+      }
+
+      throw Exception(
+        '''
+You trying to access a ${typeString(isSignalReadable)} as a ${typeString(isTypeReadable)}
+The signal id that caused this issue is $id
+''',
+      );
+    }
+  }
+
   /// Obtains the [Signal] of the given type and [id] corresponding to the
   /// nearest [Solid] widget.
-  static Signal<T> _findSignal<T>(
+  static S _getOrCreateSignal<S extends SignalBase<dynamic>>(
     BuildContext context,
     Object id, {
     bool listen = false,
   }) {
     final state = _findState(context, id: id, listen: listen);
-    if (state == null) throw SolidError(signalId: id);
-    var createdSignal = state._createdSignals[id] as Signal<T>?;
+    _checkSignalType<S>(state: state, id: id);
+
+    final createdSignal = state._createdSignals[id] as S?;
     // if the signal is not already present, create it lazily
-    return createdSignal ??= state.create<T>(id: id);
+    return createdSignal ?? state.createSignal<S>(id: id);
   }
 
   /// Obtains the [Signal] of the given type and [id] corresponding to the
@@ -73,11 +103,11 @@ class Solid extends StatefulWidget {
   /// Doesn't listen to the signal so it won't cause the widget to rebuild.
   ///
   /// You may call this method inside the `initState` or `build` methods.
-  static Signal<T> get<T>(
+  static S get<S extends SignalBase<dynamic>>(
     BuildContext context,
     Object id,
   ) {
-    return _findSignal(context, id);
+    return _getOrCreateSignal<S>(context, id);
   }
 
   /// Subscribe to the [Signal] of the given type and [id] corresponding to the
@@ -102,18 +132,31 @@ class Solid extends StatefulWidget {
   /// Listens to the signal so it causes the widget to rebuild.
   ///
   /// You must call this method only from the `build` method.
-  static T listen<T>(
+  static T observe<T>(
     BuildContext context,
     Object id,
   ) {
-    return _findSignal<T>(context, id, listen: true).value;
+    final state = _findState(context, id: id, listen: true);
+
+    // retrieve the signal
+    var createdSignal = state._createdSignals[id];
+
+    // if the signal is not already present, create it lazily
+    if (createdSignal == null) {
+      if (state.isReadableSignal(id: id)) {
+        createdSignal = state.createSignal<ReadableSignal<T>>(id: id);
+      } else {
+        createdSignal = state.createSignal<Signal<T>>(id: id);
+      }
+    }
+    // return the signal value
+    return createdSignal.value as T;
   }
 }
 
 class SolidState extends State<Solid> {
   // Stores all the created signals.
-  final Map<Object, Signal<dynamic>> _createdSignals = {};
-
+  final Map<Object, SignalBase<dynamic>> _createdSignals = {};
   // Keeps track of the value of each signals, used to detect which signal
   // updated and to implement fine-grained reactivity.
   Map<Object, dynamic> _signalValues = {};
@@ -121,6 +164,8 @@ class SolidState extends State<Solid> {
   @override
   void dispose() {
     // dispose all the created signals
+    // no need to dipose readable because they are a subset of a signal
+    // and are going to dispose automatically when the signal disposes.
     for (final signal in _createdSignals.values) {
       _stopListeningToSignal(signal);
       signal.dispose();
@@ -130,14 +175,27 @@ class SolidState extends State<Solid> {
     super.dispose();
   }
 
-  /// Creates a [Signal] of type T lazily.
-  Signal<T> create<T>({required Object id}) {
+  // Indicates is the signal is readable.
+  bool isReadableSignal({required Object id}) {
+    final isReadableSignal = widget.signals[id] is! Signal<dynamic> Function();
+    return isReadableSignal;
+  }
+
+  /// Creates a signal with a value of type T:
+  S createSignal<S>({required Object id}) {
     if (!isPresent(id)) {
       throw Exception('Cannot find signal with id $id');
     }
-    final signal = widget.signals[id]!() as Signal<T>;
+    final signal = widget.signals[id]!();
+    // store the created signal
     _createdSignals[id] = signal;
 
+    _initializeSignal(signal, id: id);
+
+    return signal as S;
+  }
+
+  void _initializeSignal(SignalBase<dynamic> signal, {required Object id}) {
     _listenToSignal(signal);
     signal.onDispose(() {
       _stopListeningToSignal(signal);
@@ -145,8 +203,6 @@ class SolidState extends State<Solid> {
 
     // store the initial signal value
     _signalValues[id] = signal.value;
-
-    return signal;
   }
 
   /// Used to determine if the requested signal is present for the given
@@ -155,11 +211,11 @@ class SolidState extends State<Solid> {
     return widget.signals.containsKey(id);
   }
 
-  void _listenToSignal<T>(Signal<T> signal) {
+  void _listenToSignal(SignalBase<dynamic> signal) {
     signal.addListener(_onSignalChange);
   }
 
-  void _stopListeningToSignal<T>(Signal<T> signal) {
+  void _stopListeningToSignal(SignalBase<dynamic> signal) {
     signal.removeListener(_onSignalChange);
   }
 

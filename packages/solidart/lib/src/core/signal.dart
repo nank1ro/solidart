@@ -1,8 +1,6 @@
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
-import 'package:solidart/solidart.dart';
-import 'package:solidart/src/core/signal_selector.dart';
+import 'package:meta/meta.dart';
+import 'package:solidart/src/core/readable_signal.dart';
+import 'package:solidart/src/core/signal_options.dart';
 
 /// Creates a simple reactive state with a getter and setter.
 ///
@@ -15,28 +13,16 @@ Signal<T> createSignal<T>(
   return Signal<T>(value, options: effectiveOptions);
 }
 
-class Signal<T> implements BaseSignal<T> {
+class Signal<T> extends ReadableSignal<T> {
   Signal(
-    T initialValue, {
-    required this.options,
+    super.initialValue, {
+    required super.options,
   }) : _value = initialValue;
 
   T _value;
 
   @override
   T get value => _value;
-
-  @override
-  final SignalOptions<T> options;
-
-  bool _disposed = false;
-
-  final _listeners = <VoidCallback>{};
-  int _version = 0;
-  int _microtaskVersion = 0;
-  // Keeps track of all the callbacks passed to [onDispose].
-  // Used later to fire each callback when this signal is disposed.
-  final _onDisposeCallbacks = <VoidCallback>[];
 
   /// Updates the current signal value with [newValue].
   ///
@@ -68,77 +54,22 @@ class Signal<T> implements BaseSignal<T> {
   @override
   T? get previousValue => _previousValue;
 
+  /// Sets the previous value.
+  ///
+  /// Never use this method.
+  @internal
+  @protected
+  set previousValue(T? newPreviousValue) {
+    _previousValue = newPreviousValue;
+  }
+
   /// Calls a function with the current [value] and assigns the result as the
   /// new value.
   T update(T Function(T value) callback) => value = callback(value);
 
-  /// [listener] will be invoked when the signal changes.
-  @override
-  void addListener(VoidCallback listener) {
-    _listeners.add(listener);
-  }
-
-  /// [listener] will no longer be invoked when the signal changes.
-  @override
-  void removeListener(VoidCallback listener) {
-    _listeners.remove(listener);
-  }
-
-  /// Returns the number of listeners listening to this signal.
-  int get listenerCount => _listeners.length;
-
-  @protected
-  void notifyListeners() {
-    // We schedule a microtask to debounce multiple changes that can occur
-    // all at once.
-    if (_microtaskVersion == _version) {
-      _microtaskVersion++;
-      scheduleMicrotask(() {
-        _version++;
-        _microtaskVersion = _version;
-
-        // Convert the Set to a List before executing each listener. This
-        // prevents errors that can arise if a listener removes itself during
-        // invocation
-        _listeners.toList().forEach((VoidCallback listener) => listener());
-      });
-    }
-  }
-
-  /// The [select] function allows filtering unwanted rebuilds by reading only
-  /// the properties that we care about.
-  @override
-  Signal<Selected> select<Selected>(
-    Selected Function(T value) selector,
-  ) {
-    final signalSelector = SignalSelector<T, Selected>(
-      signal: this,
-      selector: selector,
-    );
-    // ignore: unnecessary_cast
-    return signalSelector as Signal<Selected>;
-  }
-
-  @override
-  void onDispose(VoidCallback cb) {
-    _onDisposeCallbacks.add(cb);
-  }
-
-  @override
-  bool get disposed => _disposed;
-
-  @override
-  void dispose() {
-    // ignore if already disposed
-    if (_disposed) return;
-    _listeners.clear();
-    _disposed = true;
-
-    for (final cb in _onDisposeCallbacks) {
-      cb();
-    }
-    _onDisposeCallbacks.clear();
-  }
+  /// Converts this [Signal] into a [ReadableSignal]
+  /// Use this method to remove the visility to the value setter.
+  ReadableSignal<T> get readable => this;
 
   @override
   String toString() =>

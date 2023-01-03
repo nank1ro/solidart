@@ -33,11 +33,17 @@ class _TodosBodyState extends State<TodosBody> {
 
   @override
   Widget build(BuildContext context) {
+    // Registering two new signals, the list of completed and uncompleted todos.
+    // These are derived [ReadableSignal]s.
+    // Provided through a [Solid] because their value is used by the [TodoList]
+    // and [Toolbar].
+    // This is preferable over passing the signals as parameters down to descendants,
+    // expecially when the usage is very deep in the tree.
     return Solid(
       signals: {
-        Signals.completedTodos: () => todosController.todos.select<List<Todo>>(
+        SignalId.completedTodos: () => todosController.todos.select<List<Todo>>(
             (value) => value.where((element) => element.completed).toList()),
-        Signals.uncompletedTodos: () => todosController.todos
+        SignalId.uncompletedTodos: () => todosController.todos
             .select<List<Todo>>((value) =>
                 value.where((element) => !element.completed).toList()),
       },
@@ -64,7 +70,6 @@ class _TodosBodyState extends State<TodosBody> {
           const SizedBox(height: 16),
           const Toolbar(),
           const SizedBox(height: 16),
-          const Text('Todos'),
           Expanded(
             child: TodoList(
               onTodoToggle: (id) {

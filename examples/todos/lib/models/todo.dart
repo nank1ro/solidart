@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:todos/common/id.dart';
+import 'package:uuid/uuid.dart';
 
 @immutable
 class Todo {
@@ -10,7 +10,8 @@ class Todo {
   });
 
   factory Todo.create(String task) {
-    return Todo(id: uuid(), task: task, completed: false);
+    final uuid = const Uuid().v4();
+    return Todo(id: uuid, task: task, completed: false);
   }
 
   final String id;

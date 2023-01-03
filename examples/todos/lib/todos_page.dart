@@ -27,18 +27,18 @@ class _TodosPageState extends State<TodosPage> {
     // Using Provider here to provide the [TodosController] to descendants.
     return Provider(
       create: (_) => todosController,
-      child: Solid(
-        // make the active filter signal visible only to descendants.
-        // created here because this is where it starts to be necessary.
-        signals: {
-          Signals.activeTodoFilter: () =>
-              createSignal<TodosFilter>(TodosFilter.all),
-        },
-        child: Scaffold(
-          appBar: AppBar(title: const Text('Todos')),
-          body: const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: TodosBody(),
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Todos')),
+        body: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Solid(
+            // make the active filter signal visible only to descendants.
+            // created here because this is where it starts to be necessary.
+            signals: {
+              SignalId.activeTodoFilter: () =>
+                  createSignal<TodosFilter>(TodosFilter.all),
+            },
+            child: const TodosBody(),
           ),
         ),
       ),

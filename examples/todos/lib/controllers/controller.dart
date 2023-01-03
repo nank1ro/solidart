@@ -4,24 +4,28 @@ import 'package:todos/models/todo.dart';
 class TodosController {
   TodosController({
     List<Todo> initialTodos = const [],
-  }) : todos = createSignal(initialTodos);
+  }) : _todos = createSignal(initialTodos);
 
   // Keep the editable todos signal private
   // only the TodoController can mutate the value.
-  final Signal<List<Todo>> todos;
+  final Signal<List<Todo>> _todos;
+
+  // Expose the list of todos as a ReadableSignal so the
+  // user cannot mutate directly the object.
+  ReadableSignal<List<Todo>> get todos => _todos.readable;
 
   void add(Todo todo) {
-    todos.update((value) => [...value, todo]);
+    _todos.update((value) => [...value, todo]);
   }
 
   void remove(String id) {
-    todos.update(
+    _todos.update(
       (value) => value.where((todo) => todo.id != id).toList(),
     );
   }
 
   void toogle(String id) {
-    todos.update(
+    _todos.update(
       (value) => [
         for (final todo in value)
           if (todo.id != id) todo else todo.copyWith(completed: !todo.completed)
@@ -30,6 +34,6 @@ class TodosController {
   }
 
   void dispose() {
-    todos.dispose();
+    _todos.dispose();
   }
 }

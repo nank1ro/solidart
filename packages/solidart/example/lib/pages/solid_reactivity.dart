@@ -58,13 +58,13 @@ class _SolidReactivityState extends State<SolidReactivity> {
               children: [
                 TextButton(
                   onPressed: () {
-                    context.get<int>(SignalId.firstCounter).value++;
+                    context.get<Signal<int>>(SignalId.firstCounter).value++;
                   },
                   child: const Text('+1 counter1'),
                 ),
                 TextButton(
                   onPressed: () {
-                    context.get<int>(SignalId.secondCounter).value++;
+                    context.get<Signal<int>>(SignalId.secondCounter).value++;
                   },
                   child: const Text('+1 counter2'),
                 ),
@@ -83,7 +83,7 @@ class _Counter1 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter1 = context.listen<int>(SignalId.firstCounter);
+    final counter1 = context.observe<int>(SignalId.firstCounter);
     print('build counter1');
     return Text('Counter1: $counter1');
   }
@@ -95,7 +95,7 @@ class _Counter2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter2 = context.listen<int>(SignalId.secondCounter);
+    final counter2 = context.observe<int>(SignalId.secondCounter);
     print('build counter2');
     return Text('Counter2: $counter2');
   }

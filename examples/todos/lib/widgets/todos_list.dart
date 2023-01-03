@@ -19,21 +19,23 @@ class TodoList extends StatefulWidget {
 }
 
 class _TodoListState extends State<TodoList> {
-  late final Signal<List<Todo>> todos;
-  late final Signal<List<Todo>> completedTodos;
-  late final Signal<List<Todo>> uncompletedTodos;
+  late final ReadableSignal<List<Todo>> todos;
+  late final ReadableSignal<List<Todo>> completedTodos;
+  late final ReadableSignal<List<Todo>> uncompletedTodos;
 
   @override
   void initState() {
     super.initState();
 
-    // retrieve the todos list
+    // retrieve the todos list and the filtered ones
     todos = context.read<TodosController>().todos;
-    completedTodos = context.get<List<Todo>>(Signals.completedTodos);
-    uncompletedTodos = context.get<List<Todo>>(Signals.uncompletedTodos);
+    completedTodos =
+        context.get<ReadableSignal<List<Todo>>>(SignalId.completedTodos);
+    uncompletedTodos =
+        context.get<ReadableSignal<List<Todo>>>(SignalId.uncompletedTodos);
   }
 
-  Signal<List<Todo>> mapFilterToTodos(TodosFilter filter) {
+  ReadableSignal<List<Todo>> mapFilterToTodos(TodosFilter filter) {
     switch (filter) {
       case TodosFilter.all:
         return todos;
@@ -46,23 +48,24 @@ class _TodoListState extends State<TodoList> {
 
   @override
   Widget build(BuildContext context) {
-    final activeFilter = TodosFilter.all;
-    context.listen<TodosFilter>(Signals.activeTodoFilter);
+    final activeFilter =
+        context.observe<TodosFilter>(SignalId.activeTodoFilter);
     return SignalBuilder(
-        signal: mapFilterToTodos(activeFilter),
-        builder: (_, todos, __) {
-          return ListView.builder(
-            itemCount: todos.length,
-            itemBuilder: (BuildContext context, int index) {
-              final todo = todos[index];
-              return TodoItem(
-                todo: todo,
-                onStatusChanged: (_) {
-                  widget.onTodoToggle?.call(todo.id);
-                },
-              );
-            },
-          );
-        });
+      signal: mapFilterToTodos(activeFilter),
+      builder: (_, todos, __) {
+        return ListView.builder(
+          itemCount: todos.length,
+          itemBuilder: (BuildContext context, int index) {
+            final todo = todos[index];
+            return TodoItem(
+              todo: todo,
+              onStatusChanged: (_) {
+                widget.onTodoToggle?.call(todo.id);
+              },
+            );
+          },
+        );
+      },
+    );
   }
 }

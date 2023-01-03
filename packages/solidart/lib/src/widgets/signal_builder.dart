@@ -23,7 +23,7 @@ class SignalBuilder<T> extends StatefulWidget {
   /// null, therefore your [builder] may need to handle null values.
   ///
   /// This [signal] itself must not be null.
-  final BaseSignal<T> signal;
+  final SignalBase<T> signal;
 
   /// A [SignalBuilder] which builds a widget depending on the
   /// [signal]'s value.

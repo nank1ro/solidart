@@ -8,8 +8,11 @@ class SignalSelector<Input, Output> extends Signal<Output> {
   SignalSelector({
     required this.signal,
     required this.selector,
-    SignalOptions<Output> options = const SignalOptions(),
-  }) : super(selector(signal.value), options: options) {
+    SignalOptions<Output>? options,
+  }) : super(
+          selector(signal.value),
+          options: options ?? SignalOptions<Output>(),
+        ) {
     // dispose the [SignalSelector] when the signal disposes
     signal.onDispose(dispose);
     _listenAndSelect();
@@ -22,6 +25,9 @@ class SignalSelector<Input, Output> extends Signal<Output> {
   final Output Function(Input) selector;
 
   void _listener() {
+    previousValue =
+        // ignore: null_check_on_nullable_type_parameter
+        signal.previousValue == null ? null : selector(signal.previousValue!);
     value = selector(signal.value);
   }
 

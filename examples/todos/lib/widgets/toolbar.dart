@@ -13,32 +13,33 @@ class Toolbar extends StatefulWidget {
 }
 
 class _ToolbarState extends State<Toolbar> {
-  late final TodosController todosController;
-
   /// All the derived signals
-  late final Signal<int> allTodosCount;
-  late final Signal<int> uncompletedTodosCount;
-  late final Signal<int> completedTodosCount;
+  late final ReadableSignal<int> allTodosCount;
+  late final ReadableSignal<int> uncompletedTodosCount;
+  late final ReadableSignal<int> completedTodosCount;
 
   @override
   void initState() {
     super.initState();
-    // retrieve the TodosController.
-    todosController = context.read<TodosController>();
-    // get the todos signal
-    final todos = todosController.todos;
+    // retrieve the todos from TodosController.
+    final todos = context.read<TodosController>().todos;
 
     // create derived signals based on the list of todos
     // no need to dispose them because they already dispose when the parent (todos) disposes.
     allTodosCount = todos.select((value) => value.length);
-    uncompletedTodosCount =
-        todos.select((todos) => todos.where((todo) => !todo.completed).length);
-    completedTodosCount =
-        todos.select((todos) => todos.where((todo) => todo.completed).length);
+
+    // retrieve the list of completed count and select the length.
+    final completedTodos =
+        context.get<ReadableSignal<List<Todo>>>(SignalId.completedTodos);
+    completedTodosCount = completedTodos.select((value) => value.length);
+    // retrieve the list of uncompleted count and select the length.
+    final uncompletedTodos =
+        context.get<ReadableSignal<List<Todo>>>(SignalId.uncompletedTodos);
+    uncompletedTodosCount = uncompletedTodos.select((value) => value.length);
   }
 
   // Return the correct signal for the given [filter].
-  Signal<int> mapFilterToSignal(TodosFilter filter) {
+  ReadableSignal<int> mapFilterToSignal(TodosFilter filter) {
     switch (filter) {
       case TodosFilter.all:
         return allTodosCount;
@@ -59,7 +60,7 @@ class _ToolbarState extends State<Toolbar> {
         tabs: TodosFilter.values.map(
           (filter) {
             final todosCount = mapFilterToSignal(filter);
-            // Each tab bar is using its specific signal
+            // Each tab bar is using its specific todos count signal
             return SignalBuilder(
               signal: todosCount,
               builder: (context, todosCount, _) {
@@ -69,9 +70,11 @@ class _ToolbarState extends State<Toolbar> {
           },
         ).toList(),
         onTap: (index) {
-          // update the current active filter
-          context.get<TodosFilter>(Signals.activeTodoFilter).value =
-              TodosFilter.values[index];
+          // retrieve the activeTodoFilter signal
+          // in order to update the current active filter
+          final signal =
+              context.get<Signal<TodosFilter>>(SignalId.activeTodoFilter);
+          signal.value = TodosFilter.values[index];
         },
       ),
     );

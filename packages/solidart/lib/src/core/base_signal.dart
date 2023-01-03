@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:solidart/src/core/signal_options.dart';
 
 /// The base of a signal.
-abstract class BaseSignal<T> extends Listenable {
+abstract class SignalBase<T> extends Listenable {
   /// The current signal value
   T get value;
 
@@ -20,11 +20,8 @@ abstract class BaseSignal<T> extends Listenable {
   /// Fired when the signal is disposing
   void onDispose(VoidCallback cb);
 
-  /// The [select] function allows filtering unwanted rebuilds by reading only
-  /// the properties that we care about.
-  BaseSignal<Selected> select<Selected>(
-    Selected Function(T value) selector,
-  );
+  /// The total number of listeners subscribed to the signal.
+  int get listenerCount;
 
   void dispose();
 }

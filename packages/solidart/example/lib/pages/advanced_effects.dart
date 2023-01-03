@@ -87,6 +87,7 @@ class _AdvancedEffectsPageState extends State<AdvancedEffectsPage> {
 }
 
 class _SecondPage extends StatelessWidget {
+  // ignore: unused_element
   const _SecondPage({super.key});
 
   @override

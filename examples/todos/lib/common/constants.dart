@@ -1,5 +1,5 @@
 // List of Signal keys used inside the [Solid] widget.
-enum Signals {
+enum SignalId {
   activeTodoFilter,
   uncompletedTodos,
   completedTodos,

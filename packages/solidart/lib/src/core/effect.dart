@@ -15,7 +15,7 @@ import 'package:solidart/src/core/base_signal.dart';
 /// ignore values for some time.
 Effect<T> createEffect<T>(
   void Function() callback, {
-  required List<BaseSignal<T>> signals,
+  required List<SignalBase<T>> signals,
 
   /// whether to fire immediatly the callback, defaults to false.
   bool fireImmediatly = false,
@@ -57,7 +57,7 @@ class Effect<T> {
   }
 
   /// The list of signals the effect is going to subscribe.
-  final List<BaseSignal<T>> signals;
+  final List<SignalBase<T>> signals;
 
   /// The callback that is fired each time a signal updates.
   final VoidCallback callback;
@@ -84,13 +84,13 @@ class Effect<T> {
     callback();
   }
 
-  void _startListeningToSignal(BaseSignal<T> signal) {
+  void _startListeningToSignal(SignalBase<T> signal) {
     // ignore disposed signals.
     if (signal.disposed) return;
     signal.addListener(_listener);
   }
 
-  void _stopListeningToSignal(BaseSignal<T> signal) {
+  void _stopListeningToSignal(SignalBase<T> signal) {
     signal.removeListener(_listener);
 
     // cancel the effect when all the signals are disposed.

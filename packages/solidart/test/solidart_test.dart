@@ -200,21 +200,21 @@ void main() {
     });
 
     test("selector's readable signal contains previous value", () async {
-      final s = createSignal(0);
-      final r = s.select((value) => value * 2);
-      expect(r.previousValue, null);
+      final signal = createSignal(0);
+      final derived = signal.select((value) => value * 2);
+      expect(derived.previousValue, null);
 
-      s.value = 1;
+      signal.value = 1;
       await pumpEventQueue();
-      expect(r.previousValue, 0);
+      expect(derived.previousValue, 0);
 
-      s.value = 2;
+      signal.value = 2;
       await pumpEventQueue();
-      expect(r.previousValue, 2);
+      expect(derived.previousValue, 2);
 
-      s.value = 1;
+      signal.value = 1;
       await pumpEventQueue();
-      expect(r.previousValue, 4);
+      expect(derived.previousValue, 4);
     });
   });
 }

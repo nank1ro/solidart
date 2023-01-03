@@ -38,7 +38,7 @@ class _Counter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter = context.get<int>(SolidSignalIds.counter);
+    final counter = context.get<Signal<int>>(SolidSignalIds.counter);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -75,7 +75,7 @@ class _Sentence extends StatefulWidget {
 class _SentenceState extends State<_Sentence> {
   @override
   Widget build(BuildContext context) {
-    final sentence = context.get<String>(SolidSignalIds.sentence);
+    final sentence = context.get<Signal<String>>(SolidSignalIds.sentence);
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
