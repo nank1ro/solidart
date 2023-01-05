@@ -1,32 +1,32 @@
 {
-    "configurations": [
-        {
-            "name": "Example",
-            "type": "dart",
-            "request": "launch",
-            "program": "lib/main.dart",
-            "cwd": "packages/solidart/example"
-        },
-        {
-            "name": "Flutter: Run all Tests",
-            "type": "dart",
-            "request": "launch",
-            "program": "./test/",
-            "cwd": "packages/solidart"
-        },
-        {
-            "name": "Todos",
-            "type": "dart",
-            "request": "launch",
-            "program": "lib/main.dart",
-            "cwd": "examples/todos/"
-        },
-        {
-            "name": "Counter",
-            "type": "dart",
-            "request": "launch",
-            "program": "lib/main.dart",
-            "cwd": "examples/counter/"
-        },
-    ]
+  "configurations": [
+    {
+      "name": "Example",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "packages/solidart/example"
+    },
+    {
+      "name": "Flutter: Run all Tests",
+      "type": "dart",
+      "request": "launch",
+      "program": "./test/",
+      "cwd": "packages/solidart"
+    },
+    {
+      "name": "Todos",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "examples/todos/"
+    },
+    {
+      "name": "Counter",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "examples/counter/"
+    }
+  ]
 }
