@@ -1,9 +1,11 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:meta/meta.dart';
-import 'package:solidart/solidart.dart';
+import 'package:solidart/src/core/signal.dart';
+import 'package:solidart/src/core/signal_base.dart';
+import 'package:solidart/src/core/signal_options.dart';
 import 'package:solidart/src/core/signal_selector.dart';
+import 'package:solidart/src/utils.dart';
 
 class ReadableSignal<T> implements SignalBase<T> {
   ReadableSignal(

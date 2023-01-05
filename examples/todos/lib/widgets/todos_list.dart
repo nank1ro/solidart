@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:provider/provider.dart';
-import 'package:solidart/solidart.dart';
 import 'package:todos/common/constants.dart';
 import 'package:todos/controllers/controller.dart';
 import 'package:todos/models/todo.dart';

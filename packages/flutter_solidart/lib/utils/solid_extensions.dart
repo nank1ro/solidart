@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:solidart/src/core/base_signal.dart';
-import 'package:solidart/src/core/signal.dart';
-import 'package:solidart/src/widgets/solid.dart';
+import 'package:flutter_solidart/widgets/solid.dart';
+import 'package:solidart/solidart.dart';
 
 extension SolidExtensions on BuildContext {
   /// Obtains the [Signal] of the given type and [id] corresponding to the

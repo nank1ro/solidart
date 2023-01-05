@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:solidart/solidart.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:http/http.dart' as http;
 
 class ResourcePage extends StatefulWidget {

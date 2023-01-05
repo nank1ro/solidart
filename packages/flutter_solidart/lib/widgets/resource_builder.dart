@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:solidart/src/core/resource.dart';
-import 'package:solidart/src/widgets/signal_builder.dart';
+import 'package:flutter_solidart/widgets/signal_builder.dart';
+import 'package:solidart/solidart.dart';
 
 typedef ResourceWidgetBuilder<R> = Widget Function(
   BuildContext context,

@@ -1,9 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:solidart/src/core/base_signal.dart';
-import 'package:solidart/src/core/readable_signal.dart';
-import 'package:solidart/src/core/signal.dart';
+import 'package:solidart/solidart.dart';
 
 /// Provides [signals] to descendants.
 class Solid extends StatefulWidget {
@@ -44,24 +42,33 @@ class Solid extends StatefulWidget {
   // Checks that the signal type correspondes to the given type provided.
   // If you created a [Signal] you cannot get it as a [ReadableSignal], and
   // vice versa.
+  // This operation is performed only in development mode.
   static void _checkSignalType<S>({
     required SolidState state,
     required Object id,
   }) {
-    Type typeOf<X>() => X;
-    final t = typeOf<S>();
-    final isTypeReadable = t.toString().startsWith('ReadableSignal');
-    final isSignalReadable = state.isReadableSignal(id: id);
+    assert(
+      () {
+        Type typeOf<X>() => X;
+        final t = typeOf<S>();
+        final isTypeReadable = t.toString().startsWith('ReadableSignal');
+        final isSignalReadable = state.isReadableSignal(id: id);
 
-    // ignore: avoid_positional_boolean_parameters
-    String typeString(bool isReadable) {
-      return isReadable ? 'ReadableSignal' : 'Signal';
-    }
+        // ignore: avoid_positional_boolean_parameters
+        String typeString(bool isReadable) {
+          return isReadable ? 'ReadableSignal' : 'Signal';
+        }
 
-    assert(isTypeReadable == isSignalReadable, '''
+        if (isTypeReadable != isSignalReadable) {
+          throw Exception('''
 You trying to access a ${typeString(isSignalReadable)} as a ${typeString(isTypeReadable)}
 The signal id that caused this issue is $id
 ''');
+        }
+        return true;
+      }(),
+      '',
+    );
   }
 
   /// Obtains the [Signal] of the given type and [id] corresponding to the

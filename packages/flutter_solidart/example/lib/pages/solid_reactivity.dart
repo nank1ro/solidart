@@ -1,7 +1,7 @@
 // ignore_for_file: avoid_print
 
 import 'package:flutter/material.dart';
-import 'package:solidart/solidart.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
 
 // Used as signal keys for [Solid]
 enum SignalId {

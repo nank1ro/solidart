@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:solidart/src/core/signal.dart';
-import 'package:solidart/src/widgets/signal_builder.dart';
+import 'package:flutter_solidart/widgets/signal_builder.dart';
+import 'package:solidart/solidart.dart';
 
 /// Conditionally render its [builder] or an optional [fallback] component
 /// based on the [when] evaluation.

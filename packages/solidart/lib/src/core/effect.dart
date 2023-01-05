@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
-import 'package:solidart/src/core/base_signal.dart';
+import 'package:solidart/src/core/signal_base.dart';
+import 'package:solidart/src/utils.dart';
 
 /// Creates a reactive computation.
 ///

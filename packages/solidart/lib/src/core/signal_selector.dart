@@ -1,4 +1,5 @@
-import 'package:solidart/solidart.dart';
+import 'package:solidart/src/core/signal.dart';
+import 'package:solidart/src/core/signal_options.dart';
 
 /// A derived signal.
 ///

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:solidart/solidart.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
 
 class DerivedSignalsPage extends StatefulWidget {
   const DerivedSignalsPage({super.key});

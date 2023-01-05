@@ -1,5 +1,5 @@
 import 'package:meta/meta.dart';
-import 'package:solidart/solidart.dart';
+import 'package:solidart/src/core/signal.dart';
 
 /// Creates a resource that wraps a repeated promise in a reactive pattern:
 CreateResource<T, R> createResource<T, R>({

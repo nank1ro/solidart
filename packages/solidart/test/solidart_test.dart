@@ -1,8 +1,8 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:solidart/src/core/effect.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_options.dart';
+import 'package:test/test.dart';
 
 class MockCallbackFunction extends Mock {
   void call();
