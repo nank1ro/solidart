@@ -11,7 +11,7 @@ class ResourcePage extends StatefulWidget {
 
 class _ResourcePageState extends State<ResourcePage> {
   final userId = createSignal(1);
-  late final CreateResource<int, String> user;
+  late final Resource<int, String> user;
 
   @override
   void initState() {

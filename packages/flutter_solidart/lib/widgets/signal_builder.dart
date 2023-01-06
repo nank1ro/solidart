@@ -51,8 +51,7 @@ class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
   @override
   void initState() {
     super.initState();
-    value = widget.signal.value;
-    widget.signal.addListener(_valueChanged);
+    _initializeSignal();
   }
 
   @override
@@ -60,8 +59,7 @@ class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.signal != widget.signal) {
       oldWidget.signal.removeListener(_valueChanged);
-      value = widget.signal.value;
-      widget.signal.addListener(_valueChanged);
+      _initializeSignal();
     }
   }
 
@@ -71,15 +69,15 @@ class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
     super.dispose();
   }
 
+  void _initializeSignal() {
+    value = widget.signal.value;
+    widget.signal.addListener(_valueChanged);
+  }
+
   void _valueChanged() {
     setState(() {
       value = widget.signal.value;
     });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return widget.builder(context, value, widget.child);
   }
 
   @override
@@ -90,6 +88,11 @@ class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
       name: 'signal',
       properties: properties,
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context, value, widget.child);
   }
 }
 
@@ -109,9 +112,9 @@ class DualSignalBuilder<T, U> extends StatefulWidget {
     this.child,
   });
 
-  final Signal<T> firstSignal;
+  final SignalBase<T> firstSignal;
 
-  final Signal<U> secondSignal;
+  final SignalBase<U> secondSignal;
 
   final DualValueWidgetBuilder<T, U> builder;
 
@@ -164,11 +167,6 @@ class _DualSignalBuilderState<T, U> extends State<DualSignalBuilder<T, U>> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return widget.builder(context, firstValue, secondValue, widget.child);
-  }
-
-  @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     DiagnosticPropertiesForGeneric(
@@ -181,6 +179,11 @@ class _DualSignalBuilderState<T, U> extends State<DualSignalBuilder<T, U>> {
       name: 'secondSignal',
       properties: properties,
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context, firstValue, secondValue, widget.child);
   }
 }
 
@@ -202,11 +205,11 @@ class TripleSignalBuilder<T, U, R> extends StatefulWidget {
     this.child,
   });
 
-  final Signal<T> firstSignal;
+  final SignalBase<T> firstSignal;
 
-  final Signal<U> secondSignal;
+  final SignalBase<U> secondSignal;
 
-  final Signal<R> thirdSignal;
+  final SignalBase<R> thirdSignal;
 
   final TripleValueWidgetBuilder<T, U, R> builder;
 
@@ -270,17 +273,6 @@ class _TripleSignalBuilderState<T, U, R>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return widget.builder(
-      context,
-      firstValue,
-      secondValue,
-      thirdValue,
-      widget.child,
-    );
-  }
-
-  @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     DiagnosticPropertiesForGeneric(
@@ -297,6 +289,17 @@ class _TripleSignalBuilderState<T, U, R>
       value: thirdValue,
       name: 'thirdSignal',
       properties: properties,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(
+      context,
+      firstValue,
+      secondValue,
+      thirdValue,
+      widget.child,
     );
   }
 }

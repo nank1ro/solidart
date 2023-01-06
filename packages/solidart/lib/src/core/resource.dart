@@ -1,28 +1,32 @@
 import 'package:meta/meta.dart';
 import 'package:solidart/src/core/signal.dart';
+import 'package:solidart/src/core/signal_base.dart';
 
 /// Creates a resource that wraps a repeated promise in a reactive pattern:
-CreateResource<T, R> createResource<T, R>({
+Resource<T, R> createResource<T, R>({
   Signal<T>? source,
   required Future<R> Function() fetcher,
 }) {
-  return CreateResource(source: source, fetcher: fetcher);
+  return Resource<T, R>(
+    source: source,
+    fetcher: fetcher,
+  );
 }
 
-class CreateResource<T, R> {
-  CreateResource({
+class Resource<T, R> extends Signal<ResourceValue<R>> {
+  Resource({
     this.source,
     required this.fetcher,
-  }) : signal = createSignal(const Resource.unresolved()) {
+    super.options,
+  }) : super(ResourceValue<R>.unresolved()) {
     _initialize();
   }
 
-  /// reactive signal values passed to the fetcher, optional
-  final Signal<T>? source;
-  final Future<R> Function() fetcher;
+  /// Reactive signal values passed to the fetcher, optional
+  final SignalBase<T>? source;
 
-  @internal
-  final Signal<Resource<R>> signal;
+  // The asynchrounous function used to retrieve data.
+  final Future<R> Function() fetcher;
 
   // React to the [source], if provided.
   void _initialize() {
@@ -34,58 +38,58 @@ class CreateResource<T, R> {
 
   /// Runs the [fetcher] for the first time.
   ///
-  /// You may not use this method directly because the operation is already
+  /// You may not use this method directly on Flutter apps because the operation is already
   /// performed by [ResourceBuilder].
   Future<void> fetch() async {
     try {
-      signal.value = const Resource.loading();
+      value = const ResourceValue.loading();
       final result = await fetcher();
-      signal.value = Resource.ready(result);
+      value = ResourceValue.ready(result);
     } catch (e, s) {
-      signal.value = Resource.error(e, stackTrace: s);
+      value = ResourceValue.error(e, stackTrace: s);
     }
   }
 
   /// Force a refresh of the [fetcher].
   Future<void> refetch() async {
     try {
-      if (signal.value is ResourceReady) {
-        signal.update(
+      if (value is ResourceReady) {
+        update(
           (value) => (value as ResourceReady<R>).copyWith(refreshing: true),
         );
       } else {
-        signal.value = const Resource.loading();
+        value = const ResourceValue.loading();
       }
       final result = await fetcher();
-      signal.value = Resource.ready(result);
+      value = ResourceValue.ready(result);
     } catch (e, s) {
-      signal.value = Resource.error(e, stackTrace: s);
+      value = ResourceValue.error(e, stackTrace: s);
     }
   }
 }
 
 @sealed
 @immutable
-abstract class Resource<T> {
-  const factory Resource.unresolved() = ResourceUnresolved<T>;
+abstract class ResourceValue<T> {
+  const factory ResourceValue.unresolved() = ResourceUnresolved<T>;
 
-  /// Creates an [Resource] with a data.
+  /// Creates an [ResourceValue] with a data.
   ///
   /// The data can be `null`.
-  const factory Resource.ready(T data) = ResourceReady<T>;
+  const factory ResourceValue.ready(T data) = ResourceReady<T>;
 
-  /// Creates an [Resource] in loading state.
+  /// Creates an [ResourceValue] in loading state.
   ///
   /// Prefer always using this constructor with the `const` keyword.
   // coverage:ignore-start
-  const factory Resource.loading() = ResourceLoading<T>;
+  const factory ResourceValue.loading() = ResourceLoading<T>;
   // coverage:ignore-end
 
-  /// Creates an [Resource] in error state.
+  /// Creates an [ResourceValue] in error state.
   ///
   /// The parameter [error] cannot be `null`.
   // coverage:ignore-start
-  const factory Resource.error(Object error, {StackTrace? stackTrace}) =
+  const factory ResourceValue.error(Object error, {StackTrace? stackTrace}) =
       ResourceError<T>;
   // private mapper, so thast classes inheriting Resource can specify their own
   // `map` method with different parameters.
@@ -96,10 +100,10 @@ abstract class Resource<T> {
   });
 }
 
-/// Creates an [Resource] in ready state with a data.
+/// Creates an [ResourceValue] in ready state with a data.
 @immutable
-class ResourceReady<T> implements Resource<T> {
-  /// Creates an [Resource] with a data.
+class ResourceReady<T> implements ResourceValue<T> {
+  /// Creates an [ResourceValue] with a data.
   const ResourceReady(this.value, {this.refreshing = false});
 
   /// The value currently exposed.
@@ -143,11 +147,11 @@ class ResourceReady<T> implements Resource<T> {
   }
 }
 
-/// Creates an [Resource] in loading state.
+/// Creates an [ResourceValue] in loading state.
 ///
 /// Prefer always using this constructor with the `const` keyword.
 @immutable
-class ResourceLoading<T> implements Resource<T> {
+class ResourceLoading<T> implements ResourceValue<T> {
   const ResourceLoading();
 
   @override
@@ -173,11 +177,11 @@ class ResourceLoading<T> implements Resource<T> {
   int get hashCode => runtimeType.hashCode;
 }
 
-/// Creates an [Resource] in error state.
+/// Creates an [ResourceValue] in error state.
 ///
 /// The parameter [error] cannot be `null`.
 @immutable
-class ResourceError<T> implements Resource<T> {
+class ResourceError<T> implements ResourceValue<T> {
   const ResourceError(
     this.error, {
     this.stackTrace,
@@ -215,9 +219,9 @@ class ResourceError<T> implements Resource<T> {
   int get hashCode => Object.hash(runtimeType, error, stackTrace);
 }
 
-/// Creates an [Resource] in unresolved state.
+/// Creates an [ResourceValue] in unresolved state.
 @immutable
-class ResourceUnresolved<T> implements Resource<T> {
+class ResourceUnresolved<T> implements ResourceValue<T> {
   const ResourceUnresolved();
 
   @override
@@ -243,7 +247,7 @@ class ResourceUnresolved<T> implements Resource<T> {
   int get hashCode => runtimeType.hashCode;
 }
 
-extension ResourceExtensions<T> on Resource<T> {
+extension ResourceExtensions<T> on ResourceValue<T> {
   /// Indicates if the resoruce is loading.
   bool get isLoading => this is ResourceLoading<T>;
 
@@ -253,8 +257,8 @@ extension ResourceExtensions<T> on Resource<T> {
   /// Indicates if the resoruce is ready.
   bool get isReady => this is ResourceReady<T>;
 
-  /// Upcast [Resource] into a [ResourceReady], or return null if the
-  /// [Resource] is in loading/error state.
+  /// Upcast [ResourceValue] into a [ResourceReady], or return null if the
+  /// [ResourceValue] is in loading/error state.
   ResourceReady<T>? get asReady {
     return map(
       ready: (r) => r,
@@ -263,8 +267,8 @@ extension ResourceExtensions<T> on Resource<T> {
     );
   }
 
-  /// Upcast [Resource] into a [ResourceError], or return null if the
-  /// [Resource] is in ready/loading state.
+  /// Upcast [ResourceValue] into a [ResourceError], or return null if the
+  /// [ResourceValue] is in ready/loading state.
   ResourceError<T>? get asError {
     return map(
       error: (e) => e,
@@ -297,7 +301,7 @@ extension ResourceExtensions<T> on Resource<T> {
     );
   }
 
-  /// Perform some actions based on the state of the [Resource], or call orElse
+  /// Perform some actions based on the state of the [ResourceValue], or call orElse
   /// if the current state is not considered.
   R maybeMap<R>({
     R Function(ResourceReady<T> ready)? ready,
@@ -321,7 +325,7 @@ extension ResourceExtensions<T> on Resource<T> {
     );
   }
 
-  /// Performs an action based on the state of the [Resource].
+  /// Performs an action based on the state of the [ResourceValue].
   ///
   /// All cases are required.
   R on<R>({
@@ -336,7 +340,7 @@ extension ResourceExtensions<T> on Resource<T> {
     );
   }
 
-  /// Performs an action based on the state of the [Resource], or call [orElse]
+  /// Performs an action based on the state of the [ResourceValue], or call [orElse]
   /// if the current state is not considered.
   R maybeOn<R>({
     R Function(T data, bool refreshing)? ready,

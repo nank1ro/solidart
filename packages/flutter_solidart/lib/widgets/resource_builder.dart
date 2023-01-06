@@ -4,7 +4,7 @@ import 'package:solidart/solidart.dart';
 
 typedef ResourceWidgetBuilder<R> = Widget Function(
   BuildContext context,
-  Resource<R> resource,
+  ResourceValue<R> resource,
 );
 
 class ResourceBuilder<T, R> extends StatefulWidget {
@@ -14,7 +14,7 @@ class ResourceBuilder<T, R> extends StatefulWidget {
     required this.builder,
   });
 
-  final CreateResource<T, R> resource;
+  final Resource<T, R> resource;
   final ResourceWidgetBuilder<R> builder;
 
   @override
@@ -31,9 +31,9 @@ class _ResourceBuilderState<T, R> extends State<ResourceBuilder<T, R>> {
   @override
   Widget build(BuildContext context) {
     return SignalBuilder(
-      signal: widget.resource.signal,
-      builder: (context, resource, __) {
-        return widget.builder(context, resource);
+      signal: widget.resource,
+      builder: (context, value, __) {
+        return widget.builder(context, value);
       },
     );
   }

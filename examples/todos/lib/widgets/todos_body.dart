@@ -33,14 +33,18 @@ class _TodosBodyState extends State<TodosBody> {
 
   @override
   Widget build(BuildContext context) {
-    // Registering two new signals, the list of completed and uncompleted todos.
-    // These are derived [ReadableSignal]s.
-    // Provided through a [Solid] because their value is used by the [TodoList]
-    // and [Toolbar].
-    // This is preferable over passing the signals as parameters down to descendants,
-    // expecially when the usage is very deep in the tree.
     return Solid(
       signals: {
+        // make the active filter signal visible only to descendants.
+        // created here because this is where it starts to be necessary.
+        SignalId.activeTodoFilter: () =>
+            createSignal<TodosFilter>(TodosFilter.all),
+        // Registering two new signals, the list of completed and uncompleted todos.
+        // These are derived [ReadableSignal]s.
+        // Provided through a [Solid] because their value is used by the [TodoList]
+        // and [Toolbar].
+        // This is preferable over passing the signals as parameters down to descendants,
+        // expecially when the usage is very deep in the tree.
         SignalId.completedTodos: () => todosController.todos.select<List<Todo>>(
             (value) => value.where((element) => element.completed).toList()),
         SignalId.uncompletedTodos: () => todosController.todos

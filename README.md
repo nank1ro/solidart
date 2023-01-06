@@ -17,7 +17,7 @@ There are 4 main concepts you should be aware:
 1. [Signals](#signals)
 2. [Effects](#effects)
 3. [Resources](#resources)
-4. [Solid](#solid)
+4. [Solid (only flutter_solidart)](#solid)
 
 ### Signals
 
@@ -38,7 +38,7 @@ print(counter.value); // prints 0
 counter.value++;
 ```
 
-You can use the `SignalBuilder` widget to automatically react to the signal value, for example:
+If you're using `flutter_solidart` you can use the `SignalBuilder` widget to automatically react to the signal value, for example:
 
 ```dart
 SignalBuilder(
@@ -90,7 +90,7 @@ final userId = createSignal(1);
 final user = createResource(fetcher: fetchUser, source: userId);
 ```
 
-Using `ResourceBuilder` you can react to the state of the resource:
+If you're using `ResourceBuilder` you can react to the state of the resource:
 
 ```dart
 ResourceBuilder(
@@ -240,7 +240,6 @@ At `[5]` using the `SignalBuilder` widget we rebuild the `IconButton` every time
 And finally at `[6]` we update the signal value.
 
 > It is mandatory to pass the type of signal value otherwise you're going to encounter an error, for example:
-
 1. `createSignal<ThemeMode>` and `context.observe<ThemeMode>` where ThemeMode is the type of the signal value.
 2. `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
 

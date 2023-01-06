@@ -1,39 +1,79 @@
-<!-- 
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+<!-- <a href="https://github.com/nank1ro/solidart"><img src="https://img.shields.io/github/stars/nank1ro/solidart.svg?style=flat&logo=github&colorB=deeppink&label=stars" alt="Star on Github"></a> -->
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/guides/libraries/writing-package-pages). 
+<a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-purple.svg" alt="License: MIT"></a>
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-library-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/developing-packages). 
--->
+# A simple state-management library inspired by SolidJS.
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+The objectives of this project are:
 
-## Features
+1. Being simple and easy to learn
+2. Do not go against the framework (e.g. Flutter) with weird workarounds.
+3. Do not have a single global state, but put multiple states only in the most appropriate places
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+## Learning
 
-## Getting started
+There are 3 main concepts you should be aware:
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+1. [Signals](#signals)
+2. [Effects](#effects)
+3. [Resources](#resources)
 
-## Usage
+### Signals
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder. 
+Signals are the cornerstone of reactivity in _solidart_. They contain values that change over time; when you change a signal's value, it automatically updates anything that uses it.
+
+To create a signal, you have to use the `createSignal` method:
 
 ```dart
-const like = 'sample';
+final counter = createSignal(0);
 ```
 
-## Additional information
+The argument passed to the create call is the initial value, and the return value is the signal.
 
-TODO: Tell users more about the package: where to find more information, how to 
-contribute to the package, how to file issues, what response they can expect 
-from the package authors, and more.
+```dart
+// Retrieve the current counter value
+print(counter.value); // prints 0
+// Increment the counter value
+counter.value++;
+```
+
+### Effects
+
+Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
+
+An effect can be created by using `createEffect`.
+The effect subscribes to any signal provided in the `signals` array and reruns when any of them change.
+
+So let's create an Effect that reruns whenever `counter` changes:
+
+```dart
+createEffect(() {
+    print("The count is now ${counter.value}");
+}, signals: [counter]);
+```
+
+### Resources
+
+Resources are special Signals designed specifically to handle Async loading. Their purpose is wrap async values in a way that makes them easy to interact with.
+
+Resources can be driven by a `source` signal that provides the query to an async data `fetcher` function that returns a `Future`.
+
+The contents of the `fetcher` function can be anything. You can hit typical REST endpoints or GraphQL or anything that generates a future. Resources are not opinionated on the means of loading the data, only that they are driven by futures.
+
+Let's create a Resource:
+
+```dart
+// The fetcher
+Future<String> fetchUser() async {
+    final response = await http.get(
+      Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
+    );
+    return response.body;
+}
+
+// The source
+final userId = createSignal(1);
+
+// The resource
+final user = createResource(fetcher: fetchUser, source: userId);
+```
