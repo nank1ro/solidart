@@ -1,7 +1,6 @@
 import 'package:meta/meta.dart';
 import 'package:solidart/src/core/readable_signal.dart';
 import 'package:solidart/src/core/signal_options.dart';
-import 'package:solidart/src/core/signal_selector.dart';
 
 /// Creates a simple reactive state with a getter and setter.
 ///
