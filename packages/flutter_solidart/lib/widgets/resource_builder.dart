@@ -30,7 +30,7 @@ class _ResourceBuilderState<T, R> extends State<ResourceBuilder<T, R>> {
 
   @override
   Widget build(BuildContext context) {
-    return SignalBuilder(
+    return SignalBuilder<ResourceValue<R>>(
       signal: widget.resource,
       builder: (context, value, __) {
         return widget.builder(context, value);

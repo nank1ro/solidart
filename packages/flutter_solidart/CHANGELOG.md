@@ -1,3 +1,7 @@
+## 0.1.0+3
+
+- Specify the type of resource to the ResourceBuilder
+
 ## 0.1.0+2
 
 - Decrease minimum Dart version to 2.17.0
