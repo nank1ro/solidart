@@ -1,0 +1,3 @@
+dependency_overrides:
+  flutter_solidart:
+    path: ../../flutter_solidart
