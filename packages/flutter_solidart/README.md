@@ -248,3 +248,25 @@ And finally at `[6]` we update the signal value.
 
 1. Add more unit tests
 2. Create docs page
+
+## Examples
+
+### Sample features using flutter_solidart:
+
+- [Counter](https://zapp.run/edit/counter-or-fluttersolidart-zz1m06lvz1n0)
+- [Toggle theme (dark/light mode)](https://zapp.run/edit/toggle-theme-or-fluttersolidart-zy1o06bdy1p0)
+- [Todos](https://zapp.run/edit/todos-or-fluttersolidart-zn4406ltn450)
+
+### Showcase of all flutter_solidart features
+
+- [Showcase of all features](https://zapp.run/edit/showcase-or-fluttersolidart-zo1s066po1t0)
+
+Learn every feature of `flutter_solidart` including:
+
+1. `createSignal`
+2. `Show` widget
+3. Derived signals with `signal.select()`
+4. `Effect`s with basic and advanced usages
+5. `SignalBuilder`, `DualSignalBuilder` and `TripleSignalBuilder`
+6. `createResource` and `ResourceBuilder`
+7. `Solid` and its fine-grained reactivity

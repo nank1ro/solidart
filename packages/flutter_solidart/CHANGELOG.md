@@ -1,3 +1,7 @@
+## 0.1.0+4
+
+- Add links to examples
+
 ## 0.1.0+3
 
 - Specify the type of resource to the ResourceBuilder
