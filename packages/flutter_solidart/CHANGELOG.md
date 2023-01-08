@@ -1,3 +1,7 @@
+## 0.1.1
+
+- Implement Solid.value to be able to pass Signals to modals
+
 ## 0.1.0+4
 
 - Add links to examples
