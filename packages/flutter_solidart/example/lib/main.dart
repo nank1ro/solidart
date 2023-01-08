@@ -5,6 +5,7 @@ import 'package:example/pages/dual_signal_builder.dart';
 import 'package:example/pages/effects.dart';
 import 'package:example/pages/resource.dart';
 import 'package:example/pages/show.dart';
+import 'package:example/pages/signals_in_modals.dart';
 import 'package:example/pages/solid.dart';
 import 'package:example/pages/solid_reactivity.dart';
 import 'package:flutter/material.dart';
@@ -41,6 +42,7 @@ final routes = <String, WidgetBuilder>{
   '/solid': (_) => const SolidPage(),
   '/advanced-effects': (_) => const AdvancedEffectsPage(),
   '/solid-reactivity': (_) => const SolidReactivity(),
+  '/signals-in-modals': (_) => const SignalsInModals(),
 };
 final routeToNameRegex = RegExp('(?:^/|-)([a-z])');
 
