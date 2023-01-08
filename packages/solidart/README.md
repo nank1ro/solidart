@@ -63,6 +63,9 @@ The contents of the `fetcher` function can be anything. You can hit typical REST
 Let's create a Resource:
 
 ```dart
+// The source
+final userId = createSignal(1);
+
 // The fetcher
 Future<String> fetchUser() async {
     final response = await http.get(
@@ -70,9 +73,6 @@ Future<String> fetchUser() async {
     );
     return response.body;
 }
-
-// The source
-final userId = createSignal(1);
 
 // The resource
 final user = createResource(fetcher: fetchUser, source: userId);

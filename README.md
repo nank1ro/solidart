@@ -75,6 +75,9 @@ The contents of the `fetcher` function can be anything. You can hit typical REST
 Let's create a Resource:
 
 ```dart
+// The source
+final userId = createSignal(1);
+
 // The fetcher
 Future<String> fetchUser() async {
     final response = await http.get(
@@ -82,9 +85,6 @@ Future<String> fetchUser() async {
     );
     return response.body;
 }
-
-// The source
-final userId = createSignal(1);
 
 // The resource
 final user = createResource(fetcher: fetchUser, source: userId);
@@ -240,6 +240,7 @@ At `[5]` using the `SignalBuilder` widget we rebuild the `IconButton` every time
 And finally at `[6]` we update the signal value.
 
 > It is mandatory to pass the type of signal value otherwise you're going to encounter an error, for example:
+
 1. `createSignal<ThemeMode>` and `context.observe<ThemeMode>` where ThemeMode is the type of the signal value.
 2. `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
 
@@ -269,3 +270,4 @@ Learn every feature of `flutter_solidart` including:
 5. `SignalBuilder`, `DualSignalBuilder` and `TripleSignalBuilder`
 6. `createResource` and `ResourceBuilder`
 7. `Solid` and its fine-grained reactivity
+8. Access signals in modals with `Solid.value`
