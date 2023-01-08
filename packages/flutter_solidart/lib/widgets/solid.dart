@@ -9,7 +9,22 @@ class Solid extends StatefulWidget {
     super.key,
     this.signals = const {},
     required this.child,
-  });
+  }) : _autoDisposeSignals = true;
+
+  /// Takes a map of signals and a [child] which will have access to the signals
+  /// New signals should not be created in `Solid.value`.
+  /// Signals should always be created using the default constructor
+  ///
+  /// This is useful for passing signals to modals, because them live in
+  /// another tree.
+  Solid.value({
+    super.key,
+    required Map<Object, SignalBase<dynamic>> signals,
+    required this.child,
+  })  : _autoDisposeSignals = false,
+        signals = <Object, SignalBase<dynamic> Function()>{
+          for (final entry in signals.entries) entry.key: () => entry.value,
+        };
 
   final Widget child;
 
@@ -19,6 +34,11 @@ class Solid extends StatefulWidget {
   /// The function must return a signal.
   /// The value is a function in order to create signals lazily only when needed
   final Map<Object, SignalBase<dynamic> Function()> signals;
+
+  /// By default signals are going to be autodisposed when the Solid disposes.
+  /// If using Solid.value this is not wanted because the signals are already
+  // managed by another Solid widget.
+  final bool _autoDisposeSignals;
 
   @override
   State<Solid> createState() => SolidState();
@@ -172,7 +192,7 @@ class SolidState extends State<Solid> {
     // and are going to dispose automatically when the signal disposes.
     for (final signal in _createdSignals.values) {
       _stopListeningToSignal(signal);
-      signal.dispose();
+      if (widget._autoDisposeSignals) signal.dispose();
     }
     _createdSignals.clear();
     _signalValues.clear();
