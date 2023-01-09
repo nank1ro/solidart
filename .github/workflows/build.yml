@@ -67,7 +67,7 @@ jobs:
       - name: Generate code coverage
         run: |
           pwd
-          chmod +x scripts/coverage.sh
+          # chmod +x ./scripts/coverage.sh
           ./scripts/coverage.sh
         shell: bash
 
