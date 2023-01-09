@@ -11,63 +11,38 @@ on:
       - "**.md"
 
 jobs:
-  analyze_solidart:
+  build:
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.head_ref }}
       cancel-in-progress: true
-    defaults:
-      run:
-        working-directory: ./packages/solidart
 
     steps:
       - uses: actions/checkout@v3
       - uses: dart-lang/setup-dart@v1.3
 
+      # Dart
+      - name: cd into folder
+        run: cd ./packages/solidart
       - name: Install dependencies
         run: dart pub get
-
       - name: Analyze project source
         run: dart analyze
 
-  analyze_flutter_solidart:
-    runs-on: ubuntu-latest
-    needs: analyze_solidart
-    concurrency:
-      group: ${{ github.head_ref }}
-      cancel-in-progress: true
-    defaults:
-      run:
-        working-directory: ./packages/flutter_solidart
-
-    steps:
-      - uses: actions/checkout@v3
+      # Flutter
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-
+      - name: cd into folder
+        run: cd ../flutter_solidart
       - name: Install dependencies
         run: flutter pub get
-
       - name: Analyze project source
         run: flutter analyze
 
-  coverage:
-    runs-on: ubuntu-latest
-    needs: [analyze_flutter_solidart, analyze_solidart]
-    concurrency:
-      group: ${{ github.head_ref }}
-      cancel-in-progress: true
-    defaults:
-      run:
-        working-directory: ./
-
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dart-lang/setup-dart@v1.3
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: "stable"
+      # Coverage
+      - name: cd into folder
+        run: cd ../../
       - name: Generate code coverage
         run: |
           chmod +x ./scripts/coverage.sh
