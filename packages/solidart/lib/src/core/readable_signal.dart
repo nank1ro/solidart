@@ -101,4 +101,8 @@ class ReadableSignal<T> implements SignalBase<T> {
   void onDispose(VoidCallback cb) {
     _onDisposeCallbacks.add(cb);
   }
+
+  @override
+  String toString() =>
+      '''ReadableSignal<$T>(value: $value, previousValue: $previousValue, options; $options)''';
 }

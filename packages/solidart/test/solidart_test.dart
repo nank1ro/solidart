@@ -1,5 +1,6 @@
 import 'package:mockito/mockito.dart';
 import 'package:solidart/src/core/effect.dart';
+import 'package:solidart/src/core/readable_signal.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_options.dart';
 import 'package:test/test.dart';
@@ -114,6 +115,18 @@ void main() {
         reason: 'The signal should have 1 has previousValue',
       );
     });
+
+    test('check toString()', () {
+      final s = createSignal(0);
+      expect(s.toString(),
+          "Signal<int>(value: 0, previousValue: null, options; SignalOptions<int>(equals: false, comparator: PRESENT))");
+    });
+
+    test('check Signal becomes ReadableSignal', () {
+      final s = createSignal(0);
+      expect(s, TypeMatcher<Signal<int>>());
+      expect(s.readable, TypeMatcher<ReadableSignal<int>>());
+    });
   });
 
   group('createEffect tests = ', () {
@@ -149,6 +162,25 @@ void main() {
       createEffect(cb, signals: [s]);
       s.dispose();
       verifyNever(cb());
+    });
+
+    test('check effect state', () {
+      final s = createSignal(0);
+      final e = createEffect(() {}, signals: [s]);
+      expect(e.state, EffectState.running);
+      expect(e.isRunning, true);
+
+      e.pause();
+      expect(e.state, EffectState.paused);
+      expect(e.isPaused, true);
+
+      e.resume();
+      expect(e.state, EffectState.resumed);
+      expect(e.isResumed, true);
+
+      e.cancel();
+      expect(e.state, EffectState.cancelled);
+      expect(e.isCancelled, true);
     });
   });
 
@@ -215,6 +247,24 @@ void main() {
       signal.value = 1;
       await pumpEventQueue();
       expect(derived.previousValue, 4);
+    });
+  });
+
+  group('ReadableSignal tests', () {
+    test('check ReadableSignal value and listener count', () {
+      final s = ReadableSignal(0);
+      expect(s.value, 0);
+      expect(s.previousValue, null);
+      expect(s.listenerCount, 0);
+
+      createEffect(() {}, signals: [s]);
+      expect(s.listenerCount, 1);
+    });
+
+    test('check toString()', () {
+      final s = ReadableSignal(0);
+      expect(s.toString(),
+          "ReadableSignal<int>(value: 0, previousValue: null, options; SignalOptions<int>(equals: false, comparator: PRESENT))");
     });
   });
 }

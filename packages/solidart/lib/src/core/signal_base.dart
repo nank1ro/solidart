@@ -1,3 +1,5 @@
+// coverage:ignore-file
+
 import 'package:solidart/src/core/signal_options.dart';
 import 'package:solidart/src/utils.dart';
 
