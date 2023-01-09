@@ -59,12 +59,17 @@ jobs:
     concurrency:
       group: ${{ github.head_ref }}
       cancel-in-progress: true
+    defaults:
+      run:
+        working-directory: ./
 
     steps:
       - name: Generate code coverage
         run: |
-          chmod +x ${{github.workspace}}/scripts/coverage.sh
-          ./${{github.workspace}}/scripts/coverage.sh
+          pwd
+          chmod +x scripts/coverage.sh
+          ./scripts/coverage.sh
+        shell: bash
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
