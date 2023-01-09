@@ -48,8 +48,6 @@ jobs:
         shell: bash
         working-directory: ./scripts
 
+      - uses: codecov/codecov-action@v3
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
         working-directory: ./
-        with:
-          files: ./lcov.info
