@@ -65,10 +65,11 @@ jobs:
 
     steps:
       - name: Generate code coverage
-        run: |
-          pwd
-          # chmod +x ./scripts/coverage.sh
+        run:
           ./scripts/coverage.sh
+          # pwd
+          # chmod +x ./scripts/coverage.sh
+          # ./scripts/coverage.sh
         shell: bash
 
       - name: Upload coverage to Codecov
