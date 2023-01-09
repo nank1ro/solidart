@@ -22,7 +22,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
       - uses: dart-lang/setup-dart@v1.3
 
       - name: Install dependencies
@@ -64,12 +63,11 @@ jobs:
         working-directory: ./
 
     steps:
+      - uses: actions/checkout@v3
       - name: Generate code coverage
-        run:
+        run: |
+          chmod +x ./scripts/coverage.sh
           ./scripts/coverage.sh
-          # pwd
-          # chmod +x ./scripts/coverage.sh
-          # ./scripts/coverage.sh
         shell: bash
 
       - name: Upload coverage to Codecov
