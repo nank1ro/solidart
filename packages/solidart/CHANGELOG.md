@@ -1,3 +1,7 @@
+## 0.1.0+6
+
+- Update Readme
+
 ## 0.1.0+5
 
 - Add code coverage
