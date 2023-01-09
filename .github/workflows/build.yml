@@ -22,34 +22,34 @@ jobs:
       - uses: dart-lang/setup-dart@v1.3
 
       # Dart
-      - name: cd into folder
-        run: cd ./packages/solidart
       - name: Install dependencies
         run: dart pub get
+        working-directory: ./packages/solidart
       - name: Analyze project source
         run: dart analyze
+        working-directory: ./packages/solidart
 
       # Flutter
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-      - name: cd into folder
-        run: cd ../flutter_solidart
       - name: Install dependencies
         run: flutter pub get
+        working-directory: ./packages/flutter_solidart
       - name: Analyze project source
         run: flutter analyze
+        working-directory: ./packages/flutter_solidart
 
       # Coverage
-      - name: cd into folder
-        run: cd ../../
       - name: Generate code coverage
         run: |
-          chmod +x ./scripts/coverage.sh
-          ./scripts/coverage.sh
+          chmod +x coverage.sh
+          ./coverage.sh
         shell: bash
+        working-directory: ./scripts
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
+        working-directory: ./
         with:
           files: ./lcov.info
