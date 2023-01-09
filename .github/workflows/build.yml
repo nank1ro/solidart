@@ -43,10 +43,10 @@ jobs:
       # Coverage
       - name: Generate code coverage
         run: |
-          chmod +x coverage.sh
-          ./coverage.sh
+          chmod +x scripts/coverage.sh
+          ./scripts/coverage.sh
         shell: bash
-        working-directory: ./scripts
+        working-directory: ./
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
