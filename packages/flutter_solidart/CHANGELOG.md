@@ -1,3 +1,7 @@
+## 0.1.2
+
+- Add code coverage
+
 ## 0.1.1
 
 - Implement Solid.value to be able to pass Signals to modals

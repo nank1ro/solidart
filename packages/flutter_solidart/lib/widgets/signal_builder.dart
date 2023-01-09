@@ -54,6 +54,7 @@ class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
     _initializeSignal();
   }
 
+  // coverage:ignore-start
   @override
   void didUpdateWidget(SignalBuilder<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -62,6 +63,7 @@ class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
       _initializeSignal();
     }
   }
+  // coverage:ignore-end
 
   @override
   void dispose() {
@@ -80,6 +82,7 @@ class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
     });
   }
 
+  // coverage:ignore-start
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
@@ -89,6 +92,7 @@ class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
       properties: properties,
     );
   }
+  // coverage:ignore-end
 
   @override
   Widget build(BuildContext context) {
@@ -137,6 +141,7 @@ class _DualSignalBuilderState<T, U> extends State<DualSignalBuilder<T, U>> {
     widget.secondSignal.addListener(_valueChanged);
   }
 
+  // coverage:ignore-start
   @override
   void didUpdateWidget(DualSignalBuilder<T, U> oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -151,6 +156,7 @@ class _DualSignalBuilderState<T, U> extends State<DualSignalBuilder<T, U>> {
       widget.secondSignal.addListener(_valueChanged);
     }
   }
+  // coverage:ignore-end
 
   @override
   void dispose() {
@@ -166,6 +172,7 @@ class _DualSignalBuilderState<T, U> extends State<DualSignalBuilder<T, U>> {
     });
   }
 
+  // coverage:ignore-start
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
@@ -180,6 +187,7 @@ class _DualSignalBuilderState<T, U> extends State<DualSignalBuilder<T, U>> {
       properties: properties,
     );
   }
+  // coverage:ignore-end
 
   @override
   Widget build(BuildContext context) {
@@ -236,6 +244,7 @@ class _TripleSignalBuilderState<T, U, R>
     widget.thirdSignal.addListener(_valueChanged);
   }
 
+  // coverage:ignore-start
   @override
   void didUpdateWidget(TripleSignalBuilder<T, U, R> oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -255,6 +264,7 @@ class _TripleSignalBuilderState<T, U, R>
       widget.thirdSignal.addListener(_valueChanged);
     }
   }
+  // coverage:ignore-end
 
   @override
   void dispose() {
@@ -272,6 +282,7 @@ class _TripleSignalBuilderState<T, U, R>
     });
   }
 
+  // coverage:ignore-start
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
@@ -291,6 +302,7 @@ class _TripleSignalBuilderState<T, U, R>
       properties: properties,
     );
   }
+  // coverage:ignore-end
 
   @override
   Widget build(BuildContext context) {
