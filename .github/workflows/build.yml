@@ -1,0 +1,54 @@
+name: Build
+
+on:
+  pull_request:
+    paths-ignore:
+      - "**.md"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.head_ref }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dart-lang/setup-dart@v1.3
+
+      # Dart
+      - name: Install dependencies
+        run: dart pub get
+        working-directory: ./packages/solidart
+      - name: Analyze project source
+        run: dart analyze
+        working-directory: ./packages/solidart
+
+      # Flutter
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: ./packages/flutter_solidart
+      - name: Analyze project source
+        run: flutter analyze
+        working-directory: ./packages/flutter_solidart
+
+      # Coverage
+      - name: Generate code coverage
+        run: |
+          chmod +x scripts/coverage.sh
+          ./scripts/coverage.sh
+        shell: bash
+        working-directory: ./
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./lcov.info

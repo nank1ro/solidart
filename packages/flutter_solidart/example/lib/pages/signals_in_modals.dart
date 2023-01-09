@@ -37,7 +37,7 @@ class _SignalsInModalsState extends State<SignalsInModals> {
         // using `Solid.value` we provide the existing signal(s) to the dialog
         return Solid.value(
           signals: {
-            'counter': counter,
+            'counter': () => counter,
           },
           child: Builder(builder: (context) {
             final counter = context.observe<int>('counter');

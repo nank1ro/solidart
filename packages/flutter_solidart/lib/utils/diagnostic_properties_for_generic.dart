@@ -22,6 +22,7 @@ class DiagnosticPropertiesForGeneric<T> {
           value as String?,
         ),
       );
+      return;
     }
     if (T == int) {
       properties.add(
@@ -30,6 +31,7 @@ class DiagnosticPropertiesForGeneric<T> {
           value as int?,
         ),
       );
+      return;
     }
     if (T == double) {
       properties.add(
@@ -38,15 +40,7 @@ class DiagnosticPropertiesForGeneric<T> {
           value as double?,
         ),
       );
-    }
-
-    if (T == Enum) {
-      properties.add(
-        EnumProperty(
-          name,
-          value as Enum?,
-        ),
-      );
+      return;
     }
 
     if (T == bool) {
@@ -56,16 +50,9 @@ class DiagnosticPropertiesForGeneric<T> {
           value as bool?,
         ),
       );
+      return;
     }
 
-    if (T == Iterable) {
-      properties.add(
-        IterableProperty(
-          name,
-          value as Iterable?,
-        ),
-      );
-    }
     if (T == Color) {
       properties.add(
         ColorProperty(
@@ -73,6 +60,7 @@ class DiagnosticPropertiesForGeneric<T> {
           value as Color?,
         ),
       );
+      return;
     }
 
     if (T == IconData) {
@@ -82,6 +70,14 @@ class DiagnosticPropertiesForGeneric<T> {
           value as IconData?,
         ),
       );
+      return;
     }
+
+    return properties.add(
+      DiagnosticsProperty<T>(
+        name,
+        value,
+      ),
+    );
   }
 }

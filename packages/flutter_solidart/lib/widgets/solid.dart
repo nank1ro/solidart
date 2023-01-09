@@ -4,10 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:solidart/solidart.dart';
 
 /// Provides [signals] to descendants.
+@immutable
 class Solid extends StatefulWidget {
   const Solid({
     super.key,
-    this.signals = const {},
+    required this.signals,
     required this.child,
   }) : _autoDisposeSignals = true;
 
@@ -17,14 +18,11 @@ class Solid extends StatefulWidget {
   ///
   /// This is useful for passing signals to modals, because them live in
   /// another tree.
-  Solid.value({
+  const Solid.value({
     super.key,
-    required Map<Object, SignalBase<dynamic>> signals,
+    required this.signals,
     required this.child,
-  })  : _autoDisposeSignals = false,
-        signals = <Object, SignalBase<dynamic> Function()>{
-          for (final entry in signals.entries) entry.key: () => entry.value,
-        };
+  }) : _autoDisposeSignals = false;
 
   final Widget child;
 
@@ -207,9 +205,6 @@ class SolidState extends State<Solid> {
 
   /// Creates a signal with a value of type T:
   S createSignal<S>({required Object id}) {
-    if (!isPresent(id)) {
-      throw Exception('Cannot find signal with id $id');
-    }
     final signal = widget.signals[id]!();
     // store the created signal
     _createdSignals[id] = signal;
@@ -263,6 +258,7 @@ class SolidState extends State<Solid> {
     );
   }
 
+  // coverage:ignore-start
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
@@ -273,6 +269,7 @@ class SolidState extends State<Solid> {
       ),
     );
   }
+  // coverage:ignore-end
 }
 
 @immutable
@@ -375,18 +372,10 @@ class _InheritedSolid extends InheritedModel<Object> {
   /// If no ancestor of type T exists, null is returned.
   static T? inheritFromNearest<T extends InheritedModel<Object>>(
     BuildContext context, {
-    Object? aspect,
+    required Object aspect,
     // Whether to listen to the [InheritedModel], defaults to false.
     bool listen = false,
   }) {
-    // If no aspect is provided, return the first ancestor found.
-    if (aspect == null) {
-      if (listen) {
-        return context.dependOnInheritedWidgetOfExactType<T>();
-      }
-      return context.getElementForInheritedWidgetOfExactType<T>()?.widget as T?;
-    }
-
     // Try finding a model in the ancestors for which isSupportedAspect(aspect)
     // is true.
     final model = _findNearestModel<T>(context, aspect: aspect);

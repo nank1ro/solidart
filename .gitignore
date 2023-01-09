@@ -34,3 +34,6 @@ ios
 macos
 web
 android
+
+coverage/
+lcov.info
