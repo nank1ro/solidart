@@ -247,11 +247,6 @@ And finally at `[6]` we update the signal value.
 1. `createSignal<ThemeMode>` and `context.observe<ThemeMode>` where ThemeMode is the type of the signal value.
 2. `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
 
-## To-do list:
-
-1. Add more unit tests
-2. Create docs page
-
 ## Examples
 
 ### Sample features using flutter_solidart:
