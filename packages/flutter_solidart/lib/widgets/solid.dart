@@ -12,17 +12,20 @@ class Solid extends StatefulWidget {
     required this.child,
   }) : _autoDisposeSignals = true;
 
-  /// Takes a map of signals and a [child] which will have access to the signals
-  /// New signals should not be created in `Solid.value`.
-  /// Signals should always be created using the default constructor
+  /// Takes a list of [signalIds], a [context] that must have access to the
+  /// signals and a [child] which will have access to the signals
   ///
-  /// This is useful for passing signals to modals, because them live in
-  /// another tree.
-  const Solid.value({
+  /// This is useful for passing signals to modals, because are spawned in a
+  /// new tree.
+  Solid.value({
     super.key,
-    required this.signals,
+    required BuildContext context,
+    required List<Object> signalIds,
     required this.child,
-  }) : _autoDisposeSignals = false;
+  })  : _autoDisposeSignals = false,
+        signals = {
+          for (final id in signalIds) id: () => get(context, id),
+        };
 
   final Widget child;
 

@@ -29,16 +29,15 @@ class _SignalsInModalsState extends State<SignalsInModals> {
   }
 
   Future<void> showCounterDialog(BuildContext context) {
-    // retrieve the counter with the context provided by the caller
-    final counter = context.get<Signal<int>>('counter');
     return showDialog(
       context: context,
       builder: (dialogContext) {
         // using `Solid.value` we provide the existing signal(s) to the dialog
         return Solid.value(
-          signals: {
-            'counter': () => counter,
-          },
+          // the context passed must have access to the Solid signals
+          context: context,
+          // the signals ids that we want to provide to the modal
+          signalIds: const ['counter'],
           child: Builder(builder: (context) {
             final counter = context.observe<int>('counter');
             return Dialog(
