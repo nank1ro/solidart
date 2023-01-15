@@ -1,7 +1,11 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:meta/meta.dart';
 import 'package:solidart/solidart.dart';
+
+typedef SignalMapper = Map<Object, SignalBase<dynamic> Function()>;
 
 /// Provides [signals] to descendants.
 @immutable
@@ -10,22 +14,32 @@ class Solid extends StatefulWidget {
     super.key,
     required this.signals,
     required this.child,
-  }) : _autoDisposeSignals = true;
+    this.autoDisposeSignals = true,
+  });
 
   /// Takes a list of [signalIds], a [context] that must have access to the
   /// signals and a [child] which will have access to the signals
   ///
   /// This is useful for passing signals to modals, because are spawned in a
   /// new tree.
-  Solid.value({
-    super.key,
+  factory Solid.value({
+    Key? key,
     required BuildContext context,
     required List<Object> signalIds,
-    required this.child,
-  })  : _autoDisposeSignals = false,
-        signals = {
-          for (final id in signalIds) id: () => get(context, id),
-        };
+    required Widget child,
+  }) {
+    final signals = <Object, SignalBase<dynamic> Function()>{};
+    for (final id in signalIds) {
+      final stateContainingSignal = _findState(context, id: id);
+      signals[id] = stateContainingSignal.widget.signals[id]!;
+    }
+    return Solid(
+      key: key,
+      signals: signals,
+      autoDisposeSignals: false,
+      child: child,
+    );
+  }
 
   final Widget child;
 
@@ -34,12 +48,16 @@ class Solid extends StatefulWidget {
   /// The key is the signal identifier.
   /// The function must return a signal.
   /// The value is a function in order to create signals lazily only when needed
-  final Map<Object, SignalBase<dynamic> Function()> signals;
+  final SignalMapper signals;
 
-  /// By default signals are going to be autodisposed when the Solid disposes.
+  /// By default signals are going to be auto-disposed when the Solid disposes.
   /// If using Solid.value this is not wanted because the signals are already
   // managed by another Solid widget.
-  final bool _autoDisposeSignals;
+  //
+  // You are not supposed to use this value.
+  @protected
+  @internal
+  final bool autoDisposeSignals;
 
   @override
   State<Solid> createState() => SolidState();
@@ -98,8 +116,11 @@ The signal id that caused this issue is $id
     BuildContext context,
     Object id, {
     bool listen = false,
+    // An optional state, provided only by Solid.value to avoid repeating the
+    // _findState method.
+    SolidState? currentState,
   }) {
-    final state = _findState(context, id: id, listen: listen);
+    final state = currentState ?? _findState(context, id: id, listen: listen);
     _checkSignalType<S>(state: state, id: id);
 
     final createdSignal = state._createdSignals[id] as S?;
@@ -193,7 +214,7 @@ class SolidState extends State<Solid> {
     // and are going to dispose automatically when the signal disposes.
     for (final signal in _createdSignals.values) {
       _stopListeningToSignal(signal);
-      if (widget._autoDisposeSignals) signal.dispose();
+      if (widget.autoDisposeSignals) signal.dispose();
     }
     _createdSignals.clear();
     _signalValues.clear();
@@ -202,8 +223,7 @@ class SolidState extends State<Solid> {
 
   // Indicates is the signal is readable.
   bool isReadableSignal({required Object id}) {
-    final isReadableSignal = widget.signals[id] is! Signal<dynamic> Function();
-    return isReadableSignal;
+    return widget.signals[id] is! Signal<dynamic> Function();
   }
 
   /// Creates a signal with a value of type T:
