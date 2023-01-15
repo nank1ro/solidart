@@ -3,18 +3,6 @@
   "logo": "https://static.invertase.io/assets/docs.page/docs-page-logo.png",
   "theme": "#36B9B9",
   "twitter": "nank1ro",
-  "anchors": [
-    {
-      "title": "Homepage",
-      "icon": "house",
-      "link": "https://docs.page/nank1ro/solidart"
-    },
-    {
-      "title": "Twitter",
-      "icon": "twitter",
-      "link": "https://twitter.com/nank1ro"
-    }
-  ],
   "sidebar": [
     [
       "Getting Started",
