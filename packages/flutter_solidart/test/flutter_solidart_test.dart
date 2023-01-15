@@ -350,23 +350,40 @@ void main() {
     expect(tester.takeException(), const TypeMatcher<SolidError>());
   });
 
-  testWidgets('Test Solid.value', (tester) async {
+  testWidgets('Test Solid.value with observe', (tester) async {
+    Future<void> showCounterDialog({required BuildContext context}) {
+      return showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return Solid.value(
+            context: context,
+            signalIds: const ['counter'],
+            child: Builder(
+              builder: (innerContext) {
+                final counter = innerContext.observe<int>('counter');
+                return Text('Dialog counter: $counter');
+              },
+            ),
+          );
+        },
+      );
+    }
+
     final s = createSignal(0);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Solid.value(
+          body: Solid(
             signals: {
               'counter': () => s,
             },
             child: Builder(
               builder: (context) {
-                final counter = context.get<Signal<int>>('counter');
-                return SignalBuilder(
-                  signal: counter,
-                  builder: (context, value, _) {
-                    return Text('$value');
+                return ElevatedButton(
+                  onPressed: () {
+                    showCounterDialog(context: context);
                   },
+                  child: const Text('show dialog'),
                 );
               },
             ),
@@ -374,12 +391,85 @@ void main() {
         ),
       ),
     );
-    Finder counterFinder(int value) => find.text('$value');
+    Finder counterFinder(int value) => find.text('Dialog counter: $value');
+
+    final buttonFinder = find.text('show dialog');
+    expect(buttonFinder, findsOneWidget);
+    await tester.tap(buttonFinder);
+    await tester.pumpAndSettle();
+
     expect(counterFinder(0), findsOneWidget);
 
     s.value = 1;
     await tester.pumpAndSettle();
     expect(counterFinder(1), findsOneWidget);
+  });
+
+  testWidgets('Test Solid.value with get', (tester) async {
+    Future<void> showCounterDialog({required BuildContext context}) {
+      return showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return Solid.value(
+            context: context,
+            signalIds: const ['counter', 'double-counter'],
+            child: Builder(
+              builder: (innerContext) {
+                final counter = innerContext.get<Signal<int>>('counter');
+                final doubleCounter =
+                    innerContext.get<ReadableSignal<int>>('double-counter');
+                return DualSignalBuilder(
+                  firstSignal: counter,
+                  secondSignal: doubleCounter,
+                  builder: (_, value1, value2, __) {
+                    return Text(
+                      'Dialog counter: $value1 doubleCounter: $value2',
+                    );
+                  },
+                );
+              },
+            ),
+          );
+        },
+      );
+    }
+
+    final s = createSignal(0);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Solid(
+            signals: {
+              'counter': () => s,
+              'double-counter': () => s.select<int>((value) => value * 2),
+            },
+            child: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () {
+                    showCounterDialog(context: context);
+                  },
+                  child: const Text('show dialog'),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    Finder counterFinder(int value1, int value2) =>
+        find.text('Dialog counter: $value1 doubleCounter: $value2');
+
+    final buttonFinder = find.text('show dialog');
+    expect(buttonFinder, findsOneWidget);
+    await tester.tap(buttonFinder);
+    await tester.pumpAndSettle();
+
+    expect(counterFinder(0, 0), findsOneWidget);
+
+    s.value = 1;
+    await tester.pumpAndSettle();
+    expect(counterFinder(1, 2), findsOneWidget);
   });
 
   testWidgets(
