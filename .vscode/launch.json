@@ -1,11 +1,18 @@
 {
   "configurations": [
     {
-      "name": "Example",
+      "name": "solidart Example",
+      "type": "dart",
+      "request": "launch",
+      "program": "main.dart",
+      "cwd": "packages/solidart/example"
+    },
+    {
+      "name": "flutter_solidart Example",
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart",
-      "cwd": "packages/solidart/example"
+      "cwd": "packages/flutter_solidart/example"
     },
     {
       "name": "Flutter: Run all Tests",

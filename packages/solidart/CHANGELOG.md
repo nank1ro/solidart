@@ -1,3 +1,7 @@
+## 0.1.1
+
+- Set the minimum Dart SDK version to `2.18`.
+
 ## 0.1.0+6
 
 - Update Readme
