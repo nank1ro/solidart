@@ -18,17 +18,4 @@ Future<void> main() async {
 
   // dispose the counter;
   counter.dispose();
-
-  Future<int> fetcher() => Future.value(1);
-  final resource = createResource(fetcher: fetcher);
-
-  createEffect(() {
-    resource.value.on(
-      ready: (r, refreshing) => print('ready $r'),
-      error: (e, stackTrace) => print('Error: $e'),
-      loading: () => print('loading'),
-    );
-  }, signals: [resource]);
-
-  resource.fetch();
 }
