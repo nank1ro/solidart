@@ -40,6 +40,15 @@
         ["ResourceBuilder", "/flutter/resource-builder"],
         ["Solid", "/flutter/solid"]
       ]
+    ],
+    [
+      "Examples",
+      [
+        ["General", "/examples/general"],
+        ["Counter", "/examples/counter"],
+        ["Todos", "/examples/todos"],
+        ["Toggle theme", "/examples/toggle-theme"]
+      ]
     ]
   ]
 }
