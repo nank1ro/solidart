@@ -5,4 +5,30 @@ description: Learn how to use the SignalBuilder widget
 
 # SignalBuilder
 
+A signal widget builder.
 
+Reacts to the `signal` calling the [builder] each time.
+The `signal` and `builder` arguments must not be null.
+The `child` is optional but is good practice to use if part of the widget
+subtree does not depend on the value of the `signal`.
+
+```dart
+final counter = createSignal(0);
+
+@override
+void dispose() {
+  counter.dispose();
+}
+
+@override
+Widget build(BuildContext context) {
+  return SignalBuilder(
+        signal: counter,
+        builder: (_, value, __) {
+          return Text('$value');
+        },
+    );
+}
+```
+
+If you need to use nest multiple `SignalBuilder`s you may check also `DualSignalBuilder` to react to 2 signals at once and `TripleSignalBuilder` to react 3 signals at once.
