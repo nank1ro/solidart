@@ -28,7 +28,8 @@
       [
         ["Signals", "/learning/signals"],
         ["Effects", "/learning/effects"],
-        ["Resources", "/learning/resources"]
+        ["Resources", "/learning/resources"],
+        ["Derived Signals", "/learning/derived-signals"]
       ]
     ],
     [
