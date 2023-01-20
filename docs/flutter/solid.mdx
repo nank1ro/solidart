@@ -116,3 +116,49 @@ And finally at `[6]` we update the signal value.
 
 1. `createSignal<ThemeMode>` and `context.observe<ThemeMode>` where ThemeMode is the type of the signal value.
 2. `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
+
+## Solid.value
+
+The `Solid.value` factory is useful for passing `signals` to modals.
+This is necessary because modals are spawned in a new tree.
+`Solid.value` takes just:
+- `context` a BuildContext that has access to signals
+- `signalIds` a list of signal identifiers that you want to provide to the modal
+
+Here it is a chuck of code taken from [this example](/examples/main).
+
+```dart
+Future<void> showCounterDialog(BuildContext context) {
+  return showDialog(
+    context: context,
+    builder: (dialogContext) {
+      // using `Solid.value` we provide the existing signal(s) to the dialog
+      return Solid.value(
+        // the context passed must have access to the Solid signals
+        context: context,
+        // the signals ids that we want to provide to the modal
+        signalIds: const [_SignalId.counter, _SignalId.doubleCounter],
+        child: Builder(
+          builder: (innerContext) {
+            final counter = innerContext.observe<int>(_SignalId.counter);
+            final doubleCounter =
+                innerContext.observe<int>(_SignalId.doubleCounter);
+            return Dialog(
+              child: SizedBox(
+                width: 200,
+                height: 100,
+                child: Center(
+                  child: ListTile(
+                    title: Text("The counter is $counter"),
+                    subtitle: Text('The doubleCounter is $doubleCounter'),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    },
+  );
+}
+```
