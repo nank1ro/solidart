@@ -5,4 +5,114 @@ description: Learn how to pass signals to descendants using the Solid widget
 
 # Solid
 
+The Flutter framework works like a Tree. There are ancestors and there are descendants.
 
+You may incur the need to pass a Signal deep into the tree, this is discouraged.
+You should never pass a signal as a parameter.
+
+To avoid this there's the _Solid_ widget.
+
+With this widget you can pass a signal down the tree to anyone who needs it.
+
+You will have already seen `Theme.of(context)` or `MediaQuery.of(context)`, the procedure is practically the same.
+
+Let's see an example to grasp the concept.
+
+You're going to see how to build a toggle theme feature using `Solid`, this example is present also [here](/examples/toggle-theme)
+
+```dart
+/// The identifiers used for [Solid] signals.
+enum SignalId { // [1]
+  themeMode,
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Provide the theme mode signal to descendats
+    return Solid( // [2]
+      signals: {
+          // the id of the signal and the signal associated.
+        SignalId.themeMode: () => createSignal<ThemeMode>(ThemeMode.light),
+      },
+      child:
+          // using a builder here because the `context` must be a descendant of [Solid]
+          Builder(
+        builder: (context) {
+          // observe the theme mode value this will rebuild every time the themeMode signal changes.
+          final themeMode = context.observe<ThemeMode>(SignalId.themeMode); // [3]
+          return MaterialApp(
+            title: 'Toggle theme',
+            themeMode: themeMode,
+            theme: ThemeData.light(),
+            darkTheme: ThemeData.dark(),
+            home: const MyHomePage(),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class MyHomePage extends StatelessWidget {
+  const MyHomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // retrieve the theme mode signal
+    final themeMode = context.get<Signal<ThemeMode>>(SignalId.themeMode); // [4]
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Toggle theme'),
+      ),
+      body: Center(
+        child:
+            // Listen to the theme mode signal rebuilding only the IconButton
+            SignalBuilder( // [5]
+          signal: themeMode,
+          builder: (_, mode, __) {
+            return IconButton(
+              onPressed: () { // [6]
+                // toggle the theme mode
+                if (themeMode.value == ThemeMode.light) {
+                  themeMode.value = ThemeMode.dark;
+                } else {
+                  themeMode.value = ThemeMode.light;
+                }
+              },
+              icon: Icon(
+                mode == ThemeMode.light ? Icons.dark_mode : Icons.light_mode,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+```
+
+In this example many things occured, first at `[1]` we've used an _Enum_ to store all the [SignalId]s.
+You may use a `String`, an `int` or wethever you want. Just be sure to use the same id to retrieve the signal.
+
+Then at `[2]` we've used the `Solid` widget to provide the `themeMode` signal to descendants.
+
+The `Solid` widgets takes a Map of `signals`:
+
+- The key of the Map is the signal id, in this case `SignalId.themeMode`.
+- The value of the Map is a function that returns a `SignalBase`. You may create a signal or a derived signal. The value is a Function because the signal is created lazily only when used for the first time, if you never access the signal it never gets created.
+
+At `[3]` we `observe` the value of a signal. The `observe` method listen to the signal value and rebuilds the widget when the value changes. It takes an `id` that is the signal identifier that you want to use. This method must be called only inside the `build` method.
+
+At `[4]` we `get` the signal with the given `id`. This doesn't listen to signal value. You may use this method inside the `initState` and `build` methods.
+
+At `[5]` using the `SignalBuilder` widget we rebuild the `IconButton` every time the signal value changes.
+
+And finally at `[6]` we update the signal value.
+
+> It is mandatory to pass the type of signal value otherwise you're going to encounter an error, for example:
+
+1. `createSignal<ThemeMode>` and `context.observe<ThemeMode>` where ThemeMode is the type of the signal value.
+2. `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
