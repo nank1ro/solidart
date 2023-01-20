@@ -82,3 +82,8 @@ The are also other convenience methods to handle only specific states:
 - `asError` upcast `ResourceValue` into a `ResourceError`, or return null if the `ResourceValue` is in loading/ready state
 - `value` attempts to synchronously get the value of `ResourceReady`
 - `error` attempts to synchronously get the error of `ResourceError`
+
+A resource provides the `fetch` and `refetch` methods.
+<Warning>You should not call `fetch()` if you're using SignalBuilder, because it's already performed by it</Warning>
+
+The `refetch` method forces a refetch of the `fetcher`.

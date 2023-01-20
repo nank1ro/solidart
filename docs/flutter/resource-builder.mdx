@@ -22,21 +22,27 @@ class ResourcePage extends StatefulWidget {
 }
 
 class _ResourcePageState extends State<ResourcePage> {
+  // source
   final userId = createSignal(1);
+  // resource
   late final Resource<int, String> user;
 
   @override
   void initState() {
     super.initState();
+    // creating the resource
     user = createResource(fetcher: fetchUser, source: userId);
   }
 
   @override
   void dispose() {
+    // disposing the source and resource
     userId.dispose();
+    user.dispose();
     super.dispose();
   }
 
+  // fetcher
   Future<String> fetchUser() async {
     print('Fetch user: ${userId.value}');
     final response = await http.get(
@@ -70,8 +76,8 @@ class _ResourcePageState extends State<ResourcePage> {
             const SizedBox(height: 16),
             ResourceBuilder(
               resource: user,
-              builder: (_, resource) {
-                return resource.on(
+              builder: (_, userValue) {
+                return userValue.on(
                   ready: (data, refreshing) {
                     return Column(
                       mainAxisSize: MainAxisSize.min,

@@ -21,6 +21,7 @@ class _ResourcePageState extends State<ResourcePage> {
 
   @override
   void dispose() {
+    user.dispose();
     userId.dispose();
     super.dispose();
   }
@@ -59,8 +60,8 @@ class _ResourcePageState extends State<ResourcePage> {
             const SizedBox(height: 16),
             ResourceBuilder(
               resource: user,
-              builder: (_, resource) {
-                return resource.on(
+              builder: (_, userValue) {
+                return userValue.on(
                   ready: (data, refreshing) {
                     return Column(
                       mainAxisSize: MainAxisSize.min,
