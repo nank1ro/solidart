@@ -3,6 +3,18 @@
   "logo": "https://static.invertase.io/assets/docs.page/docs-page-logo.png",
   "theme": "#36B9B9",
   "twitter": "nank1ro",
+  "anchors": [
+    {
+      "title": "pub.dev solidart",
+      "icon": "cube",
+      "link": "https://pub.dev/packages/solidart"
+    },
+    {
+      "title": "pub.dev flutter_solidart",
+      "icon": "cube",
+      "link": "https://pub.dev/packages/flutter_solidart"
+    }
+  ],
   "sidebar": [
     [
       "Getting Started",
@@ -16,8 +28,16 @@
       [
         ["Signals", "/learning/signals"],
         ["Effects", "/learning/effects"],
-        ["Resources", "/learning/resources"],
-        ["Solid", "/learning/solid"]
+        ["Resources", "/learning/resources"]
+      ]
+    ],
+    [
+      "Flutter",
+      [
+        ["Show", "/flutter/show"],
+        ["SignalBuilder", "/flutter/signal-builder"],
+        ["ResourceBuilder", "/flutter/resource-builder"],
+        ["Solid", "/flutter/solid"]
       ]
     ]
   ]
