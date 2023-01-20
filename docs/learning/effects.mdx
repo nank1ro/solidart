@@ -26,9 +26,9 @@ counter.value++;
 // The effect prints `The count is now 1`;
 ```
 
-<Info>The effect automatically disposes when all the `signals` provided dispose</Info>
+<Info>The effect automatically cancels when all the `signals` provided dispose</Info>
 
-The `createEffect` method return a class `Effect` with has more advanced usage:
+The `createEffect` method returns an `Effect` class giving you a more advanced usage:
 ```dart
 final effect = createEffect(() {
     print("The count is now ${counter.value}");
