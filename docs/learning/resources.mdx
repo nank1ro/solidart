@@ -81,4 +81,4 @@ The are also other convenience methods to handle only specific states:
 - `asReady` upcast `ResourceValue` into a `ResourceReady`, or return null if the `ResourceValue` is in loading/error state
 - `asError` upcast `ResourceValue` into a `ResourceError`, or return null if the `ResourceValue` is in loading/ready state
 - `value` attempts to synchronously get the value of `ResourceReady`
-- `value` attempts to synchronously get the error of `ResourceError`
+- `error` attempts to synchronously get the error of `ResourceError`
