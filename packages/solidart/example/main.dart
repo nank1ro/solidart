@@ -7,7 +7,7 @@ Future<void> main() async {
       print("The counter is now: ${counter.value}");
     },
     signals: [counter],
-    fireImmediatly: true,
+    fireImmediately: true,
   );
 
   counter.value++;
