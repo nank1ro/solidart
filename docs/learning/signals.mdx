@@ -1,0 +1,58 @@
+---
+title: Signals
+description: Introduction to Signals
+---
+
+# Signals
+
+Signals are the cornerstone of reactivity in `solidart`. They contain values that change over time; when you change a signal's value, it automatically updates anything that uses it.
+
+To create a signal, let's import createSignal and call it like this:
+<Tabs
+  groupId="library"
+  values={[
+    { label: 'Flutter', value: 'flutter' },
+    { label: 'Dart', value: 'dart' },
+  ]}
+>
+ <TabItem value="flutter">
+    Import the `flutter_solidart` package:
+    ```dart
+    import 'package:flutter_solidart/flutter_solidart.dart';
+    ```
+  </TabItem>
+  <TabItem value="dart">
+    Import the `solidart` package:
+
+    ```dart
+    import 'package:solidart/solidart.dart';
+    ```
+  </TabItem>
+</Tabs>
+
+Next create the signal with:
+
+```dart
+final counter = createSignal(0);
+````
+
+The argument passed to the create call is the initial value, and the return value is the signal.
+
+To retrieve the current signal value use:
+```dart
+print(counter.value); // prints 0
+```
+
+To update the current signal value you can use:
+```dart
+counter.value++; // increase by 1
+// or 
+counter.value = 5; // sets the value to 5
+// or 
+counter.update((v) => v * 2); // update based on the current value
+```
+
+<Warning>Don't forget to call the `dispose()` method when you no longer need the signal.</Warning>
+```dart
+counter.dispose();
+```

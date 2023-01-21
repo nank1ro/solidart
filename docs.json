@@ -1,0 +1,54 @@
+{
+  "name": "solidart",
+  "logo": "https://static.invertase.io/assets/docs.page/docs-page-logo.png",
+  "theme": "#36B9B9",
+  "twitter": "nank1ro",
+  "anchors": [
+    {
+      "title": "pub.dev solidart",
+      "icon": "cube",
+      "link": "https://pub.dev/packages/solidart"
+    },
+    {
+      "title": "pub.dev flutter_solidart",
+      "icon": "cube",
+      "link": "https://pub.dev/packages/flutter_solidart"
+    }
+  ],
+  "sidebar": [
+    [
+      "Getting Started",
+      [
+        ["Overview", "/"],
+        ["Getting Started", "/getting-started"]
+      ]
+    ],
+    [
+      "Learning",
+      [
+        ["Signals", "/learning/signals"],
+        ["Effects", "/learning/effects"],
+        ["Resources", "/learning/resources"],
+        ["Derived Signals", "/learning/derived-signals"]
+      ]
+    ],
+    [
+      "Flutter",
+      [
+        ["Show", "/flutter/show"],
+        ["SignalBuilder", "/flutter/signal-builder"],
+        ["ResourceBuilder", "/flutter/resource-builder"],
+        ["Solid", "/flutter/solid"]
+      ]
+    ],
+    [
+      "Examples",
+      [
+        ["General", "/examples/general"],
+        ["Counter", "/examples/counter"],
+        ["Todos", "/examples/todos"],
+        ["Toggle theme", "/examples/toggle-theme"]
+      ]
+    ]
+  ]
+}

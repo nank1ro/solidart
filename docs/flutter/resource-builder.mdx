@@ -1,3 +1,15 @@
+---
+title: Resource Builder
+description: Learn how to use the ResourceBuilder widget
+---
+
+# ResourceBuilder
+
+The `ResourceBuilder` widget makes the consumption of a `Resource` extremely simple.
+It takes a `resource` and a `builder` fired any time the resource state changes.
+
+Let's see it in action:
+```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:http/http.dart' as http;
@@ -10,24 +22,28 @@ class ResourcePage extends StatefulWidget {
 }
 
 class _ResourcePageState extends State<ResourcePage> {
+  // source
   final userId = createSignal(1);
+  // resource
   late final Resource<int, String> user;
 
   @override
   void initState() {
     super.initState();
+    // creating the resource
     user = createResource(fetcher: fetchUser, source: userId);
   }
 
   @override
   void dispose() {
-    user.dispose();
+    // disposing the source and resource
     userId.dispose();
+    user.dispose();
     super.dispose();
   }
 
+  // fetcher
   Future<String> fetchUser() async {
-    // ignore: avoid_print
     print('Fetch user: ${userId.value}');
     final response = await http.get(
       Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
@@ -92,3 +108,4 @@ class _ResourcePageState extends State<ResourcePage> {
     );
   }
 }
+```

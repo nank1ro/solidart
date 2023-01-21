@@ -17,13 +17,13 @@ Effect<T> createEffect<T>(
   void Function() callback, {
   required List<SignalBase<T>> signals,
 
-  /// whether to fire immediatly the callback, defaults to false.
-  bool fireImmediatly = false,
+  /// whether to fire immediately the callback, defaults to false.
+  bool fireImmediately = false,
 }) {
   return Effect(
     signals: signals,
     callback: callback,
-    fireImmediatly: fireImmediatly,
+    fireImmediately: fireImmediately,
   );
 }
 
@@ -48,12 +48,12 @@ class Effect<T> {
   Effect({
     required this.signals,
     required this.callback,
-    this.fireImmediatly = false,
+    this.fireImmediately = false,
   }) : assert(signals.isNotEmpty, 'You should provide at least one signal') {
     _run();
 
-    // fire immediatly the listener.
-    if (fireImmediatly) _listener();
+    // fire immediately the listener.
+    if (fireImmediately) _listener();
   }
 
   /// The list of signals the effect is going to subscribe.
@@ -62,8 +62,8 @@ class Effect<T> {
   /// The callback that is fired each time a signal updates.
   final VoidCallback callback;
 
-  /// Whether to fire immediatly the [callback], defaults to false.
-  final bool fireImmediatly;
+  /// Whether to fire immediately the [callback], defaults to false.
+  final bool fireImmediately;
 
   /// The current state of the effect.
   late EffectState state;

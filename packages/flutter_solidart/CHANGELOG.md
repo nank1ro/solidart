@@ -1,3 +1,8 @@
+## 0.1.4
+
+- Add official documentation link
+- Fix typo in fireImmediately argument name
+
 ## 0.1.3
 
 - Now `Solid.value` takes a list of [signalIds] and a [BuildContext]. You don't need anymore to get the signal first and pass it to `Solid.value`.

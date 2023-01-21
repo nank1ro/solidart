@@ -1,0 +1,89 @@
+---
+title: Resources
+description: Introduction to Resources
+---
+
+# Resources
+
+`Resources` are special `Signal`s designed specifically to handle Async loading. Their purpose is wrap async values in a way that makes them easy to interact with handling the common states of a future __data__, __error__ and __loading__.
+
+Resources can be driven by a `source` signal that provides the query to an async data `fetcher` function that returns a `Future`.
+
+The contents of the `fetcher` function can be anything. You can hit typical REST endpoints or GraphQL or anything that generates a future. Resources are not opinionated on the means of loading the data, only that they are driven by futures.
+
+Let's create a Resource:
+
+```dart
+// Using http as a client
+import 'package:http/http.dart' as http;
+
+// The source
+final userId = createSignal(1);
+
+// The fetcher
+Future<String> fetchUser() async {
+    final response = await http.get(
+      Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
+    );
+    return response.body;
+}
+
+// The resource (source is optional)
+final user = createResource(fetcher: fetchUser, source: userId);
+```
+
+Using `ResourceBuilder` (`flutter_solidart` only) you can react to the state of the resource:
+
+```dart
+ResourceBuilder(
+  resource: user,
+  builder: (_, userValue) {
+    return userValue.on(
+      // the call was successful
+      ready: (data, refreshing) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(data),
+              subtitle: Text('refreshing: $refreshing'),
+            ),
+            ElevatedButton(
+              // you can refetch if you want to update the data
+              onPressed: user.refetch,
+              child: const Text('Refresh'),
+            ),
+          ],
+        );
+      },
+      // the call failed.
+      error: (e, _) => Text(e.toString()),
+      // the call is loading.
+      loading: () {
+        return const RepaintBoundary(
+          child: CircularProgressIndicator(),
+        );
+      },
+    );
+  },
+)
+```
+
+The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
+The are also other convenience methods to handle only specific states:
+- `on` forces you to handle all the states of a Resource
+- `maybeOn` lets you decide which states to handle and provide an `orElse` action for unhandled states
+- `map` equal to `on` but gives access to the `ResourceValue` data class
+- `maybeMap` equal to `maybeMap` but gives access to the `ResourceValue` data class
+- `isReady` indicates if the `Resource` is in the ready state
+- `isLoading` indicates if the `Resource` is in the loading state
+- `hasError` indicates if the `Resource` is in the error state
+- `asReady` upcast `ResourceValue` into a `ResourceReady`, or return null if the `ResourceValue` is in loading/error state
+- `asError` upcast `ResourceValue` into a `ResourceError`, or return null if the `ResourceValue` is in loading/ready state
+- `value` attempts to synchronously get the value of `ResourceReady`
+- `error` attempts to synchronously get the error of `ResourceError`
+
+A `Resource` provides the `fetch` and `refetch` methods.
+<Warning>You should not call `fetch()` if you're using SignalBuilder, because it's already performed by it</Warning>
+
+The `refetch` method forces an update and calls the `fetcher` function again.

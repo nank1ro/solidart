@@ -1,0 +1,145 @@
+---
+title: Toogle theme example
+description: Toogle theme example using flutter_solidart
+---
+
+# Toogle theme example
+
+A simple __toggle-theme__ feature built using `flutter_solidart`
+
+<Zapp id="toggle-theme-or-fluttersolidart-zy1o06bdy1p0" />
+
+This simple example uses a powerful feature of `flutter_solidart`, the `Solid` widget.
+The `Solid` widget is used to provide `signals` to descendants without passing them as parameters.
+
+<Warning>You are discouraged in passing signals as parameters, even inside modals you may use Solid.value</Warning>
+
+First of all let's use the default `light` and `dark` themes by adding them to our `MaterialApp`:
+```dart
+MaterialApp(
+  theme: ThemeData.light(),
+  darkTheme: ThemeData.dark(),
+)
+```
+
+`themeMode` is an `Enum` used by the `MaterialApp` to choose which theme to use: `[light, dark, system]`.
+
+To update the theme mode we've to rebuild our `MaterialApp`.
+
+Let's wrap the MaterialApp with a `Solid` widget:
+```dart
+Solid(
+  child: MaterialApp(
+    theme: ThemeData.light(),
+    darkTheme: ThemeData.dark(),
+  ),
+)
+```
+
+`Solid` takes a `signals` map, let's create our `themeMode` signal:
+```dart
+Solid(
+  signals: {
+    SignalId.themeMode: () => createSignal<ThemeMode>(ThemeMode.light),
+  },
+  child: MaterialApp(
+    theme: ThemeData.light(),
+    darkTheme: ThemeData.dark(),
+  ),
+)
+```
+
+The key of the `Map` is the signal identifier, here we've used an `Enum` but you may use a `String`, and `int` or whatever you want.
+```dart
+/// The identifiers used for [Solid] signals.
+enum SignalId {
+  themeMode,
+}
+```
+
+<Warning>Don't forget to define the signal value type to `createSignal` otherwise you may encounter unexpected errors</Warning>
+
+Now we've provided the `themeMode` signal to descendants, but we've to observe the `themeMode` signal in order to rebuilt the `MaterialApp`.
+Since we need a `BuildContext` that is a descendant of `Solid` we wrap the `MaterialApp` inside a `Builder`.
+
+```dart
+Builder(
+  builder: (context) {
+    return MaterialApp(
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+    );
+  }
+)
+```
+
+Now using the `context.observe` method we effectively listen to the `themeMode` signal:
+```dart
+Builder(
+  builder: (context) {
+    final themeMode = context.observe<ThemeMode>(SignalId.themeMode);
+
+    return MaterialApp(
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+      themeMode: themeMode,
+    );
+  }
+)
+```
+
+Provide the exact type of the signal value also to the `observe()` method. 
+
+This little line of code will subscribe the `context` we've used to the `signal` and will rebuild every time the `themeMode` signal changes.
+Finally pass the `themeMode` value to the `MaterialApp`.
+
+In this example we've a page called `MyHomePage` that displays a simple `IconButton` that toggles the theme mode.
+
+The page retrieves the `themeMode` signal using the `context.get()` method:
+```dart
+ @override
+  Widget build(BuildContext context) {
+  final themeMode = context.get<Signal<ThemeMode>>(SignalId.themeMode);
+  ...
+}
+```
+
+<Info>Note that the type passed to the get method contains also the signal type, it can be `Signal` or `ReadableSignal` if you need to access a __read-only__ signal</Info>
+
+The `get` method obtains the signal for the given identifier without listening to it. You may use this method inside the `initState()`, `build()` methods and inside callbacks like `onTap` or `onPressed`. 
+
+To react to the signal we've used a `SignalBuilder`:
+```dart
+SignalBuilder(
+  signal: themeMode,
+  builder: (_, mode, __) {
+    return IconButton(
+      icon: Icon(
+        mode == ThemeMode.light ? Icons.dark_mode : Icons.light_mode,
+      ),
+    );
+  },
+)
+```
+
+and to update our `themeMode` signal we just update the signal value inside the `onPressed` callback:
+```dart
+SignalBuilder(
+  signal: themeMode,
+  builder: (_, mode, __) {
+    return IconButton(
+      onPressed: () {
+        // toggle the theme mode
+        if (mode == ThemeMode.light) {
+          themeMode.value = ThemeMode.dark;
+        } else {
+          themeMode.value = ThemeMode.light;
+        }
+      },
+      icon: Icon(
+        mode == ThemeMode.light ? Icons.dark_mode : Icons.light_mode,
+      ),
+    );
+  },
+)
+```
