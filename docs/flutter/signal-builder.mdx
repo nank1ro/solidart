@@ -25,7 +25,7 @@ void dispose() {
 Widget build(BuildContext context) {
   return SignalBuilder(
         signal: counter,
-        builder: (_, value, __) {
+        builder: (context, value, child) {
           return Text('$value');
         },
     );
