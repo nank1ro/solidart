@@ -15,6 +15,8 @@ The objectives of this project are:
 
 ## Learning
 
+For an comprehensive documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart)
+
 There are 4 main concepts you should be aware:
 
 1. [Signals](#signals)
@@ -246,11 +248,6 @@ And finally at `[6]` we update the signal value.
 
 1. `createSignal<ThemeMode>` and `context.observe<ThemeMode>` where ThemeMode is the type of the signal value.
 2. `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
-
-## To-do list:
-
-1. Add more unit tests
-2. Create docs page
 
 ## Examples
 
