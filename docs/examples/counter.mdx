@@ -5,4 +5,43 @@ description: Counter example using flutter_solidart
 
 # Counter example
 
+A very simple example with a counter.
+
 <Zapp id="counter-or-fluttersolidart-zz1m06lvz1n0" />
+
+In this example we've used a `StatefulWidget` because we must not forget to `dispose()` the created signal.
+We've used `counter` as our signal name:
+```dart
+final counter = createSignal(0);
+```
+
+Starting it from `0`.
+
+In the `override` method we dispose the signal:
+```dart
+@override
+void dispose() {
+  counter.dispose();
+  super.dispose();
+}
+```
+
+To display the `counter` value we've used a `SignalBuilder` that rebuild any time the `counter` value changes:
+```dart
+SignalBuilder(
+  signal: counter,
+  builder: (_, value, __) {
+    return Text('$value');
+  },
+)
+```
+
+And finally to update our `counter` value we've used a `FloatingActionButton`:
+```dart
+FloatingActionButton(
+  onPressed: () {
+    counter.value++;
+  },
+  child: const Icon(Icons.add),
+)
+```
