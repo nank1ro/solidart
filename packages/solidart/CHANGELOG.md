@@ -1,3 +1,8 @@
+## 0.1.2
+
+- Add official documentation link
+- Fix typo in fireImmediately argument name
+
 ## 0.1.1
 
 - Set the minimum Dart SDK version to `2.18`.
