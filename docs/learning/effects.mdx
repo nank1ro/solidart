@@ -37,7 +37,7 @@ final effect = createEffect(() {
 print(effect.isRunning); // prints true
 
 // pause effect
-effect.cancel();
+effect.pause();
 
 print(effect.isPaused); // prints true
 
