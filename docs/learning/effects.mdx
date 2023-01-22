@@ -13,7 +13,7 @@ The effect subscribes to any signal provided in the signals array and reruns whe
 So let's create an `Effect` that reruns whenever `counter` changes:
 ```dart
 // sample signal
-final counter = createCounter(0);
+final counter = createSignal(0);
 
 // effect creation
 createEffect(() {
@@ -52,7 +52,7 @@ effect.cancel();
 print(effect.isCancelled); // prints true
 ```
 
-The `fireImmediately` flag indicates if the effect sould run immediately with the current `signals` values, defaults to false.
+The `fireImmediately` flag indicates if the effect should run immediately with the current `signals` values, defaults to false.
 
 You may want to `pause`, `resume` or `cancel` an effect.
 
