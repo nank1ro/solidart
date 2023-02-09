@@ -80,7 +80,7 @@ class _DualSignalBuilderPageState extends State<DualSignalBuilderPage> {
                 'Even when only one signal updates, the whole builder is called again. '
                 'Prefer using the DualSignalBuilder over nesting two [SignalBuilder]s in a single build method.\n\n'
                 'See also TripleSignalBuilder for reacting to three signals at once.',
-                style: textTheme.subtitle1!.copyWith(color: Colors.blueGrey),
+                style: textTheme.titleMedium!.copyWith(color: Colors.blueGrey),
               ),
             )
           ],
