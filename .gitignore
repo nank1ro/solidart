@@ -37,3 +37,5 @@ android
 
 coverage/
 lcov.info
+.fvm
+.vscode/settings.json

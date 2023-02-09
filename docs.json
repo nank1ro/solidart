@@ -50,5 +50,10 @@
         ["Toggle theme", "/examples/toggle-theme"]
       ]
     ]
-  ]
+  ],
+  "docsearch": {
+    "apiKey": "aff9ce4492cfe9f77d97b59550554655",
+    "appId": "QVU7X32B27",
+    "indexName": "page"
+  }
 }
