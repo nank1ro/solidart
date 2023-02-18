@@ -16,7 +16,7 @@ Signal<T> createSignal<T>(
 class Signal<T> extends ReadableSignal<T> {
   Signal(
     super.initialValue, {
-    required super.options,
+    super.options,
   }) : _value = initialValue;
 
   T _value;

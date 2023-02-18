@@ -2,31 +2,128 @@ import 'package:meta/meta.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_base.dart';
 
-/// Creates a resource that wraps a repeated promise in a reactive pattern:
-Resource<T, R> createResource<T, R>({
-  Signal<T>? source,
-  required Future<R> Function() fetcher,
+/// `Resources` are special `Signal`s designed specifically to handle Async loading. Their purpose is wrap async values in a way that makes them easy to interact with handling the common states of a future __data__, __error__ and __loading__.
+///
+/// Resources can be driven by a `source` signal that provides the query to an async data `fetcher` function that returns a `Future`.
+///
+/// The contents of the `fetcher` function can be anything. You can hit typical REST endpoints or GraphQL or anything that generates a future. Resources are not opinionated on the means of loading the data, only that they are driven by futures.
+///
+/// Let's create a Resource:
+///
+/// ```dart
+/// // Using http as a client
+/// import 'package:http/http.dart' as http;
+///
+/// // The source
+/// final userId = createSignal(1);
+///
+/// // The fetcher
+/// Future<String> fetchUser() async {
+///     final response = await http.get(
+///       Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
+///     );
+///     return response.body;
+/// }
+///
+/// // The resource (source is optional)
+/// final user = createResource(fetcher: fetchUser, source: userId);
+/// ```
+///
+/// If you are using the `flutter_solidart` library, check [ResourceBuilder] to learn how to react to the state of the resource in the UI.
+///
+/// The resource has a value named `ResourceValue`, that provides many useful convenience method to correctly handle the state of the resource.
+///
+/// The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
+/// The are also other convenience methods to handle only specific states:
+/// - `on` forces you to handle all the states of a Resource
+/// - `maybeOn` lets you decide which states to handle and provide an `orElse` action for unhandled states
+/// - `map` equal to `on` but gives access to the `ResourceValue` data class
+/// - `maybeMap` equal to `maybeMap` but gives access to the `ResourceValue` data class
+/// - `isReady` indicates if the `Resource` is in the ready state
+/// - `isLoading` indicates if the `Resource` is in the loading state
+/// - `hasError` indicates if the `Resource` is in the error state
+/// - `asReady` upcast `ResourceValue` into a `ResourceReady`, or return null if the `ResourceValue` is in loading/error state
+/// - `asError` upcast `ResourceValue` into a `ResourceError`, or return null if the `ResourceValue` is in loading/ready state
+/// - `value` attempts to synchronously get the value of `ResourceReady`
+/// - `error` attempts to synchronously get the error of `ResourceError`
+///
+/// A `Resource` provides the `fetch` and `refetch` methods.
+///
+/// The `refetch` method forces an update and calls the `fetcher` function again.
+Resource<FetcherValueType, SignalValueType>
+    createResource<FetcherValueType, SignalValueType>({
+  required Future<FetcherValueType> Function() fetcher,
+  Signal<SignalValueType>? source,
 }) {
-  return Resource<T, R>(
+  return Resource<FetcherValueType, SignalValueType>(
     source: source,
     fetcher: fetcher,
   );
 }
 
-class Resource<T, R> extends Signal<ResourceValue<R>> {
+/// `Resources` are special `Signal`s designed specifically to handle Async loading. Their purpose is wrap async values in a way that makes them easy to interact with handling the common states of a future __data__, __error__ and __loading__.
+///
+/// Resources can be driven by a `source` signal that provides the query to an async data `fetcher` function that returns a `Future`.
+///
+/// The contents of the `fetcher` function can be anything. You can hit typical REST endpoints or GraphQL or anything that generates a future. Resources are not opinionated on the means of loading the data, only that they are driven by futures.
+///
+/// Let's create a Resource:
+///
+/// ```dart
+/// // Using http as a client
+/// import 'package:http/http.dart' as http;
+///
+/// // The source
+/// final userId = createSignal(1);
+///
+/// // The fetcher
+/// Future<String> fetchUser() async {
+///     final response = await http.get(
+///       Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
+///     );
+///     return response.body;
+/// }
+///
+/// // The resource (source is optional)
+/// final user = createResource(fetcher: fetchUser, source: userId);
+/// ```
+///
+/// If you are using the `flutter_solidart` library, check [ResourceBuilder] to learn how to react to the state of the resource in the UI.
+///
+/// The resource has a value named `ResourceValue`, that provides many useful convenience method to correctly handle the state of the resource.
+///
+/// The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
+/// The are also other convenience methods to handle only specific states:
+/// - `on` forces you to handle all the states of a Resource
+/// - `maybeOn` lets you decide which states to handle and provide an `orElse` action for unhandled states
+/// - `map` equal to `on` but gives access to the `ResourceValue` data class
+/// - `maybeMap` equal to `maybeMap` but gives access to the `ResourceValue` data class
+/// - `isReady` indicates if the `Resource` is in the ready state
+/// - `isLoading` indicates if the `Resource` is in the loading state
+/// - `hasError` indicates if the `Resource` is in the error state
+/// - `asReady` upcast `ResourceValue` into a `ResourceReady`, or return null if the `ResourceValue` is in loading/error state
+/// - `asError` upcast `ResourceValue` into a `ResourceError`, or return null if the `ResourceValue` is in loading/ready state
+/// - `value` attempts to synchronously get the value of `ResourceReady`
+/// - `error` attempts to synchronously get the error of `ResourceError`
+///
+/// A `Resource` provides the `fetch` and `refetch` methods.
+///
+/// The `refetch` method forces an update and calls the `fetcher` function again.
+class Resource<FetcherValueType, SignalValueType>
+    extends Signal<ResourceValue<FetcherValueType>> {
   Resource({
     this.source,
     required this.fetcher,
     super.options,
-  }) : super(ResourceValue<R>.unresolved()) {
+  }) : super(ResourceValue<FetcherValueType>.unresolved()) {
     _initialize();
   }
 
   /// Reactive signal values passed to the fetcher, optional
-  final SignalBase<T>? source;
+  final SignalBase<SignalValueType>? source;
 
   // The asynchrounous function used to retrieve data.
-  final Future<R> Function() fetcher;
+  final Future<FetcherValueType> Function() fetcher;
 
   // React to the [source], if provided.
   void _initialize() {
@@ -55,7 +152,8 @@ class Resource<T, R> extends Signal<ResourceValue<R>> {
     try {
       if (value is ResourceReady) {
         update(
-          (value) => (value as ResourceReady<R>).copyWith(refreshing: true),
+          (value) => (value as ResourceReady<FetcherValueType>)
+              .copyWith(refreshing: true),
         );
       } else {
         value = const ResourceValue.loading();

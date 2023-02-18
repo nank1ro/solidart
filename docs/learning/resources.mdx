@@ -32,42 +32,9 @@ Future<String> fetchUser() async {
 final user = createResource(fetcher: fetchUser, source: userId);
 ```
 
-Using `ResourceBuilder` (`flutter_solidart` only) you can react to the state of the resource:
+If you are using the `flutter_solidart` library, check [ResourceBuilder] to learn how to react to the state of the resource in the UI.
 
-```dart
-ResourceBuilder(
-  resource: user,
-  builder: (_, userValue) {
-    return userValue.on(
-      // the call was successful
-      ready: (data, refreshing) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(data),
-              subtitle: Text('refreshing: $refreshing'),
-            ),
-            ElevatedButton(
-              // you can refetch if you want to update the data
-              onPressed: user.refetch,
-              child: const Text('Refresh'),
-            ),
-          ],
-        );
-      },
-      // the call failed.
-      error: (e, _) => Text(e.toString()),
-      // the call is loading.
-      loading: () {
-        return const RepaintBoundary(
-          child: CircularProgressIndicator(),
-        );
-      },
-    );
-  },
-)
-```
+The resource has a value named `ResourceValue`, that provides many useful convenience method to correctly handle the state of the resource.
 
 The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
 The are also other convenience methods to handle only specific states:
@@ -84,6 +51,5 @@ The are also other convenience methods to handle only specific states:
 - `error` attempts to synchronously get the error of `ResourceError`
 
 A `Resource` provides the `fetch` and `refetch` methods.
-<Warning>You should not call `fetch()` if you're using SignalBuilder, because it's already performed by it</Warning>
 
 The `refetch` method forces an update and calls the `fetcher` function again.
