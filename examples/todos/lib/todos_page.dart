@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:provider/provider.dart';
-import 'package:todos/common/constants.dart';
 import 'package:todos/controllers/controller.dart';
 import 'package:todos/models/todo.dart';
 import 'package:todos/widgets/todos_body.dart';

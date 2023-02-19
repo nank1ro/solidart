@@ -8,6 +8,30 @@ import 'package:solidart/solidart.dart';
 /// The [signal] and [builder] arguments must not be null.
 /// The [child] is optional but is good practice to use if part of the widget
 /// subtree does not depend on the value of the [signal].
+/// Example:
+///
+/// ```dart
+/// final counter = createSignal(0);
+///
+/// @override
+/// void dispose() {
+///   counter.dispose();
+/// }
+///
+/// @override
+/// Widget build(BuildContext context) {
+///   return SignalBuilder(
+///         signal: counter,
+///         builder: (context, value, child) {
+///           return Text('$value');
+///         },
+///     );
+/// }
+/// ```
+///
+/// If you need to nest multiple `SignalBuilder`s you may also check:
+/// - `DualSignalBuilder` to react to __2__ signals at once
+/// - `TripleSignalBuilder` to react to __3__ signals at once.
 class SignalBuilder<T> extends StatefulWidget {
   const SignalBuilder({
     super.key,

@@ -1,18 +1,58 @@
 import 'package:solidart/src/core/signal_base.dart';
 import 'package:solidart/src/utils.dart';
 
-/// Creates a reactive computation.
+/// Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
 ///
-/// An _effect_ is an observer; it runs a side effect that depends on signals.
+/// An effect can be created by using `createEffect`.
+/// The effect subscribes to any signal provided in the signals array and reruns when any of them change.
 ///
-/// The effect subscribes to the [signals] provided and reruns when any of them
-/// change.
+/// So let's create an `Effect` that reruns whenever `counter` changes:
+/// ```dart
+/// // sample signal
+/// final counter = createSignal(0);
 ///
-/// The effect will be automatically invalidated when all the [signals] dispose.
-/// But you can manually invalidate an effect using the [Effect.cancel] method.
+/// // effect creation
+/// createEffect(() {
+///     print("The count is now ${counter.value}");
+/// }, signals: [counter]);
 ///
-/// You may also [Effect.pause] and [Effect.resume] an effect if you want to
-/// ignore values for some time.
+/// // increment the counter
+/// counter.value++;
+///
+/// // The effect prints `The count is now 1`;
+/// ```
+///
+/// > The effect automatically cancels when all the `signals` provided dispose
+///
+/// The `createEffect` method returns an `Effect` class giving you a more advanced usage:
+/// ```dart
+/// final effect = createEffect(() {
+///     print("The count is now ${counter.value}");
+/// }, signals: [counter], fireImmediately: true);
+///
+/// print(effect.isRunning); // prints true
+///
+/// // pause effect
+/// effect.pause();
+///
+/// print(effect.isPaused); // prints true
+///
+/// // resume effect
+/// effect.resume();
+///
+/// print(effect.isResumed); // prints true
+///
+/// // cancel effect
+/// effect.cancel();
+///
+/// print(effect.isCancelled); // prints true
+/// ```
+///
+/// The `fireImmediately` flag indicates if the effect should run immediately with the current `signals` values, defaults to false.
+///
+/// You may want to `pause`, `resume` or `cancel` an effect.
+///
+/// > An effect is useless after it is cancelled, you must not use it anymore.
 Effect<T> createEffect<T>(
   void Function() callback, {
   required List<SignalBase<T>> signals,
@@ -42,8 +82,58 @@ enum EffectState {
   cancelled,
 }
 
-/// A side effect that react to any change of the [signals] provided by calling
-/// [callback] every time.
+/// Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
+///
+/// An effect can be created by using `createEffect`.
+/// The effect subscribes to any signal provided in the signals array and reruns when any of them change.
+///
+/// So let's create an `Effect` that reruns whenever `counter` changes:
+/// ```dart
+/// // sample signal
+/// final counter = createSignal(0);
+///
+/// // effect creation
+/// createEffect(() {
+///     print("The count is now ${counter.value}");
+/// }, signals: [counter]);
+///
+/// // increment the counter
+/// counter.value++;
+///
+/// // The effect prints `The count is now 1`;
+/// ```
+///
+/// > The effect automatically cancels when all the `signals` provided dispose
+///
+/// The `createEffect` method returns an `Effect` class giving you a more advanced usage:
+/// ```dart
+/// final effect = createEffect(() {
+///     print("The count is now ${counter.value}");
+/// }, signals: [counter], fireImmediately: true);
+///
+/// print(effect.isRunning); // prints true
+///
+/// // pause effect
+/// effect.pause();
+///
+/// print(effect.isPaused); // prints true
+///
+/// // resume effect
+/// effect.resume();
+///
+/// print(effect.isResumed); // prints true
+///
+/// // cancel effect
+/// effect.cancel();
+///
+/// print(effect.isCancelled); // prints true
+/// ```
+///
+/// The `fireImmediately` flag indicates if the effect should run immediately with the current `signals` values, defaults to false.
+///
+/// You may want to `pause`, `resume` or `cancel` an effect.
+///
+/// > An effect is useless after it is cancelled, you must not use it anymore.
 class Effect<T> {
   Effect({
     required this.signals,
