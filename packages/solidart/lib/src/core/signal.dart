@@ -88,11 +88,10 @@ import 'package:solidart/src/core/signal_options.dart';
 ///
 /// Every time the `counter` signal changes, the doubleCounter updates with the new doubled `counter` value.
 ///
-/// You can also transform the value type like:
+/// You can also transform the value type into a `bool`:
 /// ```dart
-/// ReadableSignal<bool>
-/// final counter = createSignal(0); // int
-/// final isGreaterThan5 = counter.select((value) => value > 5); // bool
+/// final counter = createSignal(0); // type: int
+/// final isGreaterThan5 = counter.select((value) => value > 5); // type: bool
 /// ```
 ///
 /// `isGreaterThan5` will update only when the `counter` value becomes lower/greater than `5`.
