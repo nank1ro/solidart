@@ -29,7 +29,7 @@ typedef ResourceWidgetBuilder<ResultType> = Widget Function(
 ///   // source
 ///   final userId = createSignal(1);
 ///   // resource
-///   late final Resource<int, String> user;
+///   late final Resource<String> user;
 ///
 ///   @override
 ///   void initState() {
