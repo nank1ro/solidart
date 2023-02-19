@@ -50,12 +50,11 @@ import 'package:solidart/src/core/signal_base.dart';
 /// A `Resource` provides the `fetch` and `refetch` methods.
 ///
 /// The `refetch` method forces an update and calls the `fetcher` function again.
-Resource<FetcherValueType, SignalValueType>
-    createResource<FetcherValueType, SignalValueType>({
-  required Future<FetcherValueType> Function() fetcher,
-  Signal<SignalValueType>? source,
+Resource<ResultType> createResource<ResultType>({
+  required Future<ResultType> Function() fetcher,
+  SignalBase? source,
 }) {
-  return Resource<FetcherValueType, SignalValueType>(
+  return Resource<ResultType>(
     source: source,
     fetcher: fetcher,
   );
@@ -109,21 +108,20 @@ Resource<FetcherValueType, SignalValueType>
 /// A `Resource` provides the `fetch` and `refetch` methods.
 ///
 /// The `refetch` method forces an update and calls the `fetcher` function again.
-class Resource<FetcherValueType, SignalValueType>
-    extends Signal<ResourceValue<FetcherValueType>> {
+class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
   Resource({
     this.source,
     required this.fetcher,
     super.options,
-  }) : super(ResourceValue<FetcherValueType>.unresolved()) {
+  }) : super(ResourceValue<ResultType>.unresolved()) {
     _initialize();
   }
 
   /// Reactive signal values passed to the fetcher, optional
-  final SignalBase<SignalValueType>? source;
+  final SignalBase? source;
 
   // The asynchrounous function used to retrieve data.
-  final Future<FetcherValueType> Function() fetcher;
+  final Future<ResultType> Function() fetcher;
 
   // React to the [source], if provided.
   void _initialize() {
@@ -152,8 +150,8 @@ class Resource<FetcherValueType, SignalValueType>
     try {
       if (value is ResourceReady) {
         update(
-          (value) => (value as ResourceReady<FetcherValueType>)
-              .copyWith(refreshing: true),
+          (value) =>
+              (value as ResourceReady<ResultType>).copyWith(refreshing: true),
         );
       } else {
         value = const ResourceValue.loading();
