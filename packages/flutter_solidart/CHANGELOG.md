@@ -1,3 +1,7 @@
+## 0.2.0+1
+
+- Add documentation link inside the pubspec
+
 ## 0.2.0
 
 - Documentation improvements
