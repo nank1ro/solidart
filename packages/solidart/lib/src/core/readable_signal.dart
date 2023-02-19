@@ -7,6 +7,14 @@ import 'package:solidart/src/core/signal_options.dart';
 import 'package:solidart/src/core/signal_selector.dart';
 import 'package:solidart/src/utils.dart';
 
+/// A read-only [Signal].
+///
+/// When you don't need to expose the setter of a [Signal],
+/// you should consider transforming it in a [ReadableSignal]
+/// using the `readable` method.
+///
+/// All derived-signals are [ReadableSignal]s because they depend
+/// on the value of a [Signal].
 class ReadableSignal<T> implements SignalBase<T> {
   ReadableSignal(
     this._value, {

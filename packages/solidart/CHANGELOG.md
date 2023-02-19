@@ -1,3 +1,18 @@
+## 0.2.0+1
+
+- Add documentation link inside the pubspec
+
+## 0.2.0
+
+- Documentation improvements
+- Refactor Resource, now the `createResource` method takes only 1 generic, the type of the future result.
+  ```dart
+  // before
+  final resource = createResource<SourceValueType, FetcherValueType>(fetcher: fetcher, source: source);
+  // now
+  final resource = createResource<FetcherValueType>(fetcher: fetcher, source: source); // the FetcherValueType can be inferred by Dart >=2.18.0, so you can omit it
+  ```
+
 ## 0.1.2
 
 - Add official documentation link
