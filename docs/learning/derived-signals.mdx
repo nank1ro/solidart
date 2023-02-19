@@ -58,7 +58,8 @@ final doubleCounter = counter.select((value) => value * 2);
 Every time the `counter` signal changes, the doubleCounter updates with the new doubled `counter` value.
 
 You can also transform the value type like:
-```dartReadableSignal<bool>
+```dart
+ReadableSignal<bool>
 final counter = createSignal(0); // int
 final isGreaterThan5 = counter.select((value) => value > 5); // bool
 ```

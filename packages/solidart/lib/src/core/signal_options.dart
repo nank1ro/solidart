@@ -1,6 +1,17 @@
 typedef ValueComparator<T> = bool Function(T a, T b);
 
 /// Signal options which increase its customization
+///
+/// The [equals] field if true performs an equality check `==`
+/// before updating the signal value.
+/// If the current and the new value are equal, no updates occur.
+
+/// The [comparator] field is taken into account only if [equals] is false.
+/// It performs an equality check by calling the custom comparator
+/// you passed in.
+/// If the current and the new value are equal, no updates occur.
+/// The default value of a [comparator] is [identical] that checks
+/// the object references.
 class SignalOptions<T> {
   const SignalOptions({
     this.equals = false,
