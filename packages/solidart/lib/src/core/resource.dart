@@ -31,7 +31,7 @@ import 'package:solidart/src/core/signal_base.dart';
 ///
 /// If you are using the `flutter_solidart` library, check [ResourceBuilder] to learn how to react to the state of the resource in the UI.
 ///
-/// The resource has a value named `ResourceValue`, that provides many useful convenience method to correctly handle the state of the resource.
+/// The resource has a value named `ResourceValue`, that provides many useful convenience methods to correctly handle the state of the resource.
 ///
 /// The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
 /// The are also other convenience methods to handle only specific states:
@@ -89,7 +89,7 @@ Resource<ResultType> createResource<ResultType>({
 ///
 /// If you are using the `flutter_solidart` library, check [ResourceBuilder] to learn how to react to the state of the resource in the UI.
 ///
-/// The resource has a value named `ResourceValue`, that provides many useful convenience method to correctly handle the state of the resource.
+/// The resource has a value named `ResourceValue`, that provides many useful convenience methods to correctly handle the state of the resource.
 ///
 /// The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
 /// The are also other convenience methods to handle only specific states:
