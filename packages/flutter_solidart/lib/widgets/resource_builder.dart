@@ -2,29 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_solidart/widgets/signal_builder.dart';
 import 'package:solidart/solidart.dart';
 
-typedef ResourceWidgetBuilder<FetcherValueType> = Widget Function(
+typedef ResourceWidgetBuilder<ResultType> = Widget Function(
   BuildContext context,
-  ResourceValue<FetcherValueType> resource,
+  ResourceValue<ResultType> resource,
 );
 
-class ResourceBuilder<FetcherValueType, SignalValueType>
-    extends StatefulWidget {
+class ResourceBuilder<ResultType> extends StatefulWidget {
   const ResourceBuilder({
     super.key,
     required this.resource,
     required this.builder,
   });
 
-  final Resource<FetcherValueType, SignalValueType> resource;
-  final ResourceWidgetBuilder<FetcherValueType> builder;
+  final Resource<ResultType> resource;
+  final ResourceWidgetBuilder<ResultType> builder;
 
   @override
-  State<ResourceBuilder<FetcherValueType, SignalValueType>> createState() =>
-      _ResourceBuilderState<FetcherValueType, SignalValueType>();
+  State<ResourceBuilder<ResultType>> createState() =>
+      _ResourceBuilderState<ResultType>();
 }
 
-class _ResourceBuilderState<FetcherValueType, SignalValueType>
-    extends State<ResourceBuilder<FetcherValueType, SignalValueType>> {
+class _ResourceBuilderState<ResultType>
+    extends State<ResourceBuilder<ResultType>> {
   @override
   void initState() {
     super.initState();
@@ -33,7 +32,7 @@ class _ResourceBuilderState<FetcherValueType, SignalValueType>
 
   @override
   Widget build(BuildContext context) {
-    return SignalBuilder<ResourceValue<FetcherValueType>>(
+    return SignalBuilder<ResourceValue<ResultType>>(
       signal: widget.resource,
       builder: (context, value, __) {
         return widget.builder(context, value);
