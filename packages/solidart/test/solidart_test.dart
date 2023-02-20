@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:mockito/mockito.dart';
 import 'package:solidart/src/core/effect.dart';
 import 'package:solidart/src/core/readable_signal.dart';
+import 'package:solidart/src/core/resource.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_options.dart';
 import 'package:test/test.dart';
@@ -265,6 +268,25 @@ void main() {
       final s = ReadableSignal(0);
       expect(s.toString(),
           "ReadableSignal<int>(value: 0, previousValue: null, options; SignalOptions<int>(equals: false, comparator: PRESENT))");
+    });
+  });
+
+  group('Resource tests', () {
+    test('check createResource with stream', () async {
+      final streamController = StreamController<int>();
+      addTearDown(() => streamController.close());
+
+      final resource = createResource(stream: streamController.stream);
+      expect(resource.value, isA<ResourceLoading<int>>());
+      streamController.add(1);
+      await pumpEventQueue();
+      expect(resource.value, isA<ResourceReady<int>>());
+      expect(resource.value.value, 1);
+
+      streamController.add(10);
+      await pumpEventQueue();
+      expect(resource.value, isA<ResourceReady<int>>());
+      expect(resource.value(), 10);
     });
   });
 }
