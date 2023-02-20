@@ -428,9 +428,7 @@ extension ResourceExtensions<T> on ResourceValue<T> {
   ///
   /// On error, this will rethrow the error.
   /// If loading, will return `null`.
-  T? call() {
-    return value;
-  }
+  T? call() => value;
 
   /// Attempts to synchronously get the error of [ResourceError].
   ///
