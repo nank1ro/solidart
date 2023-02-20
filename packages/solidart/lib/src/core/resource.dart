@@ -125,7 +125,7 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
   })  : assert((fetcher != null) ^ (stream != null),
             "Provide a fetcher or a stream"),
         super(
-          // if the you are using a Future, the value starts as unresolved
+          // if you are using a Future, the value starts as unresolved
           // otherwise consider the Stream starting with loading because without any value
           fetcher != null
               ? ResourceValue<ResultType>.unresolved()
