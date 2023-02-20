@@ -1,6 +1,6 @@
 name: solidart
 description: A simple State Management solution for Dart applications inspired by SolidJS
-version: 0.2.0+1
+version: 0.2.1
 repository: https://github.com/nank1ro/solidart
 documentation: https://docs.page/nank1ro/solidart
 
