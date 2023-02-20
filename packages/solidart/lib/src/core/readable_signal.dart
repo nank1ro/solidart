@@ -30,6 +30,9 @@ class ReadableSignal<T> implements SignalBase<T> {
   T get value => _value;
 
   @override
+  T call() => value;
+
+  @override
   T? get previousValue => _previousValue;
 
   @override

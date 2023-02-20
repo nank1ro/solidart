@@ -8,6 +8,9 @@ abstract class SignalBase<T> extends Listenable {
   /// The current signal value
   T get value;
 
+  /// The current signal value
+  T call();
+
   /// The previous signal value
   ///
   /// Defaults to null when no previous value is present.
