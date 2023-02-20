@@ -1,3 +1,7 @@
+# 0.2.1
+
+- Get a signal value with `signalName()`.
+
 ## 0.2.0+1
 
 - Add documentation link inside the pubspec

@@ -41,7 +41,7 @@ void main() {
 
       counter.value = counter.value + 1;
       await pumpEventQueue();
-      expect(counter.value, 1);
+      expect(counter(), 1);
       counter
         ..value = 2
         ..value = 2
@@ -50,7 +50,7 @@ void main() {
       await pumpEventQueue();
       counter.value = 3;
 
-      expect(counter.value, 3);
+      expect(counter(), 3);
       await pumpEventQueue();
       verify(cb()).called(3);
       // clear
