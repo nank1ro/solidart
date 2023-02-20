@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:meta/meta.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_base.dart';
@@ -29,6 +31,10 @@ import 'package:solidart/src/core/signal_base.dart';
 /// final user = createResource(fetcher: fetchUser, source: userId);
 /// ```
 ///
+/// A Resource can also be driven from a [stream] instead of a Future.
+/// In this case you just need to pass the `stream` field to the `createResource` method.
+/// The [source] field is ignored for the [stream] and used only for a [fetcher].
+///
 /// If you are using the `flutter_solidart` library, check [ResourceBuilder] to learn how to react to the state of the resource in the UI.
 ///
 /// The resource has a value named `ResourceValue`, that provides many useful convenience methods to correctly handle the state of the resource.
@@ -51,12 +57,14 @@ import 'package:solidart/src/core/signal_base.dart';
 ///
 /// The `refetch` method forces an update and calls the `fetcher` function again.
 Resource<ResultType> createResource<ResultType>({
-  required Future<ResultType> Function() fetcher,
+  Future<ResultType> Function()? fetcher,
+  Stream<ResultType>? stream,
   SignalBase? source,
 }) {
   return Resource<ResultType>(
-    source: source,
     fetcher: fetcher,
+    source: source,
+    stream: stream,
   );
 }
 
@@ -110,24 +118,46 @@ Resource<ResultType> createResource<ResultType>({
 /// The `refetch` method forces an update and calls the `fetcher` function again.
 class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
   Resource({
+    this.fetcher,
+    this.stream,
     this.source,
-    required this.fetcher,
     super.options,
-  }) : super(ResourceValue<ResultType>.unresolved()) {
+  })  : assert((fetcher != null) ^ (stream != null),
+            "Provide a fetcher or a stream"),
+        super(
+          // if the you are using a Future, the value starts as unresolved
+          // otherwise consider the Stream starting with loading because without any value
+          fetcher != null
+              ? ResourceValue<ResultType>.unresolved()
+              : ResourceValue<ResultType>.loading(),
+        ) {
     _initialize();
   }
 
   /// Reactive signal values passed to the fetcher, optional
+  /// Has no effect on a [stream].
   final SignalBase? source;
 
   // The asynchrounous function used to retrieve data.
-  final Future<ResultType> Function() fetcher;
+  final Future<ResultType> Function()? fetcher;
 
-  // React to the [source], if provided.
+  // The stream used to retrieve data.
+  final Stream<ResultType>? stream;
+  StreamSubscription<ResultType>? _streamSubscription;
+
   void _initialize() {
-    if (source != null) {
+    // React to the [source], if provided.
+    if (fetcher != null && source != null) {
       source!.addListener(fetch);
       source!.onDispose(() => source!.removeListener(fetch));
+    }
+    // React the the [stream], if provided
+    if (stream != null) {
+      _streamSubscription = stream!.listen((data) {
+        value = ResourceValue.ready(data);
+      }, onError: (error, stackTrace) {
+        value = ResourceValue.error(error, stackTrace: stackTrace);
+      });
     }
   }
 
@@ -136,9 +166,10 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
   /// You may not use this method directly on Flutter apps because the operation is already
   /// performed by [ResourceBuilder].
   Future<void> fetch() async {
+    assert(fetcher != null, "You are trying to fetch, but fetcher is null");
     try {
       value = const ResourceValue.loading();
-      final result = await fetcher();
+      final result = await fetcher!();
       value = ResourceValue.ready(result);
     } catch (e, s) {
       value = ResourceValue.error(e, stackTrace: s);
@@ -147,6 +178,7 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
 
   /// Force a refresh of the [fetcher].
   Future<void> refetch() async {
+    assert(fetcher != null, "You are trying to refetch, but fetcher is null");
     try {
       if (value is ResourceReady) {
         update(
@@ -156,11 +188,17 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
       } else {
         value = const ResourceValue.loading();
       }
-      final result = await fetcher();
+      final result = await fetcher!();
       value = ResourceValue.ready(result);
     } catch (e, s) {
       value = ResourceValue.error(e, stackTrace: s);
     }
+  }
+
+  @override
+  void dispose() {
+    _streamSubscription?.cancel();
+    super.dispose();
   }
 }
 
@@ -384,6 +422,14 @@ extension ResourceExtensions<T> on ResourceValue<T> {
       error: (r) => throw r.error,
       loading: (_) => null,
     );
+  }
+
+  /// Attempts to synchronously get the value of [ResourceReady].
+  ///
+  /// On error, this will rethrow the error.
+  /// If loading, will return `null`.
+  T? call() {
+    return value;
   }
 
   /// Attempts to synchronously get the error of [ResourceError].

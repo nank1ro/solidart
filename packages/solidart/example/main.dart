@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:solidart/solidart.dart';
 
 Future<void> main() async {
