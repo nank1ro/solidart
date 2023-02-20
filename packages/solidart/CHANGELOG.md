@@ -1,4 +1,4 @@
-# 0.2.1
+## 0.2.1
 
 - Get a signal value with `signalName()`.
 
