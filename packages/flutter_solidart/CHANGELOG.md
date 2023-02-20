@@ -1,3 +1,7 @@
+## 0.2.2
+
+- `createResource` now accepts a `stream` and can be used to wrap a Stream and correctly handle its state.
+
 ## 0.2.1
 
 - Get a signal value with `signalName()`.
