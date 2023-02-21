@@ -305,7 +305,6 @@ void main() {
       streamController.addError(UnimplementedError());
       await pumpEventQueue();
       expect(resource.value, isA<ResourceError<int>>());
-      print(resource.value.error);
       expect(resource.value.error, isUnimplementedError);
     });
 
@@ -313,10 +312,10 @@ void main() {
       final userId = createSignal(0);
 
       Future<User> getUser() {
+        if (userId.value == 2) throw Exception();
         return Future.value(User(id: userId.value));
       }
 
-      when(getUser()).thenAnswer((_) => Future.value(User(id: userId.value)));
       final resource = createResource(fetcher: getUser, source: userId);
 
       await resource.fetch();
@@ -329,11 +328,10 @@ void main() {
       expect(resource.value, isA<ResourceReady<User>>());
       expect(resource.value(), User(id: 1));
 
-      when(getUser()).thenThrow(UnimplementedError());
       userId.value = 2;
       await pumpEventQueue();
       expect(resource.value, isA<ResourceError<User>>());
-      expect(resource.value.error, isUnimplementedError);
+      expect(resource.value.error, isException);
     });
   });
 }
