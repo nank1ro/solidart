@@ -31,6 +31,20 @@ class _C {
   final int count;
 }
 
+class User {
+  final int id;
+
+  User({required this.id});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is User && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => runtimeType.hashCode ^ id.hashCode;
+}
+
 void main() {
   group('createSignal tests - ', () {
     test('with equals true it notifies only when the value changes', () async {
@@ -287,6 +301,108 @@ void main() {
       await pumpEventQueue();
       expect(resource.value, isA<ResourceReady<int>>());
       expect(resource.value(), 10);
+
+      streamController.addError(UnimplementedError());
+      await pumpEventQueue();
+      expect(resource.value, isA<ResourceError<int>>());
+      expect(resource.value.error, isUnimplementedError);
+    });
+
+    test('check createResource with future', () async {
+      final userId = createSignal(0);
+
+      Future<User> getUser() {
+        if (userId.value == 2) throw Exception();
+        return Future.value(User(id: userId.value));
+      }
+
+      final resource = createResource(fetcher: getUser, source: userId);
+
+      await resource.fetch();
+      await pumpEventQueue();
+      expect(resource.value, isA<ResourceReady<User>>());
+      expect(resource.value.value, User(id: 0));
+
+      userId.value = 1;
+      await pumpEventQueue();
+      expect(resource.value, isA<ResourceReady<User>>());
+      expect(resource.value(), User(id: 1));
+
+      userId.value = 2;
+      await pumpEventQueue();
+      expect(resource.value, isA<ResourceError<User>>());
+      expect(resource.value.error, isException);
+
+      userId.value = 3;
+      await pumpEventQueue();
+      await resource.refetch();
+      expect(resource.value, isA<ResourceReady<User>>());
+      expect(resource.value.hasError, false);
+      expect(resource.value.asError, isNull);
+      expect(resource.value.isLoading, false);
+      expect(resource.value.asReady, isNotNull);
+      expect(resource.value.isReady, true);
+
+      resource.value.on(
+        ready: (data, refreshing) {},
+        error: (error, stack) {},
+        loading: () {},
+      );
+
+      resource.dispose();
+    });
+
+    test('check ResourceValue.on', () async {
+      bool shouldThrow = false;
+      Future<int> fetcher() {
+        return Future.delayed(const Duration(milliseconds: 150), () {
+          if (shouldThrow) throw Exception();
+          return 0;
+        });
+      }
+
+      var dataCalledTimes = 0;
+      var loadingCalledTimes = 0;
+      var errorCalledTimes = 0;
+      var refreshingTrueTimes = 0;
+      final resource = createResource(fetcher: fetcher);
+
+      createEffect(() {
+        resource.value.on(ready: (data, refreshing) {
+          if (refreshing) {
+            refreshingTrueTimes++;
+          } else {
+            dataCalledTimes++;
+          }
+        }, error: (error, stackTrace) {
+          errorCalledTimes++;
+        }, loading: () {
+          loadingCalledTimes++;
+        });
+      }, signals: [resource]);
+
+      resource.fetch();
+      await Future.delayed(const Duration(milliseconds: 40));
+      expect(loadingCalledTimes, 1);
+      await Future.delayed(const Duration(milliseconds: 150));
+      expect(dataCalledTimes, 1);
+      expect(errorCalledTimes, 0);
+
+      resource.refetch();
+      await Future.delayed(const Duration(milliseconds: 40));
+      expect(refreshingTrueTimes, 1);
+      await Future.delayed(const Duration(milliseconds: 150));
+      expect(dataCalledTimes, 2);
+
+      expect(resource.value, TypeMatcher<ResourceReady<int>>());
+      shouldThrow = true;
+      resource.refetch();
+      await Future.delayed(const Duration(milliseconds: 150));
+      expect(errorCalledTimes, 1);
+
+      resource.refetch();
+      await Future.delayed(const Duration(milliseconds: 150));
+      expect(loadingCalledTimes, 2);
     });
   });
 }

@@ -225,6 +225,8 @@ abstract class ResourceValue<T> {
   // coverage:ignore-start
   const factory ResourceValue.error(Object error, {StackTrace? stackTrace}) =
       ResourceError<T>;
+  // coverage:ignore-end
+
   // private mapper, so thast classes inheriting Resource can specify their own
   // `map` method with different parameters.
   R map<R>({
@@ -246,6 +248,7 @@ class ResourceReady<T> implements ResourceValue<T> {
   /// Indicates if the data is being refreshed, defaults to false.
   final bool refreshing;
 
+  // coverage:ignore-start
   @override
   R map<R>({
     required R Function(ResourceReady<T> ready) ready,
@@ -279,6 +282,7 @@ class ResourceReady<T> implements ResourceValue<T> {
       refreshing: refreshing ?? this.refreshing,
     );
   }
+  // coverage:ignore-end
 }
 
 /// Creates an [ResourceValue] in loading state.
@@ -288,6 +292,7 @@ class ResourceReady<T> implements ResourceValue<T> {
 class ResourceLoading<T> implements ResourceValue<T> {
   const ResourceLoading();
 
+  // coverage:ignore-start
   @override
   R map<R>({
     required R Function(ResourceReady<T> ready) ready,
@@ -309,6 +314,7 @@ class ResourceLoading<T> implements ResourceValue<T> {
 
   @override
   int get hashCode => runtimeType.hashCode;
+  // coverage:ignore-end
 }
 
 /// Creates an [ResourceValue] in error state.
@@ -327,6 +333,7 @@ class ResourceError<T> implements ResourceValue<T> {
   /// The stackTrace of [error], optional.
   final StackTrace? stackTrace;
 
+  // coverage:ignore-start
   @override
   R map<R>({
     required R Function(ResourceReady<T> ready) ready,
@@ -351,6 +358,7 @@ class ResourceError<T> implements ResourceValue<T> {
 
   @override
   int get hashCode => Object.hash(runtimeType, error, stackTrace);
+  // coverage:ignore-end
 }
 
 /// Creates an [ResourceValue] in unresolved state.
@@ -358,6 +366,7 @@ class ResourceError<T> implements ResourceValue<T> {
 class ResourceUnresolved<T> implements ResourceValue<T> {
   const ResourceUnresolved();
 
+  // coverage:ignore-start
   @override
   R map<R>({
     required R Function(ResourceReady<T> ready) ready,
@@ -379,8 +388,10 @@ class ResourceUnresolved<T> implements ResourceValue<T> {
 
   @override
   int get hashCode => runtimeType.hashCode;
+  // coverage:ignore-end
 }
 
+// coverage:ignore-start
 extension ResourceExtensions<T> on ResourceValue<T> {
   /// Indicates if the resoruce is loading.
   bool get isLoading => this is ResourceLoading<T>;
@@ -504,3 +515,4 @@ extension ResourceExtensions<T> on ResourceValue<T> {
     );
   }
 }
+// coverage:ignore-end
