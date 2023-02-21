@@ -31,6 +31,20 @@ class _C {
   final int count;
 }
 
+class User {
+  final int id;
+
+  User({required this.id});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is User && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => runtimeType.hashCode ^ id.hashCode;
+}
+
 void main() {
   group('createSignal tests - ', () {
     test('with equals true it notifies only when the value changes', () async {
@@ -287,6 +301,39 @@ void main() {
       await pumpEventQueue();
       expect(resource.value, isA<ResourceReady<int>>());
       expect(resource.value(), 10);
+
+      streamController.addError(UnimplementedError());
+      await pumpEventQueue();
+      expect(resource.value, isA<ResourceError<int>>());
+      print(resource.value.error);
+      expect(resource.value.error, isUnimplementedError);
+    });
+
+    test('check createResource with future', () async {
+      final userId = createSignal(0);
+
+      Future<User> getUser() {
+        return Future.value(User(id: userId.value));
+      }
+
+      when(getUser()).thenAnswer((_) => Future.value(User(id: userId.value)));
+      final resource = createResource(fetcher: getUser, source: userId);
+
+      await resource.fetch();
+      await pumpEventQueue();
+      expect(resource.value, isA<ResourceReady<User>>());
+      expect(resource.value.value, User(id: 0));
+
+      userId.value = 1;
+      await pumpEventQueue();
+      expect(resource.value, isA<ResourceReady<User>>());
+      expect(resource.value(), User(id: 1));
+
+      when(getUser()).thenThrow(UnimplementedError());
+      userId.value = 2;
+      await pumpEventQueue();
+      expect(resource.value, isA<ResourceError<User>>());
+      expect(resource.value.error, isUnimplementedError);
     });
   });
 }
