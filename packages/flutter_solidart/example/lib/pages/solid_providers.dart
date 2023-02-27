@@ -48,6 +48,8 @@ class SomeChildThatNeedsProviders extends StatelessWidget {
   const SomeChildThatNeedsProviders({super.key});
 
   Future<void> openDialog(BuildContext context) {
+    return Future.value();
+    /*
     final nameProvider = context.getProvider<NameProvider>();
     return showDialog(
       context: context,
@@ -66,6 +68,7 @@ class SomeChildThatNeedsProviders extends StatelessWidget {
         ),
       ),
     );
+    */
   }
 
   @override

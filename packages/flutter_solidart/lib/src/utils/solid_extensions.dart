@@ -54,5 +54,5 @@ extension SolidExtensions on BuildContext {
     return Solid.observe<T>(this, id);
   }
 
-  P getProvider<P extends Object>() => Solid.getProvider<P>(this);
+  P getProvider<P>() => Solid.getProvider<P>(this);
 }

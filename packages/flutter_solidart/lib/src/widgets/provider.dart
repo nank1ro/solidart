@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:meta/meta.dart';
 
 /// A function that creates an object of type [T].
 typedef Create<T> = T Function(BuildContext context);
 
 /// A function that disposes an object of type [T].
-typedef Dispose<T> = void Function(BuildContext context, T value);
+typedef Dispose<T> = void Function(
+  BuildContext context,
+  T value,
+);
 
 @immutable
 class SolidProvider<T> {
@@ -27,7 +29,4 @@ class SolidProvider<T> {
   /// If this value is true the provider will be [create]d only
   /// when retrieved from descendants.
   final bool lazy;
-
-  @internal
-  Type id() => T;
 }
