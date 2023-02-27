@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:flutter_solidart/utils/diagnostic_properties_for_generic.dart';
+import 'package:flutter_solidart/src/utils/diagnostic_properties_for_generic.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

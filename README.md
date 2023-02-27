@@ -40,8 +40,15 @@ The argument passed to the create call is the initial value, and the return valu
 ```dart
 // Retrieve the current counter value
 print(counter.value); // prints 0
-// Increment the counter value
-counter.value++;
+// equal to
+print(counter());
+
+// Change the counter value
+counter.value++; // Increments by 1
+// or
+counter.value = 2; // Sets the value to 2
+// or
+counter.update((value) => value * 2); // Update the value based on the current value
 ```
 
 If you're using `flutter_solidart` you can use the `SignalBuilder` widget to automatically react to the signal value, for example:
@@ -258,13 +265,13 @@ And finally at `[6]` we update the signal value.
 
 ### Sample features using flutter_solidart:
 
-- [Counter](https://zapp.run/edit/counter-or-fluttersolidart-zz1m06lvz1n0)
-- [Toggle theme (dark/light mode)](https://zapp.run/edit/toggle-theme-or-fluttersolidart-zy1o06bdy1p0)
-- [Todos](https://zapp.run/edit/todos-or-fluttersolidart-zn4406ltn450)
+- [Counter](https://zapp.run/github/nank1ro/solidart/tree/main/examples/counter)
+- [Toggle theme (dark/light mode)](https://zapp.run/github/nank1ro/solidart/tree/main/examples/toggle_theme)
+- [Todos](https://zapp.run/github/nank1ro/solidart/tree/main/examples/todos)
 
 ### Showcase of all flutter_solidart features
 
-- [Showcase of all features](https://zapp.run/edit/showcase-or-fluttersolidart-zo1s066po1t0)
+- [Showcase of all features](https://zapp.run/github/nank1ro/solidart/tree/main/packages/flutter_solidart/example)
 
 Learn every feature of `flutter_solidart` including:
 

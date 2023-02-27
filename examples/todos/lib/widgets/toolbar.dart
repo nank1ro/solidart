@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:provider/provider.dart';
 import 'package:todos/common/constants.dart';
 import 'package:todos/controllers/controller.dart';
 import 'package:todos/models/todo.dart';
@@ -22,7 +21,7 @@ class _ToolbarState extends State<Toolbar> {
   void initState() {
     super.initState();
     // retrieve the todos from TodosController.
-    final todos = context.read<TodosController>().todos;
+    final todos = context.getProvider<TodosController>().todos;
 
     // create derived signals based on the list of todos
     // no need to dispose them because they already dispose when the parent (todos) disposes.

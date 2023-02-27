@@ -2,8 +2,9 @@ library flutter_solidart;
 
 export 'package:solidart/solidart.dart';
 
-export 'utils/solid_extensions.dart';
-export 'widgets/resource_builder.dart';
-export 'widgets/show.dart';
-export 'widgets/signal_builder.dart';
-export 'widgets/solid.dart';
+export 'src/utils/solid_extensions.dart';
+export 'src/widgets/provider.dart';
+export 'src/widgets/resource_builder.dart';
+export 'src/widgets/show.dart';
+export 'src/widgets/signal_builder.dart';
+export 'src/widgets/solid.dart';
