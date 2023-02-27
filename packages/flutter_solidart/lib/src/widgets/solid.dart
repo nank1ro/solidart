@@ -135,12 +135,13 @@ typedef SignalsMapper = Map<SignalIdentifier, SignalBase<dynamic> Function()>;
 ///
 /// ## Solid.value
 ///
-/// The `Solid.value` factory is useful for passing `signals` to modals.
+/// The `Solid.value` factory is useful for passing `signals` and `providers`
+/// to modals, because they are spawned in a new tree.
 /// This is necessary because modals are spawned in a new tree.
-/// `Solid.value` takes just:
+/// `Solid.value` takes just a:
 /// - `context` a BuildContext that has access to signals
-/// - `signalIds` a list of signal identifiers that you want to provide to the
-/// modal
+/// - `signalIds` a list of signal identifiers
+/// - `providerTypes` a list of provider types
 ///
 /// Here it is a chuck of code taken from [this example](/examples/general).
 ///
@@ -198,11 +199,18 @@ class Solid extends StatefulWidget {
     required bool autoDispose,
   }) : _autoDispose = autoDispose;
 
-  /// Takes a list of [signalIds], a [context] that must have access to the
-  /// signals and a [child] which will have access to the signals
+  /// Provide signals and providers to modals.
   ///
-  /// This is useful for passing signals to modals, because are spawned in a
-  /// new tree.
+  /// The [context] parameter being passed must be a valid descendant of the
+  /// [Solid] widget that contains the signals and providers.
+  /// The [child] parameter is the target that inherit the signals and
+  /// providers.
+  ///
+  /// To provide signals, provide a list of [signalIds], while for providers
+  /// provide a list of provider [Type]s
+  ///
+  /// This is useful for passing signals and providers to modals, because are
+  /// spawned in a new tree.
   factory Solid.value({
     Key? key,
     required BuildContext context,
@@ -236,25 +244,7 @@ class Solid extends StatefulWidget {
     );
   }
 
-  /// Provides a provider value to a new tree.
-  ///
-  /// It takes a provider value and a [child] that will get access to the
-  /// provider.
-  /// This is useful for passing providers to modals, because are spawned in a
-  /// new tree.
-  // factory Solid.providerValue({
-  //   Key? key,
-  //   required P value,
-  //   required Widget child,
-  // }) {
-  //   return Solid._internal(
-  //     key: key,
-  //     autoDispose: false,
-  //     providers: [SolidProvider<P>(create: (_) => value)],
-  //     child: child,
-  //   );
-  // }
-  //
+  /// The widget child that gets access to the [signals] and [providers].
   final Widget child;
 
   /// All the signals provided to all the descendants of [Solid].
@@ -276,6 +266,10 @@ class Solid extends StatefulWidget {
   @override
   State<Solid> createState() => SolidState();
 
+  /// Finds the first SolidState ancestor that satifies the given [aspect] or
+  /// [providerType].
+  ///
+  /// If [listen] is true, the [context] gets subscribed to the given value.
   static SolidState _findState(
     BuildContext context, {
     Object? aspect,
@@ -316,7 +310,7 @@ class Solid extends StatefulWidget {
 
         if (isTypeReadable != isSignalReadable) {
           throw Exception('''
-You trying to access a ${typeString(isSignalReadable)} as a ${typeString(isTypeReadable)}
+You're trying to access a ${typeString(isSignalReadable)} as a ${typeString(isTypeReadable)}
 The signal id that caused this issue is $id
 ''');
         }
@@ -344,7 +338,7 @@ The signal id that caused this issue is $id
   /// Obtains the [Signal] or [SolidProvider] of the given type corresponding
   /// to the nearest [Solid] widget.
   ///
-  /// The [id] is mandatory only if targeting a Signal.
+  /// The [id] is mandatory only if targeting a Signal and ignored for providers
   ///
   /// Throws if no such element or [Solid] widget is found.
   ///
@@ -417,6 +411,10 @@ The signal id that caused this issue is $id
     return createdSignal.value as T;
   }
 
+  /// Tries to find a provider of type P from the created providers and returns
+  /// it.
+  ///
+  /// The provider is created in case the find fails.
   static P _getOrCreateProvider<P>(
     BuildContext context, {
     bool listen = false,
@@ -473,7 +471,7 @@ class SolidState extends State<Solid> {
     super.dispose();
   }
 
-  /// Signals logic
+  /// -- Signals logic
 
   // Indicates is the signal is readable.
   bool isReadableSignal({required SignalIdentifier id}) {
@@ -529,7 +527,9 @@ class SolidState extends State<Solid> {
     });
   }
 
-  /// Providers logic
+  /// -- Providers logic
+
+  /// Try to find a [SolidProvider] of type [Type] and returns it
   SolidProvider<dynamic>? _getProviderOfType(Type providerType) {
     final provider = widget.providers.firstWhereOrNull(
       (element) => element.type == providerType,
@@ -538,6 +538,7 @@ class SolidState extends State<Solid> {
     return provider;
   }
 
+  /// Creates a provider of type P and stores it
   P createProvider<P>() {
     // find the provider in the list
     final provider = _getProviderOfType(P)!;
@@ -553,7 +554,7 @@ class SolidState extends State<Solid> {
   /// Used to determine if the requested provider is present in the current
   /// scope
   bool isProviderInScope(Type providerType) {
-    // Find the provider by type P
+    // Find the provider by type
     return _getProviderOfType(providerType) != null;
   }
 

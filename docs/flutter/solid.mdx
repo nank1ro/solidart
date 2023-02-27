@@ -116,11 +116,12 @@ The `context.get()` method doesn't listen to the signal value. You may use this 
 
 ## Solid.value
 
-The `Solid.value` factory is useful for passing `signals` to modals.
+The `Solid.value` factory is useful for passing `signals` and `providers` to modals, because they are spawned in a new tree.
 This is necessary because modals are spawned in a new tree.
-`Solid.value` takes just:
+`Solid.value` takes just a:
 - `context` a BuildContext that has access to signals
-- `signalIds` a list of signal identifiers that you want to provide to the modal
+- `signalIds` a list of signal identifiers
+- `providerTypes` a list of provider types
 
 Here it is a chuck of code taken from [this example](/examples/general).
 
