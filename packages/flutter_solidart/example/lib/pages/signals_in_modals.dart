@@ -82,9 +82,6 @@ class _SignalsInModalsPageState extends State<SignalsInModalsPage> {
           context: context,
           // the signals ids that we want to provide to the modal
           signalIds: const [_SignalId.counter, _SignalId.doubleCounter],
-          providerTypes: [
-            int,
-          ],
           child: Builder(
             builder: (innerContext) {
               final counter = innerContext.observe<int>(_SignalId.counter);

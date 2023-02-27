@@ -55,7 +55,7 @@ class SomeChildThatNeedsProviders extends StatelessWidget {
         providerTypes: const [NameProvider],
         child: Dialog(
           child: Builder(builder: (innerContext) {
-            final nameProvider = innerContext.getProvider<NameProvider>();
+            final nameProvider = innerContext.get<NameProvider>();
             return SizedBox.square(
               dimension: 100,
               child: Center(
@@ -70,8 +70,8 @@ class SomeChildThatNeedsProviders extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nameProvider = context.getProvider<NameProvider>();
-    final numberProvider = context.getProvider<NumberProvider>();
+    final nameProvider = context.get<NameProvider>();
+    final numberProvider = context.get<NumberProvider>();
     return Center(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
