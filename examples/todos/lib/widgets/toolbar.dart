@@ -21,7 +21,7 @@ class _ToolbarState extends State<Toolbar> {
   void initState() {
     super.initState();
     // retrieve the todos from TodosController.
-    final todos = context.getProvider<TodosController>().todos;
+    final todos = context.get<TodosController>().todos;
 
     // create derived signals based on the list of todos
     // no need to dispose them because they already dispose when the parent (todos) disposes.

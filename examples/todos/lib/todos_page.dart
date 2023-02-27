@@ -14,7 +14,7 @@ class TodosPage extends StatelessWidget {
       providers: [
         SolidProvider<TodosController>(
           create: (_) => TodosController(initialTodos: Todo.sample),
-          dispose: (_, controller) => controller.dispose(),
+          onDispose: (_, controller) => controller.dispose(),
         ),
       ],
       child: Scaffold(

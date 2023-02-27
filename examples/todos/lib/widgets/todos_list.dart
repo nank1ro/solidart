@@ -27,7 +27,7 @@ class _TodoListState extends State<TodoList> {
     super.initState();
 
     // retrieve the todos list and the filtered ones
-    todos = context.getProvider<TodosController>().todos;
+    todos = context.get<TodosController>().todos;
     completedTodos =
         context.get<ReadableSignal<List<Todo>>>(SignalId.completedTodos);
     uncompletedTodos =

@@ -21,7 +21,7 @@ class _TodosBodyState extends State<TodosBody> {
   void initState() {
     super.initState();
     // retrieve the [TodosController]
-    todosController = context.getProvider<TodosController>();
+    todosController = context.get<TodosController>();
   }
 
   @override
