@@ -9,9 +9,6 @@ typedef SignalIdentifier = Object;
 /// A map of signals with their ids.
 typedef SignalsMapper = Map<SignalIdentifier, SignalBase<dynamic> Function()>;
 
-/// Used internally to avoid searching for a provider
-class _NoProvider {}
-
 /// Provides [signals] and [providers] to descendants.
 
 /// The Flutter framework works like a Tree. There are ancestors and there are
@@ -216,14 +213,19 @@ class Solid extends StatefulWidget {
     // retrieve the signals
     final signals = <SignalIdentifier, SignalBase<dynamic> Function()>{};
     for (final id in signalIds) {
-      final stateContainingSignal =
-          _findState<_NoProvider>(context, aspect: id);
+      final stateContainingSignal = _findState(context, aspect: id);
       signals[id] = stateContainingSignal.widget.signals[id]!;
     }
 
+    final providers = <SolidProvider<dynamic>>[];
     for (final type in providerTypes) {
-      final state = _findState(context, aspect: type);
-      print("state: $state");
+      final stateContainingProvider = _findState(context, providerType: type);
+      providers.add(
+        stateContainingProvider.widget.providers.firstWhere(
+          (element) =>
+              stateContainingProvider._getProviderOfType(type) == element,
+        ),
+      );
     }
     /*
      TODO(alex): If I get a list of provider [Type]s I lose its type when
@@ -240,6 +242,7 @@ class Solid extends StatefulWidget {
     return Solid._internal(
       key: key,
       signals: signals,
+      providers: providers,
       autoDispose: false,
       child: child,
     );
@@ -285,18 +288,20 @@ class Solid extends StatefulWidget {
   @override
   State<Solid> createState() => SolidState();
 
-  static SolidState _findState<ProviderType>(
+  static SolidState _findState(
     BuildContext context, {
     Object? aspect,
+    Type? providerType,
     bool listen = false,
   }) {
-    final state = _InheritedSolid.inheritFromNearest<ProviderType>(
+    final state = _InheritedSolid.inheritFromNearest(
       context,
       aspect: aspect,
       listen: listen,
+      providerType: providerType,
     )?.state;
     if (state == null) {
-      throw SolidError(signalId: aspect, providerType: ProviderType);
+      throw SolidError(signalId: aspect, providerType: providerType);
     }
     return state;
   }
@@ -343,8 +348,8 @@ The signal id that caused this issue is $id
     // _findState method.
     SolidState? currentState,
   }) {
-    final state = currentState ??
-        _findState<_NoProvider>(context, aspect: id, listen: listen);
+    final state =
+        currentState ?? _findState(context, aspect: id, listen: listen);
     _checkSignalType<S>(state: state, id: id);
 
     final createdSignal = state._createdSignals[id] as S?;
@@ -406,7 +411,7 @@ The signal id that caused this issue is $id
     BuildContext context,
     SignalIdentifier id,
   ) {
-    final state = _findState<_NoProvider>(context, aspect: id, listen: true);
+    final state = _findState(context, aspect: id, listen: true);
 
     // retrieve the signal
     var createdSignal = state._createdSignals[id];
@@ -437,7 +442,8 @@ The signal id that caused this issue is $id
     // _findState method.
     SolidState? currentState,
   }) {
-    final state = currentState ?? _findState<P>(context, listen: listen);
+    final state =
+        currentState ?? _findState(context, listen: listen, providerType: P);
 
     final createdProvider = state._createdProviders.values
         .firstWhereOrNull((element) => element is P);
@@ -480,8 +486,7 @@ class SolidState extends State<Solid> {
     print(_createdProviders);
     if (widget._autoDispose) {
       _createdProviders.forEach((provider, value) {
-        // provider.dispose?.call(value);
-        print(provider.dispose);
+        provider.dispose(context, value);
       });
     }
 
@@ -548,19 +553,19 @@ class SolidState extends State<Solid> {
   }
 
   /// Providers logic
-  SolidProvider<P>? _getProviderOfType<P>() {
+  SolidProvider<dynamic>? _getProviderOfType(Type providerType) {
     final provider = widget.providers.firstWhereOrNull(
-      (element) => element.create is P Function(BuildContext),
+      (element) => element.type == providerType,
     );
     if (provider == null) return null;
-    return provider as SolidProvider<P>;
+    return provider;
   }
 
   P createProvider<P>() {
     // find the provider in the list
-    final provider = _getProviderOfType<P>()!;
+    final provider = _getProviderOfType(P)!;
     // create and return it
-    final value = provider.create(context);
+    final value = provider.create(context) as P;
 
     // store the created provider
     _createdProviders[provider] = value;
@@ -570,9 +575,9 @@ class SolidState extends State<Solid> {
 
   /// Used to determine if the requested provider is present in the current
   /// scope
-  bool isProviderInScope<P>() {
+  bool isProviderInScope(Type providerType) {
     // Find the provider by type P
-    return _getProviderOfType<P>() != null;
+    return _getProviderOfType(providerType) != null;
   }
 
   @override
@@ -631,8 +636,8 @@ class _InheritedSolid extends InheritedModel<Object> {
   }
 
   // Used to determine in which ancestor is the given provider type P.
-  bool isProviderInScope<P>() {
-    return state.isProviderInScope<P>();
+  bool isProviderInScope(Type type) {
+    return state.isProviderInScope(type);
   }
 
   /// Fine-grained rebuilding of signals that changed value
@@ -660,9 +665,10 @@ class _InheritedSolid extends InheritedModel<Object> {
   // ancestors.
   // The [result] will be a single _InheritedSolid of context's type T ancestor
   // that supports the specified model [aspect].
-  static InheritedElement? _findNearestModel<ProviderType>(
+  static InheritedElement? _findNearestModel(
     BuildContext context, {
     Object? aspect,
+    Type? providerType,
   }) {
     final model =
         context.getElementForInheritedWidgetOfExactType<_InheritedSolid>();
@@ -683,9 +689,7 @@ class _InheritedSolid extends InheritedModel<Object> {
     }
 
     // The model contains the provider, the ancestor has been found, return it.
-    if (aspect == null &&
-        ProviderType is! _NoProvider &&
-        modelWidget.isProviderInScope<ProviderType>()) {
+    if (providerType != null && modelWidget.isProviderInScope(providerType)) {
       return model;
     }
 
@@ -701,7 +705,11 @@ class _InheritedSolid extends InheritedModel<Object> {
       return null;
     }
 
-    return _findNearestModel<ProviderType>(modelParent!, aspect: aspect);
+    return _findNearestModel(
+      modelParent!,
+      aspect: aspect,
+      providerType: providerType,
+    );
   }
 
   /// Makes [context] dependent on the specified [aspect] or provider with type
@@ -720,15 +728,17 @@ class _InheritedSolid extends InheritedModel<Object> {
   /// `context.getElementForInheritedWidgetOfExactType<T>()`.
   ///
   /// If no ancestor of type T exists, null is returned.
-  static _InheritedSolid? inheritFromNearest<ProviderType>(
+  static _InheritedSolid? inheritFromNearest(
     BuildContext context, {
     SignalIdentifier? aspect,
+    Type? providerType,
     // Whether to listen to the [InheritedModel], defaults to false.
     bool listen = false,
   }) {
     // Try finding a model in the ancestors for which isSupportedAspect(aspect)
     // is true.
-    final model = _findNearestModel<ProviderType>(context, aspect: aspect);
+    final model =
+        _findNearestModel(context, aspect: aspect, providerType: providerType);
     if (model == null) {
       return null;
     }

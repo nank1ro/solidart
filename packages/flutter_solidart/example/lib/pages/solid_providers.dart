@@ -30,7 +30,7 @@ class SolidProvidersPage extends StatelessWidget {
           SolidProvider<NameProvider>(
             create: (_) => const NameProvider('Ale'),
             // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
-            dispose: (context, provider) => provider.dispose(),
+            onDispose: (context, provider) => provider.dispose(),
           ),
           SolidProvider<NumberProvider>(
             create: (_) => const NumberProvider(1),
@@ -48,13 +48,11 @@ class SomeChildThatNeedsProviders extends StatelessWidget {
   const SomeChildThatNeedsProviders({super.key});
 
   Future<void> openDialog(BuildContext context) {
-    return Future.value();
-    /*
-    final nameProvider = context.getProvider<NameProvider>();
     return showDialog(
       context: context,
-      builder: (context) => Solid.providerValue(
-        value: nameProvider,
+      builder: (_) => Solid.value(
+        context: context,
+        providerTypes: const [NameProvider],
         child: Dialog(
           child: Builder(builder: (innerContext) {
             final nameProvider = innerContext.getProvider<NameProvider>();
@@ -68,7 +66,6 @@ class SomeChildThatNeedsProviders extends StatelessWidget {
         ),
       ),
     );
-    */
   }
 
   @override
