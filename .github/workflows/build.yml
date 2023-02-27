@@ -4,12 +4,17 @@ on:
   pull_request:
     paths-ignore:
       - "**.md"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     concurrency:
-      group: ${{ github.head_ref }}
+      group: ${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
 
     steps:
@@ -42,3 +47,8 @@ jobs:
           ./scripts/coverage.sh
         shell: bash
         working-directory: ./
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./lcov.info

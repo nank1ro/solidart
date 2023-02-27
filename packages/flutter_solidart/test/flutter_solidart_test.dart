@@ -44,7 +44,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ResourceBuilder<int, int>(
+          body: ResourceBuilder(
             resource: r,
             builder: (context, resource) {
               return resource.on(
@@ -96,7 +96,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ResourceBuilder<int, int>(
+          body: ResourceBuilder(
             resource: r,
             builder: (context, resource) {
               return resource.on(
@@ -142,7 +142,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ResourceBuilder<int, int>(
+          body: ResourceBuilder(
             resource: r,
             builder: (context, resource) {
               return resource.on(
