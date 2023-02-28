@@ -739,4 +739,52 @@ void main() {
 
     expect(counterFinder(1), findsOneWidget);
   });
+
+  testWidgets('Test Solid throws an error for a SolidProvider<dynamic>',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Solid(
+            providers: [
+              SolidProvider(
+                create: (_) => const NumberProvider(1),
+              ),
+            ],
+            child: const SizedBox(),
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.takeException(),
+      const TypeMatcher<SolidProviderDynamicError>(),
+    );
+  });
+
+  testWidgets(
+      'Test Solid throws an error for multiple providers of the same type',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Solid(
+            providers: [
+              SolidProvider<NumberProvider>(
+                create: (_) => const NumberProvider(1),
+              ),
+              SolidProvider<NumberProvider>(
+                create: (_) => const NumberProvider(2),
+              ),
+            ],
+            child: const SizedBox(),
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.takeException(),
+      const TypeMatcher<SolidProviderMultipleProviderOfSameTypeError>(),
+    );
+  });
 }

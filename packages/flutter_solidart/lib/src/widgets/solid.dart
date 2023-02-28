@@ -450,6 +450,19 @@ class SolidState extends State<Solid> {
   @override
   void initState() {
     super.initState();
+    // check if the provider type is not dynamic
+    // check there are multiple providers of the same type
+    final types = <Type>[];
+    for (final provider in widget.providers) {
+      final type = provider._type;
+      if (type == dynamic) throw SolidProviderDynamicError();
+
+      if (types.contains(type)) {
+        throw SolidProviderMultipleProviderOfSameTypeError(providerType: type);
+      } else {
+        types.add(type);
+      }
+    }
     // create non lazy providers.
     widget.providers.where((element) => !element.lazy).forEach((provider) {
       // create and store the provider
@@ -773,6 +786,16 @@ https://github.com/nank1ro/solidart/issues/new
   }
 }
 
+class SolidProviderDynamicError extends Error {
+  @override
+  String toString() {
+    return '''
+    Seems like that you forgot to declare the provider type.
+    You have `SolidProvider()` but it should be `SolidProvider<ProviderType>()`.
+      ''';
+  }
+}
+
 class SolidSignalError extends Error {
   SolidSignalError({
     required this.signalId,
@@ -801,6 +824,19 @@ To fix, please:
   
 If none of these solutions work, please file a bug at:
 https://github.com/nank1ro/solidart/issues/new
+      ''';
+  }
+}
+
+class SolidProviderMultipleProviderOfSameTypeError extends Error {
+  SolidProviderMultipleProviderOfSameTypeError({required this.providerType});
+
+  final Type providerType;
+  @override
+  String toString() {
+    return '''
+      You cannot have multiple providers of the same type.
+      Seems like you declared the type $providerType multiple times in the list of providers.
       ''';
   }
 }
