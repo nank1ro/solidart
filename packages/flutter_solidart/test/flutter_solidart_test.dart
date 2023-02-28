@@ -632,11 +632,11 @@ void main() {
           body: Solid(
             providers: [
               SolidProvider<NameProvider>(
-                create: (_) => nameProvider,
-                dispose: (_, provider) => provider.dispose(),
+                create: () => nameProvider,
+                dispose: (provider) => provider.dispose(),
               ),
               SolidProvider<NumberProvider>(
-                create: (_) => const NumberProvider(1),
+                create: () => const NumberProvider(1),
                 lazy: false,
               ),
             ],
@@ -671,7 +671,7 @@ void main() {
           body: Solid(
             providers: [
               SolidProvider<NumberProvider>(
-                create: (_) => const NumberProvider(1),
+                create: () => const NumberProvider(1),
               ),
             ],
             child: Builder(
@@ -713,7 +713,7 @@ void main() {
           body: Solid(
             providers: [
               SolidProvider<NumberProvider>(
-                create: (_) => const NumberProvider(1),
+                create: () => const NumberProvider(1),
               ),
             ],
             child: Builder(
@@ -748,7 +748,7 @@ void main() {
           body: Solid(
             providers: [
               SolidProvider(
-                create: (_) => const NumberProvider(1),
+                create: () => const NumberProvider(1),
               ),
             ],
             child: const SizedBox(),
@@ -771,10 +771,10 @@ void main() {
           body: Solid(
             providers: [
               SolidProvider<NumberProvider>(
-                create: (_) => const NumberProvider(1),
+                create: () => const NumberProvider(1),
               ),
               SolidProvider<NumberProvider>(
-                create: (_) => const NumberProvider(2),
+                create: () => const NumberProvider(2),
               ),
             ],
             child: const SizedBox(),

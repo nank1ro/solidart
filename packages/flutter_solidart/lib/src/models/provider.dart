@@ -1,10 +1,10 @@
 part of '../widgets/solid.dart';
 
 /// A function that creates an object of type [T].
-typedef Create<T> = T Function(BuildContext context);
+typedef Create<T> = T Function();
 
 /// A function that disposes an object of type [T].
-typedef Dispose<T> = void Function(BuildContext context, T value);
+typedef Dispose<T> = void Function(T value);
 
 @immutable
 class SolidProvider<T> {
@@ -30,6 +30,6 @@ class SolidProvider<T> {
   Type get _type => T;
 
   void _dispose(BuildContext context, dynamic value) {
-    dispose?.call(context, value as T);
+    dispose?.call(value as T);
   }
 }

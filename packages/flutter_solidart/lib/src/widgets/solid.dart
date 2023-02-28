@@ -171,12 +171,12 @@ typedef SignalsMapper = Map<SignalIdentifier, SignalBase<dynamic> Function()>;
 ///       body: Solid(
 ///         providers: [
 ///           SolidProvider<NameProvider>(
-///             create: (_) => const NameProvider('Ale'),
+///             create: () => const NameProvider('Ale'),
 ///             // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
-///             dispose: (context, provider) => provider.dispose(),
+///             dispose: (provider) => provider.dispose(),
 ///           ),
 ///           SolidProvider<NumberProvider>(
-///             create: (_) => const NumberProvider(1),
+///             create: () => const NumberProvider(1),
 ///             // Do not create the provider lazily, but immediately
 ///             lazy: false,
 ///           ),
@@ -562,7 +562,7 @@ class SolidState extends State<Solid> {
     // create non lazy providers.
     widget.providers.where((element) => !element.lazy).forEach((provider) {
       // create and store the provider
-      _createdProviders[provider] = provider.create(context);
+      _createdProviders[provider] = provider.create();
     });
   }
 
@@ -658,7 +658,7 @@ class SolidState extends State<Solid> {
     // find the provider in the list
     final provider = _getProviderOfType(P)!;
     // create and return it
-    final value = provider.create(context) as P;
+    final value = provider.create() as P;
 
     // store the created provider
     _createdProviders[provider] = value;
@@ -869,7 +869,7 @@ To fix, please:
     Solid(
       providers: [
           SolidProvider<NameProvider>(
-            create: (_) => const NameProvider('Ale'),
+            create: () => const NameProvider('Ale'),
           ),
       ],
     )

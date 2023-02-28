@@ -11,12 +11,12 @@
   Solid(
         providers: [
           SolidProvider<NameProvider>(
-            create: (_) => const NameProvider('Ale'),
+            create: () => const NameProvider('Ale'),
             // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
-            dispose: (context, provider) => provider.dispose(),
+            dispose: (provider) => provider.dispose(),
           ),
           SolidProvider<NumberProvider>(
-            create: (_) => const NumberProvider(1),
+            create: () => const NumberProvider(1),
             // Do not create the provider lazily, but immediately
             lazy: false,
           ),
