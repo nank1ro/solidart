@@ -135,6 +135,79 @@ typedef SignalsMapper = Map<SignalIdentifier, SignalBase<dynamic> Function()>;
 /// 2. `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type
 /// of signal with its type value.
 ///
+/// ## Providers
+///
+/// You can also pass `providers` to descendants:
+///
+/// ```dart
+/// import 'package:flutter/material.dart';
+/// import 'package:flutter_solidart/flutter_solidart.dart';
+///
+/// class NameProvider {
+///   const NameProvider(this.name);
+///   final String name;
+///
+///   void dispose() {
+///     // put your dispose logic here
+///     // ignore: avoid_print
+///     print('dispose name provider');
+///   }
+/// }
+///
+/// class NumberProvider {
+///   const NumberProvider(this.number);
+///   final int number;
+/// }
+///
+/// class SolidProvidersPage extends StatelessWidget {
+///   const SolidProvidersPage({super.key});
+///
+///   @override
+///   Widget build(BuildContext context) {
+///     return Scaffold(
+///       appBar: AppBar(
+///         title: const Text('Solid'),
+///       ),
+///       body: Solid(
+///         providers: [
+///           SolidProvider<NameProvider>(
+///             create: (_) => const NameProvider('Ale'),
+///             // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
+///             dispose: (context, provider) => provider.dispose(),
+///           ),
+///           SolidProvider<NumberProvider>(
+///             create: (_) => const NumberProvider(1),
+///             // Do not create the provider lazily, but immediately
+///             lazy: false,
+///           ),
+///         ],
+///         child: const SomeChildThatNeedsProviders(),
+///       ),
+///     );
+///   }
+/// }
+///
+/// class SomeChildThatNeedsProviders extends StatelessWidget {
+///   const SomeChildThatNeedsProviders({super.key});
+///
+///   @override
+///   Widget build(BuildContext context) {
+///     final nameProvider = context.get<NameProvider>();
+///     final numberProvider = context.get<NumberProvider>();
+///     return Center(
+///       child: Column(
+///         crossAxisAlignment: CrossAxisAlignment.center,
+///         children: [
+///           Text('name: ${nameProvider.name}'),
+///           const SizedBox(height: 8),
+///           Text('number: ${numberProvider.number}'),
+///         ],
+///       ),
+///     );
+///   }
+/// }
+/// ```
+///
 /// ## Solid.value
 ///
 /// The `Solid.value` factory is useful for passing `signals` and `providers`
@@ -145,8 +218,7 @@ typedef SignalsMapper = Map<SignalIdentifier, SignalBase<dynamic> Function()>;
 /// - `signalIds` a list of signal identifiers
 /// - `providerTypes` a list of provider types
 ///
-/// Here it is a chuck of code taken from [this example](/examples/general).
-///
+/// ### Access signals in modals
 /// ```dart
 /// Future<void> showCounterDialog(BuildContext context) {
 ///   return showDialog(
@@ -179,6 +251,30 @@ typedef SignalsMapper = Map<SignalIdentifier, SignalBase<dynamic> Function()>;
 ///         ),
 ///       );
 ///     },
+///   );
+/// }
+/// ```
+///
+/// ### Access providers in modals
+/// ```dart
+/// Future<void> openDialog(BuildContext context) {
+///   return showDialog(
+///     context: context,
+///     builder: (_) => Solid.value(
+///       context: context,
+///       providerTypes: const [NameProvider],
+///       child: Dialog(
+///         child: Builder(builder: (innerContext) {
+///           final nameProvider = innerContext.get<NameProvider>();
+///           return SizedBox.square(
+///             dimension: 100,
+///             child: Center(
+///               child: Text('name: ${nameProvider.name}'),
+///             ),
+///           );
+///         }),
+///       ),
+///     ),
 ///   );
 /// }
 /// ```
