@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:provider/provider.dart';
 import 'package:todos/common/constants.dart';
 import 'package:todos/controllers/controller.dart';
 import 'package:todos/models/todo.dart';
@@ -22,7 +21,7 @@ class _TodosBodyState extends State<TodosBody> {
   void initState() {
     super.initState();
     // retrieve the [TodosController]
-    todosController = context.read<TodosController>();
+    todosController = context.get<TodosController>();
   }
 
   @override

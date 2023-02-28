@@ -15,7 +15,7 @@ The objectives of this project are:
 
 ## Learning
 
-For a comprehensive documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart)
+For a comprehensive and updated documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart)
 
 There are 4 main concepts you should be aware:
 
@@ -257,13 +257,13 @@ And finally at `[6]` we update the signal value.
 
 ### Sample features using flutter_solidart:
 
-- [Counter](https://zapp.run/edit/counter-or-fluttersolidart-zz1m06lvz1n0)
-- [Toggle theme (dark/light mode)](https://zapp.run/edit/toggle-theme-or-fluttersolidart-zy1o06bdy1p0)
-- [Todos](https://zapp.run/edit/todos-or-fluttersolidart-zn4406ltn450)
+- [Counter](https://zapp.run/github/nank1ro/solidart/tree/main/examples/counter)
+- [Toggle theme (dark/light mode)](https://zapp.run/github/nank1ro/solidart/tree/main/examples/toggle_theme)
+- [Todos](https://zapp.run/github/nank1ro/solidart/tree/main/examples/todos)
 
 ### Showcase of all flutter_solidart features
 
-- [Showcase of all features](https://zapp.run/edit/showcase-or-fluttersolidart-zo1s066po1t0)
+- [Showcase of all features](https://zapp.run/github/nank1ro/solidart/tree/main/packages/flutter_solidart/example)
 
 Learn every feature of `flutter_solidart` including:
 

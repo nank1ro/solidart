@@ -8,14 +8,14 @@ enum _SignalId {
   doubleCounter,
 }
 
-class SignalsInModals extends StatefulWidget {
-  const SignalsInModals({super.key});
+class SignalsInModalsPage extends StatefulWidget {
+  const SignalsInModalsPage({super.key});
 
   @override
-  State<SignalsInModals> createState() => _SignalsInModalsState();
+  State<SignalsInModalsPage> createState() => _SignalsInModalsPageState();
 }
 
-class _SignalsInModalsState extends State<SignalsInModals> {
+class _SignalsInModalsPageState extends State<SignalsInModalsPage> {
   final counter = createSignal(0);
   late final Timer timer;
 

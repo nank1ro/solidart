@@ -3,8 +3,32 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:flutter_solidart/utils/diagnostic_properties_for_generic.dart';
+import 'package:flutter_solidart/src/utils/diagnostic_properties_for_generic.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
+
+// Used in Solid providers tests
+abstract class NameProvider {
+  const NameProvider(this.name);
+
+  final String name;
+
+  void dispose();
+}
+
+class MockNameProvider extends Mock implements NameProvider {
+  MockNameProvider(this.name);
+
+  @override
+  final String name;
+}
+
+@immutable
+class NumberProvider {
+  const NumberProvider(this.number);
+
+  final int number;
+}
 
 void main() {
   testWidgets('Show widget works properly', (tester) async {
@@ -285,7 +309,7 @@ void main() {
     expect(counterFinder(1, 2), findsOneWidget);
   });
 
-  testWidgets('Test Solid context.get', (tester) async {
+  testWidgets('Test Solid context.get with Signal', (tester) async {
     final s = createSignal(0);
     final s2 = s.select((value) => value * 2);
     await tester.pumpWidget(
@@ -347,7 +371,7 @@ void main() {
         ),
       ),
     );
-    expect(tester.takeException(), const TypeMatcher<SolidError>());
+    expect(tester.takeException(), const TypeMatcher<SolidSignalError>());
   });
 
   testWidgets('Test Solid.value with observe', (tester) async {
@@ -405,7 +429,7 @@ void main() {
     expect(counterFinder(1), findsOneWidget);
   });
 
-  testWidgets('Test Solid.value with get', (tester) async {
+  testWidgets('Test Solid.value for signals with get', (tester) async {
     Future<void> showCounterDialog({required BuildContext context}) {
       return showDialog(
         context: context,
@@ -597,6 +621,170 @@ void main() {
     expect(
       builder.properties.last,
       const TypeMatcher<IconDataProperty>(),
+    );
+  });
+
+  testWidgets('Test Solid context.get with providers', (tester) async {
+    final nameProvider = MockNameProvider('Ale');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Solid(
+            providers: [
+              SolidProvider<NameProvider>(
+                create: () => nameProvider,
+                dispose: (provider) => provider.dispose(),
+              ),
+              SolidProvider<NumberProvider>(
+                create: () => const NumberProvider(1),
+                lazy: false,
+              ),
+            ],
+            child: Builder(
+              builder: (context) {
+                final nameProvider = context.get<NameProvider>();
+                final numberProvider = context.get<NumberProvider>();
+                return Text('${nameProvider.name} ${numberProvider.number}');
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    Finder providerFinder(String value1, int value2) =>
+        find.text('$value1 $value2');
+    expect(providerFinder('Ale', 1), findsOneWidget);
+
+    // mock NameProvider dispose method
+    when(nameProvider.dispose()).thenReturn(null);
+    // Push a different widget
+    await tester.pumpWidget(Container());
+    // check dispose has been called on NameProvider
+    verify(nameProvider.dispose()).called(1);
+  });
+
+  testWidgets('Test Solid throws an error for a not found provider',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Solid(
+            providers: [
+              SolidProvider<NumberProvider>(
+                create: () => const NumberProvider(1),
+              ),
+            ],
+            child: Builder(
+              builder: (context) {
+                // NameProvider is not present
+                final nameProvider = context.get<NameProvider>();
+                return Text(nameProvider.name);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), const TypeMatcher<SolidProviderError>());
+  });
+
+  testWidgets('Test Solid.value for providers', (tester) async {
+    Future<void> showNumberDialog({required BuildContext context}) {
+      return showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return Solid.value(
+            context: context,
+            providerTypes: const [NumberProvider],
+            child: Builder(
+              builder: (innerContext) {
+                final numberProvider = innerContext.get<NumberProvider>();
+                return Text('${numberProvider.number}');
+              },
+            ),
+          );
+        },
+      );
+    }
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Solid(
+            providers: [
+              SolidProvider<NumberProvider>(
+                create: () => const NumberProvider(1),
+              ),
+            ],
+            child: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () {
+                    showNumberDialog(context: context);
+                  },
+                  child: const Text('show dialog'),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    Finder counterFinder(int value) => find.text('$value');
+
+    final buttonFinder = find.text('show dialog');
+    expect(buttonFinder, findsOneWidget);
+    await tester.tap(buttonFinder);
+    await tester.pumpAndSettle();
+
+    expect(counterFinder(1), findsOneWidget);
+  });
+
+  testWidgets('Test Solid throws an error for a SolidProvider<dynamic>',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Solid(
+            providers: [
+              SolidProvider(
+                create: () => const NumberProvider(1),
+              ),
+            ],
+            child: const SizedBox(),
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.takeException(),
+      const TypeMatcher<SolidProviderDynamicError>(),
+    );
+  });
+
+  testWidgets(
+      'Test Solid throws an error for multiple providers of the same type',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Solid(
+            providers: [
+              SolidProvider<NumberProvider>(
+                create: () => const NumberProvider(1),
+              ),
+              SolidProvider<NumberProvider>(
+                create: () => const NumberProvider(2),
+              ),
+            ],
+            child: const SizedBox(),
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.takeException(),
+      const TypeMatcher<SolidProviderMultipleProviderOfSameTypeError>(),
     );
   });
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/utils/diagnostic_properties_for_generic.dart';
+import 'package:flutter_solidart/src/utils/diagnostic_properties_for_generic.dart';
 import 'package:solidart/solidart.dart';
 
 /// Reacts to the [signal] calling the [builder] each time.
