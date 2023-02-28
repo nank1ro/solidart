@@ -7,7 +7,7 @@
 
   ### Declare providers
 
-  ```
+  ```dart
   Solid(
         providers: [
           SolidProvider<NameProvider>(
@@ -27,14 +27,14 @@
 
   ### Retrieve providers
 
-  ```
+  ```dart
   final nameProvider = context.get<NameProvider>();
   final numberProvider = context.get<NumberProvider>();
   ```
 
   ### Provide providers to modals (dialogs, bottomsheets)
 
-  ```
+  ```dart
     return showDialog(
       context: context,
       builder: (dialogContext) => Solid.value(
