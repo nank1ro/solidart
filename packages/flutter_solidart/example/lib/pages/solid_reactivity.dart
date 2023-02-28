@@ -9,14 +9,14 @@ enum SignalId {
   secondCounter,
 }
 
-class SolidReactivity extends StatefulWidget {
-  const SolidReactivity({super.key});
+class SolidReactivityPage extends StatefulWidget {
+  const SolidReactivityPage({super.key});
 
   @override
-  State<SolidReactivity> createState() => _SolidReactivityState();
+  State<SolidReactivityPage> createState() => _SolidReactivityPageState();
 }
 
-class _SolidReactivityState extends State<SolidReactivity> {
+class _SolidReactivityPageState extends State<SolidReactivityPage> {
   @override
   Widget build(BuildContext context) {
     return Solid(

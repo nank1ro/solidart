@@ -220,7 +220,6 @@ class Signal<T> extends ReadableSignal<T> {
   /// check [SignalOptions.equals] and [SignalOptions.comparator].
   set value(T newValue) {
     // skip if the value are equals
-    // TODO(alex): add specific equality based on type, e.g. DeepCollectionEquality
     if (options.equals && value == newValue) {
       return;
     }

@@ -1,3 +1,65 @@
+## 0.3.0
+
+- Now Solid can deal also with `SolidProviders`. You no longer need an external dependency injector library.
+  I decided to put some boundaries and stop suggesting any external dependency injector library.
+  This choice is due to the fact that external libraries in turn provide state management and the user is more likely to mistakenly use solidart.
+  I simplified the usage of InheritedWidgets with a very nice API:
+
+  ### Declare providers
+
+  ```dart
+  Solid(
+        providers: [
+          SolidProvider<NameProvider>(
+            create: () => const NameProvider('Ale'),
+            // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
+            dispose: (provider) => provider.dispose(),
+          ),
+          SolidProvider<NumberProvider>(
+            create: () => const NumberProvider(1),
+            // Do not create the provider lazily, but immediately
+            lazy: false,
+          ),
+        ],
+        child: const SomeChildThatNeedsProviders(),
+    )
+  ```
+
+  ### Retrieve providers
+
+  ```dart
+  final nameProvider = context.get<NameProvider>();
+  final numberProvider = context.get<NumberProvider>();
+  ```
+
+  ### Provide providers to modals (dialogs, bottomsheets)
+
+  ```dart
+    return showDialog(
+      context: context,
+      builder: (dialogContext) => Solid.value(
+        // pass a context that has access to providers
+        context: context,
+        // pass the list of provider [Type]s
+        providerTypes: const [NameProvider],
+        child: Dialog(
+          child: Builder(builder: (innerContext) {
+            // retrieve the provider with the innerContext
+            final nameProvider = innerContext.get<NameProvider>();
+            return SizedBox.square(
+              dimension: 100,
+              child: Center(
+                child: Text('name: ${nameProvider.name}'),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  ```
+
+  > You cannot provide multiple providers of the same type in the same Solid widget.
+
 ## 0.2.2
 
 - `createResource` now accepts a `stream` and can be used to wrap a Stream and correctly handle its state.

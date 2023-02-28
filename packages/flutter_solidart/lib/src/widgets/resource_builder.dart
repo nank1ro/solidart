@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/widgets/signal_builder.dart';
+import 'package:flutter_solidart/src/widgets/signal_builder.dart';
 import 'package:solidart/solidart.dart';
 
 typedef ResourceWidgetBuilder<ResultType> = Widget Function(

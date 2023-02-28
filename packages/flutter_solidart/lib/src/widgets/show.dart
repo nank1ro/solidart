@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/widgets/signal_builder.dart';
+import 'package:flutter_solidart/src/widgets/signal_builder.dart';
 import 'package:solidart/solidart.dart';
 
 /// Conditionally render its [builder] or an optional [fallback] component

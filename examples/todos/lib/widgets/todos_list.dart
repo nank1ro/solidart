@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:provider/provider.dart';
 import 'package:todos/common/constants.dart';
 import 'package:todos/controllers/controller.dart';
 import 'package:todos/models/todo.dart';
@@ -28,7 +27,7 @@ class _TodoListState extends State<TodoList> {
     super.initState();
 
     // retrieve the todos list and the filtered ones
-    todos = context.read<TodosController>().todos;
+    todos = context.get<TodosController>().todos;
     completedTodos =
         context.get<ReadableSignal<List<Todo>>>(SignalId.completedTodos);
     uncompletedTodos =

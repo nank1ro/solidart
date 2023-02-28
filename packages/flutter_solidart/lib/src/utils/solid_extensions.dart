@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/widgets/solid.dart';
+import 'package:flutter_solidart/src/widgets/solid.dart';
 import 'package:solidart/solidart.dart';
 
 extension SolidExtensions on BuildContext {
@@ -24,7 +24,7 @@ extension SolidExtensions on BuildContext {
   /// Doesn't listen to the signal so it won't cause the widget to rebuild.
   ///
   /// You may call this method inside the `initState` or `build` methods.
-  S get<S extends SignalBase<dynamic>>(Object id) {
+  S get<S>([SignalIdentifier? id]) {
     return Solid.get<S>(this, id);
   }
 
@@ -50,7 +50,7 @@ extension SolidExtensions on BuildContext {
   /// Listens to the signal so it causes the widget to rebuild.
   ///
   /// You must call this method only from the `build` method.
-  T observe<T>(Object id) {
+  T observe<T>(SignalIdentifier id) {
     return Solid.observe<T>(this, id);
   }
 }
