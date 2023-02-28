@@ -7,6 +7,7 @@ class NameProvider {
 
   void dispose() {
     // put your dispose logic here
+    // ignore: avoid_print
     print('dispose name provider');
   }
 }
@@ -30,7 +31,7 @@ class SolidProvidersPage extends StatelessWidget {
           SolidProvider<NameProvider>(
             create: (_) => const NameProvider('Ale'),
             // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
-            onDispose: (context, provider) => provider.dispose(),
+            dispose: (context, provider) => provider.dispose(),
           ),
           SolidProvider<NumberProvider>(
             create: (_) => const NumberProvider(1),

@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:meta/meta.dart';
+part of '../widgets/solid.dart';
 
 /// A function that creates an object of type [T].
 typedef Create<T> = T Function(BuildContext context);
@@ -11,7 +10,7 @@ typedef Dispose<T> = void Function(BuildContext context, T value);
 class SolidProvider<T> {
   const SolidProvider({
     required this.create,
-    this.onDispose,
+    this.dispose,
     this.lazy = true,
   });
 
@@ -20,7 +19,7 @@ class SolidProvider<T> {
 
   /// An optional dispose function called when the Solid that created this
   /// provider disposes
-  final Dispose<T>? onDispose;
+  final Dispose<T>? dispose;
 
   /// Make the provider creation lazy, defaults to true.
   ///
@@ -28,11 +27,9 @@ class SolidProvider<T> {
   /// when retrieved from descendants.
   final bool lazy;
 
-  @internal
-  Type get type => T;
+  Type get _type => T;
 
-  @internal
-  void dispose(BuildContext context, dynamic value) {
-    onDispose?.call(context, value as T);
+  void _dispose(BuildContext context, dynamic value) {
+    dispose?.call(context, value as T);
   }
 }

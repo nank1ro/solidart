@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
+part '../models/provider.dart';
+
 /// The id of a signal
 typedef SignalIdentifier = Object;
 
@@ -283,7 +285,11 @@ class Solid extends StatefulWidget {
       providerType: providerType,
     )?.state;
     if (state == null) {
-      throw SolidError(signalId: aspect, providerType: providerType);
+      if (aspect != null) {
+        throw SolidSignalError(signalId: aspect);
+      } else {
+        throw SolidProviderError(providerType: providerType!);
+      }
     }
     return state;
   }
@@ -461,7 +467,7 @@ class SolidState extends State<Solid> {
     // dispose all the created providers
     if (widget._autoDispose) {
       _createdProviders.forEach((provider, value) {
-        provider.dispose(context, value);
+        provider._dispose(context, value);
       });
     }
 
@@ -532,7 +538,7 @@ class SolidState extends State<Solid> {
   /// Try to find a [SolidProvider] of type [Type] and returns it
   SolidProvider<dynamic>? _getProviderOfType(Type providerType) {
     final provider = widget.providers.firstWhereOrNull(
-      (element) => element.type == providerType,
+      (element) => element._type == providerType,
     );
     if (provider == null) return null;
     return provider;
@@ -734,19 +740,16 @@ class _InheritedSolid extends InheritedModel<Object> {
   }
 }
 
-class SolidError extends Error {
-  SolidError({
-    this.signalId,
-    this.providerType,
+class SolidProviderError extends Error {
+  SolidProviderError({
+    required this.providerType,
   });
 
-  final SignalIdentifier? signalId;
-  final Type? providerType;
+  final Type providerType;
 
   @override
   String toString() {
-    if (providerType != null) {
-      return '''
+    return '''
 Error could not fint a Solid containing the given SolidProvider type $providerType
 To fix, please:
           
@@ -767,7 +770,18 @@ To fix, please:
 If none of these solutions work, please file a bug at:
 https://github.com/nank1ro/solidart/issues/new
       ''';
-    }
+  }
+}
+
+class SolidSignalError extends Error {
+  SolidSignalError({
+    required this.signalId,
+  });
+
+  final SignalIdentifier? signalId;
+
+  @override
+  String toString() {
     return '''
 Error: Could not find a Solid containing the given Signal with id $signalId.
     
