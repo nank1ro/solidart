@@ -547,7 +547,7 @@ class SolidState extends State<Solid> {
   void initState() {
     super.initState();
     // check if the provider type is not dynamic
-    // check there are multiple providers of the same type
+    // check if there are multiple providers of the same type
     final types = <Type>[];
     for (final provider in widget.providers) {
       final type = provider._type;
