@@ -24,21 +24,22 @@ class _ToolbarState extends State<Toolbar> {
     final todos = context.get<TodosController>().todos;
 
     // create derived signals based on the list of todos
+
     // no need to dispose them because they already dispose when the parent (todos) disposes.
     allTodosCount = todos.select((value) => value.length);
 
-    // retrieve the list of completed count and select the length.
+    // retrieve the list of completed count and select just the length.
     final completedTodos =
         context.get<ReadableSignal<List<Todo>>>(SignalId.completedTodos);
     completedTodosCount = completedTodos.select((value) => value.length);
-    // retrieve the list of uncompleted count and select the length.
+    // retrieve the list of uncompleted count and select just the length.
     final uncompletedTodos =
         context.get<ReadableSignal<List<Todo>>>(SignalId.uncompletedTodos);
     uncompletedTodosCount = uncompletedTodos.select((value) => value.length);
   }
 
-  // Return the correct signal for the given [filter].
-  ReadableSignal<int> mapFilterToSignal(TodosFilter filter) {
+  /// Maps the given [filter] to the correct list of todos
+  ReadableSignal<int> mapFilterToTodosList(TodosFilter filter) {
     switch (filter) {
       case TodosFilter.all:
         return allTodosCount;
@@ -58,7 +59,7 @@ class _ToolbarState extends State<Toolbar> {
         labelColor: Colors.black,
         tabs: TodosFilter.values.map(
           (filter) {
-            final todosCount = mapFilterToSignal(filter);
+            final todosCount = mapFilterToTodosList(filter);
             // Each tab bar is using its specific todos count signal
             return SignalBuilder(
               signal: todosCount,
@@ -69,11 +70,10 @@ class _ToolbarState extends State<Toolbar> {
           },
         ).toList(),
         onTap: (index) {
-          // retrieve the activeTodoFilter signal
-          // in order to update the current active filter
-          final signal =
+          // retrieve the activeTodoFilter signal in order to update the current active filter
+          final activeTodoFilter =
               context.get<Signal<TodosFilter>>(SignalId.activeTodoFilter);
-          signal.value = TodosFilter.values[index];
+          activeTodoFilter.value = TodosFilter.values[index];
         },
       ),
     );

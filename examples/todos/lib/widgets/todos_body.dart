@@ -14,15 +14,7 @@ class TodosBody extends StatefulWidget {
 }
 
 class _TodosBodyState extends State<TodosBody> {
-  late final TodosController todosController;
   final textController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    // retrieve the [TodosController]
-    todosController = context.get<TodosController>();
-  }
 
   @override
   void dispose() {
@@ -32,6 +24,10 @@ class _TodosBodyState extends State<TodosBody> {
 
   @override
   Widget build(BuildContext context) {
+    // retrieve the [TodosController], you're safe to `get` a Signal or Provider
+    // in both the `initState` and `build` methods.
+    final todosController = context.get<TodosController>();
+
     return Solid(
       signals: {
         // make the active filter signal visible only to descendants.
@@ -45,10 +41,12 @@ class _TodosBodyState extends State<TodosBody> {
         // This is preferable over passing the signals as parameters down to descendants,
         // expecially when the usage is very deep in the tree.
         SignalId.completedTodos: () => todosController.todos.select<List<Todo>>(
-            (value) => value.where((element) => element.completed).toList()),
-        SignalId.uncompletedTodos: () => todosController.todos
-            .select<List<Todo>>((value) =>
-                value.where((element) => !element.completed).toList()),
+              (value) => value.where((element) => element.completed).toList(),
+            ),
+        SignalId.uncompletedTodos: () =>
+            todosController.todos.select<List<Todo>>(
+              (value) => value.where((element) => !element.completed).toList(),
+            ),
       },
       child: Column(
         children: [

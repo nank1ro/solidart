@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:todos/models/todo.dart';
 
+/// Renders a ListTile with a checkbox where you can change
+/// the "completion" status of a [Todo]
 class TodoItem extends StatelessWidget {
   const TodoItem({
     super.key,

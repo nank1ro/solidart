@@ -18,7 +18,9 @@ class TodosPage extends StatelessWidget {
         ),
       ],
       child: Scaffold(
-        appBar: AppBar(title: const Text('Todos')),
+        appBar: AppBar(
+          title: const Text('Todos'),
+        ),
         body: const Padding(
           padding: EdgeInsets.all(8.0),
           child: TodosBody(),

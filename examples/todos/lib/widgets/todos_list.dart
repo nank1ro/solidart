@@ -26,7 +26,13 @@ class _TodoListState extends State<TodoList> {
   void initState() {
     super.initState();
 
-    // retrieve the todos list and the filtered ones
+    // retrieve the whole todos list and the filtered ones
+    // this can be done here in the initState, or in the build method.
+    // You're not going to experience any performance issues writing the
+    // lines below in the build method. Used the initState here just
+    // to show you that it's possible.
+    // NOTE: If you need to `select` a value from a signal, do it always in the `initState`.
+    //       The `select` method creates a new signal every time it runs, and you don't want this to happen.
     todos = context.get<TodosController>().todos;
     completedTodos =
         context.get<ReadableSignal<List<Todo>>>(SignalId.completedTodos);
@@ -34,7 +40,8 @@ class _TodoListState extends State<TodoList> {
         context.get<ReadableSignal<List<Todo>>>(SignalId.uncompletedTodos);
   }
 
-  ReadableSignal<List<Todo>> mapFilterToTodos(TodosFilter filter) {
+  // Given a [filter] return the correct list of todos
+  ReadableSignal<List<Todo>> mapFilterToTodosList(TodosFilter filter) {
     switch (filter) {
       case TodosFilter.all:
         return todos;
@@ -47,10 +54,13 @@ class _TodoListState extends State<TodoList> {
 
   @override
   Widget build(BuildContext context) {
+    // rebuilds this BuildContext every time the `activeFilter` value changes
     final activeFilter =
         context.observe<TodosFilter>(SignalId.activeTodoFilter);
+
     return SignalBuilder(
-      signal: mapFilterToTodos(activeFilter),
+      // react to the correct list of todos list
+      signal: mapFilterToTodosList(activeFilter),
       builder: (_, todos, __) {
         return ListView.builder(
           itemCount: todos.length,
