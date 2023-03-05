@@ -1,6 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:todos/models/todo.dart';
 
+/// Contains the state of the [todos] list and allows to
+/// - `add`: Add a todo in the list of [todos]
+/// - `remove`: Removes a todo with the given id from the list of [todos]
+/// - `toggle`: Toggles a todo with the given id
+/// The list of todos exposed is a [ReadableSignal] so the user cannot mutate
+/// the signal without using this controller.
+@immutable
 class TodosController {
   TodosController({
     List<Todo> initialTodos = const [],

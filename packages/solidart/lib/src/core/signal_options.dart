@@ -1,3 +1,5 @@
+import 'package:meta/meta.dart';
+
 typedef ValueComparator<T> = bool Function(T a, T b);
 
 /// Signal options which increase its customization
@@ -12,6 +14,7 @@ typedef ValueComparator<T> = bool Function(T a, T b);
 /// If the current and the new value are equal, no updates occur.
 /// The default value of a [comparator] is [identical] that checks
 /// the object references.
+@immutable
 class SignalOptions<T> {
   const SignalOptions({
     this.equals = false,
