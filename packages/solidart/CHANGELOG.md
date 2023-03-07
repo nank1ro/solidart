@@ -1,3 +1,8 @@
+## 0.2.3
+
+- The `select` method of a signal now can take a custom `options` parameter to customize its behaviour.
+- Fixed an invalid assert in the `ResourceBuilder` widget that happens for resources without a fetcher.
+
 ## 0.2.2
 
 - `createResource` now accepts a `stream` and can be used to wrap a Stream and correctly handle its state.

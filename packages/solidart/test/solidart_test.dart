@@ -8,6 +8,8 @@ import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_options.dart';
 import 'package:test/test.dart';
 
+import 'package:collection/collection.dart';
+
 class MockCallbackFunction extends Mock {
   void call();
 }
@@ -43,6 +45,12 @@ class User {
 
   @override
   int get hashCode => runtimeType.hashCode ^ id.hashCode;
+}
+
+class SampleList {
+  final List<int> numbers;
+
+  SampleList(this.numbers);
 }
 
 void main() {
@@ -245,6 +253,29 @@ void main() {
       selector.onDispose(cb);
       s.dispose();
 
+      verify(cb()).called(1);
+    });
+
+    test('custom signal options for derived signal', () async {
+      final a = createSignal(SampleList([1]));
+      final selected = a.select(
+        (value) => value.numbers,
+        options: SignalOptions<List<int>>(
+          comparator: (a, b) => ListEquality().equals(a, b),
+        ),
+      );
+
+      final cb = MockCallbackFunction();
+      createEffect(cb, signals: [selected]);
+
+      verifyNever(cb());
+
+      a.value = SampleList([1]);
+      await pumpEventQueue();
+      verifyNever(cb());
+
+      a.value = SampleList([1, 2]);
+      await pumpEventQueue();
       verify(cb()).called(1);
     });
 
