@@ -50,11 +50,13 @@ class ReadableSignal<T> implements SignalBase<T> {
   /// The [select] function allows filtering unwanted rebuilds by reading only
   /// the properties that we care about.
   ReadableSignal<Selected> select<Selected>(
-    Selected Function(T value) selector,
-  ) {
+    Selected Function(T value) selector, {
+    SignalOptions<Selected>? options,
+  }) {
     final signalSelector = SignalSelector<T, Selected>(
       signal: this as Signal<T>,
       selector: selector,
+      options: options,
     );
     // ignore: unnecessary_cast
     return signalSelector as ReadableSignal<Selected>;
