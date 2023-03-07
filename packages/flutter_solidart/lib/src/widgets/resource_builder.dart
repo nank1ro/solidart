@@ -135,7 +135,10 @@ class _ResourceBuilderState<ResultType>
   @override
   void initState() {
     super.initState();
-    widget.resource.fetch();
+    // start fetching if the [fetcher] is present
+    if (widget.resource.fetcher != null) {
+      widget.resource.fetch();
+    }
   }
 
   @override

@@ -1,3 +1,8 @@
+## 0.3.1
+
+- The `select` method of a signal now can take a custom `options` parameter to customize its behaviour.
+- Fixed an invalid assert in the `ResourceBuilder` widget that happens for resources without a fetcher.
+
 ## 0.3.0
 
 - Now Solid can deal also with `SolidProviders`. You no longer need an external dependency injector library.
