@@ -123,19 +123,19 @@ SignalBuilder(
 ```
 
 and to update our `themeMode` signal we just update the signal value inside the `onPressed` callback:
-```dart
+```diff
 SignalBuilder(
   signal: themeMode,
   builder: (_, mode, __) {
     return IconButton(
-      onPressed: () {
-        // toggle the theme mode
-        if (mode == ThemeMode.light) {
-          themeMode.value = ThemeMode.dark;
-        } else {
-          themeMode.value = ThemeMode.light;
-        }
-      },
++      onPressed: () {
++        // toggle the theme mode
++        if (mode == ThemeMode.light) {
++          themeMode.value = ThemeMode.dark;
++        } else {
++          themeMode.value = ThemeMode.light;
++        }
++      },
       icon: Icon(
         mode == ThemeMode.light ? Icons.dark_mode : Icons.light_mode,
       ),
