@@ -12,7 +12,7 @@ import 'package:toggle_theme/main.dart';
 
 void main() {
   testWidgets(
-      'Check that when the app is in light mode the icon button shows is a moon, while in dark mode is a sun',
+      'Check that when the app is in light mode the icon button shows a moon, while in dark mode it shows a sun',
       (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
