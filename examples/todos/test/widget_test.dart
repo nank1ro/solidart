@@ -6,25 +6,111 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:todos/controllers/controller.dart';
 
-import 'package:todos/main.dart';
+import 'package:todos/models/todo.dart';
+import 'package:todos/todos_page.dart';
+import 'package:todos/widgets/todo_item.dart';
+
+// Utility function to easily wrap a [child] into a mocked todos controller.
+Widget wrapWithMockedTodosController({
+  required Widget child,
+  required TodosController todosController,
+}) {
+  return MaterialApp(
+    home: Solid(
+      providers: [
+        SolidProvider<TodosController>(
+          create: () => todosController,
+          dispose: (controller) => controller.dispose(),
+        ),
+      ],
+      child: child,
+    ),
+  );
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Todos with initial value', (WidgetTester tester) async {
+    // create controller with an initial value
+    final initialTodos = List.generate(
+      3,
+      (i) => Todo(id: "$i", task: 'mock$i', completed: false),
+    );
+    // Build our TodosPageView and trigger a frame.
+    await tester.pumpWidget(
+      wrapWithMockedTodosController(
+        todosController: TodosController(initialTodos: initialTodos),
+        child: const TodosPageView(),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // verify that there are 3 todos rendered initially
+    expect(tester.widgetList(find.byType(TodoItem)).length, 3);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // Verify that the todos list contains 'mock0'
+    expect(find.text('mock0'), findsOneWidget);
+
+    // Verify that the todos list contains 'mock1'
+    expect(find.text('mock1'), findsOneWidget);
+
+    // Verify that the todos list contains 'mock2'
+    expect(find.text('mock2'), findsOneWidget);
+  });
+
+  testWidgets('Add a todo', (WidgetTester tester) async {
+    // Build our TodosPageView and trigger a frame.
+    await tester.pumpWidget(
+      wrapWithMockedTodosController(
+        todosController: TodosController(),
+        child: const TodosPageView(),
+      ),
+    );
+
+    // verify that there are 0 todos rendered initially
+    expect(tester.widgetList(find.byType(TodoItem)).length, 0);
+
+    await tester.enterText(find.byType(TextFormField), 'test todo');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // verify that there is 1 todos now
+    expect(tester.widgetList(find.byType(TodoItem)).length, 1);
+    // Verify that the todos list contains 'test todo'
+    expect(find.text('test todo'), findsOneWidget);
+  });
+
+  testWidgets('Toggle a todo', (WidgetTester tester) async {
+    // create controller with an initial value
+    final initialTodos = List.generate(
+      2,
+      (i) => Todo(id: "$i", task: 'mock$i', completed: false),
+    );
+    final todosController = TodosController(initialTodos: initialTodos);
+    // Build our TodosPageView and trigger a frame.
+    await tester.pumpWidget(
+      wrapWithMockedTodosController(
+        todosController: todosController,
+        child: const TodosPageView(),
+      ),
+    );
+
+    // verify that the completed tabs starts with 0 todos
+    expect(find.text('completed (0)'), findsOneWidget);
+
+    todosController.toggle('0');
+    await tester.pump();
+
+    expect(find.text('completed (1)'), findsOneWidget);
+
+    await tester.tap(find.text('completed (1)'));
+    await tester.pump();
+
+    // Verify that the completed todos list contains 'mock0'
+    expect(find.text('mock0'), findsOneWidget);
+    // Verify that the completed todos list not contains 'mock1'
+    expect(find.text('mock1'), findsNothing);
   });
 }

@@ -59,7 +59,7 @@ class MyHomePage extends StatelessWidget {
             return IconButton(
               onPressed: () {
                 // toggle the theme mode
-                if (themeMode.value == ThemeMode.light) {
+                if (mode == ThemeMode.light) {
                   themeMode.value = ThemeMode.dark;
                 } else {
                   themeMode.value = ThemeMode.light;
