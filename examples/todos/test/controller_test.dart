@@ -73,7 +73,7 @@ void main() {
       expect(controller.todos.value.first.completed, false);
 
       // complete the first todo
-      controller.toogle('1');
+      controller.toggle('1');
 
       // verify that the first todo is completed
       expect(controller.todos.value.first.completed, true);
