@@ -72,6 +72,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // expect_lint: specify_context_get_type
+    final sampleClass = context.get();
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
     //

@@ -24,7 +24,6 @@ class AvoidDynamicSolidProviders extends DartLintRule {
 
       final type = node.staticType;
       final name = type?.getDisplayString(withNullability: false);
-      if (name == null) return;
       if (name == 'SolidProvider<dynamic>') {
         reporter.reportErrorForNode(_code, node);
         return;
@@ -33,9 +32,7 @@ class AvoidDynamicSolidProviders extends DartLintRule {
   }
 
   @override
-  List<Fix> getFixes() {
-    return [_SpecifySolidProviderType()];
-  }
+  List<Fix> getFixes() => [_SpecifySolidProviderType()];
 }
 
 class _SpecifySolidProviderType extends DartFix {
@@ -52,13 +49,11 @@ class _SpecifySolidProviderType extends DartFix {
 
       final argumentList =
           node.childEntities.whereType<ArgumentList>().firstOrNull;
-      if (argumentList == null) return;
 
       final namedExpression =
-          argumentList.childEntities.whereType<NamedExpression>().firstOrNull;
-      if (namedExpression == null) return;
+          argumentList?.childEntities.whereType<NamedExpression>().firstOrNull;
 
-      final expressionFunctionBody = namedExpression.expression.childEntities
+      final expressionFunctionBody = namedExpression?.expression.childEntities
           .whereType<ExpressionFunctionBody>()
           .firstOrNull;
       if (expressionFunctionBody == null) return;
