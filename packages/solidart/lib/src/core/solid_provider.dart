@@ -1,4 +1,4 @@
-part of '../widgets/solid.dart';
+import 'package:meta/meta.dart';
 
 /// A function that creates an object of type [T].
 typedef Create<T> = T Function();
@@ -26,10 +26,4 @@ class SolidProvider<T> {
   /// If this value is true the provider will be [create]d only
   /// when retrieved from descendants.
   final bool lazy;
-
-  Type get _type => T;
-
-  void _dispose(BuildContext context, dynamic value) {
-    dispose?.call(value as T);
-  }
 }

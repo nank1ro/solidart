@@ -5,7 +5,7 @@ void main() {
   runApp(const MyApp());
 }
 
-class SampleClass {}
+class Sample {}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -15,7 +15,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Solid(
       providers: [
-        SolidProvider(create: () => SampleClass()),
+        // expect_lint: avoid_dynamic_solid_providers
+        SolidProvider(create: () => Sample()),
       ],
       child: MaterialApp(
         title: 'Flutter Demo',
