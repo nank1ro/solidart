@@ -154,9 +154,9 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
     // React the the [stream], if provided
     if (stream != null) {
       _streamSubscription = stream!.listen((data) {
-        value = ResourceValue.ready(data);
+        value = ResourceValue<ResultType>.ready(data);
       }, onError: (error, stackTrace) {
-        value = ResourceValue.error(error, stackTrace: stackTrace);
+        value = ResourceValue<ResultType>.error(error, stackTrace: stackTrace);
       });
     }
   }
@@ -168,11 +168,11 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
   Future<void> fetch() async {
     assert(fetcher != null, "You are trying to fetch, but fetcher is null");
     try {
-      value = const ResourceValue.loading();
+      value = ResourceValue<ResultType>.loading();
       final result = await fetcher!();
-      value = ResourceValue.ready(result);
+      value = ResourceValue<ResultType>.ready(result);
     } catch (e, s) {
-      value = ResourceValue.error(e, stackTrace: s);
+      value = ResourceValue<ResultType>.error(e, stackTrace: s);
     }
   }
 
@@ -180,18 +180,18 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
   Future<void> refetch() async {
     assert(fetcher != null, "You are trying to refetch, but fetcher is null");
     try {
-      if (value is ResourceReady) {
+      if (value is ResourceReady<ResultType>) {
         update(
           (value) =>
               (value as ResourceReady<ResultType>).copyWith(refreshing: true),
         );
       } else {
-        value = const ResourceValue.loading();
+        value = ResourceValue<ResultType>.loading();
       }
       final result = await fetcher!();
-      value = ResourceValue.ready(result);
+      value = ResourceValue<ResultType>.ready(result);
     } catch (e, s) {
-      value = ResourceValue.error(e, stackTrace: s);
+      value = ResourceValue<ResultType>.error(e, stackTrace: s);
     }
   }
 
@@ -200,6 +200,10 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
     _streamSubscription?.cancel();
     super.dispose();
   }
+
+  @override
+  String toString() =>
+      '''Resource<$ResultType>(value: $value, previousValue: $previousValue, options; $options)''';
 }
 
 @sealed
@@ -393,13 +397,13 @@ class ResourceUnresolved<T> implements ResourceValue<T> {
 
 // coverage:ignore-start
 extension ResourceExtensions<T> on ResourceValue<T> {
-  /// Indicates if the resoruce is loading.
+  /// Indicates if the resource is loading.
   bool get isLoading => this is ResourceLoading<T>;
 
-  /// Indicates if the resoruce has an error.
+  /// Indicates if the resource has an error.
   bool get hasError => this is ResourceError<T>;
 
-  /// Indicates if the resoruce is ready.
+  /// Indicates if the resource is ready.
   bool get isReady => this is ResourceReady<T>;
 
   /// Upcast [ResourceValue] into a [ResourceReady], or return null if the

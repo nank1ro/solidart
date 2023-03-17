@@ -33,8 +33,15 @@ class WrapWithResourceBuilder extends DartAssist {
             'ResourceBuilder(\n'
             'resource: null,\n'
             'builder: (context, resourceValue) {\n'
+            'return resourceValue.on(\n'
+            'ready: (value, isRefreshing) {\n'
             'return ');
-        builder.addSimpleInsertion(node.end, '; },)');
+        builder.addSimpleInsertion(
+            node.end,
+            ';},'
+            'loading: () => const CircularProgressIndicator(),\n'
+            "error: (error, stackTrace) => Text('\$error'),\n"
+            ');},)');
       });
     });
   }
