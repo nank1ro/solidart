@@ -435,5 +435,13 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 150));
       expect(loadingCalledTimes, 2);
     });
+
+    test('check toString()', () async {
+      final r = createResource(fetcher: () => Future.value(1));
+      await r.fetch();
+      await pumpEventQueue();
+      expect(r.toString(),
+          "Resource<int>(value: ResourceReady<int>(value: 1, refreshing: false), previousValue: ResourceLoading<int>(), options; SignalOptions<ResourceValue<int>>(equals: false, comparator: PRESENT))");
+    });
   });
 }
