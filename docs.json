@@ -43,8 +43,10 @@
     ],
     [
       "Lints",
-      ["All the assists", "/lints/assists"],
-      ["All the lints", "/lints/lints"]
+      [
+        ["All the assists", "/lints/assists"],
+        ["All the lints", "/lints/lints"]
+      ]
     ],
     [
       "Examples",
