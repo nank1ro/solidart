@@ -12,7 +12,6 @@ class WrapWithShow extends DartAssist {
     SourceRange target,
   ) {
     context.registry.addInstanceCreationExpression((node) {
-      // Select from "new" to the opening bracket
       if (!target.intersects(node.constructorName.sourceRange)) {
         return;
       }
