@@ -1,4 +1,4 @@
-This package is a developer tool for users of flutter_solidart, designed to help stop common issue and simplify repetetive tasks.
+This package is a developer tool for users of flutter_solidart, designed to help stop common issues and simplify repetetive tasks.
 
 > I highly recommend using this package to avoid errors and understand how to properly use flutter_solidart
 
