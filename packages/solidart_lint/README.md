@@ -62,6 +62,8 @@ Solid(
 ),
 ```
 
+---
+
 ### avoid_dynamic_solid_signal
 
 Solid `signals` cannot be dynamic
@@ -86,6 +88,8 @@ Solid(
 ),
 ```
 
+---
+
 ### invalid_provider_type
 
 The provider type you want to retrieve is invalid, must not implement `SignalBase`.
@@ -103,6 +107,8 @@ final provider = context.get<Signal<MyClass>>();
 final provider = context.get<MyClass>();
 ```
 
+---
+
 ### invalid_signal_type
 
 The signal type you want to retrieve is invalid, must implement `SignalBase`.
@@ -119,6 +125,8 @@ final signal = context.get<MyClass>('signal-id');
 ```dart
 final signal = context.get<Signal<int>>('signal-id');
 ```
+
+---
 
 ### invalid_solid_get_type
 
