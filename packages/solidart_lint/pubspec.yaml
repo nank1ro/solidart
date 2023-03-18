@@ -12,7 +12,6 @@ dependencies:
   analyzer_plugin: ^0.11.2
   collection: ^1.17.0
   custom_lint_builder: ^0.3.2
-  solidart: ^0.2.3
 
 dev_dependencies:
   lints: ^2.0.0
