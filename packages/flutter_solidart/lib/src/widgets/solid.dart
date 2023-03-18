@@ -2,7 +2,6 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:flutter_solidart/src/models/solid_provider.dart';
 
 extension<T> on SolidProvider<T> {
   Type get valueType => T;
