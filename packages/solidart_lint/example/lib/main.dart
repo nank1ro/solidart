@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
       ],
       signals: {
         // expect_lint: avoid_dynamic_solid_signal
-        '1': () => createSignal(1),
+        'counter': () => createSignal(0),
         // expect_lint: avoid_dynamic_solid_signal
         'double-counter': () => counter.select((value) => value * 2),
       },

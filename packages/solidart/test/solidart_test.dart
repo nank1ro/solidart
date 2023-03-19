@@ -339,6 +339,18 @@ void main() {
       expect(resource.value.error, isUnimplementedError);
     });
 
+    test('check createResource with future that throws', () async {
+      Future<User> getUser() => throw Exception();
+      final resource = createResource(fetcher: getUser);
+
+      addTearDown(resource.dispose);
+
+      await resource.fetch();
+      await pumpEventQueue();
+      expect(resource.value, isA<ResourceError<User>>());
+      expect(resource.value.error, isException);
+    });
+
     test('check createResource with future', () async {
       final userId = createSignal(0);
 

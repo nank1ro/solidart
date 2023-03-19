@@ -148,7 +148,7 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
   void _initialize() {
     // React to the [source], if provided.
     if (fetcher != null && source != null) {
-      source!.addListener(fetch);
+      source!.addListener(refetch);
       source!.onDispose(() => source!.removeListener(fetch));
     }
     // React the the [stream], if provided
@@ -167,6 +167,8 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
   /// performed by [ResourceBuilder].
   Future<void> fetch() async {
     assert(fetcher != null, "You are trying to fetch, but fetcher is null");
+    assert(value is ResourceUnresolved<ResultType>,
+        "Cannot fetch a resource that is already resolved, use 'refetch' instead");
     try {
       value = ResourceValue<ResultType>.loading();
       final result = await fetcher!();

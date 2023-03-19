@@ -11,7 +11,7 @@ class AvoidDynamicSolidProvider extends DartLintRule {
   static const _code = LintCode(
     name: 'avoid_dynamic_solid_provider',
     errorSeverity: ErrorSeverity.ERROR,
-    problemMessage: 'SolidProviders cannot be dynamic',
+    problemMessage: 'The SolidProvider cannot be dynamic',
   );
 
   @override
@@ -35,10 +35,10 @@ class AvoidDynamicSolidProvider extends DartLintRule {
   }
 
   @override
-  List<Fix> getFixes() => [_SpecifySolidProviderType()];
+  List<Fix> getFixes() => [_SolidProviderTypeFix()];
 }
 
-class _SpecifySolidProviderType extends DartFix {
+class _SolidProviderTypeFix extends DartFix {
   @override
   void run(
     CustomLintResolver resolver,
@@ -57,13 +57,24 @@ class _SpecifySolidProviderType extends DartFix {
         final namedExpression = argumentList?.childEntities
             .whereType<NamedExpression>()
             .firstOrNull;
+        if (namedExpression == null) return;
 
-        final expressionFunctionBody = namedExpression?.expression.childEntities
-            .whereType<ExpressionFunctionBody>()
-            .firstOrNull;
-        if (expressionFunctionBody == null) return;
+        Expression? expression;
 
-        final dartType = expressionFunctionBody.expression.staticType;
+        for (final child in namedExpression.expression.childEntities) {
+          if (child is ExpressionFunctionBody) {
+            expression = child.expression;
+            break;
+          } else if (child is BlockFunctionBody) {
+            final returnStatement = child.block.childEntities
+                .whereType<ReturnStatement>()
+                .firstOrNull;
+            expression = returnStatement?.expression;
+            break;
+          }
+        }
+
+        final dartType = expression?.staticType;
         if (dartType == null) return;
 
         final changeBuilder = reporter.createChangeBuilder(
@@ -74,7 +85,7 @@ class _SpecifySolidProviderType extends DartFix {
         changeBuilder.addDartFileEdit(
           (builder) {
             builder.addSimpleInsertion(
-              node.offset + 'SolidProvider'.length,
+              node.offset + node.length,
               '<$dartType>',
             );
           },
