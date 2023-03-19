@@ -99,7 +99,7 @@ class _SolidSignalTypeFix extends DartFix {
             if (returnType == null) return;
 
             final changeBuilder = reporter.createChangeBuilder(
-              message: "Specify the '$returnType'",
+              message: "Specify the '$returnType' type",
               priority: 1,
             );
 
