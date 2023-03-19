@@ -18,6 +18,14 @@ analyzer:
     - custom_lint
 ```
 
+Then run:
+
+```sh
+flutter clean
+flutter pub get
+dart run custom_lint
+```
+
 ## ASSISTS
 
 ### Wrap with Solid

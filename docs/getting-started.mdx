@@ -62,3 +62,11 @@ analyzer:
   plugins:
     - custom_lint
 ```
+
+Then run:
+```sh
+rm pubspec.lock
+flutter clean
+flutter pub get
+dart run custom_lint
+```
