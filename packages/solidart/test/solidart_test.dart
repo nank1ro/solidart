@@ -339,6 +339,18 @@ void main() {
       expect(resource.value.error, isUnimplementedError);
     });
 
+    test('check createResource with future that throws', () async {
+      Future<User> getUser() => throw Exception();
+      final resource = createResource(fetcher: getUser);
+
+      addTearDown(resource.dispose);
+
+      await resource.fetch();
+      await pumpEventQueue();
+      expect(resource.value, isA<ResourceError<User>>());
+      expect(resource.value.error, isException);
+    });
+
     test('check createResource with future', () async {
       final userId = createSignal(0);
 
@@ -434,6 +446,14 @@ void main() {
       resource.refetch();
       await Future.delayed(const Duration(milliseconds: 150));
       expect(loadingCalledTimes, 2);
+    });
+
+    test('check toString()', () async {
+      final r = createResource(fetcher: () => Future.value(1));
+      await r.fetch();
+      await pumpEventQueue();
+      expect(r.toString(),
+          "Resource<int>(value: ResourceReady<int>(value: 1, refreshing: false), previousValue: ResourceLoading<int>(), options; SignalOptions<ResourceValue<int>>(equals: false, comparator: PRESENT))");
     });
   });
 }

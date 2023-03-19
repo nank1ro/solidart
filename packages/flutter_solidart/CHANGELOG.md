@@ -1,3 +1,8 @@
+## 0.3.2
+
+- Add assert to resource `fetch` method to prevent multiple fetches of the same resource.
+- Fix `ResourceBuilder` that fetched the resource every time even if the resource was already resolved.
+
 ## 0.3.1
 
 - The `select` method of a signal now can take a custom `options` parameter to customize its behaviour.

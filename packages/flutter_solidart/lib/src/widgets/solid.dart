@@ -3,8 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-part '../models/provider.dart';
-
 /// The id of a signal
 typedef SignalIdentifier = Object;
 
@@ -550,7 +548,7 @@ class SolidState extends State<Solid> {
     // check if there are multiple providers of the same type
     final types = <Type>[];
     for (final provider in widget.providers) {
-      final type = provider._type;
+      final type = provider.valueType;
       if (type == dynamic) throw SolidProviderDynamicError();
 
       if (types.contains(type)) {
@@ -576,7 +574,7 @@ class SolidState extends State<Solid> {
     // dispose all the created providers
     if (widget._autoDispose) {
       _createdProviders.forEach((provider, value) {
-        provider._dispose(context, value);
+        provider.disposeFn(context, value);
       });
     }
 
@@ -647,7 +645,7 @@ class SolidState extends State<Solid> {
   /// Try to find a [SolidProvider] of type [Type] and returns it
   SolidProvider<dynamic>? _getProviderOfType(Type providerType) {
     final provider = widget.providers.firstWhereOrNull(
-      (element) => element._type == providerType,
+      (element) => element.valueType == providerType,
     );
     if (provider == null) return null;
     return provider;

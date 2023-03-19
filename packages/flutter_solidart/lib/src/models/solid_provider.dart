@@ -1,4 +1,5 @@
-part of '../widgets/solid.dart';
+import 'package:flutter/material.dart';
+import 'package:meta/meta.dart';
 
 /// A function that creates an object of type [T].
 typedef Create<T> = T Function();
@@ -27,9 +28,11 @@ class SolidProvider<T> {
   /// when retrieved from descendants.
   final bool lazy;
 
-  Type get _type => T;
+  @internal
+  Type get valueType => T;
 
-  void _dispose(BuildContext context, dynamic value) {
+  @internal
+  void disposeFn(BuildContext context, dynamic value) {
     dispose?.call(value as T);
   }
 }
