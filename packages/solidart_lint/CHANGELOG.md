@@ -1,3 +1,7 @@
+## 0.1.1
+
+- Fix dynamic SolidProvider type fix position
+
 ## 0.1.0
 
 - First release of **solidart_lint** with the following **assists**:

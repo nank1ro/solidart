@@ -81,11 +81,15 @@ class _SolidProviderTypeFix extends DartFix {
           message: 'Convert SolidProvider to SolidProvider<$dartType>',
           priority: 1,
         );
+        final constructorName =
+            node.childEntities.whereType<ConstructorName>().firstOrNull;
+        final name = constructorName?.toString();
+        if (name != 'SolidProvider') return;
 
         changeBuilder.addDartFileEdit(
           (builder) {
             builder.addSimpleInsertion(
-              node.offset + node.length,
+              constructorName!.offset + constructorName.length,
               '<$dartType>',
             );
           },
