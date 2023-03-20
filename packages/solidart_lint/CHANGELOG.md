@@ -1,3 +1,7 @@
+## 0.1.2
+
+- Fix dynamic solid signal quickfix
+
 ## 0.1.1
 
 - Fix dynamic SolidProvider type fix position
