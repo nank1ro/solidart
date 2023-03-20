@@ -42,6 +42,13 @@
       ]
     ],
     [
+      "Testing",
+      [
+        ["Getting started", "/testing/getting-started"],
+        ["Counter", "/testing/counter"]
+      ]
+    ],
+    [
       "Lints",
       [
         ["All the assists", "/lints/assists"],
