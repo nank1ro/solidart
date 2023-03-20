@@ -1,3 +1,7 @@
+## 0.2.4
+
+- Add assert to resource `fetch` method to prevent multiple fetches of the same resource.
+
 ## 0.2.3
 
 - The `select` method of a signal now can take a custom `options` parameter to customize its behaviour.

@@ -5,13 +5,14 @@ description: Get started with solidart on your repository.
 
 # Getting started
 
-The library is made up of two packages:
+The library is made up of three packages:
 1. [solidart](/getting-started#solidart)
 2. [flutter_solidart](/getting-started#flutter_solidart)
+2. [solidart_lint](/getting-started#solidart_lint)
 
 ## solidart
 
-This library is meant to be used only in Dart applications.
+This package is meant to be used only in Dart applications.
 
 ### Install
 
@@ -28,7 +29,7 @@ import 'package:solidart/solidart.dart';
 
 ## flutter_solidart
 
-This library extends the functionatilies of `solidart` and is meant to be used only in Flutter applications.
+This package extends the functionatilies of `solidart` and is meant to be used only in Flutter applications.
 
 ### Install
 
@@ -41,4 +42,31 @@ flutter pub add flutter_solidart
 
 ```dart
 import 'package:flutter_solidart/flutter_solidart.dart';
+```
+
+## solidart_lint
+
+This package is a developer tool for users of flutter_solidart, designed to help stop common issues and simplify repetitive tasks.
+<Success>I highly recommend using this package to avoid errors and understand how to properly use flutter_solidart</Success>
+
+### Install
+
+Run this command in the root of your Flutter project:
+```sh
+flutter pub add -d solidart_lint custom_lint
+```
+
+Then edit your `analysis_options.yaml` file and add these lines of code:
+```yaml
+analyzer:
+  plugins:
+    - custom_lint
+```
+
+Then run:
+```sh
+rm pubspec.lock
+flutter clean
+flutter pub get
+dart run custom_lint
 ```

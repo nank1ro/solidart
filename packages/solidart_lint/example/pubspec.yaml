@@ -1,6 +1,5 @@
-name: todos
+name: example
 description: A new Flutter project.
-
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
@@ -20,7 +19,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ">=2.18.6 <3.0.0"
+  sdk: ">=2.18.0 <3.0.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -31,19 +30,19 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_solidart: ^0.3.2
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
-  uuid: ^3.0.7
+  flutter_solidart: ^0.3.2
 
 dev_dependencies:
   custom_lint: ^0.3.2
+  solidart_lint:
+    path: ../
   flutter_test:
     sdk: flutter
 
-  solidart_lint: ^0.1.0
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
