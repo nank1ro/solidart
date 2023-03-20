@@ -95,8 +95,12 @@ class _SolidSignalTypeFix extends DartFix {
                 expression.childEntities.whereType<ArgumentList>().firstOrNull;
             final fnExp2 =
                 argList?.arguments.whereType<FunctionExpression>().firstOrNull;
-            final returnType = fnExp2?.declaredElement?.returnType;
-            if (returnType == null) return;
+            final innerExp =
+                argList?.arguments.whereType<Expression>().firstOrNull;
+            final returnType =
+                fnExp2?.declaredElement?.returnType ?? innerExp?.staticType;
+
+            if (returnType == null || returnType.isDartCoreNull) return;
 
             final changeBuilder = reporter.createChangeBuilder(
               message: "Specify the '$returnType' type",
