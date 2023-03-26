@@ -787,4 +787,40 @@ void main() {
       const TypeMatcher<SolidProviderMultipleProviderOfSameTypeError>(),
     );
   });
+
+  testWidgets('Test Solid.update method', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Solid(
+            signals: {
+              'counter': () => createSignal<int>(0),
+            },
+            child: Builder(
+              builder: (context) {
+                final counter = context.observe<int>('counter');
+                return Column(
+                  children: [
+                    Text('$counter'),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.update<int>('counter', (value) => value + 1);
+                      },
+                      child: const Text('add'),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('0'), findsOneWidget);
+
+    expect(find.byType(ElevatedButton), findsOneWidget);
+    await tester.tap(find.byType(ElevatedButton));
+    await tester.pumpAndSettle();
+    expect(find.text('1'), findsOneWidget);
+  });
 }
