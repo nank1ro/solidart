@@ -41,7 +41,7 @@
         ["Solid", "/flutter/solid"]
       ]
     ],
-    ["Testing"],
+    ["Testing", [["Getting started", "/testing/introduction"]]],
     [
       "Lints",
       [
