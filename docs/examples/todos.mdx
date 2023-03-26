@@ -7,6 +7,391 @@ description: Todos example using flutter_solidart
 
 <Zapp id="zxug06s6xuh0" />
 
+This example leverages the power of the `Solid` widgets using `signals` and `providers`.
+
+### TodosPage
+
+In this example we've a `TodosPage` that is the starting point of our __todos__ feature.
+The `TodosPage` uses a `Solid` widget to provide a `TodosController` to descendants.
+```dart
+class TodosPage extends StatelessWidget {
+  const TodosPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Using SolidProvider here to provide the [TodosController] to descendants.
+    return Solid(
+      providers: [
+        SolidProvider<TodosController>(
+          create: () => TodosController(initialTodos: Todo.sample),
+          dispose: (controller) => controller.dispose(),
+        ),
+      ],
+      child: const TodosPageView(),
+    );
+  }
+}
+```
+
+### TodosController
+
+Let's jump into the `TodosController` and let's check what is responsible for.
+
+The `TodosController` is where the business logic lives.
+It keep the whole todos list state and allows us to __add__, __remove__ or __toggle__ a _Todo_.
+The `TodosController` can have an initialValue, that is the initial list of todos.
+```dart
+@immutable
+class TodosController {
+  TodosController({
+    List<Todo> initialTodos = const [],
+  }) : _todos = createSignal(initialTodos);
+
+  // Keep the editable todos signal private
+  // only the TodoController can mutate the value.
+  final Signal<List<Todo>> _todos;
+
+  // Expose the list of todos as a ReadableSignal so the
+  // user cannot mutate directly the object.
+  ReadableSignal<List<Todo>> get todos => _todos.readable;
+
+  void add(Todo todo) {
+    _todos.update((value) => [...value, todo]);
+  }
+
+  void remove(String id) {
+    _todos.update(
+      (value) => value.where((todo) => todo.id != id).toList(),
+    );
+  }
+
+  void toggle(String id) {
+    _todos.update(
+      (value) => [
+        for (final todo in value)
+          if (todo.id != id) todo else todo.copyWith(completed: !todo.completed)
+      ],
+    );
+  }
+
+  void dispose() {
+    _todos.dispose();
+  }
+}
+```
+
+As you can see the `TodosController` can get an `initialTodos` list. This is going to be its initial state.
+
+When the constructor is runned, the `_todos` signal is populated with the provided `initialTodos`.
+The thing to note here is that `_todos` is private by choice. Instead the user has to use the `todos` getter.
+
+The `todos` getter is a `ReadableSignal`. This means that the user won't be able to mutate its value directly.
+
+The `add` method uses the `update` function of a `Signal` to append the new `todo` to the current list of todos.
+
+In a similar way the `remove` and `toggle` methods update the signal value.
+In the `remove` method we __remove__ from the list the todo with the `id` provided.
+In the `toggle` method we loop through each todo and toggle the completed state of the todo with the given `id`.
+
+### TodosPageView
+
+Let's jump back to the UI and let's see the `TodosPageView` widget:
+```dart
+class TodosPageView extends StatelessWidget {
+  const TodosPageView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Todos'),
+      ),
+      body: const Padding(
+        padding: EdgeInsets.all(8.0),
+        child: TodosBody(),
+      ),
+    );
+  }
+}
+```
+
+This widget is the child of the `TodosPage` and is the base structure of our page.
+You may wonder why I haven't placed this code in the `TodosPage`.
+This is necessary (_only_) for testing, so I can easily mock the `TodosController` and just test the view.
+
+### TodosBody
+
+Let's continue to the `TodosBody`.
+The `TodosBody` is the body of our feature, it has a text input on top where you can write a new todo, a [Toolbar](#toolbar) and the [TodoList](#todolist).
+```dart
+class TodosBody extends StatefulWidget {
+  const TodosBody({super.key});
+
+  @override
+  State<TodosBody> createState() => _TodosBodyState();
+}
+
+class _TodosBodyState extends State<TodosBody> {
+  final textController = TextEditingController();
+
+  @override
+  void dispose() {
+    textController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // retrieve the [TodosController], you're safe to `get` a Signal or Provider
+    // in both the `initState` and `build` methods.
+    final todosController = context.get<TodosController>();
+
+    return Solid(
+      signals: {
+        // make the active filter signal visible only to descendants.
+        // created here because this is where it starts to be necessary.
+        SignalId.activeTodoFilter: () =>
+            createSignal<TodosFilter>(TodosFilter.all),
+        // Registering two new signals, the list of completed and uncompleted todos.
+        // These are derived [ReadableSignal]s.
+        // Provided through a [Solid] because their value is used by the [TodoList]
+        // and [Toolbar].
+        // This is preferable over passing the signals as parameters down to descendants,
+        // expecially when the usage is very deep in the tree.
+        SignalId.completedTodos: () => todosController.todos.select<List<Todo>>(
+              (value) => value.where((element) => element.completed).toList(),
+            ),
+        SignalId.uncompletedTodos: () =>
+            todosController.todos.select<List<Todo>>(
+              (value) => value.where((element) => !element.completed).toList(),
+            ),
+      },
+      child: Column(
+        children: [
+          TextFormField(
+            controller: textController,
+            decoration: const InputDecoration(
+              hintText: 'Write new todo',
+            ),
+            validator: (v) {
+              if (v == null || v.isEmpty) {
+                return 'Cannot be empty';
+              }
+              return null;
+            },
+            onFieldSubmitted: (task) {
+              if (task.isEmpty) return;
+              final newTodo = Todo.create(task);
+              todosController.add(newTodo);
+              textController.clear();
+            },
+          ),
+          const SizedBox(height: 16),
+          const Toolbar(),
+          const SizedBox(height: 16),
+          Expanded(
+            child: TodoList(
+              onTodoToggle: (id) {
+                todosController.toggle(id);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+The important parts here are two.
+1. We're retrieving the `todosController` with the syntax `context.get<TodosController>()`.
+   This is how we access providers from descendants. You can safely run this method in the `initState`, in the `build` method or even inside a callback like `onPressed`.
+2. We're creating a new `Solid` widget. Yes, you can create many Solid widgets inside your app, this the ideal usage. Don't use a single `Solid` widget but many. Place the `signals` and `providers` only where needed.
+
+Here we're creating the a signal with id `SignalId.activeTodoFilter` with an initial value of `TodosFilter.all`. This signals keeps the state of the current selected tab.
+
+We're also creating two derived signals, the list of `completedTodos` and `uncompletedTodos` using the `select` method of the todos list signal.
+
+In the `TextFormField` when the field is submitted we add the new todo simply using:
+```dart
+// skip if the task is empty
+if (task.isEmpty) return;
+// create the new todo
+final newTodo = Todo.create(task);
+// add it to the todosList using our todosController
+todosController.add(newTodo);
+// clear the text field in order to be able to enter a new todo
+textController.clear();
+```
+
+### Toolbar
+
+The toolbar shows 3 tabs (or filters).
+- All the todos
+- The uncompleted todos list
+- The completed todos list
+
+Each tab contain the number of todos present.
+```dart
+class Toolbar extends StatefulWidget {
+  const Toolbar({super.key});
+
+  @override
+  State<Toolbar> createState() => _ToolbarState();
+}
+
+class _ToolbarState extends State<Toolbar> {
+  /// All the derived signals
+  late final ReadableSignal<int> allTodosCount;
+  late final ReadableSignal<int> uncompletedTodosCount;
+  late final ReadableSignal<int> completedTodosCount;
+
+  @override
+  void initState() {
+    super.initState();
+    // retrieve the todos from TodosController.
+    final todos = context.get<TodosController>().todos;
+
+    // create derived signals based on the list of todos
+
+    // no need to dispose them because they already dispose when the parent (todos) disposes.
+    allTodosCount = todos.select((value) => value.length);
+
+    // retrieve the list of completed count and select just the length.
+    final completedTodos =
+        context.get<ReadableSignal<List<Todo>>>(SignalId.completedTodos);
+    completedTodosCount = completedTodos.select((value) => value.length);
+    // retrieve the list of uncompleted count and select just the length.
+    final uncompletedTodos =
+        context.get<ReadableSignal<List<Todo>>>(SignalId.uncompletedTodos);
+    uncompletedTodosCount = uncompletedTodos.select((value) => value.length);
+  }
+
+  /// Maps the given [filter] to the correct list of todos
+  ReadableSignal<int> mapFilterToTodosList(TodosFilter filter) {
+    switch (filter) {
+      case TodosFilter.all:
+        return allTodosCount;
+      case TodosFilter.uncompleted:
+        return uncompletedTodosCount;
+      case TodosFilter.completed:
+        return completedTodosCount;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: TodosFilter.values.length,
+      initialIndex: 0,
+      child: TabBar(
+        labelColor: Colors.black,
+        tabs: TodosFilter.values.map(
+          (filter) {
+            final todosCount = mapFilterToTodosList(filter);
+            // Each tab bar is using its specific todos count signal
+            return SignalBuilder(
+              signal: todosCount,
+              builder: (context, todosCount, _) {
+                return Tab(text: '${filter.name} ($todosCount)');
+              },
+            );
+          },
+        ).toList(),
+        onTap: (index) {
+          // update the current active filter
+          context.update<TodosFilter>(
+            SignalId.activeTodoFilter,
+            (_) => TodosFilter.values[index],
+          );
+        },
+      ),
+    );
+  }
+}
+```
+
+### TodosList
+
+The `TodosList` renders all the todos based on the current `activeFilter`.
+In order to react to the active filter is uses the `observe` extension on `BuildContext` that subscribes to the signal provided and rebuilds every time the value changes.
+
+```dart
+class TodoList extends StatefulWidget {
+  const TodoList({
+    super.key,
+    this.onTodoToggle,
+  });
+
+  final ValueChanged<String>? onTodoToggle;
+
+  @override
+  State<TodoList> createState() => _TodoListState();
+}
+
+class _TodoListState extends State<TodoList> {
+  late final ReadableSignal<List<Todo>> todos;
+  late final ReadableSignal<List<Todo>> completedTodos;
+  late final ReadableSignal<List<Todo>> uncompletedTodos;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // retrieve the whole todos list and the filtered ones
+    // this can be done here in the initState, or in the build method.
+    // You're not going to experience any performance issues writing the
+    // lines below in the build method. Used the initState here just
+    // to show you that it's possible.
+    // NOTE: If you need to `select` a value from a signal, do it always in the `initState`.
+    //       The `select` method creates a new signal every time it runs, and you don't want this to happen.
+    todos = context.get<TodosController>().todos;
+    completedTodos =
+        context.get<ReadableSignal<List<Todo>>>(SignalId.completedTodos);
+    uncompletedTodos =
+        context.get<ReadableSignal<List<Todo>>>(SignalId.uncompletedTodos);
+  }
+
+  // Given a [filter] return the correct list of todos
+  ReadableSignal<List<Todo>> mapFilterToTodosList(TodosFilter filter) {
+    switch (filter) {
+      case TodosFilter.all:
+        return todos;
+      case TodosFilter.uncompleted:
+        return uncompletedTodos;
+      case TodosFilter.completed:
+        return completedTodos;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // rebuilds this BuildContext every time the `activeFilter` value changes
+    final activeFilter =
+        context.observe<TodosFilter>(SignalId.activeTodoFilter);
+
+    return SignalBuilder(
+      // react to the correct list of todos list
+      signal: mapFilterToTodosList(activeFilter),
+      builder: (_, todos, __) {
+        return ListView.builder(
+          itemCount: todos.length,
+          itemBuilder: (BuildContext context, int index) {
+            final todo = todos[index];
+            return TodoItem(
+              todo: todo,
+              onStatusChanged: (_) {
+                widget.onTodoToggle?.call(todo.id);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+```
+
 ## Testing
 
 Here we're going to separate the widgets tests from the business logic tests.
