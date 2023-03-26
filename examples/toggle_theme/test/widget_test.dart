@@ -17,6 +17,7 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
 
+    // Icon finders
     Finder lightModeIcon() => find.byIcon(Icons.light_mode);
     Finder darkModeIcon() => find.byIcon(Icons.dark_mode);
 
@@ -24,20 +25,20 @@ void main() {
     // Verify that the toggle theme icon button shows the dark mode icon
     expect(darkModeIcon(), findsOneWidget);
     expect(lightModeIcon(), findsNothing);
-    //
-    // // Tap the icon button to toggle the theme mode and trigger a frame.
+
+    // Tap the icon button to toggle the theme mode and trigger a frame.
     await tester.tap(darkModeIcon());
     await tester.pump();
-    //
-    // // Verify that our theme has changed to 'dark' mode and the `light_mode` icon should be shown
+
+    // Verify that our theme has changed to 'dark' mode and the `light_mode` icon should be shown
     expect(lightModeIcon(), findsOneWidget);
     expect(darkModeIcon(), findsNothing);
 
-    // // Tap the icon button to toggle the theme mode and trigger a frame.
+    // Tap the icon button to toggle the theme mode and trigger a frame.
     await tester.tap(lightModeIcon());
     await tester.pump();
-    //
-    // // Verify that our theme has changed to 'light' mode and the `dark_mode` icon should be shown
+
+    // Verify that our theme has changed to 'light' mode and the `dark_mode` icon should be shown
     expect(darkModeIcon(), findsOneWidget);
     expect(lightModeIcon(), findsNothing);
   });

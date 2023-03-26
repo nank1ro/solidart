@@ -72,6 +72,7 @@ void main() {
     // verify that there are 0 todos rendered initially
     expect(tester.widgetList(find.byType(TodoItem)).length, 0);
 
+    // write and add a new todo
     await tester.enterText(find.byType(TextFormField), 'test todo');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump();
@@ -80,6 +81,38 @@ void main() {
     expect(tester.widgetList(find.byType(TodoItem)).length, 1);
     // Verify that the todos list contains 'test todo'
     expect(find.text('test todo'), findsOneWidget);
+  });
+
+  testWidgets('Remove a todo', (WidgetTester tester) async {
+    // create controller with an initial value
+    final initialTodos = List.generate(
+      3,
+      (i) => Todo(id: "$i", task: 'mock$i', completed: false),
+    );
+    // Build our TodosPageView and trigger a frame.
+    await tester.pumpWidget(
+      wrapWithMockedTodosController(
+        todosController: TodosController(initialTodos: initialTodos),
+        child: const TodosPageView(),
+      ),
+    );
+
+    // verify that there are 3 todos rendered initially
+    expect(tester.widgetList(find.byType(TodoItem)).length, 3);
+
+    final firstTodoItem = find.byType(TodoItem).first;
+    // simulate the drag from right to left
+    await tester.fling(
+      firstTodoItem,
+      const Offset(-300, 0),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    // verify that there are 2 todos rendered now
+    expect(tester.widgetList(find.byType(TodoItem)).length, 2);
+    // Verify that the todos list doesn't contain 'mock0'
+    expect(find.text('mock0'), findsNothing);
   });
 
   testWidgets('Toggle a todo', (WidgetTester tester) async {
@@ -100,11 +133,14 @@ void main() {
     // verify that the completed tabs starts with 0 todos
     expect(find.text('completed (0)'), findsOneWidget);
 
+    // toggle the todo with id `0`
     todosController.toggle('0');
     await tester.pump();
 
+    // verify that the completed tab shows 1 todo now
     expect(find.text('completed (1)'), findsOneWidget);
 
+    // tap in the completed tab
     await tester.tap(find.text('completed (1)'));
     await tester.pump();
 
