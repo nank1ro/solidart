@@ -10,8 +10,7 @@ class InvalidUpdateType extends DartLintRule {
   static const _code = LintCode(
     name: 'invalid_update_type',
     errorSeverity: ErrorSeverity.ERROR,
-    problemMessage:
-        'The update type you want to retrieve is invalid, must not implement SignalBase',
+    problemMessage: 'The update type is invalid, must not implement SignalBase',
   );
 
   @override

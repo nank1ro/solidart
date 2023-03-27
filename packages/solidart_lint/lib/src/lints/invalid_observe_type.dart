@@ -10,7 +10,7 @@ class InvalidObserveType extends DartLintRule {
     name: 'invalid_observe_type',
     errorSeverity: ErrorSeverity.ERROR,
     problemMessage:
-        'The observe type you want to retrieve is invalid, must not implement SignalBase',
+        'The observe type is invalid, must not implement SignalBase',
   );
 
   @override
