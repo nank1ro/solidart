@@ -20,7 +20,7 @@ class TodoItem extends StatelessWidget {
     return Dismissible(
       key: ValueKey(todo.id),
       direction: DismissDirection.endToStart,
-      onDismissed: (dir) {
+      onDismissed: (_) {
         // remove the todo
         context.get<TodosController>().remove(todo.id);
       },
