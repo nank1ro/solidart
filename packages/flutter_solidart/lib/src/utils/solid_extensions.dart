@@ -56,6 +56,10 @@ extension SolidExtensions on BuildContext {
 
   /// Convenience method to update a `Signal` value.
   ///
+  /// You can use it to update a signal value, e.g:
+  /// ```dart
+  /// context.update<int>('counter', (value) => value * 2);
+  /// ```
   /// This is equal to:
   /// ```dart
   /// // retrieve the signal
@@ -68,6 +72,6 @@ extension SolidExtensions on BuildContext {
     SignalIdentifier id,
     T Function(T value) callback,
   ) {
-    return Solid.update<T>(this, id, callback: callback);
+    return Solid.update<T>(this, id, callback);
   }
 }

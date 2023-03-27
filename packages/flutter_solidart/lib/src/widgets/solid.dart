@@ -510,6 +510,10 @@ The signal id that caused this issue is $id
 
   /// Convenience method to update a `Signal` value.
   ///
+  /// You can use it to update a signal value, e.g:
+  /// ```dart
+  /// context.update<int>('counter', (value) => value * 2);
+  /// ```
   /// This is equal to:
   /// ```dart
   /// // retrieve the signal
@@ -520,9 +524,9 @@ The signal id that caused this issue is $id
   /// but shorter when you don't need the signal for anything else.
   static void update<T>(
     BuildContext context,
-    SignalIdentifier id, {
-    required T Function(T value) callback,
-  }) {
+    SignalIdentifier id,
+    T Function(T value) callback,
+  ) {
     // retrieve the signal and update its value
     get<Signal<T>>(context, id).update(callback);
   }
