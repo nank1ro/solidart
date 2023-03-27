@@ -36,9 +36,9 @@ class _SolidReactivityPageState extends State<SolidReactivityPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: const [
                 Text(
-                  'Check the console to see that the context.watch behaves in a fine-grained way, rebuilding only the specific descendants with the new value. '
+                  'Check the console to see that the context.observe behaves in a fine-grained way, rebuilding only the specific descendants with the new value. '
                   "It's like using SignalBuilder but works differently under the hood. "
-                  'The context.watch should be placed deeper as it causes the whole widget to rebuild as the value changes.',
+                  'The context.observe should be placed deeper as it causes the whole widget to rebuild as the value changes.',
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: 16),
