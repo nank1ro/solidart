@@ -151,3 +151,41 @@ final provider = context.get();
 ```dart
 final provider = context.get<MyClass>();
 ```
+
+---
+
+### invalid_observe_type
+
+The type you want to observe is invalid, must not implement `SignalBase`.
+You cannot observe a signal that implements `SignalBase`, like `Signal`, `ReadableSignal` and `Resource`.
+
+**Bad**:
+
+```dart
+final counter = context.observe<Signal<int>>('counter');
+```
+
+**Good**:
+
+```dart
+final counter = context.observe<int>('counter');
+```
+
+---
+
+### invalid_update_type
+
+The update type is invalid, must not implement `SignalBase`.
+You cannot update a signal that implements `SignalBase`, like `Signal`, `ReadableSignal` and `Resource`.
+
+**Bad**:
+
+```dart
+context.update<Signal<int>>('counter', (value) => value * 2);
+```
+
+**Good**:
+
+```dart
+context.update<int>('counter', (value) => value * 2);
+```
