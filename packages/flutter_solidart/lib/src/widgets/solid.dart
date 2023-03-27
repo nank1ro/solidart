@@ -490,10 +490,7 @@ The signal id that caused this issue is $id
   /// Listens to the signal so it causes the widget to rebuild.
   ///
   /// You must call this method only from the `build` method.
-  static T observe<T>(
-    BuildContext context,
-    SignalIdentifier id,
-  ) {
+  static T observe<T>(BuildContext context, SignalIdentifier id) {
     final state = _findState(context, aspect: id, listen: true);
 
     // retrieve the signal
@@ -509,6 +506,29 @@ The signal id that caused this issue is $id
     }
     // return the signal value
     return createdSignal.value as T;
+  }
+
+  /// Convenience method to update a `Signal` value.
+  ///
+  /// You can use it to update a signal value, e.g:
+  /// ```dart
+  /// context.update<int>('counter', (value) => value * 2);
+  /// ```
+  /// This is equal to:
+  /// ```dart
+  /// // retrieve the signal
+  /// final signal = context.get<Signal<int>>('counter');
+  /// // update the signal
+  /// signal.update((value) => value * 2);
+  /// ```
+  /// but shorter when you don't need the signal for anything else.
+  static void update<T>(
+    BuildContext context,
+    SignalIdentifier id,
+    T Function(T value) callback,
+  ) {
+    // retrieve the signal and update its value
+    get<Signal<T>>(context, id).update(callback);
   }
 
   /// Tries to find a provider of type P from the created providers and returns

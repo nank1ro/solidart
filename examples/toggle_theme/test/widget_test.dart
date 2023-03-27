@@ -11,20 +11,35 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:toggle_theme/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets(
+      'Check that when the app is in light mode the icon button shows a moon, while in dark mode it shows a sun',
+      (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Icon finders
+    Finder lightModeIcon() => find.byIcon(Icons.light_mode);
+    Finder darkModeIcon() => find.byIcon(Icons.dark_mode);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // Given that our theme starts at light mode
+    // Verify that the toggle theme icon button shows the dark mode icon
+    expect(darkModeIcon(), findsOneWidget);
+    expect(lightModeIcon(), findsNothing);
+
+    // Tap the icon button to toggle the theme mode and trigger a frame.
+    await tester.tap(darkModeIcon());
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify that our theme has changed to 'dark' mode and the `light_mode` icon should be shown
+    expect(lightModeIcon(), findsOneWidget);
+    expect(darkModeIcon(), findsNothing);
+
+    // Tap the icon button to toggle the theme mode and trigger a frame.
+    await tester.tap(lightModeIcon());
+    await tester.pump();
+
+    // Verify that our theme has changed to 'light' mode and the `dark_mode` icon should be shown
+    expect(darkModeIcon(), findsOneWidget);
+    expect(lightModeIcon(), findsNothing);
   });
 }

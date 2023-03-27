@@ -17,14 +17,25 @@ class TodosPage extends StatelessWidget {
           dispose: (controller) => controller.dispose(),
         ),
       ],
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Todos'),
-        ),
-        body: const Padding(
-          padding: EdgeInsets.all(8.0),
-          child: TodosBody(),
-        ),
+      child: const TodosPageView(),
+    );
+  }
+}
+
+/// As you can see I'm separating the creation of the Solid widget from the descendants
+/// This is necessary for testing, so I can easily mock the `TodosController` and just test the view
+class TodosPageView extends StatelessWidget {
+  const TodosPageView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Todos'),
+      ),
+      body: const Padding(
+        padding: EdgeInsets.all(8.0),
+        child: TodosBody(),
       ),
     );
   }

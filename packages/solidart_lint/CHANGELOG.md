@@ -1,3 +1,10 @@
+## 0.1.3
+
+Add the following lints:
+
+- invalid_update_type
+- invalid_observe_type
+
 ## 0.1.2
 
 - Fix dynamic solid signal quickfix
