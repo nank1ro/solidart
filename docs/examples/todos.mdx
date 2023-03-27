@@ -231,7 +231,7 @@ The toolbar shows 3 tabs (or filters).
 - The uncompleted todos list
 - The completed todos list
 
-Each tab contain the number of todos present.
+Each tab contain the number of todos present in the current tab.
 ```dart
 class Toolbar extends StatefulWidget {
   const Toolbar({super.key});
@@ -311,10 +311,17 @@ class _ToolbarState extends State<Toolbar> {
 }
 ```
 
+To get the total number of todos we've used the `select` method of signals.
+It subscribes to the signal and updates only when the selected value changes.
+
+Then we have used a `SignalBuilder` to rebuild every time the count signal changes.
+
+Finally, when a tab is tapped, we `update` the `activeTodoFilter` signal to set the new active tab.
+
 ### TodosList
 
 The `TodosList` renders all the todos based on the current `activeFilter`.
-In order to react to the active filter is uses the `observe` extension on `BuildContext` that subscribes to the signal provided and rebuilds every time the value changes.
+In order to react to the active filter it uses the `observe` extension on `BuildContext` that subscribes to the signal provided and rebuilds every time the value changes.
 
 ```dart
 class TodoList extends StatefulWidget {
