@@ -1,3 +1,25 @@
+## 0.3.3
+
+- Add `update` extension on `BuildContext`.
+  It's a convenience method to update a `Signal` value.
+
+  You can use it to update a signal value, e.g:
+
+  ```dart
+  context.update<int>('counter', (value) => value * 2);
+  ```
+
+  This is equal to:
+
+  ```dart
+  // retrieve the signal
+  final signal = context.get<Signal<int>>('counter');
+  // update the signal
+  signal.update((value) => value * 2);
+  ```
+
+  but shorter when you don't need the signal for anything else.
+
 ## 0.3.2
 
 - Add assert to resource `fetch` method to prevent multiple fetches of the same resource.

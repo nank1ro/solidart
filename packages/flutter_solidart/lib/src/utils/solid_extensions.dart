@@ -53,4 +53,25 @@ extension SolidExtensions on BuildContext {
   T observe<T>(SignalIdentifier id) {
     return Solid.observe<T>(this, id);
   }
+
+  /// Convenience method to update a `Signal` value.
+  ///
+  /// You can use it to update a signal value, e.g:
+  /// ```dart
+  /// context.update<int>('counter', (value) => value * 2);
+  /// ```
+  /// This is equal to:
+  /// ```dart
+  /// // retrieve the signal
+  /// final signal = context.get<Signal<int>>('counter');
+  /// // update the signal
+  /// signal.update((value) => value * 2);
+  /// ```
+  /// but shorter when you don't need the signal for anything else.
+  void update<T>(
+    SignalIdentifier id,
+    T Function(T value) callback,
+  ) {
+    return Solid.update<T>(this, id, callback);
+  }
 }

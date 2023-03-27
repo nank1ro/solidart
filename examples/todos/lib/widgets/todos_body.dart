@@ -74,7 +74,7 @@ class _TodosBodyState extends State<TodosBody> {
           Expanded(
             child: TodoList(
               onTodoToggle: (id) {
-                todosController.toogle(id);
+                todosController.toggle(id);
               },
             ),
           ),

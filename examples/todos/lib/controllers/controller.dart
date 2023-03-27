@@ -32,7 +32,7 @@ class TodosController {
     );
   }
 
-  void toogle(String id) {
+  void toggle(String id) {
     _todos.update(
       (value) => [
         for (final todo in value)
