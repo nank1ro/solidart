@@ -693,9 +693,9 @@ testWidgets('Toggle a todo', (WidgetTester tester) async {
   // verify that the completed tabs starts with 0 todos
   expect(find.text('completed (0)'), findsOneWidget);
 
-    // toggle the first todo
-    await tester.tap(find.byType(CheckboxListTile).first);
-    await tester.pump();
+  // toggle the first todo
+  await tester.tap(find.byType(CheckboxListTile).first);
+  await tester.pump();
 
   // verify that the completed tab shows 1 todo now
   expect(find.text('completed (1)'), findsOneWidget);
