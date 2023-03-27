@@ -133,8 +133,8 @@ void main() {
     // verify that the completed tabs starts with 0 todos
     expect(find.text('completed (0)'), findsOneWidget);
 
-    // toggle the todo with id `0`
-    todosController.toggle('0');
+    // toggle the first todo
+    await tester.tap(find.byType(CheckboxListTile).first);
     await tester.pump();
 
     // verify that the completed tab shows 1 todo now
