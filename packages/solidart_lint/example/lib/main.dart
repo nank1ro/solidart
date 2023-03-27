@@ -46,9 +46,9 @@ class MyHomePage extends StatelessWidget {
     final invalidSignalType = context.get<MyClass>('1');
     // expect_lint: invalid_provider_type
     final invalidProviderType = context.get<Signal>();
-
     // expect_lint: invalid_observe_type
     final counter = context.observe<Signal<int>>('counter');
+
     return ElevatedButton(
       child: const Text('Increment'),
       onPressed: () {
