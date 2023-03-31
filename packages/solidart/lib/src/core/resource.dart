@@ -53,9 +53,14 @@ import 'package:solidart/src/core/signal_base.dart';
 /// - `value` attempts to synchronously get the value of `ResourceReady`
 /// - `error` attempts to synchronously get the error of `ResourceError`
 ///
-/// A `Resource` provides the `fetch` and `refetch` methods.
+/// A `Resource` provides the `resolve` and `refetch` methods.
+///
+/// The `resolve` method must be called only once for the lifecycle of the resource.
+/// If runs the `fetcher` for the first time and then it listen to the [source], if provided.
+/// If you're passing a [stream] it subscribes to it.
 ///
 /// The `refetch` method forces an update and calls the `fetcher` function again.
+/// The
 Resource<ResultType> createResource<ResultType>({
   Future<ResultType> Function()? fetcher,
   Stream<ResultType>? stream,
@@ -124,15 +129,7 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
     super.options,
   })  : assert((fetcher != null) ^ (stream != null),
             "Provide a fetcher or a stream"),
-        super(
-          // if you are using a Future, the value starts as unresolved
-          // otherwise consider the Stream starting with loading because without any value
-          fetcher != null
-              ? ResourceValue<ResultType>.unresolved()
-              : ResourceValue<ResultType>.loading(),
-        ) {
-    _initialize();
-  }
+        super(ResourceValue<ResultType>.unresolved());
 
   /// Reactive signal values passed to the fetcher, optional
   /// Has no effect on a [stream].
@@ -145,19 +142,28 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
   final Stream<ResultType>? stream;
   StreamSubscription<ResultType>? _streamSubscription;
 
-  void _initialize() {
-    // React to the [source], if provided.
-    if (fetcher != null && source != null) {
-      source!.addListener(refetch);
-      source!.onDispose(() => source!.removeListener(fetch));
+  /// Resolves the [Resource].
+  ///
+  /// If you provided a [fetcher], it run the async call and then it
+  /// will subscribe to the [source], if provided.
+  /// Otherwise it starts listening to the [stream].
+  ///
+  /// This method must be called once during the life cycle of the resource.
+  Future<void> resolve() async {
+    assert(value is ResourceUnresolved<ResultType>,
+        "The resource has been already resolved, you can't resolve it more than once. Use `refresh()` instead if you want to refresh the value.");
+    if (fetcher != null) {
+      // start fetching
+      await _fetch();
+      // react to the [source], if provided.
+      if (source != null) {
+        source!.addListener(refetch);
+        source!.onDispose(() => source!.removeListener(refetch));
+      }
     }
     // React the the [stream], if provided
     if (stream != null) {
-      _streamSubscription = stream!.listen((data) {
-        value = ResourceValue<ResultType>.ready(data);
-      }, onError: (error, stackTrace) {
-        value = ResourceValue<ResultType>.error(error, stackTrace: stackTrace);
-      });
+      _listenToStream();
     }
   }
 
@@ -165,7 +171,7 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
   ///
   /// You may not use this method directly on Flutter apps because the operation is already
   /// performed by [ResourceBuilder].
-  Future<void> fetch() async {
+  Future<void> _fetch() async {
     assert(fetcher != null, "You are trying to fetch, but fetcher is null");
     assert(value is ResourceUnresolved<ResultType>,
         "Cannot fetch a resource that is already resolved, use 'refetch' instead");
@@ -176,6 +182,16 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
     } catch (e, s) {
       value = ResourceValue<ResultType>.error(e, stackTrace: s);
     }
+  }
+
+  /// Starts listening to the [stream] provided.
+  void _listenToStream() {
+    value = ResourceValue<ResultType>.loading();
+    _streamSubscription = stream!.listen((data) {
+      value = ResourceValue<ResultType>.ready(data);
+    }, onError: (error, stackTrace) {
+      value = ResourceValue<ResultType>.error(error, stackTrace: stackTrace);
+    });
   }
 
   /// Force a refresh of the [fetcher].

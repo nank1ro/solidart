@@ -345,7 +345,7 @@ void main() {
 
       addTearDown(resource.dispose);
 
-      await resource.fetch();
+      await resource.resolve();
       await pumpEventQueue();
       expect(resource.value, isA<ResourceError<User>>());
       expect(resource.value.error, isException);
@@ -361,7 +361,7 @@ void main() {
 
       final resource = createResource(fetcher: getUser, source: userId);
 
-      await resource.fetch();
+      await resource.resolve();
       await pumpEventQueue();
       expect(resource.value, isA<ResourceReady<User>>());
       expect(resource.value.value, User(id: 0));
@@ -424,7 +424,7 @@ void main() {
         });
       }, signals: [resource]);
 
-      resource.fetch();
+      resource.resolve();
       await Future.delayed(const Duration(milliseconds: 40));
       expect(loadingCalledTimes, 1);
       await Future.delayed(const Duration(milliseconds: 150));
@@ -450,7 +450,7 @@ void main() {
 
     test('check toString()', () async {
       final r = createResource(fetcher: () => Future.value(1));
-      await r.fetch();
+      await r.resolve();
       await pumpEventQueue();
       expect(r.toString(),
           "Resource<int>(value: ResourceReady<int>(value: 1, refreshing: false), previousValue: ResourceLoading<int>(), options; SignalOptions<ResourceValue<int>>(equals: false, comparator: PRESENT))");

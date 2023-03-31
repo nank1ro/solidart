@@ -114,7 +114,8 @@ typedef ResourceWidgetBuilder<ResultType> = Widget Function(
 /// }
 /// ```
 ///
-/// <Warning>You should not call `fetch()` if you're using SignalBuilder, because it's already performed by it</Warning>
+/// You should not call `resolve()` if you're using ResourceBuilder, because
+/// it's already performed by it
 class ResourceBuilder<ResultType> extends StatefulWidget {
   const ResourceBuilder({
     super.key,
@@ -135,11 +136,9 @@ class _ResourceBuilderState<ResultType>
   @override
   void initState() {
     super.initState();
-    // start fetching if the [fetcher] is present and the resource is not
-    // resolved
-    if (widget.resource.fetcher != null &&
-        widget.resource.value is ResourceUnresolved<ResultType>) {
-      widget.resource.fetch();
+    // Resolve the resource if it's not resolved yet
+    if (widget.resource.value is ResourceUnresolved<ResultType>) {
+      widget.resource.resolve();
     }
   }
 
