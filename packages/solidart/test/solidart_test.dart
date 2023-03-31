@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:mockito/mockito.dart';
 import 'package:solidart/src/core/effect.dart';
-import 'package:solidart/src/core/readable_signal.dart';
+import 'package:solidart/src/core/read_signal.dart';
 import 'package:solidart/src/core/resource.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_options.dart';
@@ -147,10 +147,12 @@ void main() {
           "Signal<int>(value: 0, previousValue: null, options; SignalOptions<int>(equals: false, comparator: PRESENT))");
     });
 
-    test('check Signal becomes ReadableSignal', () {
+    test('check Signal becomes ReadSignal', () {
       final s = createSignal(0);
       expect(s, TypeMatcher<Signal<int>>());
-      expect(s.readable, TypeMatcher<ReadableSignal<int>>());
+      expect(s.toReadSignal(), TypeMatcher<ReadSignal<int>>());
+      // ignore: deprecated_member_use_from_same_package
+      expect(s.readable, TypeMatcher<ReadSignal<int>>());
     });
   });
 
@@ -298,9 +300,9 @@ void main() {
     });
   });
 
-  group('ReadableSignal tests', () {
-    test('check ReadableSignal value and listener count', () {
-      final s = ReadableSignal(0);
+  group('ReadSignal tests', () {
+    test('check ReadSignal value and listener count', () {
+      final s = ReadSignal(0);
       expect(s.value, 0);
       expect(s.previousValue, null);
       expect(s.listenerCount, 0);
@@ -310,9 +312,9 @@ void main() {
     });
 
     test('check toString()', () {
-      final s = ReadableSignal(0);
+      final s = ReadSignal(0);
       expect(s.toString(),
-          "ReadableSignal<int>(value: 0, previousValue: null, options; SignalOptions<int>(equals: false, comparator: PRESENT))");
+          "ReadSignal<int>(value: 0, previousValue: null, options; SignalOptions<int>(equals: false, comparator: PRESENT))");
     });
   });
 
@@ -322,6 +324,8 @@ void main() {
       addTearDown(() => streamController.close());
 
       final resource = createResource(stream: streamController.stream);
+      expect(resource.value, isA<ResourceUnresolved<int>>());
+      resource.resolve();
       expect(resource.value, isA<ResourceLoading<int>>());
       streamController.add(1);
       await pumpEventQueue();

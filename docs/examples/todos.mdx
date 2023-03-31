@@ -51,9 +51,9 @@ class TodosController {
   // only the TodoController can mutate the value.
   final Signal<List<Todo>> _todos;
 
-  // Expose the list of todos as a ReadableSignal so the
+  // Expose the list of todos as a ReadSignal so the
   // user cannot mutate directly the object.
-  ReadableSignal<List<Todo>> get todos => _todos.readable;
+  ReadSignal<List<Todo>> get todos => _todos.toReadSignal();
 
   void add(Todo todo) {
     _todos.update((value) => [...value, todo]);
@@ -85,7 +85,7 @@ As you can see the `TodosController` can get an `initialTodos` list. This is goi
 When the constructor is runned, the `_todos` signal is populated with the provided `initialTodos`.
 The thing to note here is that `_todos` is private by choice. Instead the user has to use the `todos` getter.
 
-The `todos` getter is a `ReadableSignal`. This means that the user won't be able to mutate its value directly.
+The `todos` getter is a `ReadSignal`. This means that the user won't be able to mutate its value directly.
 
 The `add` method uses the `update` function of a `Signal` to append the new `todo` to the current list of todos.
 
@@ -153,7 +153,7 @@ class _TodosBodyState extends State<TodosBody> {
         SignalId.activeTodoFilter: () =>
             createSignal<TodosFilter>(TodosFilter.all),
         // Registering two new signals, the list of completed and uncompleted todos.
-        // These are derived [ReadableSignal]s.
+        // These are derived [ReadSignal]s.
         // Provided through a [Solid] because their value is used by the [TodoList]
         // and [Toolbar].
         // This is preferable over passing the signals as parameters down to descendants,
@@ -242,9 +242,9 @@ class Toolbar extends StatefulWidget {
 
 class _ToolbarState extends State<Toolbar> {
   /// All the derived signals
-  late final ReadableSignal<int> allTodosCount;
-  late final ReadableSignal<int> uncompletedTodosCount;
-  late final ReadableSignal<int> completedTodosCount;
+  late final ReadSignal<int> allTodosCount;
+  late final ReadSignal<int> uncompletedTodosCount;
+  late final ReadSignal<int> completedTodosCount;
 
   @override
   void initState() {
@@ -259,16 +259,16 @@ class _ToolbarState extends State<Toolbar> {
 
     // retrieve the list of completed count and select just the length.
     final completedTodos =
-        context.get<ReadableSignal<List<Todo>>>(SignalId.completedTodos);
+        context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
     completedTodosCount = completedTodos.select((value) => value.length);
     // retrieve the list of uncompleted count and select just the length.
     final uncompletedTodos =
-        context.get<ReadableSignal<List<Todo>>>(SignalId.uncompletedTodos);
+        context.get<ReadSignal<List<Todo>>>(SignalId.uncompletedTodos);
     uncompletedTodosCount = uncompletedTodos.select((value) => value.length);
   }
 
   /// Maps the given [filter] to the correct list of todos
-  ReadableSignal<int> mapFilterToTodosList(TodosFilter filter) {
+  ReadSignal<int> mapFilterToTodosList(TodosFilter filter) {
     switch (filter) {
       case TodosFilter.all:
         return allTodosCount;
@@ -337,9 +337,9 @@ class TodoList extends StatefulWidget {
 }
 
 class _TodoListState extends State<TodoList> {
-  late final ReadableSignal<List<Todo>> todos;
-  late final ReadableSignal<List<Todo>> completedTodos;
-  late final ReadableSignal<List<Todo>> uncompletedTodos;
+  late final ReadSignal<List<Todo>> todos;
+  late final ReadSignal<List<Todo>> completedTodos;
+  late final ReadSignal<List<Todo>> uncompletedTodos;
 
   @override
   void initState() {
@@ -354,13 +354,13 @@ class _TodoListState extends State<TodoList> {
     //       The `select` method creates a new signal every time it runs, and you don't want this to happen.
     todos = context.get<TodosController>().todos;
     completedTodos =
-        context.get<ReadableSignal<List<Todo>>>(SignalId.completedTodos);
+        context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
     uncompletedTodos =
-        context.get<ReadableSignal<List<Todo>>>(SignalId.uncompletedTodos);
+        context.get<ReadSignal<List<Todo>>>(SignalId.uncompletedTodos);
   }
 
   // Given a [filter] return the correct list of todos
-  ReadableSignal<List<Todo>> mapFilterToTodosList(TodosFilter filter) {
+  ReadSignal<List<Todo>> mapFilterToTodosList(TodosFilter filter) {
     switch (filter) {
       case TodosFilter.all:
         return todos;

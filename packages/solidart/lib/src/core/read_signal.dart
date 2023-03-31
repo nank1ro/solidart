@@ -7,16 +7,20 @@ import 'package:solidart/src/core/signal_options.dart';
 import 'package:solidart/src/core/signal_selector.dart';
 import 'package:solidart/src/utils.dart';
 
+@Deprecated(
+    'ReadableSignal has been deprecated, use ReadSignal instead. It will be removed in future releases.')
+typedef ReadableSignal = ReadSignal;
+
 /// A read-only [Signal].
 ///
 /// When you don't need to expose the setter of a [Signal],
-/// you should consider transforming it in a [ReadableSignal]
+/// you should consider transforming it in a [ReadSignal]
 /// using the `readable` method.
 ///
-/// All derived-signals are [ReadableSignal]s because they depend
+/// All derived-signals are [ReadSignal]s because they depend
 /// on the value of a [Signal].
-class ReadableSignal<T> implements SignalBase<T> {
-  ReadableSignal(
+class ReadSignal<T> implements SignalBase<T> {
+  ReadSignal(
     this._value, {
     T? previousValue,
     SignalOptions<T>? options,
@@ -49,7 +53,7 @@ class ReadableSignal<T> implements SignalBase<T> {
 
   /// The [select] function allows filtering unwanted rebuilds by reading only
   /// the properties that we care about.
-  ReadableSignal<Selected> select<Selected>(
+  ReadSignal<Selected> select<Selected>(
     Selected Function(T value) selector, {
     SignalOptions<Selected>? options,
   }) {
@@ -59,7 +63,7 @@ class ReadableSignal<T> implements SignalBase<T> {
       options: options,
     );
     // ignore: unnecessary_cast
-    return signalSelector as ReadableSignal<Selected>;
+    return signalSelector as ReadSignal<Selected>;
   }
 
   @override
@@ -117,5 +121,5 @@ class ReadableSignal<T> implements SignalBase<T> {
 
   @override
   String toString() =>
-      '''ReadableSignal<$T>(value: $value, previousValue: $previousValue, options; $options)''';
+      '''ReadSignal<$T>(value: $value, previousValue: $previousValue, options; $options)''';
 }

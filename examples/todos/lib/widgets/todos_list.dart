@@ -18,9 +18,9 @@ class TodoList extends StatefulWidget {
 }
 
 class _TodoListState extends State<TodoList> {
-  late final ReadableSignal<List<Todo>> todos;
-  late final ReadableSignal<List<Todo>> completedTodos;
-  late final ReadableSignal<List<Todo>> uncompletedTodos;
+  late final ReadSignal<List<Todo>> todos;
+  late final ReadSignal<List<Todo>> completedTodos;
+  late final ReadSignal<List<Todo>> uncompletedTodos;
 
   @override
   void initState() {
@@ -35,13 +35,13 @@ class _TodoListState extends State<TodoList> {
     //       The `select` method creates a new signal every time it runs, and you don't want this to happen.
     todos = context.get<TodosController>().todos;
     completedTodos =
-        context.get<ReadableSignal<List<Todo>>>(SignalId.completedTodos);
+        context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
     uncompletedTodos =
-        context.get<ReadableSignal<List<Todo>>>(SignalId.uncompletedTodos);
+        context.get<ReadSignal<List<Todo>>>(SignalId.uncompletedTodos);
   }
 
   // Given a [filter] return the correct list of todos
-  ReadableSignal<List<Todo>> mapFilterToTodosList(TodosFilter filter) {
+  ReadSignal<List<Todo>> mapFilterToTodosList(TodosFilter filter) {
     switch (filter) {
       case TodosFilter.all:
         return todos;

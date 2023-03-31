@@ -4,7 +4,7 @@
 library solidart;
 
 export 'src/core/signal.dart';
-export 'src/core/readable_signal.dart';
+export 'src/core/read_signal.dart';
 export 'src/core/resource.dart';
 export 'src/core/effect.dart';
 export 'src/core/signal_options.dart';

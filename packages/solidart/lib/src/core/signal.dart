@@ -1,5 +1,5 @@
 import 'package:meta/meta.dart';
-import 'package:solidart/src/core/readable_signal.dart';
+import 'package:solidart/src/core/read_signal.dart';
 import 'package:solidart/src/core/signal_options.dart';
 
 /// # Signals
@@ -77,8 +77,8 @@ import 'package:solidart/src/core/signal_options.dart';
 /// user.update((value) => value.copyWith(age: 21));
 /// ```
 ///
-/// A derived signal is not of type `Signal` but is a `ReadableSignal`.
-/// The difference with a normal `Signal` is that a `ReadableSignal` doesn't have a value setter, in other words it's a __read-only__ signal.
+/// A derived signal is not of type `Signal` but is a `ReadSignal`.
+/// The difference with a normal `Signal` is that a `ReadSignal` doesn't have a value setter, in other words it's a __read-only__ signal.
 ///
 /// You can also use derived signals in other ways, like here:
 /// ```dart
@@ -181,8 +181,8 @@ Signal<T> createSignal<T>(
 /// user.update((value) => value.copyWith(age: 21));
 /// ```
 ///
-/// A derived signal is not of type `Signal` but is a `ReadableSignal`.
-/// The difference with a normal `Signal` is that a `ReadableSignal` doesn't have a value setter, in other words it's a __read-only__ signal.
+/// A derived signal is not of type `Signal` but is a `ReadSignal`.
+/// The difference with a normal `Signal` is that a `ReadSignal` doesn't have a value setter, in other words it's a __read-only__ signal.
 ///
 /// You can also use derived signals in other ways, like here:
 /// ```dart
@@ -194,7 +194,7 @@ Signal<T> createSignal<T>(
 ///
 /// You can also transform the value type like:
 /// ```dart
-/// ReadableSignal<bool>
+/// ReadSignal<bool>
 /// final counter = createSignal(0); // int
 /// final isGreaterThan5 = counter.select((value) => value > 5); // bool
 /// ```
@@ -203,7 +203,7 @@ Signal<T> createSignal<T>(
 /// - If the `counter` value is `0`, `isGreaterThan5` is equal to `false`.
 /// - If you update the value to `1`, `isGreaterThan5` doesn't emit a new value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
-class Signal<T> extends ReadableSignal<T> {
+class Signal<T> extends ReadSignal<T> {
   Signal(
     super.initialValue, {
     super.options,
@@ -256,9 +256,15 @@ class Signal<T> extends ReadableSignal<T> {
   /// new value.
   T update(T Function(T value) callback) => value = callback(value);
 
-  /// Converts this [Signal] into a [ReadableSignal]
+  /// Converts this [Signal] into a [ReadSignal]
   /// Use this method to remove the visility to the value setter.
-  ReadableSignal<T> get readable => this;
+  @Deprecated(
+      'readable has been deprecated, use toReadSignal() instead. It will be removed in future releases.')
+  ReadSignal<T> get readable => toReadSignal();
+
+  /// Converts this [Signal] into a [ReadSignal]
+  /// Use this method to remove the visility to the value setter.
+  ReadSignal<T> toReadSignal() => this;
 
   @override
   String toString() =>
