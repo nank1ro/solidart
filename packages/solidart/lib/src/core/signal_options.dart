@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 
+/// A custom comparator function
 typedef ValueComparator<T> = bool Function(T a, T b);
 
 /// {@template signaloptions}

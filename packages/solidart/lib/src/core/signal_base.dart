@@ -35,6 +35,7 @@ abstract class SignalBase<T> extends Listenable {
   @useResult
   int get listenerCount;
 
+  /// Diposes the signal
   void dispose();
 }
 
