@@ -67,8 +67,7 @@ class ReadSignal<T> implements SignalBase<T> {
       selector: selector,
       options: options,
     );
-    // ignore: unnecessary_cast
-    return signalSelector as ReadSignal<Selected>;
+    return signalSelector.toReadSignal();
   }
 
   @override

@@ -87,7 +87,7 @@ class SignalSelector<Input, Output> extends Signal<Output> {
     _listenAndSelect();
   }
 
-  /// The signal that was selected
+  /// The signal on which to select
   final Signal<Input> signal;
 
   /// The selector applied
