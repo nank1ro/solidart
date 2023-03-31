@@ -13,9 +13,9 @@ class Toolbar extends StatefulWidget {
 
 class _ToolbarState extends State<Toolbar> {
   /// All the derived signals
-  late final ReadableSignal<int> allTodosCount;
-  late final ReadableSignal<int> uncompletedTodosCount;
-  late final ReadableSignal<int> completedTodosCount;
+  late final ReadSignal<int> allTodosCount;
+  late final ReadSignal<int> uncompletedTodosCount;
+  late final ReadSignal<int> completedTodosCount;
 
   @override
   void initState() {
@@ -30,16 +30,16 @@ class _ToolbarState extends State<Toolbar> {
 
     // retrieve the list of completed count and select just the length.
     final completedTodos =
-        context.get<ReadableSignal<List<Todo>>>(SignalId.completedTodos);
+        context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
     completedTodosCount = completedTodos.select((value) => value.length);
     // retrieve the list of uncompleted count and select just the length.
     final uncompletedTodos =
-        context.get<ReadableSignal<List<Todo>>>(SignalId.uncompletedTodos);
+        context.get<ReadSignal<List<Todo>>>(SignalId.uncompletedTodos);
     uncompletedTodosCount = uncompletedTodos.select((value) => value.length);
   }
 
   /// Maps the given [filter] to the correct list of todos
-  ReadableSignal<int> mapFilterToTodosList(TodosFilter filter) {
+  ReadSignal<int> mapFilterToTodosList(TodosFilter filter) {
     switch (filter) {
       case TodosFilter.all:
         return allTodosCount;

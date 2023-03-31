@@ -1,3 +1,10 @@
+## 0.4.0
+
+- **BUGFIX**: Listening to the `source` of a Resource was not stopped when the `source` disposed.
+- **BUGFIX**: A `Resource` would not perform the asynchronous operation until someone called the `fetch` method, typically the `ResourceBuilder` widget. This did not apply to the `stream` which was listened to when the resource was created. Now the behaviour has been merged and the `fetch` method has been renamed into `resolve`.
+- **CHORE**: Renamed `ReadableSignal` into `ReadSignal`.
+- **CHORE**: Renamed the `readable` method of a `Signal` into `toReadSignal()`
+
 ## 0.3.3
 
 - Add `update` extension on `BuildContext`.

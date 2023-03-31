@@ -46,8 +46,8 @@ user.update((value) => value.copyWith(name: 'new-name'));
 user.update((value) => value.copyWith(age: 21));
 ```
 
-A derived signal is not of type `Signal` but is a `ReadableSignal`.
-The difference with a normal `Signal` is that a `ReadableSignal` doesn't have a value setter, in other words it's a __read-only__ signal.
+A derived signal is not of type `Signal` but is a `ReadSignal`.
+The difference with a normal `Signal` is that a `ReadSignal` doesn't have a value setter, in other words it's a __read-only__ signal.
 
 You can also use derived signals in other ways, like here:
 ```dart

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_solidart/src/widgets/signal_builder.dart';
 import 'package:solidart/solidart.dart';
 
+/// {@template show}
 /// Conditionally render its [builder] or an optional [fallback] component
 /// based on the [when] evaluation.
 ///
@@ -46,7 +47,9 @@ import 'package:solidart/solidart.dart';
 /// The `fallback` widget builder is optional, by default nothing is rendered.
 ///
 /// The `Show` widget takes a `Signal` of type `bool`, see [Derived Signals](/learning/derived-signals) to learn how to create a derived signal if your Signal is not of type `bool`.
+/// {$endtemplate}
 class Show<T extends bool> extends StatelessWidget {
+  /// {@macro show}
   const Show({
     super.key,
     required this.when,
@@ -54,9 +57,19 @@ class Show<T extends bool> extends StatelessWidget {
     this.fallback,
   });
 
+  /// A boolean Signal used to determine which builder needs to be used.
+  ///
+  /// When the Signal's value is true, renders the [builder], otherwise the
+  ///  [fallback] (if provided, or an empty view).
   final Signal<T> when;
-  final WidgetBuilder? fallback;
+
+  /// The builder widget is rendered when the [when] signal value evalutes to
+  /// `true`
   final WidgetBuilder builder;
+
+  /// The fallback widget is rendered when the [when] signal value evalutes to
+  /// `false`
+  final WidgetBuilder? fallback;
 
   @override
   Widget build(BuildContext context) {

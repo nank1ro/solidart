@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_solidart/src/widgets/solid.dart';
 import 'package:solidart/solidart.dart';
 
+/// Convenience extensions to interact with the [Solid] InheritedModel.
 extension SolidExtensions on BuildContext {
   /// Obtains the [Signal] of the given type and [id] corresponding to the
   /// nearest [Solid] widget.

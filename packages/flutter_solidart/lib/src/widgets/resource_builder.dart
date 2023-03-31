@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_solidart/src/widgets/signal_builder.dart';
 import 'package:solidart/solidart.dart';
 
+/// Builder function for a [resource]
 typedef ResourceWidgetBuilder<ResultType> = Widget Function(
   BuildContext context,
   ResourceValue<ResultType> resource,
 );
 
+/// {@template resourcebuilder}
 /// The `ResourceBuilder` widget makes the consumption of a `Resource`
 /// extremely simple.
 /// It takes a `resource` and a `builder` fired any time the resource state
@@ -114,15 +116,21 @@ typedef ResourceWidgetBuilder<ResultType> = Widget Function(
 /// }
 /// ```
 ///
-/// <Warning>You should not call `fetch()` if you're using SignalBuilder, because it's already performed by it</Warning>
+/// You should not call `resolve()` if you're using ResourceBuilder, because
+/// it's already performed by it
+/// {@endtemplate}
 class ResourceBuilder<ResultType> extends StatefulWidget {
+  /// {@macro resourcebuilder}
   const ResourceBuilder({
     super.key,
     required this.resource,
     required this.builder,
   });
 
+  /// The [resource] that needs to be rendered.
   final Resource<ResultType> resource;
+
+  /// The builder of the resource, called every time the resource value changes.
   final ResourceWidgetBuilder<ResultType> builder;
 
   @override
@@ -135,11 +143,9 @@ class _ResourceBuilderState<ResultType>
   @override
   void initState() {
     super.initState();
-    // start fetching if the [fetcher] is present and the resource is not
-    // resolved
-    if (widget.resource.fetcher != null &&
-        widget.resource.value is ResourceUnresolved<ResultType>) {
-      widget.resource.fetch();
+    // Resolve the resource if it's not resolved yet
+    if (widget.resource.value is ResourceUnresolved<ResultType>) {
+      widget.resource.resolve();
     }
   }
 
