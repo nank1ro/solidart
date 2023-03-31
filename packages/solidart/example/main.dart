@@ -6,7 +6,8 @@ Future<void> main() async {
   final counter = createSignal(0);
   createEffect(
     () {
-      print("The counter is now: ${counter.value}");
+      // ignore: avoid_print
+      print('The counter is now: ${counter.value}');
     },
     signals: [counter],
     fireImmediately: true,
@@ -16,7 +17,7 @@ Future<void> main() async {
 
   // The signal sets the value asynchronously, so here we await for the value
   // to be notified to listeners.
-  await Future.value();
+  await Future<void>.value();
 
   // dispose the counter;
   counter.dispose();

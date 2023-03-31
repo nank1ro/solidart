@@ -7,10 +7,13 @@ import 'package:solidart/src/core/signal_options.dart';
 import 'package:solidart/src/core/signal_selector.dart';
 import 'package:solidart/src/utils.dart';
 
+/// {@macro readsignal}
 @Deprecated(
-    'ReadableSignal has been deprecated, use ReadSignal instead. It will be removed in future releases.')
-typedef ReadableSignal = ReadSignal;
+  '''Use ReadSignal instead. It will be removed in future releases.''',
+)
+typedef ReadableSignal<T> = ReadSignal<T>;
 
+/// {@template readsignal}
 /// A read-only [Signal].
 ///
 /// When you don't need to expose the setter of a [Signal],
@@ -19,7 +22,9 @@ typedef ReadableSignal = ReadSignal;
 ///
 /// All derived-signals are [ReadSignal]s because they depend
 /// on the value of a [Signal].
+/// {@endtemplate}
 class ReadSignal<T> implements SignalBase<T> {
+  /// {@macro readsignal}
   ReadSignal(
     this._value, {
     T? previousValue,
@@ -80,6 +85,7 @@ class ReadSignal<T> implements SignalBase<T> {
   @override
   int get listenerCount => _listeners.length;
 
+  /// Notifies every listener. Never use this method.
   @protected
   void notifyListeners() {
     // We schedule a microtask to debounce multiple changes that can occur

@@ -549,6 +549,7 @@ The signal id that caused this issue is $id
   }
 }
 
+/// The state of the [Solid] widget
 class SolidState extends State<Solid> {
   // Stores all the created signals.
   final Map<SignalIdentifier, SignalBase<dynamic>> _createdSignals = {};
@@ -867,11 +868,16 @@ class _InheritedSolid extends InheritedModel<Object> {
   }
 }
 
+/// {@template solidprovidererror}
+/// Error thrown when the [SolidProvider] of type [providerType] cannot be found
+/// {$endtemplate}
 class SolidProviderError extends Error {
+  /// {@macro solidprovidererror}
   SolidProviderError({
     required this.providerType,
   });
 
+  /// The type of provider
   final Type providerType;
 
   @override
@@ -900,6 +906,7 @@ https://github.com/nank1ro/solidart/issues/new
   }
 }
 
+/// Error thrown when the [SolidProvider] has a `dynamic` Type.
 class SolidProviderDynamicError extends Error {
   @override
   String toString() {
@@ -910,12 +917,17 @@ class SolidProviderDynamicError extends Error {
   }
 }
 
+/// {@template solidsignalerror}
+/// Error thrown when the Signal with id [signalId] cannot be found
+/// {$endtemplate}
 class SolidSignalError extends Error {
+  /// {@macro solidsignalerror}
   SolidSignalError({
     required this.signalId,
   });
 
-  final SignalIdentifier? signalId;
+  /// The id of the signal
+  final SignalIdentifier signalId;
 
   @override
   String toString() {
@@ -942,9 +954,15 @@ https://github.com/nank1ro/solidart/issues/new
   }
 }
 
+/// {@template solidprovidermultipleproviderofsametypeerror}
+/// Error thrown when there are multiple providers of the same [providerType]
+/// Type in the same [Solid] widget
+/// {$endtemplate}
 class SolidProviderMultipleProviderOfSameTypeError extends Error {
+  /// {@macro solidprovidermultipleproviderofsametypeerror}
   SolidProviderMultipleProviderOfSameTypeError({required this.providerType});
 
+  /// The type of the provider
   final Type providerType;
   @override
   String toString() {

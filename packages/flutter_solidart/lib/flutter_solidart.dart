@@ -1,3 +1,4 @@
+/// Flutter solidart library.
 library flutter_solidart;
 
 export 'package:solidart/solidart.dart';

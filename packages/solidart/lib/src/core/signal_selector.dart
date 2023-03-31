@@ -1,6 +1,7 @@
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_options.dart';
 
+/// {@template signalselector}
 /// A special [Signal] that notifies only whenever the selected
 /// value changes.
 ///
@@ -46,7 +47,8 @@ import 'package:solidart/src/core/signal_options.dart';
 /// ```
 ///
 /// A derived signal is not of type `Signal` but is a `ReadSignal`.
-/// The difference with a normal `Signal` is that a `ReadSignal` doesn't have a value setter, in other words it's a __read-only__ signal.
+/// The difference with a normal `Signal` is that a `ReadSignal` doesn't have a
+/// value setter, in other words it's a __read-only__ signal.
 ///
 /// You can also use derived signals in other ways, like here:
 /// ```dart
@@ -54,7 +56,8 @@ import 'package:solidart/src/core/signal_options.dart';
 /// final doubleCounter = counter.select((value) => value * 2);
 /// ```
 ///
-/// Every time the `counter` signal changes, the doubleCounter updates with the new doubled `counter` value.
+/// Every time the `counter` signal changes, the doubleCounter updates with the
+/// new doubled `counter` value.
 ///
 /// You can also transform the value type like:
 /// ```dart
@@ -65,9 +68,12 @@ import 'package:solidart/src/core/signal_options.dart';
 ///
 /// `isGreaterThan5` will update only when the `counter` value becomes lower/greater than `5`.
 /// - If the `counter` value is `0`, `isGreaterThan5` is equal to `false`.
-/// - If you update the value to `1`, `isGreaterThan5` doesn't emit a new value, but still contains `false`.
+/// - If you update the value to `1`, `isGreaterThan5` doesn't emit a new
+/// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
+/// {@endtemplate}
 class SignalSelector<Input, Output> extends Signal<Output> {
+  /// {@macro signalselector}
   SignalSelector({
     required this.signal,
     required this.selector,
