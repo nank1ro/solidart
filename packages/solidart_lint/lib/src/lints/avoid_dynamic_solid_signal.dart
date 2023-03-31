@@ -45,7 +45,7 @@ class AvoidDynamicSolidSignal extends DartLintRule {
             reporter.reportErrorForToken(_code, expression.beginToken);
           }
 
-          if (name == "ReadableSignal<dynamic>") {
+          if (name == "ReadSignal<dynamic>") {
             final childEntities =
                 expression.childEntities.whereType<SimpleIdentifier>();
             for (final entity in childEntities) {

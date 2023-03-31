@@ -101,7 +101,7 @@ Solid(
 ### invalid_provider_type
 
 The provider type you want to retrieve is invalid, must not implement `SignalBase`.
-You cannot retrieve a provider that implements `SignalBase`, like `Signal`, `ReadableSignal` and `Resource`.
+You cannot retrieve a provider that implements `SignalBase`, like `Signal`, `ReadSignal` and `Resource`.
 
 **Bad**:
 
@@ -120,7 +120,7 @@ final provider = context.get<MyClass>();
 ### invalid_signal_type
 
 The signal type you want to retrieve is invalid, must implement `SignalBase`.
-You can retrieve signals that implement `SignalBase`, like `Signal`, `ReadableSignal` and `Resource`.
+You can retrieve signals that implement `SignalBase`, like `Signal`, `ReadSignal` and `Resource`.
 
 **Bad**:
 
@@ -157,7 +157,7 @@ final provider = context.get<MyClass>();
 ### invalid_observe_type
 
 The type you want to observe is invalid, must not implement `SignalBase`.
-You cannot observe a signal that implements `SignalBase`, like `Signal`, `ReadableSignal` and `Resource`.
+You cannot observe a signal that implements `SignalBase`, like `Signal`, `ReadSignal` and `Resource`.
 
 **Bad**:
 
@@ -176,7 +176,7 @@ final counter = context.observe<int>('counter');
 ### invalid_update_type
 
 The update type is invalid, must not implement `SignalBase`.
-You cannot update a signal that implements `SignalBase`, like `Signal`, `ReadableSignal` and `Resource`.
+You cannot update a signal that implements `SignalBase`, like `Signal`, `ReadSignal` and `Resource`.
 
 **Bad**:
 

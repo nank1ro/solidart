@@ -104,7 +104,7 @@ The page retrieves the `themeMode` signal using the `context.get()` method:
 }
 ```
 
-<Info>Note that the type passed to the get method contains also the signal type, it can be `Signal` or `ReadableSignal` if you need to access a __read-only__ signal</Info>
+<Info>Note that the type passed to the get method contains also the signal type, it can be `Signal` or `ReadSignal` if you need to access a __read-only__ signal</Info>
 
 The `get` method obtains the signal for the given identifier without listening to it. You may use this method inside the `initState()`, `build()` methods and inside callbacks like `onTap` or `onPressed`. 
 

@@ -1,3 +1,7 @@
+## 0.2.0
+
+- Update `flutter_solidart` and fix deprecated fields
+
 ## 0.1.3
 
 Add the following lints:

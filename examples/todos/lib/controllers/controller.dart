@@ -6,7 +6,7 @@ import 'package:todos/models/todo.dart';
 /// - `add`: Add a todo in the list of [todos]
 /// - `remove`: Removes a todo with the given id from the list of [todos]
 /// - `toggle`: Toggles a todo with the given id
-/// The list of todos exposed is a [ReadableSignal] so the user cannot mutate
+/// The list of todos exposed is a [ReadSignal] so the user cannot mutate
 /// the signal without using this controller.
 @immutable
 class TodosController {
@@ -18,9 +18,9 @@ class TodosController {
   // only the TodoController can mutate the value.
   final Signal<List<Todo>> _todos;
 
-  // Expose the list of todos as a ReadableSignal so the
+  // Expose the list of todos as a ReadSignal so the
   // user cannot mutate directly the object.
-  ReadableSignal<List<Todo>> get todos => _todos.readable;
+  ReadSignal<List<Todo>> get todos => _todos.toReadSignal();
 
   void add(Todo todo) {
     _todos.update((value) => [...value, todo]);

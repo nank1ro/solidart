@@ -1,14 +1,14 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
 import 'package:solidart/src/core/effect.dart';
-import 'package:solidart/src/core/readable_signal.dart';
+import 'package:solidart/src/core/read_signal.dart';
 import 'package:solidart/src/core/resource.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_options.dart';
 import 'package:test/test.dart';
-
-import 'package:collection/collection.dart';
 
 class MockCallbackFunction extends Mock {
   void call();
@@ -33,10 +33,10 @@ class _C {
   final int count;
 }
 
+@immutable
 class User {
+  const User({required this.id});
   final int id;
-
-  User({required this.id});
 
   @override
   bool operator ==(Object other) =>
@@ -48,9 +48,8 @@ class User {
 }
 
 class SampleList {
-  final List<int> numbers;
-
   SampleList(this.numbers);
+  final List<int> numbers;
 }
 
 void main() {
@@ -60,7 +59,7 @@ void main() {
           createSignal(0, options: const SignalOptions<int>(equals: true));
 
       final cb = MockCallbackFunction();
-      counter.addListener(cb);
+      counter.addListener(cb.call);
 
       expect(counter.value, 0);
 
@@ -79,7 +78,7 @@ void main() {
       await pumpEventQueue();
       verify(cb()).called(3);
       // clear
-      counter.removeListener(cb);
+      counter.removeListener(cb.call);
     });
 
     test(
@@ -90,7 +89,7 @@ void main() {
         options: const SignalOptions<_A>(),
       );
       final cb = MockCallbackFunction();
-      signal.addListener(cb);
+      signal.addListener(cb.call);
 
       expect(signal.value, null);
       final a = _A();
@@ -105,14 +104,14 @@ void main() {
       verify(cb()).called(2);
 
       // clear
-      signal.removeListener(cb);
+      signal.removeListener(cb.call);
     });
 
     test('check onDispose callback fired when disposing signal', () {
       final s = createSignal(0);
       final cb = MockCallbackFunction();
       s
-        ..onDispose(cb)
+        ..onDispose(cb.call)
         ..dispose();
       verify(cb()).called(1);
     });
@@ -143,14 +142,18 @@ void main() {
 
     test('check toString()', () {
       final s = createSignal(0);
-      expect(s.toString(),
-          "Signal<int>(value: 0, previousValue: null, options; SignalOptions<int>(equals: false, comparator: PRESENT))");
+      expect(
+        s.toString(),
+        '''Signal<int>(value: 0, previousValue: null, options; SignalOptions<int>(equals: false, comparator: PRESENT))''',
+      );
     });
 
-    test('check Signal becomes ReadableSignal', () {
+    test('check Signal becomes ReadSignal', () {
       final s = createSignal(0);
-      expect(s, TypeMatcher<Signal<int>>());
-      expect(s.readable, TypeMatcher<ReadableSignal<int>>());
+      expect(s, const TypeMatcher<Signal<int>>());
+      expect(s.toReadSignal(), const TypeMatcher<ReadSignal<int>>());
+      // ignore: deprecated_member_use_from_same_package
+      expect(s.readable, const TypeMatcher<ReadSignal<int>>());
     });
   });
 
@@ -184,7 +187,7 @@ void main() {
     test('check effect not called if signal is disposed', () {
       final s = createSignal(0);
       final cb = MockCallbackFunction();
-      createEffect(cb, signals: [s]);
+      createEffect(cb.call, signals: [s]);
       s.dispose();
       verifyNever(cb());
     });
@@ -250,7 +253,7 @@ void main() {
       final selector = s.select((value) => value.c.count);
 
       final cb = MockCallbackFunction();
-      selector.onDispose(cb);
+      selector.onDispose(cb.call);
       s.dispose();
 
       verify(cb()).called(1);
@@ -261,12 +264,12 @@ void main() {
       final selected = a.select(
         (value) => value.numbers,
         options: SignalOptions<List<int>>(
-          comparator: (a, b) => ListEquality().equals(a, b),
+          comparator: (a, b) => const ListEquality<int>().equals(a, b),
         ),
       );
 
       final cb = MockCallbackFunction();
-      createEffect(cb, signals: [selected]);
+      createEffect(cb.call, signals: [selected]);
 
       verifyNever(cb());
 
@@ -298,9 +301,9 @@ void main() {
     });
   });
 
-  group('ReadableSignal tests', () {
-    test('check ReadableSignal value and listener count', () {
-      final s = ReadableSignal(0);
+  group('ReadSignal tests', () {
+    test('check ReadSignal value and listener count', () {
+      final s = ReadSignal(0);
       expect(s.value, 0);
       expect(s.previousValue, null);
       expect(s.listenerCount, 0);
@@ -310,18 +313,22 @@ void main() {
     });
 
     test('check toString()', () {
-      final s = ReadableSignal(0);
-      expect(s.toString(),
-          "ReadableSignal<int>(value: 0, previousValue: null, options; SignalOptions<int>(equals: false, comparator: PRESENT))");
+      final s = ReadSignal(0);
+      expect(
+        s.toString(),
+        '''ReadSignal<int>(value: 0, previousValue: null, options; SignalOptions<int>(equals: false, comparator: PRESENT))''',
+      );
     });
   });
 
   group('Resource tests', () {
     test('check createResource with stream', () async {
       final streamController = StreamController<int>();
-      addTearDown(() => streamController.close());
+      addTearDown(streamController.close);
 
       final resource = createResource(stream: streamController.stream);
+      expect(resource.value, isA<ResourceUnresolved<int>>());
+      resource.resolve().ignore();
       expect(resource.value, isA<ResourceLoading<int>>());
       streamController.add(1);
       await pumpEventQueue();
@@ -345,7 +352,7 @@ void main() {
 
       addTearDown(resource.dispose);
 
-      await resource.fetch();
+      await resource.resolve();
       await pumpEventQueue();
       expect(resource.value, isA<ResourceError<User>>());
       expect(resource.value.error, isException);
@@ -361,15 +368,15 @@ void main() {
 
       final resource = createResource(fetcher: getUser, source: userId);
 
-      await resource.fetch();
+      await resource.resolve();
       await pumpEventQueue();
       expect(resource.value, isA<ResourceReady<User>>());
-      expect(resource.value.value, User(id: 0));
+      expect(resource.value.value, const User(id: 0));
 
       userId.value = 1;
       await pumpEventQueue();
       expect(resource.value, isA<ResourceReady<User>>());
-      expect(resource.value(), User(id: 1));
+      expect(resource.value(), const User(id: 1));
 
       userId.value = 2;
       await pumpEventQueue();
@@ -396,7 +403,7 @@ void main() {
     });
 
     test('check ResourceValue.on', () async {
-      bool shouldThrow = false;
+      var shouldThrow = false;
       Future<int> fetcher() {
         return Future.delayed(const Duration(milliseconds: 150), () {
           if (shouldThrow) throw Exception();
@@ -410,50 +417,59 @@ void main() {
       var refreshingTrueTimes = 0;
       final resource = createResource(fetcher: fetcher);
 
-      createEffect(() {
-        resource.value.on(ready: (data, refreshing) {
-          if (refreshing) {
-            refreshingTrueTimes++;
-          } else {
-            dataCalledTimes++;
-          }
-        }, error: (error, stackTrace) {
-          errorCalledTimes++;
-        }, loading: () {
-          loadingCalledTimes++;
-        });
-      }, signals: [resource]);
+      createEffect(
+        () {
+          resource.value.on(
+            ready: (data, refreshing) {
+              if (refreshing) {
+                refreshingTrueTimes++;
+              } else {
+                dataCalledTimes++;
+              }
+            },
+            error: (error, stackTrace) {
+              errorCalledTimes++;
+            },
+            loading: () {
+              loadingCalledTimes++;
+            },
+          );
+        },
+        signals: [resource],
+      );
 
-      resource.fetch();
-      await Future.delayed(const Duration(milliseconds: 40));
+      resource.resolve().ignore();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
       expect(loadingCalledTimes, 1);
-      await Future.delayed(const Duration(milliseconds: 150));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
       expect(dataCalledTimes, 1);
       expect(errorCalledTimes, 0);
 
-      resource.refetch();
-      await Future.delayed(const Duration(milliseconds: 40));
+      resource.refetch().ignore();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
       expect(refreshingTrueTimes, 1);
-      await Future.delayed(const Duration(milliseconds: 150));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
       expect(dataCalledTimes, 2);
 
-      expect(resource.value, TypeMatcher<ResourceReady<int>>());
+      expect(resource.value, const TypeMatcher<ResourceReady<int>>());
       shouldThrow = true;
-      resource.refetch();
-      await Future.delayed(const Duration(milliseconds: 150));
+      resource.refetch().ignore();
+      await Future<void>.delayed(const Duration(milliseconds: 150));
       expect(errorCalledTimes, 1);
 
-      resource.refetch();
-      await Future.delayed(const Duration(milliseconds: 150));
+      resource.refetch().ignore();
+      await Future<void>.delayed(const Duration(milliseconds: 150));
       expect(loadingCalledTimes, 2);
     });
 
     test('check toString()', () async {
       final r = createResource(fetcher: () => Future.value(1));
-      await r.fetch();
+      await r.resolve();
       await pumpEventQueue();
-      expect(r.toString(),
-          "Resource<int>(value: ResourceReady<int>(value: 1, refreshing: false), previousValue: ResourceLoading<int>(), options; SignalOptions<ResourceValue<int>>(equals: false, comparator: PRESENT))");
+      expect(
+        r.toString(),
+        '''Resource<int>(value: ResourceReady<int>(value: 1, refreshing: false), previousValue: ResourceLoading<int>(), options; SignalOptions<ResourceValue<int>>(equals: false, comparator: PRESENT))''',
+      );
     });
   });
 }

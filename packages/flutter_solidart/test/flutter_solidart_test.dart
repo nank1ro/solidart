@@ -324,7 +324,7 @@ void main() {
               builder: (context) {
                 final counter = context.get<Signal<int>>('counter');
                 final doubleCounter =
-                    context.get<ReadableSignal<int>>('double-counter');
+                    context.get<ReadSignal<int>>('double-counter');
                 return DualSignalBuilder(
                   firstSignal: counter,
                   secondSignal: doubleCounter,
@@ -441,7 +441,7 @@ void main() {
               builder: (innerContext) {
                 final counter = innerContext.get<Signal<int>>('counter');
                 final doubleCounter =
-                    innerContext.get<ReadableSignal<int>>('double-counter');
+                    innerContext.get<ReadSignal<int>>('double-counter');
                 return DualSignalBuilder(
                   firstSignal: counter,
                   secondSignal: doubleCounter,
@@ -497,9 +497,9 @@ void main() {
   });
 
   testWidgets(
-      '''Trying to retrieve a ReadableSignal as a Signal throws an error, and vice versa''',
+      '''Trying to retrieve a ReadSignal as a Signal throws an error, and vice versa''',
       (tester) async {
-    final s = ReadableSignal(0);
+    final s = ReadSignal(0);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -534,7 +534,7 @@ void main() {
             },
             child: Builder(
               builder: (context) {
-                final counter = context.get<ReadableSignal<int>>('counter');
+                final counter = context.get<ReadSignal<int>>('counter');
                 return SignalBuilder(
                   signal: counter,
                   builder: (context, value, _) {

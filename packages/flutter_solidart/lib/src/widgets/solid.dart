@@ -389,7 +389,7 @@ class Solid extends StatefulWidget {
   }
 
   // Checks that the signal type correspondes to the given type provided.
-  // If you created a [Signal] you cannot get it as a [ReadableSignal], and
+  // If you created a [Signal] you cannot get it as a [ReadSignal], and
   // vice versa.
   // This operation is performed only in development mode.
   static void _checkSignalType<S>({
@@ -400,12 +400,12 @@ class Solid extends StatefulWidget {
       () {
         Type typeOf<X>() => X;
         final t = typeOf<S>();
-        final isTypeReadable = t.toString().startsWith('ReadableSignal');
-        final isSignalReadable = state.isReadableSignal(id: id);
+        final isTypeReadable = t.toString().startsWith('ReadSignal');
+        final isSignalReadable = state.isReadSignal(id: id);
 
         // ignore: avoid_positional_boolean_parameters
         String typeString(bool isReadable) {
-          return isReadable ? 'ReadableSignal' : 'Signal';
+          return isReadable ? 'ReadSignal' : 'Signal';
         }
 
         if (isTypeReadable != isSignalReadable) {
@@ -498,8 +498,8 @@ The signal id that caused this issue is $id
 
     // if the signal is not already present, create it lazily
     if (createdSignal == null) {
-      if (state.isReadableSignal(id: id)) {
-        createdSignal = state.createSignal<ReadableSignal<T>>(id: id);
+      if (state.isReadSignal(id: id)) {
+        createdSignal = state.createSignal<ReadSignal<T>>(id: id);
       } else {
         createdSignal = state.createSignal<Signal<T>>(id: id);
       }
@@ -549,6 +549,7 @@ The signal id that caused this issue is $id
   }
 }
 
+/// The state of the [Solid] widget
 class SolidState extends State<Solid> {
   // Stores all the created signals.
   final Map<SignalIdentifier, SignalBase<dynamic>> _createdSignals = {};
@@ -607,7 +608,7 @@ class SolidState extends State<Solid> {
   /// -- Signals logic
 
   // Indicates is the signal is readable.
-  bool isReadableSignal({required SignalIdentifier id}) {
+  bool isReadSignal({required SignalIdentifier id}) {
     return widget.signals[id] is! Signal<dynamic> Function();
   }
 
@@ -867,11 +868,16 @@ class _InheritedSolid extends InheritedModel<Object> {
   }
 }
 
+/// {@template solidprovidererror}
+/// Error thrown when the [SolidProvider] of type [providerType] cannot be found
+/// {$endtemplate}
 class SolidProviderError extends Error {
+  /// {@macro solidprovidererror}
   SolidProviderError({
     required this.providerType,
   });
 
+  /// The type of provider
   final Type providerType;
 
   @override
@@ -900,6 +906,7 @@ https://github.com/nank1ro/solidart/issues/new
   }
 }
 
+/// Error thrown when the [SolidProvider] has a `dynamic` Type.
 class SolidProviderDynamicError extends Error {
   @override
   String toString() {
@@ -910,12 +917,17 @@ class SolidProviderDynamicError extends Error {
   }
 }
 
+/// {@template solidsignalerror}
+/// Error thrown when the Signal with id [signalId] cannot be found
+/// {$endtemplate}
 class SolidSignalError extends Error {
+  /// {@macro solidsignalerror}
   SolidSignalError({
     required this.signalId,
   });
 
-  final SignalIdentifier? signalId;
+  /// The id of the signal
+  final SignalIdentifier signalId;
 
   @override
   String toString() {
@@ -942,9 +954,15 @@ https://github.com/nank1ro/solidart/issues/new
   }
 }
 
+/// {@template solidprovidermultipleproviderofsametypeerror}
+/// Error thrown when there are multiple providers of the same [providerType]
+/// Type in the same [Solid] widget
+/// {$endtemplate}
 class SolidProviderMultipleProviderOfSameTypeError extends Error {
+  /// {@macro solidprovidermultipleproviderofsametypeerror}
   SolidProviderMultipleProviderOfSameTypeError({required this.providerType});
 
+  /// The type of the provider
   final Type providerType;
   @override
   String toString() {

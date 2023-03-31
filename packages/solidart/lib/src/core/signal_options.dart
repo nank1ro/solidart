@@ -1,7 +1,9 @@
 import 'package:meta/meta.dart';
 
+/// A custom comparator function
 typedef ValueComparator<T> = bool Function(T a, T b);
 
+/// {@template signaloptions}
 /// Signal options which increase its customization
 ///
 /// The [equals] field if true performs an equality check `==`
@@ -14,8 +16,10 @@ typedef ValueComparator<T> = bool Function(T a, T b);
 /// If the current and the new value are equal, no updates occur.
 /// The default value of a [comparator] is [identical] that checks
 /// the object references.
+/// {@endtemplate}
 @immutable
 class SignalOptions<T> {
+  /// {@macro signaloptions}
   const SignalOptions({
     this.equals = false,
     this.comparator = identical,

@@ -1,58 +1,7 @@
 import 'package:solidart/src/core/signal_base.dart';
 import 'package:solidart/src/utils.dart';
 
-/// Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
-///
-/// An effect can be created by using `createEffect`.
-/// The effect subscribes to any signal provided in the signals array and reruns when any of them change.
-///
-/// So let's create an `Effect` that reruns whenever `counter` changes:
-/// ```dart
-/// // sample signal
-/// final counter = createSignal(0);
-///
-/// // effect creation
-/// createEffect(() {
-///     print("The count is now ${counter.value}");
-/// }, signals: [counter]);
-///
-/// // increment the counter
-/// counter.value++;
-///
-/// // The effect prints `The count is now 1`;
-/// ```
-///
-/// > The effect automatically cancels when all the `signals` provided dispose
-///
-/// The `createEffect` method returns an `Effect` class giving you a more advanced usage:
-/// ```dart
-/// final effect = createEffect(() {
-///     print("The count is now ${counter.value}");
-/// }, signals: [counter], fireImmediately: true);
-///
-/// print(effect.isRunning); // prints true
-///
-/// // pause effect
-/// effect.pause();
-///
-/// print(effect.isPaused); // prints true
-///
-/// // resume effect
-/// effect.resume();
-///
-/// print(effect.isResumed); // prints true
-///
-/// // cancel effect
-/// effect.cancel();
-///
-/// print(effect.isCancelled); // prints true
-/// ```
-///
-/// The `fireImmediately` flag indicates if the effect should run immediately with the current `signals` values, defaults to false.
-///
-/// You may want to `pause`, `resume` or `cancel` an effect.
-///
-/// > An effect is useless after it is cancelled, you must not use it anymore.
+/// {@macro effect}
 Effect<T> createEffect<T>(
   void Function() callback, {
   required List<SignalBase<T>> signals,
@@ -82,10 +31,15 @@ enum EffectState {
   cancelled,
 }
 
-/// Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
+/// {@template effect}
+/// Signals are trackable values, but they are only one half of the equation.
+/// To complement those are observers that can be updated by those trackable
+/// values. An effect is one such observer; it runs a side effect that depends
+/// on signals.
 ///
 /// An effect can be created by using `createEffect`.
-/// The effect subscribes to any signal provided in the signals array and reruns when any of them change.
+/// The effect subscribes to any signal provided in the signals array and
+/// reruns when any of them change.
 ///
 /// So let's create an `Effect` that reruns whenever `counter` changes:
 /// ```dart
@@ -105,7 +59,8 @@ enum EffectState {
 ///
 /// > The effect automatically cancels when all the `signals` provided dispose
 ///
-/// The `createEffect` method returns an `Effect` class giving you a more advanced usage:
+/// The `createEffect` method returns an `Effect` class giving you a more
+/// advanced usage:
 /// ```dart
 /// final effect = createEffect(() {
 ///     print("The count is now ${counter.value}");
@@ -129,12 +84,15 @@ enum EffectState {
 /// print(effect.isCancelled); // prints true
 /// ```
 ///
-/// The `fireImmediately` flag indicates if the effect should run immediately with the current `signals` values, defaults to false.
+/// The `fireImmediately` flag indicates if the effect should run immediately
+/// with the current `signals` values, defaults to false.
 ///
 /// You may want to `pause`, `resume` or `cancel` an effect.
 ///
 /// > An effect is useless after it is cancelled, you must not use it anymore.
+/// {@endtemplate}
 class Effect<T> {
+  /// {@macro effect}
   Effect({
     required this.signals,
     required this.callback,

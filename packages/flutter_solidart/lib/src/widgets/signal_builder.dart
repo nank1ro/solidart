@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_solidart/src/utils/diagnostic_properties_for_generic.dart';
 import 'package:solidart/solidart.dart';
 
+/// {@template signalbuilder}
 /// Reacts to the [signal] calling the [builder] each time.
 ///
 /// The [signal] and [builder] arguments must not be null.
@@ -30,9 +31,11 @@ import 'package:solidart/solidart.dart';
 /// ```
 ///
 /// If you need to nest multiple `SignalBuilder`s you may also check:
-/// - `DualSignalBuilder` to react to __2__ signals at once
-/// - `TripleSignalBuilder` to react to __3__ signals at once.
+/// - [DualSignalBuilder] to react to __2__ signals at once
+/// - [TripleSignalBuilder] to react to __3__ signals at once.
+/// {@endtemplate}
 class SignalBuilder<T> extends StatefulWidget {
+  /// {@macro signalbuilder}
   const SignalBuilder({
     super.key,
     required this.signal,
@@ -40,29 +43,35 @@ class SignalBuilder<T> extends StatefulWidget {
     this.child,
   });
 
-  /// The [Signal] whose value you depend on in order to build.
+  /// {@template signalbuilder.signal}
+  /// The signal whose value you depend on in order to build.
   ///
-  /// This widget does not ensure that the [Signal]'s value is not
+  /// This widget does not ensure that the signal's value is not
   /// null, therefore your [builder] may need to handle null values.
   ///
-  /// This [signal] itself must not be null.
+  /// This signal itself must not be null.
+  /// {@endtemplate}
   final SignalBase<T> signal;
 
+  /// {@template signalbuilder.builder}
   /// A [SignalBuilder] which builds a widget depending on the
-  /// [signal]'s value.
+  /// signal's value.
   ///
   /// Can incorporate a [signal] value-independent widget subtree
   /// from the [child] parameter into the returned widget tree.
   ///
   /// Must not be null.
+  /// {@endtemplate}
   final ValueWidgetBuilder<T> builder;
 
+  /// {@template signalbuilder.child}
   /// A [signal]-independent widget which is passed back to the [builder].
   ///
   /// This argument is optional and can be null if the entire widget subtree
   /// the [builder] builds depends on the value of the [signal]. For
   /// example, if the [signal] is a [String] and the [builder] simply
   /// returns a [Text] widget with the [String] value.
+  /// {@endtemplate}
   final Widget? child;
 
   @override
@@ -124,6 +133,7 @@ class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
   }
 }
 
+/// The builder function for a [DualSignalBuilder]
 typedef DualValueWidgetBuilder<T, U> = Widget Function(
   BuildContext context,
   T firstValue,
@@ -131,7 +141,17 @@ typedef DualValueWidgetBuilder<T, U> = Widget Function(
   Widget? child,
 );
 
+/// {@template dualsignalbuilder}
+/// The same as [SignalBuilder] but reacts to two signals.
+///
+/// The usage of [DualSignalBuilder] is preferred over nesting multiple
+/// [SignalBuilder]s.
+///
+/// Docs for [SignalBuilder]:
+/// {@macro signalbuilder}
+/// {@endtemplate}
 class DualSignalBuilder<T, U> extends StatefulWidget {
+  /// {@macro dualsignalbuilder}
   const DualSignalBuilder({
     super.key,
     required this.firstSignal,
@@ -140,12 +160,18 @@ class DualSignalBuilder<T, U> extends StatefulWidget {
     this.child,
   });
 
+  /// {@template signalbuilder.signal}
   final SignalBase<T> firstSignal;
 
+  /// {@template signalbuilder.signal}
   final SignalBase<U> secondSignal;
 
+  /// {@template signalbuilder.builder}
+  ///
+  /// Called when any of the signals values changes
   final DualValueWidgetBuilder<T, U> builder;
 
+  /// {@macro signalbuilder.child}
   final Widget? child;
 
   @override
@@ -219,6 +245,7 @@ class _DualSignalBuilderState<T, U> extends State<DualSignalBuilder<T, U>> {
   }
 }
 
+/// The builder function for a [TripleSignalBuilder]
 typedef TripleValueWidgetBuilder<T, U, R> = Widget Function(
   BuildContext context,
   T firstValue,
@@ -227,7 +254,17 @@ typedef TripleValueWidgetBuilder<T, U, R> = Widget Function(
   Widget? child,
 );
 
+/// {@template tripesignalbuilder}
+/// The same as [SignalBuilder] but reacts to three signals.
+///
+/// The usage of [TripleSignalBuilder] is preferred over nesting multiple
+/// [SignalBuilder]s.
+///
+/// Docs for [SignalBuilder]:
+/// {@macro signalbuilder}
+/// {@endtemplate}
 class TripleSignalBuilder<T, U, R> extends StatefulWidget {
+  /// {@macro tripesignalbuilder}
   const TripleSignalBuilder({
     super.key,
     required this.firstSignal,
@@ -237,14 +274,21 @@ class TripleSignalBuilder<T, U, R> extends StatefulWidget {
     this.child,
   });
 
+  /// {@template signalbuilder.signal}
   final SignalBase<T> firstSignal;
 
+  /// {@template signalbuilder.signal}
   final SignalBase<U> secondSignal;
 
+  /// {@template signalbuilder.signal}
   final SignalBase<R> thirdSignal;
 
+  /// {@template signalbuilder.builder}
+  ///
+  /// Called when any of the signals values changes
   final TripleValueWidgetBuilder<T, U, R> builder;
 
+  /// {@macro signalbuilder.child}
   final Widget? child;
 
   @override
