@@ -140,9 +140,24 @@ class ResourceBuilder<ResultType> extends StatefulWidget {
 
 class _ResourceBuilderState<ResultType>
     extends State<ResourceBuilder<ResultType>> {
+  late Resource<ResultType> effectiveResource;
+
   @override
   void initState() {
     super.initState();
+    initialize();
+  }
+
+  @override
+  void didUpdateWidget(covariant ResourceBuilder<ResultType> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.resource != widget.resource) {
+      initialize();
+    }
+  }
+
+  void initialize() {
+    effectiveResource = widget.resource;
     // Resolve the resource if it's not resolved yet
     if (widget.resource.value is ResourceUnresolved<ResultType>) {
       widget.resource.resolve();
@@ -152,7 +167,7 @@ class _ResourceBuilderState<ResultType>
   @override
   Widget build(BuildContext context) {
     return SignalBuilder<ResourceValue<ResultType>>(
-      signal: widget.resource,
+      signal: effectiveResource,
       builder: (context, value, __) {
         return widget.builder(context, value);
       },
