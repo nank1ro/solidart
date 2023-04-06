@@ -127,7 +127,7 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
   Future<void> resolve() async {
     assert(
       value is ResourceUnresolved<ResultType>,
-      """The resource has been already resolved, you can't resolve it more than once. Use `refresh()` instead if you want to refresh the value.""",
+      """The resource has been already resolved, you can't resolve it more than once. Use `refetch()` instead if you want to refresh the value.""",
     );
     if (fetcher != null) {
       // start fetching
