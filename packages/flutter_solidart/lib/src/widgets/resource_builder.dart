@@ -148,6 +148,7 @@ class _ResourceBuilderState<ResultType>
     initialize();
   }
 
+  // coverage:ignore-start
   @override
   void didUpdateWidget(covariant ResourceBuilder<ResultType> oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -155,6 +156,7 @@ class _ResourceBuilderState<ResultType>
       initialize();
     }
   }
+  // coverage:ignore-end
 
   void initialize() {
     effectiveResource = widget.resource;

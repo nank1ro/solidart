@@ -1,3 +1,7 @@
+## 0.4.1
+
+- **CHORE**: The `ResourceBuilder` now correctly handles a different `Resource` when the widget is updated.
+
 ## 0.4.0
 
 - **BUGFIX**: Listening to the `source` of a Resource was not stopped when the `source` disposed.
