@@ -1,34 +1,31 @@
-import 'package:solidart/src/core/signal_base.dart';
+import 'dart:async';
+
+import 'package:solidart/src/core/atom.dart';
+import 'package:solidart/src/core/derivation.dart';
+import 'package:solidart/src/core/reactive_context.dart';
 import 'package:solidart/src/utils.dart';
 
 /// {@macro effect}
-Effect<T> createEffect<T>(
+Effect createEffect(
   void Function() callback, {
-  required List<SignalBase<T>> signals,
-
-  /// whether to fire immediately the callback, defaults to false.
-  bool fireImmediately = false,
+  void Function(Object)? onError,
 }) {
-  return Effect(
-    signals: signals,
-    callback: callback,
-    fireImmediately: fireImmediately,
+  late Effect effect;
+  effect = Effect(
+    callback: () => effect.track(callback),
+    onError: onError,
   );
+  // ignore: cascade_invocations
+  effect.schedule();
+  return effect;
 }
 
-/// The state of the effect
-enum EffectState {
-  /// The effect is running, this is the default state
-  running,
+abstract class ReactionInterface implements Derivation {
+  bool get isDisposed;
 
-  /// The effect is paused
-  paused,
+  void dispose();
 
-  /// The effect is resumed
-  resumed,
-
-  /// The effect has been cancelled, the last possibile state
-  cancelled,
+  void run();
 }
 
 /// {@template effect}
@@ -91,103 +88,115 @@ enum EffectState {
 ///
 /// > An effect is useless after it is cancelled, you must not use it anymore.
 /// {@endtemplate}
-class Effect<T> {
+class Effect implements ReactionInterface {
   /// {@macro effect}
   Effect({
-    required this.signals,
-    required this.callback,
-    this.fireImmediately = false,
-  }) : assert(signals.isNotEmpty, 'You should provide at least one signal') {
-    _run();
-
-    // fire immediately the listener.
-    if (fireImmediately) _listener();
-  }
-
-  /// The list of signals the effect is going to subscribe.
-  final List<SignalBase<T>> signals;
+    required void Function() callback,
+    void Function(Object)? onError,
+  })  : _onError = onError,
+        _callback = callback;
 
   /// The callback that is fired each time a signal updates.
-  final VoidCallback callback;
+  // late final VoidCallback callback;
+  final void Function() _callback;
 
-  /// Whether to fire immediately the [callback], defaults to false.
-  final bool fireImmediately;
+  /// Optionally handle the error case
+  final void Function(Object)? _onError;
 
-  /// The current state of the effect.
-  late EffectState state;
+  final _context = ReactiveContext.main;
+  bool _isScheduled = false;
+  bool _isDisposed = false;
+  bool _isRunning = false;
 
-  /// Indicates if the effect is cancelled.
-  bool get isCancelled => state == EffectState.cancelled;
+  @override
+  DerivationState dependenciesState = DerivationState.notTracking;
 
-  /// Indicates if the effect is running.
-  bool get isRunning => state == EffectState.running;
+  @override
+  SolidartCaughtException? errorValue;
 
-  /// Indicates if the effect is paused.
-  bool get isPaused => state == EffectState.paused;
+  @override
+  Set<Atom>? newObservables;
 
-  /// Indicates if the effect is resumed.
-  bool get isResumed => state == EffectState.resumed;
+  @override
+  Set<Atom> observables = {};
 
-  void _listener() {
-    callback();
+  @override
+  bool get isDisposed => _isDisposed;
+
+  @override
+  void onBecomeStale() {
+    schedule();
   }
 
-  void _startListeningToSignal(SignalBase<T> signal) {
-    // ignore disposed signals.
-    if (signal.disposed) return;
-    signal.addListener(_listener);
-  }
-
-  void _stopListeningToSignal(SignalBase<T> signal) {
-    signal.removeListener(_listener);
-
-    // cancel the effect when all the signals are disposed.
-    if (_allSignalsDisposed()) {
-      state = EffectState.cancelled;
+  void schedule() {
+    if (_isScheduled) {
+      return;
     }
+
+    _isScheduled = true;
+    _context
+      ..addPendingReaction(this)
+      ..runReactions();
   }
 
-  // Indicates if all the signals are disposed
-  bool _allSignalsDisposed() {
-    final a = signals.every((signal) => signal.disposed);
-    return a;
-  }
+  void track(void Function() fn) {
+    _context.startBatch();
 
-  void _run() {
-    for (final signal in signals) {
-      _startListeningToSignal(signal);
-      signal.onDispose(() => _stopListeningToSignal(signal));
+    _isRunning = true;
+    _context.trackDerivation(this, fn);
+    _isRunning = false;
+
+    if (_isDisposed) {
+      _context.clearObservables(this);
     }
-    state = EffectState.running;
+
+    if (_context.hasCaughtException(this)) {
+      _onError?.call(errorValue!);
+    }
+
+    _context.endBatch();
   }
+
+  @override
+  void run() {
+    if (_isDisposed) return;
+
+    _context.startBatch();
+
+    _isScheduled = false;
+
+    if (_context.shouldCompute(this)) {
+      try {
+        _callback();
+      } on Object catch (e, s) {
+        // Note: "on Object" accounts for both Error and Exception
+        errorValue = SolidartCaughtException(e, stackTrace: s);
+        _onError?.call(errorValue!);
+      }
+    }
+
+    _context.endBatch();
+  }
+
+  /// No-op
+  @override
+  void suspend() {}
 
   /// Invalidates the effect.
   ///
   /// After this operation the effect is useless.
-  void cancel() {
-    signals.forEach(_stopListeningToSignal);
-    state = EffectState.cancelled;
-  }
+  @override
+  void dispose() {
+    if (_isDisposed) return;
 
-  /// Pauses the listening to signals.
-  ///
-  /// May be followed by a resume later.
-  void pause() {
-    assert(
-      state != EffectState.cancelled,
-      'Cannot pause an effect that has been already cancelled',
-    );
-    signals.forEach(_stopListeningToSignal);
-    state = EffectState.paused;
-  }
+    _isDisposed = true;
 
-  /// Resumes the listening to signals.
-  void resume() {
-    assert(
-      state == EffectState.paused,
-      'Cannot resume an effect that has not been paused',
-    );
-    signals.forEach(_startListeningToSignal);
-    state = EffectState.resumed;
+    if (_isRunning) return;
+
+    // ignore: cascade_invocations
+    _context
+      ..startBatch()
+      ..clearObservables(this)
+      ..endBatch();
   }
 }

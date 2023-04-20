@@ -1,4 +1,5 @@
 import 'package:meta/meta.dart';
+import 'package:solidart/src/core/derivation.dart';
 import 'package:solidart/src/core/read_signal.dart';
 import 'package:solidart/src/core/signal_options.dart';
 
@@ -125,56 +126,75 @@ class Signal<T> extends ReadSignal<T> {
   T _value;
 
   @override
-  T get value => _value;
+  T get value {
+    context.enforceReadPolicy(this);
+    reportObserved();
+    return _value;
+  }
 
   /// Updates the current signal value with [newValue].
   ///
   /// This operation may be skipped if the value is equal to the previous one,
   /// check [SignalOptions.equals] and [SignalOptions.comparator].
   set value(T newValue) {
+    context.enforceWritePolicy(this);
     // skip if the value are equals
-    if (options.equals && value == newValue) {
+    if (areEqual(value, newValue)) {
       return;
-    }
-
-    // skip if the [comparator] returns true
-    if (!options.equals && options.comparator != null) {
-      final areEqual = options.comparator!(value, newValue);
-      if (areEqual) return;
     }
 
     // store the previous value
     _previousValue = value;
     // notify with the new value
     _value = newValue;
-    notifyListeners();
+    reportChanged();
+    _notifyListeners();
+  }
+
+  /// Indicates if the [oldValue] and the [newValue] are equal
+  @internal
+  bool areEqual(T? oldValue, T? newValue) {
+    // skip if the value are equals
+    if (options.equals && oldValue == newValue) {
+      return true;
+    }
+
+    // skip if the [comparator] returns true
+    if (!options.equals && options.comparator != null) {
+      return options.comparator!(oldValue, newValue);
+    }
+    return false;
   }
 
   T? _previousValue;
 
   /// The previous value, if any.
   @override
-  T? get previousValue => _previousValue;
+  T? get previousValue {
+    context.enforceReadPolicy(this);
+    // reportObserved();
+    return _previousValue;
+  }
 
-  /// Sets the previous value.
-  ///
-  /// Never use this method.
-  @internal
-  @protected
-  set previousValue(T? newPreviousValue) {
-    _previousValue = newPreviousValue;
+  /// The previous value, if any, unobserved.
+  T? get unobservedPreviousValue => _previousValue;
+
+  /// The current value, unobserved.
+  T get unobservedValue => _value;
+
+  void _notifyListeners() {
+    if (listeners.isNotEmpty) {
+      context.untracked(() {
+        for (final listener in listeners.toList(growable: false)) {
+          listener(_previousValue, _value);
+        }
+      });
+    }
   }
 
   /// Calls a function with the current [value] and assigns the result as the
   /// new value.
   T update(T Function(T value) callback) => value = callback(value);
-
-  /// Converts this [Signal] into a [ReadSignal]
-  /// Use this method to remove the visility to the value setter.
-  @Deprecated(
-    '''Use toReadSignal() instead. It will be removed in future releases.''',
-  )
-  ReadSignal<T> get readable => toReadSignal();
 
   /// Converts this [Signal] into a [ReadSignal]
   /// Use this method to remove the visility to the value setter.

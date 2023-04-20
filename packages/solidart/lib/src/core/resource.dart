@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:meta/meta.dart';
+import 'package:solidart/solidart.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_base.dart';
 
@@ -133,9 +134,10 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
       // start fetching
       await _fetch();
       // react to the [source], if provided.
+
       if (source != null) {
-        source!.addListener(refetch);
-        source!.onDispose(() => source!.removeListener(refetch));
+        // source!.addListener(refetch);
+        // source!.onDispose(() => source!.removeListener(refetch));
       }
     }
     // React the the [stream], if provided

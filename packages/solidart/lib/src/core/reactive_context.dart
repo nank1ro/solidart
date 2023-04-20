@@ -1,0 +1,533 @@
+// ignore_for_file: public_member_api_docs
+
+import 'package:meta/meta.dart';
+import 'package:solidart/src/core/atom.dart';
+import 'package:solidart/src/core/computed.dart';
+import 'package:solidart/src/core/derivation.dart';
+import 'package:solidart/src/core/effect.dart';
+import 'package:solidart/src/utils.dart';
+
+class _ReactiveState {
+  /// Current batch depth. This is used to track the depth of `transaction` / `action`.
+  /// When the batch ends, we execute all the [pendingReactions]
+  int batch = 0;
+
+  /// Monotonically increasing counter for assigning a name to an action/reaction/atom
+  int nextIdCounter = 0;
+
+  /// Tracks the currently executing derivation (reactions or computeds).
+  /// The Observables used here are linked to this derivation.
+  Derivation? trackingDerivation;
+
+  /// The reactions that must be triggered at the end of a `transaction` or an
+  /// `action`
+  List<ReactionInterface> pendingReactions = [];
+
+  /// Are we in middle of executing the [pendingReactions].
+  bool isRunningReactions = false;
+
+  /// The atoms that must be disconnected from their observed reactions. This
+  /// happens if a reaction has been disposed during a batch
+  List<Atom> pendingUnobservations = [];
+
+  /// Tracks if within a computed property evaluation
+  int computationDepth = 0;
+
+  /// Tracks if observables can be mutated
+  bool allowStateChanges = true;
+
+  /// Are we inside an action or transaction?
+  bool get isWithinBatch => batch > 0;
+
+  /// Are we inside a reaction or computed?
+  bool get isWithinDerivation =>
+      trackingDerivation != null || computationDepth > 0;
+}
+
+typedef ReactionErrorHandler = void Function(
+  Object error,
+  ReactionInterface reaction,
+);
+
+/// Defines the behavior for observables read outside actions and reactions
+///
+/// `always`: If observables are read outside actions/reactions, throw an Exception
+/// `never`: Allow unrestricted reading of observables everywhere. This is the
+/// default.
+enum ReactiveReadPolicy { always, never }
+
+/// Defines the behavior for observables mutated outside actions
+///
+/// `observed`: If there are observers for the mutated observable, then throw.
+/// Else allow mutation outside an action.
+/// `always`: Always throw if an observable is mutated outside an action
+/// `never`: Allow mutating observables outside actions
+enum ReactiveWritePolicy { observed, always, never }
+
+/// Configuration used by [ReactiveContext]
+
+@internal
+class ReactiveConfig {
+  ReactiveConfig({
+    this.disableErrorBoundaries = false,
+    this.writePolicy = ReactiveWritePolicy.observed,
+    this.readPolicy = ReactiveReadPolicy.never,
+    this.maxIterations = 100,
+  });
+
+  /// The main or default configuration used by [ReactiveContext]
+  static final ReactiveConfig main = ReactiveConfig();
+
+  /// Throw exceptions instead of catching them and store
+  /// as [Derivation.errorValue].
+  final bool disableErrorBoundaries;
+
+  /// Enforce mutation of observables inside an action
+  final ReactiveWritePolicy writePolicy;
+
+  /// Enforce the use of reactions for reading observables
+  final ReactiveReadPolicy readPolicy;
+
+  /// Max number of iterations before bailing out for a cyclic reaction
+  final int maxIterations;
+
+  final Set<ReactionErrorHandler> _reactionErrorHandlers = {};
+
+  ReactiveConfig clone({
+    bool? disableErrorBoundaries,
+    ReactiveWritePolicy? writePolicy,
+    ReactiveReadPolicy? readPolicy,
+    int? maxIterations,
+  }) =>
+      ReactiveConfig(
+        disableErrorBoundaries:
+            disableErrorBoundaries ?? this.disableErrorBoundaries,
+        writePolicy: writePolicy ?? this.writePolicy,
+        readPolicy: readPolicy ?? this.readPolicy,
+        maxIterations: maxIterations ?? this.maxIterations,
+      );
+}
+
+class ReactiveContext {
+  ReactiveContext._main();
+
+  /// The main reactive context
+  static final ReactiveContext main = ReactiveContext._main();
+  final config = ReactiveConfig.main;
+
+  _ReactiveState _state = _ReactiveState();
+
+  int get nextId => ++_state.nextIdCounter;
+
+  String nameFor(String prefix) {
+    assert(prefix.isNotEmpty, 'the prefix cannot be empty');
+    return '$prefix@$nextId';
+  }
+
+  bool get isWithinBatch => _state.isWithinBatch;
+
+  void startBatch() {
+    _state.batch++;
+  }
+
+  void endBatch() {
+    if (--_state.batch == 0) {
+      runReactions();
+
+      for (var i = 0; i < _state.pendingUnobservations.length; i++) {
+        final ob = _state.pendingUnobservations[i]
+          ..isPendingUnobservation = false;
+
+        if (ob.observers.isEmpty) {
+          if (ob.isBeingObserved) {
+            // if this observable had reactive observers, trigger the hooks
+            ob.isBeingObserved = false;
+          }
+
+          if (ob is Computed) {
+            ob.suspend();
+          }
+        }
+      }
+
+      _state.pendingUnobservations = [];
+    }
+  }
+
+  void enforceReadPolicy(Atom atom) {
+    // ---
+    // We are wrapping in an assert() since we don't want this code to execute
+    //  at runtime.
+    // The dart compiler removes assert() calls from the release build.
+    // ---
+    // ignore: prefer_asserts_with_message
+    assert(() {
+      switch (config.readPolicy) {
+        case ReactiveReadPolicy.always:
+          assert(
+            _state.isWithinBatch || _state.isWithinDerivation,
+            '''
+Observable values cannot be read outside Actions and Reactions. Make sure to wrap them inside an action or a reaction. Tried to read: ${atom.name}''',
+          );
+          break;
+
+        case ReactiveReadPolicy.never:
+          break;
+      }
+
+      return true;
+    }());
+  }
+
+  void enforceWritePolicy(Atom atom) {
+    // Cannot mutate observables inside a computed. This is required to
+    // maintain the consistency of the reactive system.
+    if (_state.computationDepth > 0 && atom.hasObservers) {
+      throw SolidartException(
+        '''
+Computed values are not allowed to cause side effects by changing observables that are already being observed. Tried to modify: ${atom.name}''',
+      );
+    }
+
+    // ---
+    // We are wrapping in an assert() since we don't want this code to execute
+    // at runtime.
+    // The dart compiler removes assert() calls from the release build.
+    // ---
+    // ignore: prefer_asserts_with_message
+    assert(() {
+      switch (config.writePolicy) {
+        case ReactiveWritePolicy.never:
+          break;
+
+        case ReactiveWritePolicy.observed:
+          if (atom.hasObservers == false) {
+            break;
+          }
+
+          assert(
+            _state.isWithinBatch,
+            '''
+Side effects like changing state are not allowed at this point. Please wrap the code in an "action". Tried to modify: ${atom.name}''',
+          );
+          break;
+
+        case ReactiveWritePolicy.always:
+          assert(
+            _state.isWithinBatch,
+            '''
+Changing observable values outside actions is not allowed. Please wrap the code in an "action" if this change is intended. Tried to modify ${atom.name}''',
+          );
+      }
+
+      return true;
+    }());
+  }
+
+  Derivation? startTracking(Derivation derivation) {
+    final prevDerivation = _state.trackingDerivation;
+    _state.trackingDerivation = derivation;
+
+    _resetDerivationState(derivation);
+    derivation.newObservables = {};
+
+    return prevDerivation;
+  }
+
+  void endTracking(Derivation currentDerivation, Derivation? prevDerivation) {
+    _state.trackingDerivation = prevDerivation;
+    _bindDependencies(currentDerivation);
+  }
+
+  T? trackDerivation<T>(Derivation d, T Function() fn) {
+    final prevDerivation = startTracking(d);
+    T? result;
+
+    if (config.disableErrorBoundaries == true) {
+      result = fn();
+    } else {
+      try {
+        result = fn();
+        d.errorValue = null;
+      } on Object catch (e, s) {
+        d.errorValue = SolidartCaughtException(e, stackTrace: s);
+      }
+    }
+
+    endTracking(d, prevDerivation);
+    return result;
+  }
+
+  void reportObserved(Atom atom) {
+    final derivation = _state.trackingDerivation;
+
+    if (derivation != null) {
+      derivation.newObservables!.add(atom);
+      if (!atom.isBeingObserved) {
+        atom.isBeingObserved = true;
+      }
+    }
+  }
+
+  void _bindDependencies(Derivation derivation) {
+    final staleObservables =
+        derivation.observables.difference(derivation.newObservables!);
+    final newObservables =
+        derivation.newObservables!.difference(derivation.observables);
+    var lowestNewDerivationState = DerivationState.upToDate;
+
+    // Add newly found observables
+    for (final observable in newObservables) {
+      observable.addObserver(derivation);
+
+      // Computed = Observable + Derivation
+      if (observable is Computed) {
+        if (observable.dependenciesState.index >
+            lowestNewDerivationState.index) {
+          lowestNewDerivationState = observable.dependenciesState;
+        }
+      }
+    }
+
+    // Remove previous observables
+    for (final ob in staleObservables) {
+      ob.removeObserver(derivation);
+    }
+
+    if (lowestNewDerivationState != DerivationState.upToDate) {
+      derivation
+        ..dependenciesState = lowestNewDerivationState
+        ..onBecomeStale();
+    }
+
+    derivation
+      ..observables = derivation.newObservables!
+      ..newObservables = {}; // No need for newObservables beyond this point
+  }
+
+  void addPendingReaction(ReactionInterface reaction) {
+    _state.pendingReactions.add(reaction);
+  }
+
+  void runReactions() {
+    if (_state.batch > 0 || _state.isRunningReactions) {
+      return;
+    }
+
+    _runReactionsInternal();
+  }
+
+  void _runReactionsInternal() {
+    _state.isRunningReactions = true;
+
+    var iterations = 0;
+    final allReactions = _state.pendingReactions;
+
+    // While running reactions, new reactions might be triggered.
+    // Hence we work with two variables and check whether
+    // we converge to no remaining reactions after a while.
+    while (allReactions.isNotEmpty) {
+      if (++iterations == config.maxIterations) {
+        final failingReaction = allReactions[0];
+
+        // Resetting ensures we have no bad-state left
+        _resetState();
+
+        throw SolidartReactionException('''
+Reaction doesn't converge to a stable state after ${config.maxIterations} iterations.
+Probably there is a cycle in the reactive function: $failingReaction ''');
+      }
+
+      final remainingReactions = allReactions.toList(growable: false);
+      allReactions.clear();
+      for (final reaction in remainingReactions) {
+        reaction.run();
+      }
+    }
+
+    _state
+      ..pendingReactions = []
+      ..isRunningReactions = false;
+  }
+
+  void propagateChanged(Atom atom) {
+    if (atom.lowestObserverState == DerivationState.stale) {
+      return;
+    }
+
+    atom.lowestObserverState = DerivationState.stale;
+
+    for (final observer in atom.observers) {
+      if (observer.dependenciesState == DerivationState.upToDate) {
+        observer.onBecomeStale();
+      }
+      observer.dependenciesState = DerivationState.stale;
+    }
+  }
+
+  void propagatePossiblyChanged(Atom atom) {
+    if (atom.lowestObserverState != DerivationState.upToDate) {
+      return;
+    }
+
+    atom.lowestObserverState = DerivationState.possiblyStale;
+
+    for (final observer in atom.observers) {
+      if (observer.dependenciesState == DerivationState.upToDate) {
+        observer
+          ..dependenciesState = DerivationState.possiblyStale
+          ..onBecomeStale();
+      }
+    }
+  }
+
+  void propagateChangeConfirmed(Atom atom) {
+    if (atom.lowestObserverState == DerivationState.stale) {
+      return;
+    }
+
+    atom.lowestObserverState = DerivationState.stale;
+
+    for (final observer in atom.observers) {
+      if (observer.dependenciesState == DerivationState.possiblyStale) {
+        observer.dependenciesState = DerivationState.stale;
+      } else if (observer.dependenciesState == DerivationState.upToDate) {
+        atom.lowestObserverState = DerivationState.upToDate;
+      }
+    }
+  }
+
+  void clearObservables(Derivation derivation) {
+    final observables = derivation.observables;
+    derivation.observables = {};
+
+    for (final x in observables) {
+      x.removeObserver(derivation);
+    }
+
+    derivation.dependenciesState = DerivationState.notTracking;
+  }
+
+  void enqueueForUnobservation(Atom atom) {
+    if (atom.isPendingUnobservation) {
+      return;
+    }
+
+    atom.isPendingUnobservation = true;
+    _state.pendingUnobservations.add(atom);
+  }
+
+  void _resetDerivationState(Derivation d) {
+    if (d.dependenciesState == DerivationState.upToDate) {
+      return;
+    }
+
+    d.dependenciesState = DerivationState.upToDate;
+    for (final obs in d.observables) {
+      obs.lowestObserverState = DerivationState.upToDate;
+    }
+  }
+
+  bool shouldCompute(Derivation derivation) {
+    switch (derivation.dependenciesState) {
+      case DerivationState.upToDate:
+        return false;
+
+      case DerivationState.notTracking:
+      case DerivationState.stale:
+        return true;
+
+      case DerivationState.possiblyStale:
+        return untracked(() {
+          for (final obs in derivation.observables) {
+            if (obs is Computed) {
+              // Force a computation
+              if (config.disableErrorBoundaries == true) {
+                obs.value;
+              } else {
+                try {
+                  obs.value;
+                } on Object catch (_) {
+                  return true;
+                }
+              }
+
+              if (derivation.dependenciesState == DerivationState.stale) {
+                return true;
+              }
+            }
+          }
+
+          _resetDerivationState(derivation);
+          return false;
+        });
+    }
+  }
+
+  bool hasCaughtException(Derivation d) =>
+      d.errorValue is SolidartCaughtException;
+
+  bool isComputingDerivation() => _state.trackingDerivation != null;
+
+  Derivation? startUntracked() {
+    final prevDerivation = _state.trackingDerivation;
+    _state.trackingDerivation = null;
+    return prevDerivation;
+  }
+
+  // ignore: use_setters_to_change_properties
+  void endUntracked(Derivation? prevDerivation) {
+    _state.trackingDerivation = prevDerivation;
+  }
+
+  T untracked<T>(T Function() fn) {
+    final prevDerivation = startUntracked();
+    try {
+      return fn();
+    } finally {
+      endUntracked(prevDerivation);
+    }
+  }
+
+  Dispose onReactionError(ReactionErrorHandler handler) {
+    config._reactionErrorHandlers.add(handler);
+    return () {
+      config._reactionErrorHandlers.removeWhere((f) => f == handler);
+    };
+  }
+
+  void notifyReactionErrorHandlers(
+    Object exception,
+    ReactionInterface reaction,
+  ) {
+    // ignore: avoid_function_literals_in_foreach_calls
+    config._reactionErrorHandlers.forEach((f) {
+      f(exception, reaction);
+    });
+  }
+
+  bool startAllowStateChanges({bool allow = true}) {
+    final prevValue = _state.allowStateChanges;
+    _state.allowStateChanges = allow;
+
+    return prevValue;
+  }
+
+  // ignore: use_setters_to_change_properties
+  void endAllowStateChanges({bool allow = true}) {
+    _state.allowStateChanges = allow;
+  }
+
+  void pushComputation() {
+    _state.computationDepth++;
+  }
+
+  void popComputation() {
+    _state.computationDepth--;
+  }
+
+  void _resetState() {
+    _state = _ReactiveState()
+      ..allowStateChanges = config.writePolicy == ReactiveWritePolicy.never;
+  }
+}
