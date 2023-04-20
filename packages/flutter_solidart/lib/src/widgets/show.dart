@@ -61,7 +61,7 @@ class Show<T extends bool> extends StatelessWidget {
   ///
   /// When the Signal's value is true, renders the [builder], otherwise the
   ///  [fallback] (if provided, or an empty view).
-  final Signal<T> when;
+  final SignalBase<T> when;
 
   /// The builder widget is rendered when the [when] signal value evalutes to
   /// `true`

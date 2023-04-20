@@ -1,3 +1,7 @@
+## 0.4.2
+
+- **BUGFIX**: The `Show` widget now can work again with a `ReadSignal`.
+
 ## 0.4.1
 
 - **CHORE**: The `ResourceBuilder` now correctly handles a different `Resource` when the widget is updated.
