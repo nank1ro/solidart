@@ -1,4 +1,3 @@
-import 'package:example/pages/advanced_effects.dart';
 import 'package:example/pages/counter.dart';
 import 'package:example/pages/derived_signal.dart';
 import 'package:example/pages/dual_signal_builder.dart';
@@ -41,7 +40,6 @@ final routes = <String, WidgetBuilder>{
   '/dual-signal-builder': (_) => const DualSignalBuilderPage(),
   '/resource': (_) => const ResourcePage(),
   '/solid': (_) => const SolidPage(),
-  '/advanced-effects': (_) => const AdvancedEffectsPage(),
   '/solid-reactivity': (_) => const SolidReactivityPage(),
   '/signals-in-modals': (_) => const SignalsInModalsPage(),
   '/solid-providers': (_) => const SolidProvidersPage(),

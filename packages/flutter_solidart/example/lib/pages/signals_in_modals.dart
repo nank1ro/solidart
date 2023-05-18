@@ -43,7 +43,7 @@ class _SignalsInModalsPageState extends State<SignalsInModalsPage> {
         signals: {
           _SignalId.counter: () => counter,
           _SignalId.doubleCounter: () =>
-              counter.select<int>((value) => value * 2),
+              createComputed<int>(() => counter() * 2),
         },
         child: Builder(
           builder: (context) {

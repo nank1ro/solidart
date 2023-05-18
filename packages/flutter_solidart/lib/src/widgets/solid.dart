@@ -562,6 +562,9 @@ class SolidState extends State<Solid> {
   // updated and to implement fine-grained reactivity.
   Map<SignalIdentifier, dynamic> _signalValues = {};
 
+  // Stores all the disposeFn for each signal
+  final _signalDisposeCallbacks = <DisposeEffect>[];
+
   @override
   void initState() {
     super.initState();
@@ -588,8 +591,10 @@ class SolidState extends State<Solid> {
   @override
   void dispose() {
     // stop listening to signals and dispose all of them if needed
+    for (final disposeFn in _signalDisposeCallbacks) {
+      disposeFn();
+    }
     for (final signal in _createdSignals.values) {
-      _stopListeningToSignal(signal);
       if (widget._autoDispose) signal.dispose();
     }
     // dispose all the created providers
@@ -599,6 +604,7 @@ class SolidState extends State<Solid> {
       });
     }
 
+    _signalDisposeCallbacks.clear();
     _createdSignals.clear();
     _signalValues.clear();
     _createdProviders.clear();
@@ -627,10 +633,11 @@ class SolidState extends State<Solid> {
     SignalBase<dynamic> signal, {
     required SignalIdentifier id,
   }) {
-    _listenToSignal(signal);
-    signal.onDispose(() {
-      _stopListeningToSignal(signal);
-    });
+    final unobserve =
+        signal.observe((previousValue, value) => _onSignalChange());
+    signal.onDispose(unobserve);
+
+    _signalDisposeCallbacks.add(unobserve);
 
     // store the initial signal value
     _signalValues[id] = signal.value;
@@ -640,14 +647,6 @@ class SolidState extends State<Solid> {
   /// [id]entifier is present in the current scope
   bool isSignalInScope(SignalIdentifier id) {
     return widget.signals.containsKey(id);
-  }
-
-  void _listenToSignal(SignalBase<dynamic> signal) {
-    signal.addListener(_onSignalChange);
-  }
-
-  void _stopListeningToSignal(SignalBase<dynamic> signal) {
-    signal.removeListener(_onSignalChange);
   }
 
   void _onSignalChange() {
@@ -860,7 +859,7 @@ class _InheritedSolid extends InheritedModel<Object> {
 
     // depend on the inherited element if [listen] is true
     if (listen) {
-      context.dependOnInheritedElement(model, aspect: aspect!)
+      context.dependOnInheritedElement(model, aspect: aspect)
           as _InheritedSolid;
     }
 

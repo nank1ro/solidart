@@ -10,7 +10,7 @@ class DerivedSignalsPage extends StatefulWidget {
 
 class _DerivedSignalsPageState extends State<DerivedSignalsPage> {
   late final count = createSignal(0);
-  late final doubleCount = count.select((value) => value * 2);
+  late final doubleCount = createComputed(() => count() * 2);
 
   @override
   void dispose() {

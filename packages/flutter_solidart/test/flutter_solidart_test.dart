@@ -280,7 +280,7 @@ void main() {
 
   testWidgets('Test Solid context.observe', (tester) async {
     final s = createSignal(0);
-    final s2 = s.select((value) => value * 2);
+    final s2 = createComputed(() => s() * 2);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -311,7 +311,7 @@ void main() {
 
   testWidgets('Test Solid context.get with Signal', (tester) async {
     final s = createSignal(0);
-    final s2 = s.select((value) => value * 2);
+    final s2 = createComputed(() => s() * 2);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -465,7 +465,7 @@ void main() {
           body: Solid(
             signals: {
               'counter': () => s,
-              'double-counter': () => s.select<int>((value) => value * 2),
+              'double-counter': () => createComputed<int>(() => s() * 2),
             },
             child: Builder(
               builder: (context) {
@@ -823,4 +823,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('1'), findsOneWidget);
   });
+
+  test(
+    'Convert Signal to ValueNotifier',
+    () {
+      final signal = createSignal(0);
+      final notifier = signal.toValueNotifier();
+      expect(notifier, isA<ValueNotifier<int>>());
+
+      signal.value = 1;
+      expect(notifier.value, 1);
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
+
+  test(
+    'Convert ValueNotifier to Signal',
+    () {
+      final notifier = ValueNotifier(0);
+      final signal = notifier.toSignal();
+      expect(signal, isA<Signal<int>>());
+      notifier.value = 1;
+      expect(signal.value, 1);
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
 }

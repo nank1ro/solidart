@@ -28,13 +28,13 @@ class _SolidReactivityPageState extends State<SolidReactivityPage> {
         appBar: AppBar(
           title: const Text('Solid Reactivity'),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
+        body: const Padding(
+          padding: EdgeInsets.all(16.0),
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 Text(
                   'Check the console to see that the context.observe behaves in a fine-grained way, rebuilding only the specific descendants with the new value. '
                   "It's like using SignalBuilder but works differently under the hood. "

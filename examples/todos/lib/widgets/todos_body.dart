@@ -40,12 +40,17 @@ class _TodosBodyState extends State<TodosBody> {
         // and [Toolbar].
         // This is preferable over passing the signals as parameters down to descendants,
         // expecially when the usage is very deep in the tree.
-        SignalId.completedTodos: () => todosController.todos.select<List<Todo>>(
-              (value) => value.where((element) => element.completed).toList(),
+        SignalId.completedTodos: () => createComputed<List<Todo>>(
+              () => todosController
+                  .todos()
+                  .where((element) => element.completed)
+                  .toList(),
             ),
-        SignalId.uncompletedTodos: () =>
-            todosController.todos.select<List<Todo>>(
-              (value) => value.where((element) => !element.completed).toList(),
+        SignalId.uncompletedTodos: () => createComputed<List<Todo>>(
+              () => todosController
+                  .todos()
+                  .where((element) => !element.completed)
+                  .toList(),
             ),
       },
       child: Column(

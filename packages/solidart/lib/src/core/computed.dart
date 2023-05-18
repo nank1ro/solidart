@@ -1,13 +1,20 @@
-import 'package:solidart/solidart.dart';
 import 'package:solidart/src/core/atom.dart';
 import 'package:solidart/src/core/derivation.dart';
+import 'package:solidart/src/core/effect.dart';
+import 'package:solidart/src/core/reactive_context.dart';
+import 'package:solidart/src/core/read_signal.dart';
+import 'package:solidart/src/core/signal.dart';
+import 'package:solidart/src/core/signal_options.dart';
 import 'package:solidart/src/utils.dart';
 
 /// {@macro computed}
 ReadSignal<T> createComputed<T>(
-  T Function() selector,
-) =>
-    Computed<T>(selector: selector).toReadSignal();
+  T Function() selector, {
+  SignalOptions<T>? options,
+  ErrorCallback? onError,
+}) =>
+    Computed<T>(selector: selector, options: options, onError: onError)
+        .toReadSignal();
 
 /// {@template computed}
 /// A special [Signal] that notifies only whenever the selected
@@ -84,11 +91,27 @@ class Computed<T> extends Signal<T> implements Derivation {
   /// {@macro computed}
   Computed({
     required this.selector,
+    ErrorCallback? onError,
     SignalOptions<T>? options,
-  }) : super(selector(), options: options);
+  })  : _onError = onError,
+        name = options?.name ?? ReactiveContext.main.nameFor('Computed'),
+        super(selector(), options: options);
+
+  // Tracks the internal value
+  T? _value;
+
+  // Tracks the internal previous value
+  T? _previousValue;
+
+  @override
+  // ignore: overridden_fields
+  final String name;
 
   /// The selector applied
   final T Function() selector;
+
+  /// Optionally handle the error case
+  final ErrorCallback? _onError;
 
   @override
   SolidartCaughtException? errorValue;
@@ -131,10 +154,7 @@ class Computed<T> extends Signal<T> implements Derivation {
     if (!context.isWithinBatch && observers.isEmpty) {
       if (context.shouldCompute(this)) {
         context.startBatch();
-        final newValue = _computeValue(track: false);
-        if (newValue != null) {
-          value = newValue;
-        }
+        _value = _computeValue(track: false);
         context.endBatch();
       }
     } else {
@@ -147,28 +167,96 @@ class Computed<T> extends Signal<T> implements Derivation {
     }
 
     if (context.hasCaughtException(this)) {
-      throw errorValue!;
+      if (_onError != null) {
+        _onError!.call(errorValue!);
+      } else {
+        throw errorValue!;
+      }
+    }
+    return _value as T;
+  }
+
+  /// The previous value, if any.
+  @override
+  T? get previousValue {
+    final prevVal = _value;
+
+    if (_isComputing) {
+      throw SolidartReactionException(
+        'Cycle detected in computation $name: $selector',
+      );
     }
 
-    return unobservedValue;
+    if (!context.isWithinBatch && observers.isEmpty) {
+      if (context.shouldCompute(this)) {
+        context.startBatch();
+        _value = _computeValue(track: false);
+        context.endBatch();
+      }
+    } else {
+      reportObserved();
+      if (context.shouldCompute(this)) {
+        if (_trackAndCompute()) {
+          context.propagateChangeConfirmed(this);
+        }
+      }
+    }
+
+    if (context.hasCaughtException(this)) {
+      if (_onError != null) {
+        _onError!.call(errorValue!);
+      } else {
+        throw errorValue!;
+      }
+    }
+    return _previousValue = prevVal;
+  }
+
+  @override
+  DisposeEffect observe(
+    ObserveCallback<T> listener, {
+    bool fireImmediately = false,
+  }) {
+    var ignore = !fireImmediately;
+
+    void notifyChange() {
+      if (ignore) {
+        ignore = false;
+        return;
+      }
+      context.untracked(() {
+        listener(_previousValue, value);
+      });
+    }
+
+    return createEffect((_) {
+      final newValue = value;
+
+      notifyChange();
+
+      _previousValue = newValue;
+    });
   }
 
   T? _computeValue({required bool track}) {
     _isComputing = true;
     context.pushComputation();
 
-    T? value;
+    T? computedValue;
     if (track) {
-      value = context.trackDerivation(this, selector);
+      computedValue = context.trackDerivation(this, selector);
     } else {
-      if (context.config.disableErrorBoundaries) {
-        value = selector();
-      } else {
-        try {
-          value = selector();
-          errorValue = null;
-        } on Object catch (e, s) {
-          errorValue = SolidartCaughtException(e, stackTrace: s);
+      try {
+        computedValue = selector();
+        errorValue = null;
+      } on Object catch (e, s) {
+        errorValue = SolidartCaughtException(e, stackTrace: s);
+        if (_onError != null) {
+          _onError!.call(errorValue!);
+        } else {
+          context.popComputation();
+          _isComputing = false;
+          throw errorValue!;
         }
       }
     }
@@ -176,11 +264,11 @@ class Computed<T> extends Signal<T> implements Derivation {
     context.popComputation();
     _isComputing = false;
 
-    return value;
+    return computedValue;
   }
 
   bool _trackAndCompute() {
-    final oldValue = unobservedValue;
+    final oldValue = _value;
     final wasSuspended = dependenciesState == DerivationState.notTracking;
     final hadCaughtException = context.hasCaughtException(this);
 
@@ -191,8 +279,9 @@ class Computed<T> extends Signal<T> implements Derivation {
     final changed =
         wasSuspended || changedException || !areEqual(oldValue, newValue);
 
-    if (changed && newValue != null) {
-      value = newValue;
+    if (changed) {
+      _previousValue = oldValue;
+      _value = newValue;
     }
 
     return changed;

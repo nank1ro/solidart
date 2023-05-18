@@ -21,6 +21,7 @@ typedef ValueComparator<T> = bool Function(T a, T b);
 class SignalOptions<T> {
   /// {@macro signaloptions}
   const SignalOptions({
+    this.name,
     this.equals = false,
     this.comparator = identical,
   });
@@ -39,7 +40,10 @@ class SignalOptions<T> {
   /// Taken into account only if [equals] is false.
   final ValueComparator<T?>? comparator;
 
+  /// The name of the signal, useful for logging purposes.
+  final String? name;
+
   @override
   String toString() =>
-      '''SignalOptions<$T>(equals: $equals, comparator: ${comparator != null ? "PRESENT" : "MISSING"})''';
+      '''SignalOptions<$T>(name: $name, equals: $equals, comparator: ${comparator != null ? "PRESENT" : "MISSING"})''';
 }

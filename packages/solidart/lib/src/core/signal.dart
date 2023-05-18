@@ -1,14 +1,17 @@
 import 'package:meta/meta.dart';
-import 'package:solidart/src/core/derivation.dart';
+import 'package:solidart/src/core/reactive_context.dart';
 import 'package:solidart/src/core/read_signal.dart';
+import 'package:solidart/src/core/signal_base.dart';
 import 'package:solidart/src/core/signal_options.dart';
+import 'package:solidart/src/utils.dart';
 
 /// {@macro signal}
 Signal<T> createSignal<T>(
   T value, {
   SignalOptions<T>? options,
 }) {
-  final effectiveOptions = options ?? SignalOptions<T>();
+  final name = options?.name ?? ReactiveContext.main.nameFor('Signal');
+  final effectiveOptions = options ?? SignalOptions<T>(name: name);
   return Signal<T>(value, options: effectiveOptions);
 }
 
@@ -123,28 +126,35 @@ class Signal<T> extends ReadSignal<T> {
     super.options,
   }) : _value = initialValue;
 
+  // Tracks the internal value
   T _value;
+  // Tracks the internal previous value
+  T? _previousValue;
 
   @override
   T get value {
-    context.enforceReadPolicy(this);
     reportObserved();
     return _value;
   }
 
-  /// Updates the current signal value with [newValue].
+  /// {@macro set-signal-value}
+  set value(T newValue) => set(newValue);
+
+  /// {@template set-signal-value}
+  /// Sets the current signal value with [newValue].
   ///
   /// This operation may be skipped if the value is equal to the previous one,
   /// check [SignalOptions.equals] and [SignalOptions.comparator].
-  set value(T newValue) {
-    context.enforceWritePolicy(this);
+  /// {@endtemplate}
+  void set(T newValue) {
     // skip if the value are equals
-    if (areEqual(value, newValue)) {
+    if (areEqual(_value, newValue)) {
       return;
     }
 
     // store the previous value
-    _previousValue = value;
+    _previousValue = _value;
+
     // notify with the new value
     _value = newValue;
     reportChanged();
@@ -166,21 +176,12 @@ class Signal<T> extends ReadSignal<T> {
     return false;
   }
 
-  T? _previousValue;
-
   /// The previous value, if any.
   @override
   T? get previousValue {
-    context.enforceReadPolicy(this);
-    // reportObserved();
+    reportObserved();
     return _previousValue;
   }
-
-  /// The previous value, if any, unobserved.
-  T? get unobservedPreviousValue => _previousValue;
-
-  /// The current value, unobserved.
-  T get unobservedValue => _value;
 
   void _notifyListeners() {
     if (listeners.isNotEmpty) {
@@ -201,6 +202,20 @@ class Signal<T> extends ReadSignal<T> {
   ReadSignal<T> toReadSignal() => this;
 
   @override
+  DisposeObservation observe(
+    ObserveCallback<T> listener, {
+    bool fireImmediately = false,
+  }) {
+    if (fireImmediately == true) {
+      listener(_previousValue, _value);
+    }
+
+    listeners.add(listener);
+
+    return () => listeners.remove(listener);
+  }
+
+  @override
   String toString() =>
-      '''Signal<$T>(value: $value, previousValue: $previousValue, options; $options)''';
+      '''Signal<$T>(value: $value, previousValue: $previousValue, options: $options)''';
 }

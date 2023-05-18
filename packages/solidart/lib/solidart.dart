@@ -11,3 +11,5 @@ export 'src/core/signal.dart';
 export 'src/core/signal_base.dart';
 export 'src/core/signal_options.dart';
 export 'src/extensions.dart';
+export 'src/utils.dart'
+    show SolidartCaughtException, SolidartException, SolidartReactionException;

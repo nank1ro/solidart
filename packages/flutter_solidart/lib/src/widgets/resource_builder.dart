@@ -5,7 +5,7 @@ import 'package:solidart/solidart.dart';
 /// Builder function for a [resource]
 typedef ResourceWidgetBuilder<ResultType> = Widget Function(
   BuildContext context,
-  ResourceValue<ResultType> resource,
+  ResourceState<ResultType> resource,
 );
 
 /// {@template resourcebuilder}
@@ -148,6 +148,7 @@ class _ResourceBuilderState<ResultType>
     initialize();
   }
 
+  // coverage:ignore-start
   @override
   void didUpdateWidget(covariant ResourceBuilder<ResultType> oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -155,6 +156,7 @@ class _ResourceBuilderState<ResultType>
       initialize();
     }
   }
+  // coverage:ignore-end
 
   void initialize() {
     effectiveResource = widget.resource;
@@ -166,7 +168,7 @@ class _ResourceBuilderState<ResultType>
 
   @override
   Widget build(BuildContext context) {
-    return SignalBuilder<ResourceValue<ResultType>>(
+    return SignalBuilder<ResourceState<ResultType>>(
       signal: effectiveResource,
       builder: (context, value, __) {
         return widget.builder(context, value);

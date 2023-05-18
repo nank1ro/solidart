@@ -1,30 +1,87 @@
 import 'dart:async';
 
+import 'package:meta/meta.dart';
 import 'package:solidart/src/core/atom.dart';
 import 'package:solidart/src/core/derivation.dart';
 import 'package:solidart/src/core/reactive_context.dart';
 import 'package:solidart/src/utils.dart';
 
-/// {@macro effect}
-Effect createEffect(
-  void Function() callback, {
-  void Function(Object)? onError,
-}) {
-  late Effect effect;
-  effect = Effect(
-    callback: () => effect.track(callback),
-    onError: onError,
-  );
-  // ignore: cascade_invocations
-  effect.schedule();
-  return effect;
+/// Dispose function
+typedef DisposeEffect = void Function();
+
+/// {@template effect-options}
+/// The effect options
+///
+/// The [name] of the effect, useful for logging
+/// The [delay] is used to delay each effect reaction
+/// {@endtemplate}
+@immutable
+class EffectOptions {
+  /// {@macro effect-options}
+  const EffectOptions({this.name, this.delay});
+
+  /// The name of the effect, useful for logging
+  final String? name;
+
+  /// Delay each effect reaction
+  final Duration? delay;
 }
 
+/// {@macro effect}
+DisposeEffect createEffect(
+  void Function(DisposeEffect dispose) callback, {
+  ErrorCallback? onError,
+  EffectOptions options = const EffectOptions(),
+}) {
+  late Effect effect;
+
+  if (options.delay == null) {
+    effect = Effect(
+      callback: () => effect.track(() => callback(effect.dispose)),
+      onError: onError,
+      options: options,
+    );
+  } else {
+    final scheduler = createDelayedScheduler(options.delay!);
+    var isScheduled = false;
+    Timer? timer;
+
+    effect = Effect(
+      callback: () {
+        if (!isScheduled) {
+          isScheduled = true;
+
+          timer?.cancel();
+          timer = null;
+
+          timer = scheduler(() {
+            isScheduled = false;
+            if (!effect.isDisposed) {
+              effect.track(() => callback(effect.dispose));
+            } else {
+              timer?.cancel();
+            }
+          });
+        }
+      },
+      options: options,
+      onError: onError,
+    );
+  }
+  // ignore: cascade_invocations
+  effect.schedule();
+  return effect.dispose;
+}
+
+/// The reaction interface
 abstract class ReactionInterface implements Derivation {
+  /// Indicate if the reaction is dispose
   bool get isDisposed;
 
+  /// Disposes the reaction
   void dispose();
 
+  /// Runs the reaction
   void run();
 }
 
@@ -91,17 +148,21 @@ abstract class ReactionInterface implements Derivation {
 class Effect implements ReactionInterface {
   /// {@macro effect}
   Effect({
-    required void Function() callback,
-    void Function(Object)? onError,
+    required VoidCallback callback,
+    EffectOptions? options,
+    ErrorCallback? onError,
   })  : _onError = onError,
+        name = options?.name ?? ReactiveContext.main.nameFor('Effect'),
         _callback = callback;
 
+  /// The name of the effect, useful for logging purposes.
+  final String name;
+
   /// The callback that is fired each time a signal updates.
-  // late final VoidCallback callback;
-  final void Function() _callback;
+  final VoidCallback _callback;
 
   /// Optionally handle the error case
-  final void Function(Object)? _onError;
+  final ErrorCallback? _onError;
 
   final _context = ReactiveContext.main;
   bool _isScheduled = false;
@@ -128,6 +189,7 @@ class Effect implements ReactionInterface {
     schedule();
   }
 
+  // ignore: public_member_api_docs
   void schedule() {
     if (_isScheduled) {
       return;
@@ -139,6 +201,7 @@ class Effect implements ReactionInterface {
       ..runReactions();
   }
 
+  // ignore: public_member_api_docs
   void track(void Function() fn) {
     _context.startBatch();
 
@@ -151,7 +214,11 @@ class Effect implements ReactionInterface {
     }
 
     if (_context.hasCaughtException(this)) {
-      _onError?.call(errorValue!);
+      if (_onError != null) {
+        _onError!.call(errorValue!);
+      } else {
+        throw errorValue!;
+      }
     }
 
     _context.endBatch();
@@ -171,7 +238,11 @@ class Effect implements ReactionInterface {
       } on Object catch (e, s) {
         // Note: "on Object" accounts for both Error and Exception
         errorValue = SolidartCaughtException(e, stackTrace: s);
-        _onError?.call(errorValue!);
+        if (_onError != null) {
+          _onError!.call(errorValue!);
+        } else {
+          throw errorValue!;
+        }
       }
     }
 

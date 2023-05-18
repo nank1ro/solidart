@@ -1,20 +1,41 @@
 import 'dart:async';
 
 import 'package:meta/meta.dart';
-import 'package:solidart/solidart.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_base.dart';
+import 'package:solidart/src/core/signal_options.dart';
+
+/// {@template resource-options}
+/// {@macro signaloptions}
+///
+/// The [lazy] parameter indicates if the resource should be computed
+/// lazily, defaults to true.
+/// {@endtemplate}
+class ResourceOptions<T> extends SignalOptions<T> {
+  /// {@macro resource-options}
+  const ResourceOptions({
+    super.name,
+    super.equals,
+    super.comparator,
+    this.lazy = true,
+  });
+
+  /// Indicates whether the resource should be computed lazily, defaults to true
+  final bool lazy;
+}
 
 /// {@macro resource}
 Resource<ResultType> createResource<ResultType>({
   Future<ResultType> Function()? fetcher,
   Stream<ResultType>? stream,
   SignalBase<dynamic>? source,
+  ResourceOptions<ResourceState<ResultType>>? options,
 }) {
   return Resource<ResultType>(
     fetcher: fetcher,
     source: source,
     stream: stream,
+    options: options,
   );
 }
 
@@ -63,7 +84,7 @@ Resource<ResultType> createResource<ResultType>({
 /// `ResourceBuilder` to learn how to react to the state of the resource in the
 /// UI.
 ///
-/// The resource has a value named `ResourceValue`, that provides many useful
+/// The resource has a value named `ResourceState`, that provides many useful
 /// convenience methods to correctly handle the state of the resource.
 ///
 /// The `on` method forces you to handle all the states of a Resource
@@ -72,14 +93,14 @@ Resource<ResultType> createResource<ResultType>({
 /// - `on` forces you to handle all the states of a Resource
 /// - `maybeOn` lets you decide which states to handle and provide an `orElse`
 /// action for unhandled states
-/// - `map` equal to `on` but gives access to the `ResourceValue` data class
-/// - `maybeMap` equal to `maybeMap` but gives access to the `ResourceValue`
+/// - `map` equal to `on` but gives access to the `ResourceState` data class
+/// - `maybeMap` equal to `maybeMap` but gives access to the `ResourceState`
 /// data class
 /// - `isReady` indicates if the `Resource` is in the ready state
 /// - `isLoading` indicates if the `Resource` is in the loading state
 /// - `hasError` indicates if the `Resource` is in the error state
-/// - `asReady` upcast `ResourceValue` into a `ResourceReady`, or return null if the `ResourceValue` is in loading/error state
-/// - `asError` upcast `ResourceValue` into a `ResourceError`, or return null if the `ResourceValue` is in loading/ready state
+/// - `asReady` upcast `ResourceState` into a `ResourceReady`, or return null if the `ResourceState` is in loading/error state
+/// - `asError` upcast `ResourceState` into a `ResourceError`, or return null if the `ResourceState` is in loading/ready state
 /// - `value` attempts to synchronously get the value of `ResourceReady`
 /// - `error` attempts to synchronously get the error of `ResourceError`
 ///
@@ -94,18 +115,30 @@ Resource<ResultType> createResource<ResultType>({
 /// The `refetch` method forces an update and calls the `fetcher` function
 /// again.
 /// {@endtemplate}
-class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
+class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
   /// {@macro resource}
   Resource({
     this.fetcher,
     this.stream,
     this.source,
-    super.options,
+    ResourceOptions<ResourceState<ResultType>>? options,
   })  : assert(
           (fetcher != null) ^ (stream != null),
           'Provide a fetcher or a stream',
         ),
-        super(ResourceValue<ResultType>.unresolved());
+        resourceOptions =
+            options ?? ResourceOptions<ResourceState<ResultType>>(),
+        super(
+          ResourceState<ResultType>.unresolved(),
+          options: SignalOptions<ResourceState<ResultType>>(
+            name: options?.name,
+            equals: options?.equals ?? false,
+            comparator: options?.comparator ?? identical,
+          ),
+        ) {
+    // resolve the resource immediately if not lazy
+    if (!resourceOptions.lazy) resolve();
+  }
 
   /// Reactive signal values passed to the fetcher, optional
   /// Has no effect on a [stream].
@@ -114,9 +147,15 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
   /// The asynchrounous function used to retrieve data.
   final Future<ResultType> Function()? fetcher;
 
+  /// The resource options
+  final ResourceOptions<ResourceState<ResultType>> resourceOptions;
+
   /// The stream used to retrieve data.
   final Stream<ResultType>? stream;
   StreamSubscription<ResultType>? _streamSubscription;
+
+  /// The current resource state
+  ResourceState<ResultType> get state => value;
 
   /// Resolves the [Resource].
   ///
@@ -136,8 +175,8 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
       // react to the [source], if provided.
 
       if (source != null) {
-        // source!.addListener(refetch);
-        // source!.onDispose(() => source!.removeListener(refetch));
+        final unobserve = source!.observe((_, __) => refetch());
+        source!.onDispose(unobserve);
       }
     }
     // React the the [stream], if provided
@@ -157,23 +196,23 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
       "Cannot fetch a resource that is already resolved, use 'refetch' instead",
     );
     try {
-      value = ResourceValue<ResultType>.loading();
+      value = ResourceState<ResultType>.loading();
       final result = await fetcher!();
-      value = ResourceValue<ResultType>.ready(result);
+      value = ResourceState<ResultType>.ready(result);
     } catch (e, s) {
-      value = ResourceValue<ResultType>.error(e, stackTrace: s);
+      value = ResourceState<ResultType>.error(e, stackTrace: s);
     }
   }
 
   /// Starts listening to the [stream] provided.
   void _listenToStream() {
-    value = ResourceValue<ResultType>.loading();
+    value = ResourceState<ResultType>.loading();
     _streamSubscription = stream!.listen(
       (data) {
-        value = ResourceValue<ResultType>.ready(data);
+        value = ResourceState<ResultType>.ready(data);
       },
       onError: (Object error, StackTrace stackTrace) {
-        value = ResourceValue<ResultType>.error(error, stackTrace: stackTrace);
+        value = ResourceState<ResultType>.error(error, stackTrace: stackTrace);
       },
     );
   }
@@ -188,13 +227,21 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
               (value as ResourceReady<ResultType>).copyWith(refreshing: true),
         );
       } else {
-        value = ResourceValue<ResultType>.loading();
+        value = ResourceState<ResultType>.loading();
       }
       final result = await fetcher!();
-      value = ResourceValue<ResultType>.ready(result);
+      value = ResourceState<ResultType>.ready(result);
     } catch (e, s) {
-      value = ResourceValue<ResultType>.error(e, stackTrace: s);
+      value = ResourceState<ResultType>.error(e, stackTrace: s);
     }
+  }
+
+  /// Returns a future that completes with the value when the Resource is ready
+  /// If the resource is already ready, it completes immediately.
+  @experimental
+  FutureOr<ResultType> untilReady() async {
+    final state = await until((value) => value.isReady);
+    return state.asReady!.value;
   }
 
   @override
@@ -205,7 +252,7 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
 
   @override
   String toString() =>
-      '''Resource<$ResultType>(value: $value, previousValue: $previousValue, options; $options)''';
+      '''Resource<$ResultType>(state: $value, previousValue: $previousValue, options; $options)''';
 }
 
 /// Manages all the different states of a [Resource]:
@@ -215,43 +262,45 @@ class Resource<ResultType> extends Signal<ResourceValue<ResultType>> {
 /// - ResourceError
 @sealed
 @immutable
-abstract class ResourceValue<T> {
-  /// The initial state of a [ResourceValue].
-  const factory ResourceValue.unresolved() = ResourceUnresolved<T>;
+sealed class ResourceState<T> {
+  /// The initial state of a [ResourceState].
+  const factory ResourceState.unresolved() = ResourceUnresolved<T>;
 
-  /// Creates an [ResourceValue] with a data.
+  /// Creates an [ResourceState] with a data.
   ///
   /// The data can be `null`.
-  const factory ResourceValue.ready(T data) = ResourceReady<T>;
+  const factory ResourceState.ready(T data) = ResourceReady<T>;
 
-  /// Creates an [ResourceValue] in loading state.
+  /// Creates an [ResourceState] in loading state.
   ///
   /// Prefer always using this constructor with the `const` keyword.
   // coverage:ignore-start
-  const factory ResourceValue.loading() = ResourceLoading<T>;
+  const factory ResourceState.loading() = ResourceLoading<T>;
   // coverage:ignore-end
 
-  /// Creates an [ResourceValue] in error state.
+  /// Creates an [ResourceState] in error state.
   ///
   /// The parameter [error] cannot be `null`.
   // coverage:ignore-start
-  const factory ResourceValue.error(Object error, {StackTrace? stackTrace}) =
+  const factory ResourceState.error(Object error, {StackTrace? stackTrace}) =
       ResourceError<T>;
   // coverage:ignore-end
 
   /// private mapper, so that classes inheriting Resource can specify their own
   /// `map` method with different parameters.
+  // coverage:ignore-start
   R map<R>({
     required R Function(ResourceReady<T> ready) ready,
     required R Function(ResourceError<T> error) error,
     required R Function(ResourceLoading<T> loading) loading,
   });
+  // coverage:ignore-end
 }
 
-/// Creates an [ResourceValue] in ready state with a data.
+/// Creates an [ResourceState] in ready state with a data.
 @immutable
-class ResourceReady<T> implements ResourceValue<T> {
-  /// Creates an [ResourceValue] with a data.
+class ResourceReady<T> implements ResourceState<T> {
+  /// Creates an [ResourceState] with a data.
   const ResourceReady(this.value, {this.refreshing = false});
 
   /// The value currently exposed.
@@ -299,12 +348,12 @@ class ResourceReady<T> implements ResourceValue<T> {
 }
 
 /// {@template resourceloading}
-/// Creates an [ResourceValue] in loading state.
+/// Creates an [ResourceState] in loading state.
 ///
 /// Prefer always using this constructor with the `const` keyword.
 /// {@endtemplate}
 @immutable
-class ResourceLoading<T> implements ResourceValue<T> {
+class ResourceLoading<T> implements ResourceState<T> {
   /// {@macro resourceloading}
   const ResourceLoading();
 
@@ -334,12 +383,12 @@ class ResourceLoading<T> implements ResourceValue<T> {
 }
 
 /// {@template resourceerror}
-/// Creates an [ResourceValue] in error state.
+/// Creates an [ResourceState] in error state.
 ///
 /// The parameter [error] cannot be `null`.
 /// {@endtemplate}
 @immutable
-class ResourceError<T> implements ResourceValue<T> {
+class ResourceError<T> implements ResourceState<T> {
   /// {@macro resourceerror}
   const ResourceError(
     this.error, {
@@ -381,10 +430,10 @@ class ResourceError<T> implements ResourceValue<T> {
 }
 
 /// {@template resourceunresolved}
-/// Creates an [ResourceValue] in unresolved state.
+/// Creates an [ResourceState] in unresolved state.
 /// {@endtemplate}
 @immutable
-class ResourceUnresolved<T> implements ResourceValue<T> {
+class ResourceUnresolved<T> implements ResourceState<T> {
   /// {@macro resourceunresolved}
   const ResourceUnresolved();
 
@@ -413,9 +462,9 @@ class ResourceUnresolved<T> implements ResourceValue<T> {
   // coverage:ignore-end
 }
 
-/// Some useful extension available on any [ResourceValue].
+/// Some useful extension available on any [ResourceState].
 // coverage:ignore-start
-extension ResourceExtensions<T> on ResourceValue<T> {
+extension ResourceExtensions<T> on ResourceState<T> {
   /// Indicates if the resource is loading.
   bool get isLoading => this is ResourceLoading<T>;
 
@@ -425,8 +474,8 @@ extension ResourceExtensions<T> on ResourceValue<T> {
   /// Indicates if the resource is ready.
   bool get isReady => this is ResourceReady<T>;
 
-  /// Upcast [ResourceValue] into a [ResourceReady], or return null if the
-  /// [ResourceValue] is in loading/error state.
+  /// Upcast [ResourceState] into a [ResourceReady], or return null if the
+  /// [ResourceState] is in loading/error state.
   ResourceReady<T>? get asReady {
     return map(
       ready: (r) => r,
@@ -435,8 +484,8 @@ extension ResourceExtensions<T> on ResourceValue<T> {
     );
   }
 
-  /// Upcast [ResourceValue] into a [ResourceError], or return null if the
-  /// [ResourceValue] is in ready/loading state.
+  /// Upcast [ResourceState] into a [ResourceError], or return null if the
+  /// [ResourceState] is in ready/loading state.
   ResourceError<T>? get asError {
     return map(
       error: (e) => e,
@@ -475,7 +524,7 @@ extension ResourceExtensions<T> on ResourceValue<T> {
     );
   }
 
-  /// Perform some actions based on the state of the [ResourceValue], or call
+  /// Perform some actions based on the state of the [ResourceState], or call
   /// orElse if the current state is not considered.
   R maybeMap<R>({
     required R Function() orElse,
@@ -499,10 +548,11 @@ extension ResourceExtensions<T> on ResourceValue<T> {
     );
   }
 
-  /// Performs an action based on the state of the [ResourceValue].
+  /// Performs an action based on the state of the [ResourceState].
   ///
   /// All cases are required.
   R on<R>({
+    // ignore: avoid_positional_boolean_parameters
     required R Function(T data, bool refreshing) ready,
     required R Function(Object error, StackTrace? stackTrace) error,
     required R Function() loading,
@@ -514,10 +564,11 @@ extension ResourceExtensions<T> on ResourceValue<T> {
     );
   }
 
-  /// Performs an action based on the state of the [ResourceValue], or call
+  /// Performs an action based on the state of the [ResourceState], or call
   /// [orElse] if the current state is not considered.
   R maybeOn<R>({
     required R Function() orElse,
+    // ignore: avoid_positional_boolean_parameters
     R Function(T data, bool refreshing)? ready,
     R Function(Object error, StackTrace? stackTrace)? error,
     R Function()? loading,

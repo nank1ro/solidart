@@ -9,32 +9,34 @@ import 'package:solidart/src/core/reactive_context.dart';
 /// useful when you don't need the value but instead a way of knowing when it
 //// becomes active and inactive in a reaction.
 /// {@endtemplate}
+@internal
 class Atom {
   /// {@macro atom}
   Atom({
     String? name,
   }) : name = name ?? ReactiveContext.main.nameFor('Atom');
 
+  @internal
   final ReactiveContext context = ReactiveContext.main;
 
   final String name;
 
-  @internal
   bool isPendingUnobservation = false;
 
   DerivationState lowestObserverState = DerivationState.notTracking;
 
   bool isBeingObserved = false;
 
-  @internal
   final Set<Derivation> observers = {};
 
   bool get hasObservers => observers.isNotEmpty;
 
+  @internal
   void reportObserved() {
     context.reportObserved(this);
   }
 
+  @internal
   void reportChanged() {
     context
       ..startBatch()
@@ -42,6 +44,7 @@ class Atom {
       ..endBatch();
   }
 
+  @internal
   void addObserver(Derivation d) {
     observers.add(d);
 
@@ -50,13 +53,11 @@ class Atom {
     }
   }
 
+  @internal
   void removeObserver(Derivation d) {
     observers.remove(d);
     if (observers.isEmpty) {
       context.enqueueForUnobservation(this);
     }
   }
-
-  @override
-  String toString() => 'Atom(name: $name, identity: ${identityHashCode(this)})';
 }

@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:meta/meta.dart';
 
 /// Signature of callbacks that have no arguments and return no data.
 typedef VoidCallback = void Function();
 
-/// Dispose function
-typedef Dispose = void Function();
+/// Error callback
+typedef ErrorCallback = void Function(Object error);
+
+/// The callback fired by the observer
+typedef ObserveCallback<T> = void Function(T? previousValue, T value);
 
 /// {@template solidartexception}
 /// An Exception class to capture Solidart specific exceptions
@@ -51,5 +56,8 @@ class SolidartCaughtException extends SolidartException {
   StackTrace? get stackTrace => _stackTrace;
 }
 
-/// The callback fired by the observer
-typedef ObserveCallback<T> = void Function(T? previousValue, T? value);
+/// Creates a delayer scheduler with the given [duration].
+/// coverage:ignore-start
+Timer Function(void Function()) createDelayedScheduler(Duration duration) =>
+    (fn) => Timer(duration, fn);
+/// coverage:ignore-end

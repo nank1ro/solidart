@@ -38,10 +38,6 @@ class _ReactiveState {
 
   /// Are we inside an action or transaction?
   bool get isWithinBatch => batch > 0;
-
-  /// Are we inside a reaction or computed?
-  bool get isWithinDerivation =>
-      trackingDerivation != null || computationDepth > 0;
 }
 
 typedef ReactionErrorHandler = void Function(
@@ -49,63 +45,18 @@ typedef ReactionErrorHandler = void Function(
   ReactionInterface reaction,
 );
 
-/// Defines the behavior for observables read outside actions and reactions
-///
-/// `always`: If observables are read outside actions/reactions, throw an Exception
-/// `never`: Allow unrestricted reading of observables everywhere. This is the
-/// default.
-enum ReactiveReadPolicy { always, never }
-
-/// Defines the behavior for observables mutated outside actions
-///
-/// `observed`: If there are observers for the mutated observable, then throw.
-/// Else allow mutation outside an action.
-/// `always`: Always throw if an observable is mutated outside an action
-/// `never`: Allow mutating observables outside actions
-enum ReactiveWritePolicy { observed, always, never }
-
 /// Configuration used by [ReactiveContext]
-
 @internal
 class ReactiveConfig {
   ReactiveConfig({
-    this.disableErrorBoundaries = false,
-    this.writePolicy = ReactiveWritePolicy.observed,
-    this.readPolicy = ReactiveReadPolicy.never,
     this.maxIterations = 100,
   });
 
   /// The main or default configuration used by [ReactiveContext]
   static final ReactiveConfig main = ReactiveConfig();
 
-  /// Throw exceptions instead of catching them and store
-  /// as [Derivation.errorValue].
-  final bool disableErrorBoundaries;
-
-  /// Enforce mutation of observables inside an action
-  final ReactiveWritePolicy writePolicy;
-
-  /// Enforce the use of reactions for reading observables
-  final ReactiveReadPolicy readPolicy;
-
   /// Max number of iterations before bailing out for a cyclic reaction
   final int maxIterations;
-
-  final Set<ReactionErrorHandler> _reactionErrorHandlers = {};
-
-  ReactiveConfig clone({
-    bool? disableErrorBoundaries,
-    ReactiveWritePolicy? writePolicy,
-    ReactiveReadPolicy? readPolicy,
-    int? maxIterations,
-  }) =>
-      ReactiveConfig(
-        disableErrorBoundaries:
-            disableErrorBoundaries ?? this.disableErrorBoundaries,
-        writePolicy: writePolicy ?? this.writePolicy,
-        readPolicy: readPolicy ?? this.readPolicy,
-        maxIterations: maxIterations ?? this.maxIterations,
-      );
 }
 
 class ReactiveContext {
@@ -154,76 +105,6 @@ class ReactiveContext {
     }
   }
 
-  void enforceReadPolicy(Atom atom) {
-    // ---
-    // We are wrapping in an assert() since we don't want this code to execute
-    //  at runtime.
-    // The dart compiler removes assert() calls from the release build.
-    // ---
-    // ignore: prefer_asserts_with_message
-    assert(() {
-      switch (config.readPolicy) {
-        case ReactiveReadPolicy.always:
-          assert(
-            _state.isWithinBatch || _state.isWithinDerivation,
-            '''
-Observable values cannot be read outside Actions and Reactions. Make sure to wrap them inside an action or a reaction. Tried to read: ${atom.name}''',
-          );
-          break;
-
-        case ReactiveReadPolicy.never:
-          break;
-      }
-
-      return true;
-    }());
-  }
-
-  void enforceWritePolicy(Atom atom) {
-    // Cannot mutate observables inside a computed. This is required to
-    // maintain the consistency of the reactive system.
-    if (_state.computationDepth > 0 && atom.hasObservers) {
-      throw SolidartException(
-        '''
-Computed values are not allowed to cause side effects by changing observables that are already being observed. Tried to modify: ${atom.name}''',
-      );
-    }
-
-    // ---
-    // We are wrapping in an assert() since we don't want this code to execute
-    // at runtime.
-    // The dart compiler removes assert() calls from the release build.
-    // ---
-    // ignore: prefer_asserts_with_message
-    assert(() {
-      switch (config.writePolicy) {
-        case ReactiveWritePolicy.never:
-          break;
-
-        case ReactiveWritePolicy.observed:
-          if (atom.hasObservers == false) {
-            break;
-          }
-
-          assert(
-            _state.isWithinBatch,
-            '''
-Side effects like changing state are not allowed at this point. Please wrap the code in an "action". Tried to modify: ${atom.name}''',
-          );
-          break;
-
-        case ReactiveWritePolicy.always:
-          assert(
-            _state.isWithinBatch,
-            '''
-Changing observable values outside actions is not allowed. Please wrap the code in an "action" if this change is intended. Tried to modify ${atom.name}''',
-          );
-      }
-
-      return true;
-    }());
-  }
-
   Derivation? startTracking(Derivation derivation) {
     final prevDerivation = _state.trackingDerivation;
     _state.trackingDerivation = derivation;
@@ -243,15 +124,11 @@ Changing observable values outside actions is not allowed. Please wrap the code 
     final prevDerivation = startTracking(d);
     T? result;
 
-    if (config.disableErrorBoundaries == true) {
+    try {
       result = fn();
-    } else {
-      try {
-        result = fn();
-        d.errorValue = null;
-      } on Object catch (e, s) {
-        d.errorValue = SolidartCaughtException(e, stackTrace: s);
-      }
+      d.errorValue = null;
+    } on Object catch (e, s) {
+      d.errorValue = SolidartCaughtException(e, stackTrace: s);
     }
 
     endTracking(d, prevDerivation);
@@ -442,14 +319,10 @@ Probably there is a cycle in the reactive function: $failingReaction ''');
           for (final obs in derivation.observables) {
             if (obs is Computed) {
               // Force a computation
-              if (config.disableErrorBoundaries == true) {
+              try {
                 obs.value;
-              } else {
-                try {
-                  obs.value;
-                } on Object catch (_) {
-                  return true;
-                }
+              } on Object catch (_) {
+                return true;
               }
 
               if (derivation.dependenciesState == DerivationState.stale) {
@@ -466,8 +339,6 @@ Probably there is a cycle in the reactive function: $failingReaction ''');
 
   bool hasCaughtException(Derivation d) =>
       d.errorValue is SolidartCaughtException;
-
-  bool isComputingDerivation() => _state.trackingDerivation != null;
 
   Derivation? startUntracked() {
     final prevDerivation = _state.trackingDerivation;
@@ -489,35 +360,6 @@ Probably there is a cycle in the reactive function: $failingReaction ''');
     }
   }
 
-  Dispose onReactionError(ReactionErrorHandler handler) {
-    config._reactionErrorHandlers.add(handler);
-    return () {
-      config._reactionErrorHandlers.removeWhere((f) => f == handler);
-    };
-  }
-
-  void notifyReactionErrorHandlers(
-    Object exception,
-    ReactionInterface reaction,
-  ) {
-    // ignore: avoid_function_literals_in_foreach_calls
-    config._reactionErrorHandlers.forEach((f) {
-      f(exception, reaction);
-    });
-  }
-
-  bool startAllowStateChanges({bool allow = true}) {
-    final prevValue = _state.allowStateChanges;
-    _state.allowStateChanges = allow;
-
-    return prevValue;
-  }
-
-  // ignore: use_setters_to_change_properties
-  void endAllowStateChanges({bool allow = true}) {
-    _state.allowStateChanges = allow;
-  }
-
   void pushComputation() {
     _state.computationDepth++;
   }
@@ -527,7 +369,6 @@ Probably there is a cycle in the reactive function: $failingReaction ''');
   }
 
   void _resetState() {
-    _state = _ReactiveState()
-      ..allowStateChanges = config.writePolicy == ReactiveWritePolicy.never;
+    _state = _ReactiveState()..allowStateChanges = true;
   }
 }

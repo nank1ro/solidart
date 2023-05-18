@@ -1,7 +1,8 @@
+import 'dart:async';
+
 import 'package:meta/meta.dart';
-import 'package:solidart/solidart.dart';
 import 'package:solidart/src/core/atom.dart';
-import 'package:solidart/src/core/derivation.dart';
+import 'package:solidart/src/core/effect.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_base.dart';
 import 'package:solidart/src/core/signal_options.dart';
@@ -27,19 +28,18 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   /// {@macro readsignal}
   ReadSignal(
     this._value, {
-    T? previousValue,
     SignalOptions<T>? options,
-  })  : options = options ?? SignalOptions<T>(),
-        _previousValue = previousValue;
+  }) : options = options ?? SignalOptions<T>();
 
   final T _value;
-  T? _previousValue;
+  // final T? _previousValue;
+
+  /// All the observers
   @internal
   final List<ObserveCallback<T>> listeners = [];
 
   @override
   T get value {
-    context.enforceReadPolicy(this);
     reportObserved();
     return _value;
   }
@@ -47,12 +47,13 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   @override
   T call() => value;
 
+  // coverage:ignore-start
   @override
   T? get previousValue {
-    context.enforceReadPolicy(this);
-    reportObserved();
-    return _previousValue;
+    // no-op
+    return null;
   }
+  // coverage:ignore-end
 
   @override
   final SignalOptions<T> options;
@@ -76,7 +77,6 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     if (_disposed) return;
     _disposed = true;
 
-    // observers.toList().forEach(removeObserver);
     listeners.clear();
 
     for (final cb in _onDisposeCallbacks) {
@@ -86,19 +86,36 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   }
 
   /// Observe the signal and trigger the [listener] every time the value changes
-  Dispose observe(ObserveCallback<T> listener, {bool fireImmediately = false}) {
-    if (fireImmediately == true) {
-      listener(_previousValue, _value);
-    }
-
-    listeners.add(listener);
-
-    return () => listeners.remove(listener);
+  // coverage:ignore-start
+  @override
+  DisposeEffect observe(
+    ObserveCallback<T> listener, {
+    bool fireImmediately = false,
+  }) {
+    // no-op
+    return () {};
   }
+  // coverage:ignore-end
 
   @override
   void onDispose(VoidCallback cb) {
     _onDisposeCallbacks.add(cb);
+  }
+
+  /// Returns the future that completes when the [condition] evalutes to true.
+  /// If the [condition] is already true, it completes immediately.
+  @experimental
+  FutureOr<T> until(bool Function(T value) condition) {
+    if (condition(value)) return value;
+
+    final completer = Completer<T>();
+    createEffect((dispose) {
+      if (condition(value)) {
+        dispose();
+        completer.complete(value);
+      }
+    });
+    return completer.future;
   }
 
   @override
