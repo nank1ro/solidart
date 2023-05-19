@@ -26,16 +26,16 @@ class _ToolbarState extends State<Toolbar> {
     // create derived signals based on the list of todos
 
     // no need to dispose them because they already dispose when the parent (todos) disposes.
-    allTodosCount = todos.select((value) => value.length);
+    allTodosCount = createComputed(() => todos().length);
 
     // retrieve the list of completed count and select just the length.
     final completedTodos =
         context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
-    completedTodosCount = completedTodos.select((value) => value.length);
+    completedTodosCount = createComputed(() => completedTodos().length);
     // retrieve the list of uncompleted count and select just the length.
     final uncompletedTodos =
         context.get<ReadSignal<List<Todo>>>(SignalId.uncompletedTodos);
-    uncompletedTodosCount = uncompletedTodos.select((value) => value.length);
+    uncompletedTodosCount = createComputed(() => uncompletedTodos().length);
   }
 
   /// Maps the given [filter] to the correct list of todos

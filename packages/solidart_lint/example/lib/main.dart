@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
         // expect_lint: avoid_dynamic_solid_signal
         'counter': () => createSignal(0),
         // expect_lint: avoid_dynamic_solid_signal
-        'double-counter': () => counter.select((value) => value * 2),
+        'double-counter': () => createComputed(() => counter() * 2),
       },
       child: const MaterialApp(
         title: 'Flutter Demo',

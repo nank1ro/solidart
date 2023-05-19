@@ -5,7 +5,7 @@ import 'package:meta/meta.dart';
 typedef Create<T> = T Function();
 
 /// A function that disposes an object of type [T].
-typedef Dispose<T> = void Function(T value);
+typedef DisposeValue<T> = void Function(T value);
 
 /// {@template solidprovider}
 /// A Provider that manages the lifecycle of the value it provides by
@@ -35,7 +35,7 @@ class SolidProvider<T> {
 
   /// An optional dispose function called when the Solid that created this
   /// provider disposes
-  final Dispose<T>? dispose;
+  final DisposeValue<T>? dispose;
 
   /// Make the provider creation lazy, defaults to true.
   ///

@@ -1,13 +1,17 @@
 import 'package:meta/meta.dart';
+import 'package:solidart/src/core/reactive_context.dart';
 import 'package:solidart/src/core/read_signal.dart';
+import 'package:solidart/src/core/signal_base.dart';
 import 'package:solidart/src/core/signal_options.dart';
+import 'package:solidart/src/utils.dart';
 
 /// {@macro signal}
 Signal<T> createSignal<T>(
   T value, {
   SignalOptions<T>? options,
 }) {
-  final effectiveOptions = options ?? SignalOptions<T>();
+  final name = options?.name ?? ReactiveContext.main.nameFor('Signal');
+  final effectiveOptions = options ?? SignalOptions<T>(name: name);
   return Signal<T>(value, options: effectiveOptions);
 }
 
@@ -36,6 +40,8 @@ Signal<T> createSignal<T>(
 /// To update the current signal value you can use:
 /// ```dart
 /// counter.value++; // increase by 1
+/// // or
+/// counter.set(2); // sets the value to 2
 /// // or
 /// counter.value = 5; // sets the value to 5
 /// // or
@@ -76,12 +82,12 @@ Signal<T> createSignal<T>(
 /// final user = createSignal(const User(name: "name", age: 20));
 ///
 /// // create a derived signal just for the age
-/// final age = user.select((value) => value.age);
+/// final age = createComputed(() => user().age);
 ///
 /// // adding an effect to print the age
-/// createEffect(() {
+/// createEffect((_) {
 ///   print('age changed from ${age.previousValue} into ${age.value}');
-/// }, signals: [age]);
+/// });
 ///
 /// // just update the name, the effect above doesn't run because the age has not changed
 /// user.update((value) => value.copyWith(name: 'new-name'));
@@ -97,7 +103,7 @@ Signal<T> createSignal<T>(
 /// You can also use derived signals in other ways, like here:
 /// ```dart
 /// final counter = createSignal(0);
-/// final doubleCounter = counter.select((value) => value * 2);
+/// final doubleCounter = createComputed(() => counter() * 2);
 /// ```
 ///
 /// Every time the `counter` signal changes, the doubleCounter updates with the
@@ -106,7 +112,7 @@ Signal<T> createSignal<T>(
 /// You can also transform the value type into a `bool`:
 /// ```dart
 /// final counter = createSignal(0); // type: int
-/// final isGreaterThan5 = counter.select((value) => value > 5); // type: bool
+/// final isGreaterThan5 = createComputed(() => counter() > 5); // type: bool
 /// ```
 ///
 /// `isGreaterThan5` will update only when the `counter` value becomes lower/greater than `5`.
@@ -122,47 +128,71 @@ class Signal<T> extends ReadSignal<T> {
     super.options,
   }) : _value = initialValue;
 
+  // Tracks the internal value
   T _value;
+  // Tracks the internal previous value
+  T? _previousValue;
 
   @override
-  T get value => _value;
+  T get value {
+    reportObserved();
+    return _value;
+  }
 
-  /// Updates the current signal value with [newValue].
+  /// {@macro set-signal-value}
+  set value(T newValue) => set(newValue);
+
+  /// {@template set-signal-value}
+  /// Sets the current signal value with [newValue].
   ///
   /// This operation may be skipped if the value is equal to the previous one,
   /// check [SignalOptions.equals] and [SignalOptions.comparator].
-  set value(T newValue) {
+  /// {@endtemplate}
+  void set(T newValue) {
     // skip if the value are equals
-    if (options.equals && value == newValue) {
+    if (areEqual(_value, newValue)) {
       return;
+    }
+
+    // store the previous value
+    _previousValue = _value;
+
+    // notify with the new value
+    _value = newValue;
+    reportChanged();
+    _notifyListeners();
+  }
+
+  /// Indicates if the [oldValue] and the [newValue] are equal
+  @internal
+  bool areEqual(T? oldValue, T? newValue) {
+    // skip if the value are equals
+    if (options.equals && oldValue == newValue) {
+      return true;
     }
 
     // skip if the [comparator] returns true
     if (!options.equals && options.comparator != null) {
-      final areEqual = options.comparator!(value, newValue);
-      if (areEqual) return;
+      return options.comparator!(oldValue, newValue);
     }
-
-    // store the previous value
-    _previousValue = value;
-    // notify with the new value
-    _value = newValue;
-    notifyListeners();
+    return false;
   }
-
-  T? _previousValue;
 
   /// The previous value, if any.
   @override
-  T? get previousValue => _previousValue;
+  T? get previousValue {
+    reportObserved();
+    return _previousValue;
+  }
 
-  /// Sets the previous value.
-  ///
-  /// Never use this method.
-  @internal
-  @protected
-  set previousValue(T? newPreviousValue) {
-    _previousValue = newPreviousValue;
+  void _notifyListeners() {
+    if (listeners.isNotEmpty) {
+      context.untracked(() {
+        for (final listener in listeners.toList(growable: false)) {
+          listener(_previousValue, _value);
+        }
+      });
+    }
   }
 
   /// Calls a function with the current [value] and assigns the result as the
@@ -171,16 +201,23 @@ class Signal<T> extends ReadSignal<T> {
 
   /// Converts this [Signal] into a [ReadSignal]
   /// Use this method to remove the visility to the value setter.
-  @Deprecated(
-    '''Use toReadSignal() instead. It will be removed in future releases.''',
-  )
-  ReadSignal<T> get readable => toReadSignal();
-
-  /// Converts this [Signal] into a [ReadSignal]
-  /// Use this method to remove the visility to the value setter.
   ReadSignal<T> toReadSignal() => this;
 
   @override
+  DisposeObservation observe(
+    ObserveCallback<T> listener, {
+    bool fireImmediately = false,
+  }) {
+    if (fireImmediately == true) {
+      listener(_previousValue, _value);
+    }
+
+    listeners.add(listener);
+
+    return () => listeners.remove(listener);
+  }
+
+  @override
   String toString() =>
-      '''Signal<$T>(value: $value, previousValue: $previousValue, options; $options)''';
+      '''Signal<$T>(value: $value, previousValue: $previousValue, options: $options)''';
 }

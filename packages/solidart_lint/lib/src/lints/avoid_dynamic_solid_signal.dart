@@ -49,7 +49,7 @@ class AvoidDynamicSolidSignal extends DartLintRule {
             final childEntities =
                 expression.childEntities.whereType<SimpleIdentifier>();
             for (final entity in childEntities) {
-              if (entity.name == 'select') {
+              if (entity.name == 'select' || entity.name == 'createComputed') {
                 reporter.reportErrorForNode(_code, entity);
               }
             }

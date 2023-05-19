@@ -1,10 +1,11 @@
 import 'dart:async';
 
 import 'package:meta/meta.dart';
+import 'package:solidart/src/core/atom.dart';
+import 'package:solidart/src/core/effect.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_base.dart';
 import 'package:solidart/src/core/signal_options.dart';
-import 'package:solidart/src/core/signal_selector.dart';
 import 'package:solidart/src/utils.dart';
 
 /// {@macro readsignal}
@@ -18,97 +19,64 @@ typedef ReadableSignal<T> = ReadSignal<T>;
 ///
 /// When you don't need to expose the setter of a [Signal],
 /// you should consider transforming it in a [ReadSignal]
-/// using the `readable` method.
+/// using the `toReadSignal` method.
 ///
 /// All derived-signals are [ReadSignal]s because they depend
 /// on the value of a [Signal].
 /// {@endtemplate}
-class ReadSignal<T> implements SignalBase<T> {
+class ReadSignal<T> extends Atom implements SignalBase<T> {
   /// {@macro readsignal}
   ReadSignal(
     this._value, {
-    T? previousValue,
     SignalOptions<T>? options,
-  })  : options = options ?? SignalOptions<T>(),
-        _previousValue = previousValue;
+  }) : options = options ?? SignalOptions<T>();
 
   final T _value;
-  final T? _previousValue;
+
+  /// All the observers
+  @internal
+  final List<ObserveCallback<T>> listeners = [];
 
   @override
-  T get value => _value;
+  T get value {
+    reportObserved();
+    return _value;
+  }
 
   @override
   T call() => value;
 
+  // coverage:ignore-start
   @override
-  T? get previousValue => _previousValue;
+  T? get previousValue {
+    // no-op
+    return null;
+  }
+  // coverage:ignore-end
 
   @override
   final SignalOptions<T> options;
 
   bool _disposed = false;
 
-  final _listeners = <VoidCallback>{};
-  int _version = 0;
-  int _microtaskVersion = 0;
   // Keeps track of all the callbacks passed to [onDispose].
   // Used later to fire each callback when this signal is disposed.
   final _onDisposeCallbacks = <VoidCallback>[];
 
-  /// The [select] function allows filtering unwanted rebuilds by reading only
-  /// the properties that we care about.
-  ReadSignal<Selected> select<Selected>(
-    Selected Function(T value) selector, {
-    SignalOptions<Selected>? options,
-  }) {
-    final signalSelector = SignalSelector<T, Selected>(
-      signal: this as Signal<T>,
-      selector: selector,
-      options: options,
-    );
-    return signalSelector.toReadSignal();
-  }
-
-  @override
-  void addListener(VoidCallback listener) {
-    _listeners.add(listener);
-  }
-
-  @override
-  void removeListener(VoidCallback listener) {
-    _listeners.remove(listener);
-  }
-
   /// Returns the number of listeners listening to this signal.
   @override
-  int get listenerCount => _listeners.length;
+  int get listenerCount => observers.length + listeners.length;
 
-  /// Notifies every listener. Never use this method.
-  @protected
-  void notifyListeners() {
-    // We schedule a microtask to debounce multiple changes that can occur
-    // all at once.
-    if (_microtaskVersion == _version) {
-      _microtaskVersion++;
-      scheduleMicrotask(() {
-        _version++;
-        _microtaskVersion = _version;
-
-        // Convert the Set to a List before executing each listener. This
-        // prevents errors that can arise if a listener removes itself during
-        // invocation
-        _listeners.toList().forEach((VoidCallback listener) => listener());
-      });
-    }
-  }
+  @override
+  bool get disposed => _disposed;
 
   @override
   void dispose() {
     // ignore if already disposed
     if (_disposed) return;
-    _listeners.clear();
     _disposed = true;
+
+    listeners.clear();
 
     for (final cb in _onDisposeCallbacks) {
       cb();
@@ -116,12 +84,37 @@ class ReadSignal<T> implements SignalBase<T> {
     _onDisposeCallbacks.clear();
   }
 
+  /// Observe the signal and trigger the [listener] every time the value changes
+  // coverage:ignore-start
   @override
-  bool get disposed => _disposed;
+  DisposeEffect observe(
+    ObserveCallback<T> listener, {
+    bool fireImmediately = false,
+  }) {
+    // no-op
+    return () {};
+  }
+  // coverage:ignore-end
 
   @override
   void onDispose(VoidCallback cb) {
     _onDisposeCallbacks.add(cb);
+  }
+
+  /// Returns the future that completes when the [condition] evalutes to true.
+  /// If the [condition] is already true, it completes immediately.
+  @experimental
+  FutureOr<T> until(bool Function(T value) condition) {
+    if (condition(value)) return value;
+
+    final completer = Completer<T>();
+    createEffect((dispose) {
+      if (condition(value)) {
+        dispose();
+        completer.complete(value);
+      }
+    });
+    return completer.future;
   }
 
   @override

@@ -39,11 +39,20 @@ The argument passed to the create call is the initial value, and the return valu
 ```dart
 // Retrieve the current counter value
 print(counter.value); // prints 0
-// Increment the counter value
-counter.value++;
+// equal to
+print(counter());
+
+// Change the counter value
+counter.value++; // Increments by 1
+// or
+counter.value = 2; // Sets the value to 2
+// or
+counter.set(3);
+// or
+counter.update((value) => value * 2); // Update the value based on the current value
 ```
 
-You can use the `SignalBuilder` widget to automatically react to the signal value, for example:
+If you're using `flutter_solidart` you can use the `SignalBuilder` widget to automatically react to the signal value, for example:
 
 ```dart
 SignalBuilder(
@@ -59,14 +68,13 @@ SignalBuilder(
 Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
 
 An effect can be created by using `createEffect`.
-The effect subscribes to any signal provided in the `signals` array and reruns when any of them change.
-
+The effect automatically subscribes to any signal and reruns when any of them change.
 So let's create an Effect that reruns whenever `counter` changes:
 
 ```dart
-createEffect(() {
+final disposeFn = createEffect((_) {
     print("The count is now ${counter.value}");
-}, signals: [counter]);
+});
 ```
 
 ### Resources
@@ -269,7 +277,7 @@ Learn every feature of `flutter_solidart` including:
 
 1. `createSignal`
 2. `Show` widget
-3. Derived signals with `signal.select()`
+3. Derived signals with `createComputed`
 4. `Effect`s with basic and advanced usages
 5. `SignalBuilder`, `DualSignalBuilder` and `TripleSignalBuilder`
 6. `createResource` and `ResourceBuilder`

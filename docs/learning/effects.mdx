@@ -8,17 +8,19 @@ description: Introduction to Effects
 Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
 
 An effect can be created by using `createEffect`.
-The effect subscribes to any signal provided in the signals array and reruns when any of them change.
+The effect automatically subscribes to any signal and reruns when any of them change.
 
-So let's create an `Effect` that reruns whenever `counter` changes:
+So let's create an Effect that reruns whenever `counter` changes:
 ```dart
 // sample signal
 final counter = createSignal(0);
 
 // effect creation
-createEffect(() {
+final disposeFn = createEffect((_) {
     print("The count is now ${counter.value}");
-}, signals: [counter]);
+});
+
+// The effect run immediately and prints `The count is now 0`;
 
 // increment the counter
 counter.value++;
@@ -26,34 +28,16 @@ counter.value++;
 // The effect prints `The count is now 1`;
 ```
 
-<Info>The effect automatically cancels when all the `signals` provided dispose</Info>
-
-The `createEffect` method returns an `Effect` class giving you a more advanced usage:
+The `createEffect` method returns a `Dispose` callback, invoke it to stop listening and clearing the effect.
 ```dart
-final effect = createEffect(() {
+final disposeFn = createEffect((disposeFn) {
     print("The count is now ${counter.value}");
-}, signals: [counter], fireImmediately: true);
+});
 
-print(effect.isRunning); // prints true
-
-// pause effect
-effect.pause();
-
-print(effect.isPaused); // prints true
-
-// resume effect
-effect.resume();
-
-print(effect.isResumed); // prints true
-
-// cancel effect
-effect.cancel();
-
-print(effect.isCancelled); // prints true
+// Somewhere else, dispose the effect
+disposeFn();
 ```
 
-The `fireImmediately` flag indicates if the effect should run immediately with the current `signals` values, defaults to false.
+<Info>The effect runs immediately with the current `signals` values</Info>
 
-You may want to `pause`, `resume` or `cancel` an effect.
-
-<Error>An effect is useless after it is cancelled, you must not use it anymore.</Error>
+<Error>An effect is useless after it is disposed, you must not use it anymore.</Error>

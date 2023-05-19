@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
+import 'package:solidart/src/core/computed.dart';
 import 'package:solidart/src/core/effect.dart';
 import 'package:solidart/src/core/read_signal.dart';
 import 'package:solidart/src/core/resource.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_options.dart';
+import 'package:solidart/src/utils.dart';
 import 'package:test/test.dart';
 
 class MockCallbackFunction extends Mock {
@@ -45,6 +47,9 @@ class User {
 
   @override
   int get hashCode => runtimeType.hashCode ^ id.hashCode;
+
+  @override
+  String toString() => 'User(id: $id)';
 }
 
 class SampleList {
@@ -55,30 +60,33 @@ class SampleList {
 void main() {
   group('createSignal tests - ', () {
     test('with equals true it notifies only when the value changes', () async {
-      final counter =
-          createSignal(0, options: const SignalOptions<int>(equals: true));
+      final counter = createSignal(
+        0,
+        options: const SignalOptions<int>(equals: true, name: ''),
+      );
 
       final cb = MockCallbackFunction();
-      counter.addListener(cb.call);
+      final unobserve = counter.observe((_, __) => cb());
 
-      expect(counter.value, 0);
+      expect(counter(), 0);
 
-      counter.value = counter.value + 1;
+      counter.set(1);
       await pumpEventQueue();
       expect(counter(), 1);
+
       counter
-        ..value = 2
-        ..value = 2
-        ..value = 2;
+        ..set(2)
+        ..set(2)
+        ..set(2);
 
       await pumpEventQueue();
-      counter.value = 3;
+      counter.set(3);
 
       expect(counter(), 3);
       await pumpEventQueue();
       verify(cb()).called(3);
       // clear
-      counter.removeListener(cb.call);
+      unobserve();
     });
 
     test(
@@ -89,22 +97,24 @@ void main() {
         options: const SignalOptions<_A>(),
       );
       final cb = MockCallbackFunction();
-      signal.addListener(cb.call);
+      final unobserve = signal.observe((_, __) => cb());
 
       expect(signal.value, null);
       final a = _A();
+
       signal
-        ..value = a
-        ..value = a
-        ..value = a;
+        ..set(a)
+        ..set(a)
+        ..set(a);
 
       await pumpEventQueue();
-      signal.value = _A();
+
+      signal.set(_A());
       await pumpEventQueue();
       verify(cb()).called(2);
 
       // clear
-      signal.removeListener(cb.call);
+      unobserve();
     });
 
     test('check onDispose callback fired when disposing signal', () {
@@ -114,6 +124,20 @@ void main() {
         ..onDispose(cb.call)
         ..dispose();
       verify(cb()).called(1);
+    });
+
+    test('observe fireImmediately works', () {
+      final s = createSignal(0);
+      final cb = MockCallbackFunction();
+      final unobserve = s.observe(
+        (previousValue, value) => cb.call(),
+        fireImmediately: true,
+      );
+      verify(cb()).called(1);
+      addTearDown(() {
+        s.dispose();
+        unobserve();
+      });
     });
 
     test('check previousValue stores the previous value', () {
@@ -140,20 +164,47 @@ void main() {
       );
     });
 
+    test(
+      'test futureWhen()',
+      () async {
+        final count = createSignal(0);
+
+        unawaited(
+          expectLater(count.until((value) => value > 5), completion(11)),
+        );
+        count
+          ..set(2)
+          ..set(11);
+      },
+      timeout: const Timeout(Duration(seconds: 1)),
+    );
+
     test('check toString()', () {
       final s = createSignal(0);
-      expect(
-        s.toString(),
-        '''Signal<int>(value: 0, previousValue: null, options; SignalOptions<int>(equals: false, comparator: PRESENT))''',
-      );
+      expect(s.toString(), startsWith('Signal<int>(value: 0'));
     });
 
     test('check Signal becomes ReadSignal', () {
       final s = createSignal(0);
       expect(s, const TypeMatcher<Signal<int>>());
       expect(s.toReadSignal(), const TypeMatcher<ReadSignal<int>>());
-      // ignore: deprecated_member_use_from_same_package
-      expect(s.readable, const TypeMatcher<ReadSignal<int>>());
+    });
+
+    test('Signal is disposed after dispose', () {
+      final s = createSignal(0);
+      expect(s.disposed, false);
+      s.dispose();
+      expect(s.disposed, true);
+    });
+
+    test('Signal has observers', () {
+      final s = createSignal(0);
+      expect(s.hasObservers, false);
+      createEffect((dispose) {
+        s();
+      });
+      expect(s.hasObservers, true);
+      addTearDown(s.dispose);
     });
   });
 
@@ -164,51 +215,44 @@ void main() {
 
       final cb = MockCallbackFunctionWithValue<int>();
       createEffect(
-        () => cb.call(signal1.value),
-        signals: [signal1],
+        (_) => cb(signal1()),
       );
       createEffect(
-        () => cb.call(signal2.value),
-        signals: [signal2],
+        (_) => cb(signal2()),
       );
 
-      signal1.value = 1;
+      signal1.set(1);
       await pumpEventQueue();
       verify(cb(1)).called(1);
-      signal2.value = 2;
+      signal1.set(2);
       await pumpEventQueue();
       verify(cb(2)).called(1);
-      signal2.value = 4;
-      signal1.value = 4;
+      signal2.set(4);
+      signal1.set(4);
       await pumpEventQueue();
       verify(cb(4)).called(2);
     });
 
-    test('check effect not called if signal is disposed', () {
-      final s = createSignal(0);
+    test('check effect reaction with delay', () async {
       final cb = MockCallbackFunction();
-      createEffect(cb.call, signals: [s]);
-      s.dispose();
+      createEffect(
+        (_) => cb(),
+        options: const EffectOptions(delay: Duration(milliseconds: 500)),
+      );
       verifyNever(cb());
+      await Future<void>.delayed(const Duration(milliseconds: 501));
+      verify(cb()).called(1);
     });
 
-    test('check effect state', () {
-      final s = createSignal(0);
-      final e = createEffect(() {}, signals: [s]);
-      expect(e.state, EffectState.running);
-      expect(e.isRunning, true);
-
-      e.pause();
-      expect(e.state, EffectState.paused);
-      expect(e.isPaused, true);
-
-      e.resume();
-      expect(e.state, EffectState.resumed);
-      expect(e.isResumed, true);
-
-      e.cancel();
-      expect(e.state, EffectState.cancelled);
-      expect(e.isCancelled, true);
+    test('check effect onError', () async {
+      Object? detectedError;
+      createEffect(
+        (_) => throw Exception(),
+        onError: (error) {
+          detectedError = error;
+        },
+      );
+      expect(detectedError, isA<SolidartCaughtException>());
     });
   });
 
@@ -217,87 +261,103 @@ void main() {
         () async {
       final klass = _B(_C(0));
       final s = createSignal(klass);
-      final selected = s.select((value) => value.c.count);
+      final selected = createComputed(() => s().c.count);
       final cb = MockCallbackFunctionWithValue<int>();
 
       void listener() {
         cb(selected.value);
       }
 
-      selected.addListener(listener);
+      final unobserve = selected.observe((_, __) => listener());
 
-      s.value = _B(_C(1));
+      s.set(_B(_C(1)));
+      await pumpEventQueue();
 
+      s.set(_B(_C(5)));
       await pumpEventQueue();
-      s.value = _B(_C(5));
-      await pumpEventQueue();
-      s.value = _B(_C(1));
+
+      s.set(_B(_C(1)));
       await pumpEventQueue();
 
       verify(cb(1)).called(2);
-      s.value = _B(_C(2));
+      s.set(_B(_C(2)));
       await pumpEventQueue();
-      s.value = _B(_C(2));
+      s.set(_B(_C(2)));
       await pumpEventQueue();
-      s.value = _B(_C(3));
+      s.set(_B(_C(3)));
       await pumpEventQueue();
       verify(cb(2)).called(1);
       verify(cb(3)).called(1);
 
       // clear
-      selected.addListener(listener);
-    });
-
-    test('selector is disposed when signal disposes', () {
-      final s = createSignal(_B(_C(0)));
-      final selector = s.select((value) => value.c.count);
-
-      final cb = MockCallbackFunction();
-      selector.onDispose(cb.call);
-      s.dispose();
-
-      verify(cb()).called(1);
+      unobserve();
     });
 
     test('custom signal options for derived signal', () async {
       final a = createSignal(SampleList([1]));
-      final selected = a.select(
-        (value) => value.numbers,
+      final selected = createComputed(
+        () => a().numbers,
         options: SignalOptions<List<int>>(
           comparator: (a, b) => const ListEquality<int>().equals(a, b),
         ),
       );
 
       final cb = MockCallbackFunction();
-      createEffect(cb.call, signals: [selected]);
+      selected.observe((previousValue, value) => cb.call());
 
       verifyNever(cb());
 
-      a.value = SampleList([1]);
+      a.set(SampleList([1]));
       await pumpEventQueue();
       verifyNever(cb());
 
-      a.value = SampleList([1, 2]);
+      a.set(SampleList([1, 2]));
       await pumpEventQueue();
       verify(cb()).called(1);
     });
 
     test("selector's readable signal contains previous value", () async {
       final signal = createSignal(0);
-      final derived = signal.select((value) => value * 2);
+      final derived = createComputed(() => signal() * 2);
       expect(derived.previousValue, null);
 
-      signal.value = 1;
+      signal.set(1);
       await pumpEventQueue();
       expect(derived.previousValue, 0);
 
-      signal.value = 2;
+      signal.set(2);
       await pumpEventQueue();
       expect(derived.previousValue, 2);
 
-      signal.value = 1;
+      signal.set(1);
       await pumpEventQueue();
       expect(derived.previousValue, 4);
+    });
+
+    test('derived signal disposes', () async {
+      final count = createSignal(0);
+      final doubleCount = createComputed(() => count() * 2);
+      expect(doubleCount.disposed, false);
+      doubleCount.dispose();
+      expect(doubleCount.disposed, true);
+    });
+
+    test('check derived signal that throws', () async {
+      final count = createSignal(1);
+      final doubleCount = createComputed(
+        () {
+          if (count() == 1) {
+            return count() * 2;
+          }
+          return throw Exception();
+        },
+      );
+
+      count.value = 3;
+      expect(
+        () => doubleCount.value,
+        throwsA(const TypeMatcher<SolidartCaughtException>()),
+      );
     });
   });
 
@@ -308,16 +368,15 @@ void main() {
       expect(s.previousValue, null);
       expect(s.listenerCount, 0);
 
-      createEffect(() {}, signals: [s]);
+      createEffect((_) {
+        s();
+      });
       expect(s.listenerCount, 1);
     });
 
     test('check toString()', () {
       final s = ReadSignal(0);
-      expect(
-        s.toString(),
-        '''ReadSignal<int>(value: 0, previousValue: null, options; SignalOptions<int>(equals: false, comparator: PRESENT))''',
-      );
+      expect(s.toString(), startsWith('ReadSignal<int>(value: 0'));
     });
   });
 
@@ -327,43 +386,45 @@ void main() {
       addTearDown(streamController.close);
 
       final resource = createResource(stream: streamController.stream);
-      expect(resource.value, isA<ResourceUnresolved<int>>());
+      expect(resource.state, isA<ResourceUnresolved<int>>());
       resource.resolve().ignore();
-      expect(resource.value, isA<ResourceLoading<int>>());
+      expect(resource.state, isA<ResourceLoading<int>>());
       streamController.add(1);
       await pumpEventQueue();
-      expect(resource.value, isA<ResourceReady<int>>());
-      expect(resource.value.value, 1);
+      expect(resource.state, isA<ResourceReady<int>>());
+      expect(resource.state.value, 1);
 
       streamController.add(10);
       await pumpEventQueue();
-      expect(resource.value, isA<ResourceReady<int>>());
-      expect(resource.value(), 10);
+      expect(resource.state, isA<ResourceReady<int>>());
+      expect(resource.state(), 10);
 
       streamController.addError(UnimplementedError());
       await pumpEventQueue();
-      expect(resource.value, isA<ResourceError<int>>());
-      expect(resource.value.error, isUnimplementedError);
+      expect(resource.state, isA<ResourceError<int>>());
+      expect(resource.state.error, isUnimplementedError);
     });
 
     test('check createResource with future that throws', () async {
       Future<User> getUser() => throw Exception();
-      final resource = createResource(fetcher: getUser);
+      final resource = createResource<User>(
+        fetcher: getUser,
+        options: const ResourceOptions(lazy: false),
+      );
 
       addTearDown(resource.dispose);
 
-      await resource.resolve();
       await pumpEventQueue();
-      expect(resource.value, isA<ResourceError<User>>());
-      expect(resource.value.error, isException);
+      expect(resource.state, isA<ResourceError<User>>());
+      expect(resource.state.error, isException);
     });
 
     test('check createResource with future', () async {
       final userId = createSignal(0);
 
       Future<User> getUser() {
-        if (userId.value == 2) throw Exception();
-        return Future.value(User(id: userId.value));
+        if (userId() == 2) throw Exception();
+        return Future.value(User(id: userId()));
       }
 
       final resource = createResource(fetcher: getUser, source: userId);
@@ -373,17 +434,17 @@ void main() {
       expect(resource.value, isA<ResourceReady<User>>());
       expect(resource.value.value, const User(id: 0));
 
-      userId.value = 1;
+      userId.set(1);
       await pumpEventQueue();
       expect(resource.value, isA<ResourceReady<User>>());
       expect(resource.value(), const User(id: 1));
 
-      userId.value = 2;
+      userId.set(2);
       await pumpEventQueue();
       expect(resource.value, isA<ResourceError<User>>());
       expect(resource.value.error, isException);
 
-      userId.value = 3;
+      userId.set(3);
       await pumpEventQueue();
       await resource.refetch();
       expect(resource.value, isA<ResourceReady<User>>());
@@ -416,9 +477,10 @@ void main() {
       var errorCalledTimes = 0;
       var refreshingTrueTimes = 0;
       final resource = createResource(fetcher: fetcher);
+      resource.resolve().ignore();
 
       createEffect(
-        () {
+        (_) {
           resource.value.on(
             ready: (data, refreshing) {
               if (refreshing) {
@@ -435,10 +497,8 @@ void main() {
             },
           );
         },
-        signals: [resource],
       );
 
-      resource.resolve().ignore();
       await Future<void>.delayed(const Duration(milliseconds: 40));
       expect(loadingCalledTimes, 1);
       await Future<void>.delayed(const Duration(milliseconds: 150));
@@ -462,14 +522,57 @@ void main() {
       expect(loadingCalledTimes, 2);
     });
 
+    test(
+      'test futureValue()',
+      () async {
+        Future<int> fetcher() => Future.delayed(
+              const Duration(milliseconds: 300),
+              () => 1,
+            );
+        final count = createResource(fetcher: fetcher);
+        count.resolve().ignore();
+
+        await expectLater(count.untilReady(), completion(1));
+      },
+      timeout: const Timeout(Duration(seconds: 1)),
+    );
+
     test('check toString()', () async {
       final r = createResource(fetcher: () => Future.value(1));
       await r.resolve();
       await pumpEventQueue();
       expect(
         r.toString(),
-        '''Resource<int>(value: ResourceReady<int>(value: 1, refreshing: false), previousValue: ResourceLoading<int>(), options; SignalOptions<ResourceValue<int>>(equals: false, comparator: PRESENT))''',
+        startsWith(
+          '''Resource<int>(state: ResourceReady<int>(value: 1, refreshing: false)''',
+        ),
       );
+    });
+  });
+
+  group('ReactiveContext tests', () {
+    test('throws Exception for reactions that do not converge', () {
+      var firstTime = true;
+      final count = createSignal(0);
+      final d = createEffect((_) {
+        // watch count
+        count.value;
+        if (firstTime) {
+          firstTime = false;
+          return;
+        }
+
+        // cyclic-dependency
+        // this effect will keep on getting triggered as count.value keeps
+        // changing every time it's invoked
+        count.value = count.value + 1;
+      });
+
+      expect(
+        () => count.value = 1,
+        throwsA(const TypeMatcher<SolidartReactionException>()),
+      );
+      d();
     });
   });
 }
