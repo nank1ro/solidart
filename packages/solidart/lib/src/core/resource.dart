@@ -11,14 +11,15 @@ import 'package:solidart/src/core/signal_options.dart';
 /// The [lazy] parameter indicates if the resource should be computed
 /// lazily, defaults to true.
 /// {@endtemplate}
-class ResourceOptions<T> extends SignalOptions<T> {
+class ResourceOptions {
   /// {@macro resource-options}
   const ResourceOptions({
-    super.name,
-    super.equals,
-    super.comparator,
+    this.name,
     this.lazy = true,
   });
+
+  /// The name of the resource, useful for logging purposes.
+  final String? name;
 
   /// Indicates whether the resource should be computed lazily, defaults to true
   final bool lazy;
@@ -29,7 +30,7 @@ Resource<ResultType> createResource<ResultType>({
   Future<ResultType> Function()? fetcher,
   Stream<ResultType>? stream,
   SignalBase<dynamic>? source,
-  ResourceOptions<ResourceState<ResultType>>? options,
+  ResourceOptions? options,
 }) {
   return Resource<ResultType>(
     fetcher: fetcher,
@@ -121,19 +122,16 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
     this.fetcher,
     this.stream,
     this.source,
-    ResourceOptions<ResourceState<ResultType>>? options,
+    ResourceOptions? options,
   })  : assert(
           (fetcher != null) ^ (stream != null),
           'Provide a fetcher or a stream',
         ),
-        resourceOptions =
-            options ?? ResourceOptions<ResourceState<ResultType>>(),
+        resourceOptions = options ?? const ResourceOptions(),
         super(
           ResourceState<ResultType>.unresolved(),
           options: SignalOptions<ResourceState<ResultType>>(
             name: options?.name,
-            equals: options?.equals ?? false,
-            comparator: options?.comparator ?? identical,
           ),
         ) {
     // resolve the resource immediately if not lazy
@@ -148,7 +146,7 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
   final Future<ResultType> Function()? fetcher;
 
   /// The resource options
-  final ResourceOptions<ResourceState<ResultType>> resourceOptions;
+  final ResourceOptions resourceOptions;
 
   /// The stream used to retrieve data.
   final Stream<ResultType>? stream;

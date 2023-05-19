@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
+/// coverage:ignore-start
 /// Signature of callbacks that have no arguments and return no data.
 typedef VoidCallback = void Function();
 
@@ -57,7 +58,6 @@ class SolidartCaughtException extends SolidartException {
 }
 
 /// Creates a delayer scheduler with the given [duration].
-/// coverage:ignore-start
 Timer Function(void Function()) createDelayedScheduler(Duration duration) =>
     (fn) => Timer(duration, fn);
 /// coverage:ignore-end

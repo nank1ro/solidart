@@ -32,10 +32,9 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   }) : options = options ?? SignalOptions<T>();
 
   final T _value;
-  // final T? _previousValue;
 
   /// All the observers
-  @internal
+  @protected
   final List<ObserveCallback<T>> listeners = [];
 
   @override
@@ -66,7 +65,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   /// Returns the number of listeners listening to this signal.
   @override
-  int get listenerCount => observers.length;
+  int get listenerCount => observers.length + listeners.length;
 
   @override
   bool get disposed => _disposed;

@@ -11,48 +11,26 @@ import 'package:solidart/src/utils.dart';
 ReadSignal<T> createComputed<T>(
   T Function() selector, {
   SignalOptions<T>? options,
-  ErrorCallback? onError,
 }) =>
-    Computed<T>(selector: selector, options: options, onError: onError)
-        .toReadSignal();
+    Computed<T>(selector: selector, options: options).toReadSignal();
 
 /// {@template computed}
 /// A special [Signal] that notifies only whenever the selected
-/// value changes.
+/// values change.
 ///
-/// You may want to subscribe only to a sub-field of a `Signal` value.
+/// You may want to subscribe only to sub-field of a `Signal` value or to
+/// combine multiple signal values.
 /// ```dart
-/// // sample User class
-/// class User {
-///   const User({
-///     required this.name,
-///     required this.age,
-///   });
+/// // first name signal
+/// final firstName = createSignal('Josh');
 ///
-///   final String name;
-///   final int age;
+/// // last name signal
+/// final lastName = createSignal('Brown');
 ///
-///   User copyWith({
-///     String? name,
-///     int? age,
-///   }) {
-///     return User(
-///       name: name ?? this.name,
-///       age: age ?? this.age,
-///     );
-///   }
-/// }
+/// // derived signal, updates automatically when firstName or lastName change
+/// final fullName = createComputed(() => '${firstName()} ${lastName()}');
 ///
-/// // create a user signal
-/// final user = createSignal(const User(name: "name", age: 20));
-///
-/// // create a derived signal just for the age
-/// final age = user.select((value) => value.age);
-///
-/// // adding an effect to print the age
-/// createEffect(() {
-///   print('age changed from ${age.previousValue} into ${age.value}');
-/// }, signals: [age]);
+/// print(fullName()); // prints Josh Brown
 ///
 /// // just update the name, the effect above doesn't run because the age has not changed
 /// user.update((value) => value.copyWith(name: 'new-name'));
@@ -68,7 +46,7 @@ ReadSignal<T> createComputed<T>(
 /// You can also use derived signals in other ways, like here:
 /// ```dart
 /// final counter = createSignal(0);
-/// final doubleCounter = counter.select((value) => value * 2);
+/// final doubleCounter = createComputed(() => counter() * 2);
 /// ```
 ///
 /// Every time the `counter` signal changes, the doubleCounter updates with the
@@ -76,9 +54,8 @@ ReadSignal<T> createComputed<T>(
 ///
 /// You can also transform the value type like:
 /// ```dart
-/// ReadSignal<bool>
-/// final counter = createSignal(0); // int
-/// final isGreaterThan5 = counter.select((value) => value > 5); // bool
+/// final counter = createSignal(0); // counter contains the value type `int`
+/// final isGreaterThan5 = createComputed(() => counter() > 5); // isGreaterThan5 contains the value type `bool`
 /// ```
 ///
 /// `isGreaterThan5` will update only when the `counter` value becomes lower/greater than `5`.
@@ -91,10 +68,8 @@ class Computed<T> extends Signal<T> implements Derivation {
   /// {@macro computed}
   Computed({
     required this.selector,
-    ErrorCallback? onError,
     SignalOptions<T>? options,
-  })  : _onError = onError,
-        name = options?.name ?? ReactiveContext.main.nameFor('Computed'),
+  })  : name = options?.name ?? ReactiveContext.main.nameFor('Computed'),
         super(selector(), options: options);
 
   // Tracks the internal value
@@ -109,9 +84,6 @@ class Computed<T> extends Signal<T> implements Derivation {
 
   /// The selector applied
   final T Function() selector;
-
-  /// Optionally handle the error case
-  final ErrorCallback? _onError;
 
   @override
   SolidartCaughtException? errorValue;
@@ -167,11 +139,7 @@ class Computed<T> extends Signal<T> implements Derivation {
     }
 
     if (context.hasCaughtException(this)) {
-      if (_onError != null) {
-        _onError!.call(errorValue!);
-      } else {
-        throw errorValue!;
-      }
+      throw errorValue!;
     }
     return _value as T;
   }
@@ -180,35 +148,8 @@ class Computed<T> extends Signal<T> implements Derivation {
   @override
   T? get previousValue {
     final prevVal = _value;
-
-    if (_isComputing) {
-      throw SolidartReactionException(
-        'Cycle detected in computation $name: $selector',
-      );
-    }
-
-    if (!context.isWithinBatch && observers.isEmpty) {
-      if (context.shouldCompute(this)) {
-        context.startBatch();
-        _value = _computeValue(track: false);
-        context.endBatch();
-      }
-    } else {
-      reportObserved();
-      if (context.shouldCompute(this)) {
-        if (_trackAndCompute()) {
-          context.propagateChangeConfirmed(this);
-        }
-      }
-    }
-
-    if (context.hasCaughtException(this)) {
-      if (_onError != null) {
-        _onError!.call(errorValue!);
-      } else {
-        throw errorValue!;
-      }
-    }
+    // get the actual value to cause observation
+    final _ = value;
     return _previousValue = prevVal;
   }
 
@@ -251,13 +192,6 @@ class Computed<T> extends Signal<T> implements Derivation {
         errorValue = null;
       } on Object catch (e, s) {
         errorValue = SolidartCaughtException(e, stackTrace: s);
-        if (_onError != null) {
-          _onError!.call(errorValue!);
-        } else {
-          context.popComputation();
-          _isComputing = false;
-          throw errorValue!;
-        }
       }
     }
 

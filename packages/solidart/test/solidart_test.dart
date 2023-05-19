@@ -196,6 +196,16 @@ void main() {
       s.dispose();
       expect(s.disposed, true);
     });
+
+    test('Signal has observers', () {
+      final s = createSignal(0);
+      expect(s.hasObservers, false);
+      createEffect((dispose) {
+        s();
+      });
+      expect(s.hasObservers, true);
+      addTearDown(s.dispose);
+    });
   });
 
   group('createEffect tests = ', () {
@@ -221,6 +231,28 @@ void main() {
       signal1.set(4);
       await pumpEventQueue();
       verify(cb(4)).called(2);
+    });
+
+    test('check effect reaction with delay', () async {
+      final cb = MockCallbackFunction();
+      createEffect(
+        (_) => cb(),
+        options: const EffectOptions(delay: Duration(milliseconds: 500)),
+      );
+      verifyNever(cb());
+      await Future<void>.delayed(const Duration(milliseconds: 501));
+      verify(cb()).called(1);
+    });
+
+    test('check effect onError', () async {
+      Object? detectedError;
+      createEffect(
+        (_) => throw Exception(),
+        onError: (error) {
+          detectedError = error;
+        },
+      );
+      expect(detectedError, isA<SolidartCaughtException>());
     });
   });
 
@@ -300,6 +332,32 @@ void main() {
       signal.set(1);
       await pumpEventQueue();
       expect(derived.previousValue, 4);
+    });
+
+    test('derived signal disposes', () async {
+      final count = createSignal(0);
+      final doubleCount = createComputed(() => count() * 2);
+      expect(doubleCount.disposed, false);
+      doubleCount.dispose();
+      expect(doubleCount.disposed, true);
+    });
+
+    test('check derived signal that throws', () async {
+      final count = createSignal(1);
+      final doubleCount = createComputed(
+        () {
+          if (count() == 1) {
+            return count() * 2;
+          }
+          return throw Exception();
+        },
+      );
+
+      count.value = 3;
+      expect(
+        () => doubleCount.value,
+        throwsA(const TypeMatcher<SolidartCaughtException>()),
+      );
     });
   });
 

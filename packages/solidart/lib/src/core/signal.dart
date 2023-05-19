@@ -162,7 +162,7 @@ class Signal<T> extends ReadSignal<T> {
   }
 
   /// Indicates if the [oldValue] and the [newValue] are equal
-  @internal
+  @protected
   bool areEqual(T? oldValue, T? newValue) {
     // skip if the value are equals
     if (options.equals && oldValue == newValue) {

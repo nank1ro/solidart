@@ -51,7 +51,9 @@ DisposeEffect createEffect(
         if (!isScheduled) {
           isScheduled = true;
 
+          // coverage:ignore-start
           timer?.cancel();
+          // coverage:ignore-end
           timer = null;
 
           timer = scheduler(() {
@@ -59,7 +61,9 @@ DisposeEffect createEffect(
             if (!effect.isDisposed) {
               effect.track(() => callback(effect.dispose));
             } else {
+              // coverage:ignore-start
               timer?.cancel();
+              // coverage:ignore-end
             }
           });
         }
@@ -92,7 +96,7 @@ abstract class ReactionInterface implements Derivation {
 /// on signals.
 ///
 /// An effect can be created by using `createEffect`.
-/// The effect subscribes to any signal provided in the signals array and
+/// The effect subscribes automatically to any signal used in the callback and
 /// reruns when any of them change.
 ///
 /// So let's create an `Effect` that reruns whenever `counter` changes:
@@ -101,9 +105,10 @@ abstract class ReactionInterface implements Derivation {
 /// final counter = createSignal(0);
 ///
 /// // effect creation
-/// createEffect(() {
+/// createEffect((_) {
 ///     print("The count is now ${counter.value}");
-/// }, signals: [counter]);
+/// });
+/// // The effect prints `The count is now 0`;
 ///
 /// // increment the counter
 /// counter.value++;
@@ -111,39 +116,33 @@ abstract class ReactionInterface implements Derivation {
 /// // The effect prints `The count is now 1`;
 /// ```
 ///
-/// > The effect automatically cancels when all the `signals` provided dispose
-///
-/// The `createEffect` method returns an `Effect` class giving you a more
+/// The `createEffect` method returns a `Dispose` class giving you a more
 /// advanced usage:
 /// ```dart
-/// final effect = createEffect(() {
+/// final dispose = createEffect((_) {
 ///     print("The count is now ${counter.value}");
-/// }, signals: [counter], fireImmediately: true);
-///
-/// print(effect.isRunning); // prints true
-///
-/// // pause effect
-/// effect.pause();
-///
-/// print(effect.isPaused); // prints true
-///
-/// // resume effect
-/// effect.resume();
-///
-/// print(effect.isResumed); // prints true
-///
-/// // cancel effect
-/// effect.cancel();
-///
-/// print(effect.isCancelled); // prints true
+/// });
 /// ```
 ///
-/// The `fireImmediately` flag indicates if the effect should run immediately
-/// with the current `signals` values, defaults to false.
+/// Whenever you want to stop the effect from running, you just have to call
+/// the `dispose()` callback
 ///
-/// You may want to `pause`, `resume` or `cancel` an effect.
+/// You can also dispose an effect inside the callback
+/// ```dart
+/// createEffect((dispose) {
+///     print("The count is now ${counter.value}");
+///     if (counter.value == 1) dispose();
+/// });
+/// ```
 ///
-/// > An effect is useless after it is cancelled, you must not use it anymore.
+/// In the example above the effect is disposed when the counter value is equal
+/// to 1
+///
+///
+/// Any effect runs at least once immediately when is created with the current
+/// signals values
+///
+/// > An effect is useless after it is disposed, you must not use it anymore.
 /// {@endtemplate}
 class Effect implements ReactionInterface {
   /// {@macro effect}
@@ -216,9 +215,11 @@ class Effect implements ReactionInterface {
     if (_context.hasCaughtException(this)) {
       if (_onError != null) {
         _onError!.call(errorValue!);
-      } else {
+      } // coverage:ignore-start
+      else {
         throw errorValue!;
       }
+// coverage:ignore-end
     }
 
     _context.endBatch();
@@ -236,6 +237,7 @@ class Effect implements ReactionInterface {
       try {
         _callback();
       } on Object catch (e, s) {
+        // coverage:ignore-start
         // Note: "on Object" accounts for both Error and Exception
         errorValue = SolidartCaughtException(e, stackTrace: s);
         if (_onError != null) {
@@ -243,15 +245,18 @@ class Effect implements ReactionInterface {
         } else {
           throw errorValue!;
         }
+        // coverage:ignore-end
       }
     }
 
     _context.endBatch();
   }
 
+  // coverage:ignore-start
   /// No-op
   @override
   void suspend() {}
+  // coverage:ignore-end
 
   /// Invalidates the effect.
   ///

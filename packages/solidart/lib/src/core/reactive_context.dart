@@ -46,7 +46,7 @@ typedef ReactionErrorHandler = void Function(
 );
 
 /// Configuration used by [ReactiveContext]
-@internal
+@protected
 class ReactiveConfig {
   ReactiveConfig({
     this.maxIterations = 100,
