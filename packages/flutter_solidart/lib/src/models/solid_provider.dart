@@ -44,11 +44,11 @@ class SolidProvider<T> {
   final bool lazy;
 
   /// Returns the type of the value, do not use.
-  @protected
+  @internal
   Type get valueType => T;
 
   /// Dispose function, do no use.
-  @protected
+  @internal
   void disposeFn(BuildContext context, dynamic value) {
     dispose?.call(value as T);
   }

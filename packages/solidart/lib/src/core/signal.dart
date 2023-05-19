@@ -41,6 +41,8 @@ Signal<T> createSignal<T>(
 /// ```dart
 /// counter.value++; // increase by 1
 /// // or
+/// counter.set(2); // sets the value to 2
+/// // or
 /// counter.value = 5; // sets the value to 5
 /// // or
 /// counter.update((v) => v * 2); // update based on the current value
@@ -80,12 +82,12 @@ Signal<T> createSignal<T>(
 /// final user = createSignal(const User(name: "name", age: 20));
 ///
 /// // create a derived signal just for the age
-/// final age = user.select((value) => value.age);
+/// final age = createComputed(() => user().age);
 ///
 /// // adding an effect to print the age
-/// createEffect(() {
+/// createEffect((_) {
 ///   print('age changed from ${age.previousValue} into ${age.value}');
-/// }, signals: [age]);
+/// });
 ///
 /// // just update the name, the effect above doesn't run because the age has not changed
 /// user.update((value) => value.copyWith(name: 'new-name'));
@@ -101,7 +103,7 @@ Signal<T> createSignal<T>(
 /// You can also use derived signals in other ways, like here:
 /// ```dart
 /// final counter = createSignal(0);
-/// final doubleCounter = counter.select((value) => value * 2);
+/// final doubleCounter = createComputed(() => counter() * 2);
 /// ```
 ///
 /// Every time the `counter` signal changes, the doubleCounter updates with the
@@ -110,7 +112,7 @@ Signal<T> createSignal<T>(
 /// You can also transform the value type into a `bool`:
 /// ```dart
 /// final counter = createSignal(0); // type: int
-/// final isGreaterThan5 = counter.select((value) => value > 5); // type: bool
+/// final isGreaterThan5 = createComputed(() => counter() > 5); // type: bool
 /// ```
 ///
 /// `isGreaterThan5` will update only when the `counter` value becomes lower/greater than `5`.
@@ -162,7 +164,7 @@ class Signal<T> extends ReadSignal<T> {
   }
 
   /// Indicates if the [oldValue] and the [newValue] are equal
-  @protected
+  @internal
   bool areEqual(T? oldValue, T? newValue) {
     // skip if the value are equals
     if (options.equals && oldValue == newValue) {

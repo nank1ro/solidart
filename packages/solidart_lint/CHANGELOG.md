@@ -1,3 +1,7 @@
+## 1.0.0-dev1
+
+Fix lints for the development preview of solidart 1.0.0
+
 ## 0.2.0
 
 - Update `flutter_solidart` and fix deprecated fields

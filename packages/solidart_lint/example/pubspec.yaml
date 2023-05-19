@@ -37,7 +37,7 @@ dependencies:
   flutter_solidart: ^0.4.0
 
 dev_dependencies:
-  custom_lint: ^0.3.2
+  custom_lint: ^0.4.0
   solidart_lint:
     path: ../
   flutter_test:

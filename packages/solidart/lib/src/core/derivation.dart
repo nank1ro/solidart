@@ -34,7 +34,7 @@ abstract class Derivation {
 
   SolidartCaughtException? errorValue;
 
-  @protected
+  @internal
   late DerivationState dependenciesState;
 
   void onBecomeStale();

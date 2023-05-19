@@ -34,7 +34,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   final T _value;
 
   /// All the observers
-  @protected
+  @internal
   final List<ObserveCallback<T>> listeners = [];
 
   @override

@@ -3,7 +3,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-@protected
+@internal
 class DiagnosticPropertiesForGeneric<T> {
   DiagnosticPropertiesForGeneric({
     required this.value,
