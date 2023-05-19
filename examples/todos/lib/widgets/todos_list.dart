@@ -20,7 +20,7 @@ class TodoList extends StatefulWidget {
 class _TodoListState extends State<TodoList> {
   late final ReadSignal<List<Todo>> todos;
   late final ReadSignal<List<Todo>> completedTodos;
-  late final ReadSignal<List<Todo>> uncompletedTodos;
+  late final ReadSignal<List<Todo>> incompleteTodos;
 
   @override
   void initState() {
@@ -36,8 +36,8 @@ class _TodoListState extends State<TodoList> {
     todos = context.get<TodosController>().todos;
     completedTodos =
         context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
-    uncompletedTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.uncompletedTodos);
+    incompleteTodos =
+        context.get<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
   }
 
   // Given a [filter] return the correct list of todos
@@ -45,8 +45,8 @@ class _TodoListState extends State<TodoList> {
     switch (filter) {
       case TodosFilter.all:
         return todos;
-      case TodosFilter.uncompleted:
-        return uncompletedTodos;
+      case TodosFilter.incomplete:
+        return incompleteTodos;
       case TodosFilter.completed:
         return completedTodos;
     }

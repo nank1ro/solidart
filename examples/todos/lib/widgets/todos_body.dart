@@ -34,7 +34,7 @@ class _TodosBodyState extends State<TodosBody> {
         // created here because this is where it starts to be necessary.
         SignalId.activeTodoFilter: () =>
             createSignal<TodosFilter>(TodosFilter.all),
-        // Registering two new signals, the list of completed and uncompleted todos.
+        // Registering two new signals, the list of completed and incomplete todos.
         // These are derived [ReadSignal]s.
         // Provided through a [Solid] because their value is used by the [TodoList]
         // and [Toolbar].
@@ -46,7 +46,7 @@ class _TodosBodyState extends State<TodosBody> {
                   .where((element) => element.completed)
                   .toList(),
             ),
-        SignalId.uncompletedTodos: () => createComputed<List<Todo>>(
+        SignalId.incompleteTodos: () => createComputed<List<Todo>>(
               () => todosController
                   .todos()
                   .where((element) => !element.completed)
