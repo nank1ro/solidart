@@ -152,7 +152,7 @@ class _TodosBodyState extends State<TodosBody> {
         // created here because this is where it starts to be necessary.
         SignalId.activeTodoFilter: () =>
             createSignal<TodosFilter>(TodosFilter.all),
-        // Registering two new signals, the list of completed and uncompleted todos.
+        // Registering two new signals, the list of completed and incomplete todos.
         // These are derived [ReadSignal]s.
         // Provided through a [Solid] because their value is used by the [TodoList]
         // and [Toolbar].
@@ -164,7 +164,7 @@ class _TodosBodyState extends State<TodosBody> {
                   .where((element) => element.completed)
                   .toList(),
             ),
-        SignalId.uncompletedTodos: () => createComputed<List<Todo>>(
+        SignalId.incompleteTodos: () => createComputed<List<Todo>>(
               () => todosController
                   .todos()
                   .where((element) => !element.completed)
@@ -215,7 +215,7 @@ The important parts here are two.
 
 Here we're creating the a signal with id `SignalId.activeTodoFilter` with an initial value of `TodosFilter.all`. This signals keeps the state of the current selected tab.
 
-We're also creating two derived signals, the list of `completedTodos` and `uncompletedTodos` using the `select` method of the todos list signal.
+We're also creating two derived signals, the list of `completedTodos` and `incompleteTodos` using the `select` method of the todos list signal.
 
 In the `TextFormField` when the field is submitted we add the new todo simply using:
 ```dart
@@ -233,7 +233,7 @@ textController.clear();
 
 The toolbar shows 3 tabs (or filters).
 - All the todos
-- The uncompleted todos list
+- The incomplete todos list
 - The completed todos list
 
 Each tab contain the number of todos present in the current tab.
@@ -248,7 +248,7 @@ class Toolbar extends StatefulWidget {
 class _ToolbarState extends State<Toolbar> {
   /// All the derived signals
   late final ReadSignal<int> allTodosCount;
-  late final ReadSignal<int> uncompletedTodosCount;
+  late final ReadSignal<int> incompleteTodosCount;
   late final ReadSignal<int> completedTodosCount;
 
   @override
@@ -266,10 +266,10 @@ class _ToolbarState extends State<Toolbar> {
     final completedTodos =
         context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
     completedTodosCount = createComputed(() => completedTodos().length);
-    // retrieve the list of uncompleted count and select just the length.
-    final uncompletedTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.uncompletedTodos);
-    uncompletedTodosCount = createComputed(() => uncompletedTodos().length);
+    // retrieve the list of incomplete count and select just the length.
+    final incompleteTodos =
+        context.get<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
+    incompleteTodosCount = createComputed(() => incompleteTodos().length);
   }
 
   /// Maps the given [filter] to the correct list of todos
@@ -277,8 +277,8 @@ class _ToolbarState extends State<Toolbar> {
     switch (filter) {
       case TodosFilter.all:
         return allTodosCount;
-      case TodosFilter.uncompleted:
-        return uncompletedTodosCount;
+      case TodosFilter.incomplete:
+        return incompleteTodosCount;
       case TodosFilter.completed:
         return completedTodosCount;
     }
@@ -344,7 +344,7 @@ class TodoList extends StatefulWidget {
 class _TodoListState extends State<TodoList> {
   late final ReadSignal<List<Todo>> todos;
   late final ReadSignal<List<Todo>> completedTodos;
-  late final ReadSignal<List<Todo>> uncompletedTodos;
+  late final ReadSignal<List<Todo>> incompleteTodos;
 
   @override
   void initState() {
@@ -360,8 +360,8 @@ class _TodoListState extends State<TodoList> {
     todos = context.get<TodosController>().todos;
     completedTodos =
         context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
-    uncompletedTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.uncompletedTodos);
+    incompleteTodos =
+        context.get<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
   }
 
   // Given a [filter] return the correct list of todos
@@ -369,8 +369,8 @@ class _TodoListState extends State<TodoList> {
     switch (filter) {
       case TodosFilter.all:
         return todos;
-      case TodosFilter.uncompleted:
-        return uncompletedTodos;
+      case TodosFilter.incomplete:
+        return incompleteTodos;
       case TodosFilter.completed:
         return completedTodos;
     }

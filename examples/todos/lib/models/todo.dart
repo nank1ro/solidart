@@ -40,6 +40,6 @@ class Todo {
 
 enum TodosFilter {
   all,
-  uncompleted,
+  incomplete,
   completed;
 }
