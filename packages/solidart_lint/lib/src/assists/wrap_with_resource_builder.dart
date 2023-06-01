@@ -31,8 +31,8 @@ class WrapWithResourceBuilder extends DartAssist {
             node.offset,
             'ResourceBuilder(\n'
             'resource: null,\n'
-            'builder: (context, resourceValue) {\n'
-            'return resourceValue.on(\n'
+            'builder: (context, resourceState) {\n'
+            'return resourceState.on(\n'
             'ready: (value, isRefreshing) {\n'
             'return ');
         builder.addSimpleInsertion(

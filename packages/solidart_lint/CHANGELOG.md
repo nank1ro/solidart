@@ -1,3 +1,7 @@
+## 1.0.0-dev2
+
+Rename ResourceValue into ResourceState
+
 ## 1.0.0-dev1
 
 Fix lints for the development preview of solidart 1.0.0

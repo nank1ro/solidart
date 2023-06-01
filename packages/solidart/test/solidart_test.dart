@@ -463,7 +463,7 @@ void main() {
       resource.dispose();
     });
 
-    test('check ResourceValue.on', () async {
+    test('check ResourceState.on', () async {
       var shouldThrow = false;
       Future<int> fetcher() {
         return Future.delayed(const Duration(milliseconds: 150), () {
