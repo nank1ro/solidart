@@ -44,7 +44,7 @@ class SignalBuilder<T> extends StatefulWidget {
   });
 
   /// {@template signalbuilder.signal}
-  /// The signal function whose value you depend on in order to build.
+  /// The signal whose value you depend on in order to build.
   ///
   /// This widget does not ensure that the signal's value is not
   /// null, therefore your [builder] may need to handle null values.
