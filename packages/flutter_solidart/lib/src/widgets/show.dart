@@ -46,9 +46,23 @@ import 'package:solidart/solidart.dart';
 /// widget based on the `when` evaluation.
 /// The `fallback` widget builder is optional, by default nothing is rendered.
 ///
-/// The `Show` widget takes a `Signal` of type `bool`, see [Derived Signals](/learning/derived-signals) to learn how to create a derived signal if your Signal is not of type `bool`.
+/// The `Show` widget takes a functions that returns a `bool`.
+/// You easily convert any type to `bool`, for example:
+///
+/// ```dart
+/// final count = createSignal(0);
+///
+/// @override
+/// Widget build(BuildContext context) {
+///   return Show(
+///     when: () => count() > 5,
+///     builder: (context) => const Text('Count is greater than 5'),
+///     fallback: (context) => const Text('Count is lower than 6'),
+///   );
+/// }
+/// ```
 /// {$endtemplate}
-class Show<T extends bool> extends StatelessWidget {
+class Show<T extends bool> extends StatefulWidget {
   /// {@macro show}
   const Show({
     super.key,
@@ -61,7 +75,7 @@ class Show<T extends bool> extends StatelessWidget {
   ///
   /// When the Signal's value is true, renders the [builder], otherwise the
   ///  [fallback] (if provided, or an empty view).
-  final SignalBase<T> when;
+  final T Function() when;
 
   /// The builder widget is rendered when the [when] signal value evalutes to
   /// `true`
@@ -72,14 +86,37 @@ class Show<T extends bool> extends StatelessWidget {
   final WidgetBuilder? fallback;
 
   @override
+  State<Show<T>> createState() => _ShowState<T>();
+}
+
+class _ShowState<T extends bool> extends State<Show<T>> {
+  final show = createSignal(false);
+  late final DisposeEffect disposeEffect;
+
+  @override
+  void initState() {
+    super.initState();
+    disposeEffect = createEffect((dispose) {
+      show.set(widget.when());
+    });
+  }
+
+  @override
+  void dispose() {
+    show.dispose();
+    disposeEffect();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SignalBuilder<T>(
-      signal: when,
+    return SignalBuilder<bool>(
+      signal: show,
       builder: (context, condition, _) {
         if (!condition) {
-          return fallback?.call(context) ?? const SizedBox();
+          return widget.fallback?.call(context) ?? const SizedBox();
         }
-        return builder(context);
+        return widget.builder(context);
       },
     );
   }

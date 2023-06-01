@@ -37,7 +37,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: Show(
-            when: s,
+            when: s.call,
             builder: (context) => const Text('Builder'),
             fallback: (context) => const Text('Fallback'),
           ),
