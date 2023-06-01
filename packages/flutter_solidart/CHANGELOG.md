@@ -1,3 +1,21 @@
+## 1.0.0-dev2
+
+The `Show` widget now takes a functions that returns a `bool`.
+You easily convert any type to `bool`, for example:
+
+```dart
+final count = createSignal(0);
+
+@override
+Widget build(BuildContext context) {
+  return Show(
+    when: () => count() > 5,
+    builder: (context) => const Text('Count is greater than 5'),
+    fallback: (context) => const Text('Count is lower than 6'),
+  );
+}
+```
+
 ## 1.0.0-dev1
 
 This is a development preview of the 1.0.0 release of solidart.

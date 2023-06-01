@@ -45,10 +45,11 @@ class _Counter extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           SignalBuilder(
-              signal: counter,
-              builder: (_, value, __) {
-                return Text(value.toString());
-              }),
+            signal: counter,
+            builder: (_, value, __) {
+              return Text(value.toString());
+            },
+          ),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
@@ -89,10 +90,11 @@ class _SentenceState extends State<_Sentence> {
         ),
         const SizedBox(height: 16),
         SignalBuilder(
-            signal: sentence,
-            builder: (_, value, __) {
-              return Text(value);
-            }),
+          signal: sentence,
+          builder: (_, value, __) {
+            return Text(value);
+          },
+        ),
         const SizedBox(height: 16),
         ElevatedButton(
           onPressed: () {
