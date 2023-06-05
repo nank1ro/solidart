@@ -595,7 +595,20 @@ class SolidState extends State<Solid> {
       disposeFn();
     }
     for (final signal in _createdSignals.values) {
-      if (widget._autoDispose) signal.dispose();
+      var autoDispose = widget._autoDispose;
+
+      // check if the signal as an overriden autoDispose
+      if (autoDispose) {
+        if (signal.options is SolidSignalOptions) {
+          autoDispose = (signal.options as SolidSignalOptions).autoDispose;
+        }
+
+        if (signal.options is SolidResourceOptions) {
+          autoDispose = (signal.options as SolidResourceOptions).autoDispose;
+        }
+      }
+
+      if (autoDispose) signal.dispose();
     }
     // dispose all the created providers
     if (widget._autoDispose) {
