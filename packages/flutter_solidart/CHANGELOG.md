@@ -1,3 +1,23 @@
+## 1.0.0-dev3
+
+Add `SolidSignalOptions` and `SolidResourceOptions` for signals and resources provided through the Solid widget.
+With this field you can customize the `autoDispose` of each Solid signal individually. (Defaults to true).
+
+### Changes from solidart
+
+- Rename `until` into `firstWhere`
+- Rename `untilReady` into `firstWhereReady`
+- **FEAT**: add `where` method to `Signal`. It returns a new `ReadSignal` with the values filtered by `condition`.
+  Use it to filter the value of another signal, e.g.:
+
+  ```dart
+  final loggedInUser = user.where((value) => value != null);
+  ```
+
+  The initial value may be null because a `Signal` must always start with an initial value.
+  The following values will always satisfy the condition.
+  The returned `ReadSignal` will automatically dispose when the parent signal disposes.
+
 ## 1.0.0-dev2
 
 The `Show` widget now takes a functions that returns a `bool`.

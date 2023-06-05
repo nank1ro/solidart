@@ -104,7 +104,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   /// Returns the future that completes when the [condition] evalutes to true.
   /// If the [condition] is already true, it completes immediately.
   @experimental
-  FutureOr<T> until(bool Function(T value) condition) {
+  FutureOr<T> firstWhere(bool Function(T value) condition) {
     if (condition(value)) return value;
 
     final completer = Completer<T>();
@@ -115,6 +115,36 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
       }
     });
     return completer.future;
+  }
+
+  /// Returns a new [ReadSignal] with the values filtered by [condition].
+  ///
+  /// The returned signal may start with a `null` value if the condition
+  /// isn't true when the [where] is called.
+  ///
+  /// The returned signal will automatically dispose when the parent signal
+  /// disposes.
+  @experimental
+  ReadSignal<T?> where(bool Function(T value) condition) {
+    // initialize signal based on current condition value;
+    final s = createSignal(condition(value) ? value : null);
+
+    final disposeEffect = createEffect((_) {
+      if (condition(value)) s.set(value);
+    });
+    onDispose(() {
+      s.dispose();
+      disposeEffect();
+    });
+    return s.toReadSignal();
+  }
+
+  /// Returns the future that completes when the [condition] evalutes to true.
+  /// If the [condition] is already true, it completes immediately.
+  @experimental
+  @Deprecated('Use firstWhere instead')
+  FutureOr<T> until(bool Function(T value) condition) {
+    return firstWhere(condition);
   }
 
   @override

@@ -1,3 +1,18 @@
+## 1.0.0-dev2
+
+- Rename `until` into `firstWhere`
+- Rename `untilReady` into `firstWhereReady`
+- **FEAT**: add `where` method to `Signal`. It returns a new `ReadSignal` with the values filtered by `condition`.
+  Use it to filter the value of another signal, e.g.:
+
+  ```dart
+  final loggedInUser = user.where((value) => value != null);
+  ```
+
+  The initial value may be null because a `Signal` must always start with an initial value.
+  The following values will always satisfy the condition.
+  The returned `ReadSignal` will automatically dispose when the parent signal disposes.
+
 ## 1.0.0-dev1
 
 This is a development preview of the 1.0.0 release of solidart.
