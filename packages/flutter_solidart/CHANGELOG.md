@@ -21,7 +21,7 @@ With this field you can customize the `autoDispose` of each Solid signal individ
 ## 1.0.0-dev2
 
 The `Show` widget now takes a functions that returns a `bool`.
-You easily convert any type to `bool`, for example:
+You can easily convert any type to `bool`, for example:
 
 ```dart
 final count = createSignal(0);
