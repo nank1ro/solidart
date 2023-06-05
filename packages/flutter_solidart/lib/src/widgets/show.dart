@@ -47,7 +47,7 @@ import 'package:solidart/solidart.dart';
 /// The `fallback` widget builder is optional, by default nothing is rendered.
 ///
 /// The `Show` widget takes a functions that returns a `bool`.
-/// You easily convert any type to `bool`, for example:
+/// You can easily convert any type to `bool`, for example:
 ///
 /// ```dart
 /// final count = createSignal(0);

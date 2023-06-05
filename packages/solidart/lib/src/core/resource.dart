@@ -237,9 +237,17 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
   /// Returns a future that completes with the value when the Resource is ready
   /// If the resource is already ready, it completes immediately.
   @experimental
-  FutureOr<ResultType> untilReady() async {
-    final state = await until((value) => value.isReady);
+  FutureOr<ResultType> firstWhereReady() async {
+    final state = await firstWhere((value) => value.isReady);
     return state.asReady!.value;
+  }
+
+  /// Returns a future that completes with the value when the Resource is ready
+  /// If the resource is already ready, it completes immediately.
+  @experimental
+  @Deprecated('Use `firstWhereReady` instead')
+  FutureOr<ResultType> untilReady() {
+    return firstWhereReady();
   }
 
   @override

@@ -12,6 +12,20 @@ import 'package:solidart/src/core/signal_options.dart';
 import 'package:solidart/src/utils.dart';
 import 'package:test/test.dart';
 
+sealed class MyEvent {}
+
+class MyEventA implements MyEvent {
+  MyEventA(this.value);
+
+  final int value;
+}
+
+class MyEventB implements MyEvent {
+  MyEventB(this.value);
+
+  final String value;
+}
+
 class MockCallbackFunction extends Mock {
   void call();
 }
@@ -165,16 +179,48 @@ void main() {
     });
 
     test(
-      'test futureWhen()',
+      'test firstWhere()',
       () async {
         final count = createSignal(0);
 
         unawaited(
-          expectLater(count.until((value) => value > 5), completion(11)),
+          expectLater(count.firstWhere((value) => value > 5), completion(11)),
         );
         count
           ..set(2)
           ..set(11);
+      },
+      timeout: const Timeout(Duration(seconds: 1)),
+    );
+
+    test(
+      'test where()',
+      () async {
+        // parent signal
+        final events = createSignal<MyEvent>(MyEventA(0));
+
+        final bEvents = events.where((event) => event is MyEventB);
+
+        // starts with null
+        expect(bEvents(), null);
+
+        // gets first MyEventB
+        final firstBEvent = MyEventB('1');
+        events.set(firstBEvent);
+        expect(bEvents(), firstBEvent);
+
+        // gets second MyEventB
+        final secondBEvent = MyEventB('2');
+        events.set(secondBEvent);
+        expect(bEvents(), secondBEvent);
+
+        // doesn't get MyEventA
+        events.set(MyEventA(2));
+        expect(bEvents(), secondBEvent);
+
+        // disposes when parent disposes
+        events.dispose();
+        expect(bEvents.disposed, true);
       },
       timeout: const Timeout(Duration(seconds: 1)),
     );
@@ -523,7 +569,7 @@ void main() {
     });
 
     test(
-      'test futureValue()',
+      'test firstWhereReady()',
       () async {
         Future<int> fetcher() => Future.delayed(
               const Duration(milliseconds: 300),
@@ -532,7 +578,7 @@ void main() {
         final count = createResource(fetcher: fetcher);
         count.resolve().ignore();
 
-        await expectLater(count.untilReady(), completion(1));
+        await expectLater(count.firstWhereReady(), completion(1));
       },
       timeout: const Timeout(Duration(seconds: 1)),
     );
