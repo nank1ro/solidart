@@ -130,7 +130,7 @@ class ResourceBuilder<ResultType> extends StatefulWidget {
   /// The [resource] that needs to be rendered.
   final Resource<ResultType> resource;
 
-  /// The builder of the resource, called every time the resource value changes.
+  /// The builder of the resource, called every time the resource state changes.
   final ResourceWidgetBuilder<ResultType> builder;
 
   @override
@@ -161,7 +161,7 @@ class _ResourceBuilderState<ResultType>
   void initialize() {
     effectiveResource = widget.resource;
     // Resolve the resource if it's not resolved yet
-    if (widget.resource.value is ResourceUnresolved<ResultType>) {
+    if (widget.resource.state is ResourceUnresolved<ResultType>) {
       widget.resource.resolve();
     }
   }
