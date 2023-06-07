@@ -23,7 +23,7 @@ extension ValueNotifierToSignal<T> on ValueNotifier<T> {
   /// {@macro value-notifier-to-signal}
   @experimental
   Signal<T> toSignal() {
-    final signal = createSignal(value);
+    final signal = createSignal(value, options: SignalOptions<T>(equals: true));
     void setValue() => signal.set(value);
     addListener(setValue);
     signal.onDispose(() => removeListener(setValue));

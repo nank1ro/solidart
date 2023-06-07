@@ -1,3 +1,7 @@
+## 1.0.0-dev4
+
+- Converting a `ValueNotifier` into a `Signal` now uses the `equals` comparator to keep the consistency.
+
 ## 1.0.0-dev3
 
 Add `SolidSignalOptions` and `SolidResourceOptions` for signals and resources provided through the Solid widget.
