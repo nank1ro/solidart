@@ -477,30 +477,30 @@ void main() {
 
       await resource.resolve();
       await pumpEventQueue();
-      expect(resource.value, isA<ResourceReady<User>>());
-      expect(resource.value.value, const User(id: 0));
+      expect(resource.state, isA<ResourceReady<User>>());
+      expect(resource.state.value, const User(id: 0));
 
       userId.set(1);
       await pumpEventQueue();
-      expect(resource.value, isA<ResourceReady<User>>());
-      expect(resource.value(), const User(id: 1));
+      expect(resource.state, isA<ResourceReady<User>>());
+      expect(resource.state(), const User(id: 1));
 
       userId.set(2);
       await pumpEventQueue();
-      expect(resource.value, isA<ResourceError<User>>());
-      expect(resource.value.error, isException);
+      expect(resource.state, isA<ResourceError<User>>());
+      expect(resource.state.error, isException);
 
       userId.set(3);
       await pumpEventQueue();
       await resource.refetch();
-      expect(resource.value, isA<ResourceReady<User>>());
-      expect(resource.value.hasError, false);
-      expect(resource.value.asError, isNull);
-      expect(resource.value.isLoading, false);
-      expect(resource.value.asReady, isNotNull);
-      expect(resource.value.isReady, true);
+      expect(resource.state, isA<ResourceReady<User>>());
+      expect(resource.state.hasError, false);
+      expect(resource.state.asError, isNull);
+      expect(resource.state.isLoading, false);
+      expect(resource.state.asReady, isNotNull);
+      expect(resource.state.isReady, true);
 
-      resource.value.on(
+      resource.state.on(
         ready: (data, refreshing) {},
         error: (error, stack) {},
         loading: () {},
@@ -527,7 +527,7 @@ void main() {
 
       createEffect(
         (_) {
-          resource.value.on(
+          resource.state.on(
             ready: (data, refreshing) {
               if (refreshing) {
                 refreshingTrueTimes++;
@@ -557,7 +557,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 150));
       expect(dataCalledTimes, 2);
 
-      expect(resource.value, const TypeMatcher<ResourceReady<int>>());
+      expect(resource.state, const TypeMatcher<ResourceReady<int>>());
       shouldThrow = true;
       resource.refetch().ignore();
       await Future<void>.delayed(const Duration(milliseconds: 150));
