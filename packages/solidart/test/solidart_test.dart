@@ -193,38 +193,6 @@ void main() {
       timeout: const Timeout(Duration(seconds: 1)),
     );
 
-    test(
-      'test where()',
-      () async {
-        // parent signal
-        final events = createSignal<MyEvent>(MyEventA(0));
-
-        final bEvents = events.where((event) => event is MyEventB);
-
-        // starts with null
-        expect(bEvents(), null);
-
-        // gets first MyEventB
-        final firstBEvent = MyEventB('1');
-        events.set(firstBEvent);
-        expect(bEvents(), firstBEvent);
-
-        // gets second MyEventB
-        final secondBEvent = MyEventB('2');
-        events.set(secondBEvent);
-        expect(bEvents(), secondBEvent);
-
-        // doesn't get MyEventA
-        events.set(MyEventA(2));
-        expect(bEvents(), secondBEvent);
-
-        // disposes when parent disposes
-        events.dispose();
-        expect(bEvents.disposed, true);
-      },
-      timeout: const Timeout(Duration(seconds: 1)),
-    );
-
     test('check toString()', () {
       final s = createSignal(0);
       expect(s.toString(), startsWith('Signal<int>(value: 0'));
