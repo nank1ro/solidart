@@ -153,7 +153,13 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
   StreamSubscription<ResultType>? _streamSubscription;
 
   /// The current resource state
-  ResourceState<ResultType> get state => value;
+  ResourceState<ResultType> get state => super.value;
+
+  @Deprecated('Use state instead')
+  @override
+  ResourceState<ResultType> get value {
+    return super.value;
+  }
 
   /// Resolves the [Resource].
   ///
@@ -164,7 +170,7 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
   /// This method must be called once during the life cycle of the resource.
   Future<void> resolve() async {
     assert(
-      value is ResourceUnresolved<ResultType>,
+      state is ResourceUnresolved<ResultType>,
       """The resource has been already resolved, you can't resolve it more than once. Use `refetch()` instead if you want to refresh the value.""",
     );
     if (fetcher != null) {
@@ -190,7 +196,7 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
   Future<void> _fetch() async {
     assert(fetcher != null, 'You are trying to fetch, but fetcher is null');
     assert(
-      value is ResourceUnresolved<ResultType>,
+      state is ResourceUnresolved<ResultType>,
       "Cannot fetch a resource that is already resolved, use 'refetch' instead",
     );
     try {
@@ -219,7 +225,7 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
   Future<void> refetch() async {
     assert(fetcher != null, 'You are trying to refetch, but fetcher is null');
     try {
-      if (value is ResourceReady<ResultType>) {
+      if (state is ResourceReady<ResultType>) {
         update(
           (value) =>
               (value as ResourceReady<ResultType>).copyWith(refreshing: true),
@@ -258,7 +264,7 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
 
   @override
   String toString() =>
-      '''Resource<$ResultType>(state: $value, previousValue: $previousValue, options; $options)''';
+      '''Resource<$ResultType>(state: $state, previousValue: $previousValue, options; $options)''';
 }
 
 /// Manages all the different states of a [Resource]:

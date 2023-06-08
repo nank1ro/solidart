@@ -193,38 +193,6 @@ void main() {
       timeout: const Timeout(Duration(seconds: 1)),
     );
 
-    test(
-      'test where()',
-      () async {
-        // parent signal
-        final events = createSignal<MyEvent>(MyEventA(0));
-
-        final bEvents = events.where((event) => event is MyEventB);
-
-        // starts with null
-        expect(bEvents(), null);
-
-        // gets first MyEventB
-        final firstBEvent = MyEventB('1');
-        events.set(firstBEvent);
-        expect(bEvents(), firstBEvent);
-
-        // gets second MyEventB
-        final secondBEvent = MyEventB('2');
-        events.set(secondBEvent);
-        expect(bEvents(), secondBEvent);
-
-        // doesn't get MyEventA
-        events.set(MyEventA(2));
-        expect(bEvents(), secondBEvent);
-
-        // disposes when parent disposes
-        events.dispose();
-        expect(bEvents.disposed, true);
-      },
-      timeout: const Timeout(Duration(seconds: 1)),
-    );
-
     test('check toString()', () {
       final s = createSignal(0);
       expect(s.toString(), startsWith('Signal<int>(value: 0'));
@@ -477,30 +445,30 @@ void main() {
 
       await resource.resolve();
       await pumpEventQueue();
-      expect(resource.value, isA<ResourceReady<User>>());
-      expect(resource.value.value, const User(id: 0));
+      expect(resource.state, isA<ResourceReady<User>>());
+      expect(resource.state.value, const User(id: 0));
 
       userId.set(1);
       await pumpEventQueue();
-      expect(resource.value, isA<ResourceReady<User>>());
-      expect(resource.value(), const User(id: 1));
+      expect(resource.state, isA<ResourceReady<User>>());
+      expect(resource.state(), const User(id: 1));
 
       userId.set(2);
       await pumpEventQueue();
-      expect(resource.value, isA<ResourceError<User>>());
-      expect(resource.value.error, isException);
+      expect(resource.state, isA<ResourceError<User>>());
+      expect(resource.state.error, isException);
 
       userId.set(3);
       await pumpEventQueue();
       await resource.refetch();
-      expect(resource.value, isA<ResourceReady<User>>());
-      expect(resource.value.hasError, false);
-      expect(resource.value.asError, isNull);
-      expect(resource.value.isLoading, false);
-      expect(resource.value.asReady, isNotNull);
-      expect(resource.value.isReady, true);
+      expect(resource.state, isA<ResourceReady<User>>());
+      expect(resource.state.hasError, false);
+      expect(resource.state.asError, isNull);
+      expect(resource.state.isLoading, false);
+      expect(resource.state.asReady, isNotNull);
+      expect(resource.state.isReady, true);
 
-      resource.value.on(
+      resource.state.on(
         ready: (data, refreshing) {},
         error: (error, stack) {},
         loading: () {},
@@ -527,7 +495,7 @@ void main() {
 
       createEffect(
         (_) {
-          resource.value.on(
+          resource.state.on(
             ready: (data, refreshing) {
               if (refreshing) {
                 refreshingTrueTimes++;
@@ -557,7 +525,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 150));
       expect(dataCalledTimes, 2);
 
-      expect(resource.value, const TypeMatcher<ResourceReady<int>>());
+      expect(resource.state, const TypeMatcher<ResourceReady<int>>());
       shouldThrow = true;
       resource.refetch().ignore();
       await Future<void>.delayed(const Duration(milliseconds: 150));

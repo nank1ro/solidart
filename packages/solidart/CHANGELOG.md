@@ -1,3 +1,8 @@
+## 1.0.0-dev3
+
+- Deprecate `value` getter in the `Resource`. Use `state` instead.
+- Remove `where` method from `ReadSignal`.
+
 ## 1.0.0-dev2
 
 - Rename `until` into `firstWhere`
