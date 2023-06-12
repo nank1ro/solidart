@@ -108,7 +108,7 @@ void main() {
         'returns false', () async {
       final signal = createSignal(
         null,
-        options: const SignalOptions<_A>(),
+        options: const SignalOptions<_A?>(),
       );
       final cb = MockCallbackFunction();
       final unobserve = signal.observe((_, __) => cb());
@@ -166,14 +166,14 @@ void main() {
 
       expect(
         s.previousValue,
-        0,
+        const Wrapped(0),
         reason: 'The signal should have 0 has previousValue',
       );
 
       s.update((value) => value * 5);
       expect(
         s.previousValue,
-        1,
+        const Wrapped(1),
         reason: 'The signal should have 1 has previousValue',
       );
     });
@@ -337,15 +337,15 @@ void main() {
 
       signal.set(1);
       await pumpEventQueue();
-      expect(derived.previousValue, 0);
+      expect(derived.previousValue, const Wrapped(0));
 
       signal.set(2);
       await pumpEventQueue();
-      expect(derived.previousValue, 2);
+      expect(derived.previousValue, const Wrapped(2));
 
       signal.set(1);
       await pumpEventQueue();
-      expect(derived.previousValue, 4);
+      expect(derived.previousValue, const Wrapped(4));
     });
 
     test('derived signal disposes', () async {
@@ -406,12 +406,12 @@ void main() {
       streamController.add(1);
       await pumpEventQueue();
       expect(resource.state, isA<ResourceReady<int>>());
-      expect(resource.state.value, 1);
+      expect(resource.state.value, const Wrapped(1));
 
       streamController.add(10);
       await pumpEventQueue();
       expect(resource.state, isA<ResourceReady<int>>());
-      expect(resource.state(), 10);
+      expect(resource.state(), const Wrapped(10));
 
       streamController.addError(UnimplementedError());
       await pumpEventQueue();
@@ -446,12 +446,12 @@ void main() {
       await resource.resolve();
       await pumpEventQueue();
       expect(resource.state, isA<ResourceReady<User>>());
-      expect(resource.state.value, const User(id: 0));
+      expect(resource.state.value, const Wrapped(User(id: 0)));
 
       userId.set(1);
       await pumpEventQueue();
       expect(resource.state, isA<ResourceReady<User>>());
-      expect(resource.state(), const User(id: 1));
+      expect(resource.state(), const Wrapped(User(id: 1)));
 
       userId.set(2);
       await pumpEventQueue();
