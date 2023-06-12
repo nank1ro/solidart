@@ -38,7 +38,7 @@ class SignalOptions<T> {
   /// Preventing signal updates if the [comparator] returns true.
   ///
   /// Taken into account only if [equals] is false.
-  final ValueComparator<T?>? comparator;
+  final ValueComparator<T>? comparator;
 
   /// The name of the signal, useful for logging purposes.
   final String? name;

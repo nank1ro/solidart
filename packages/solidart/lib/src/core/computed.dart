@@ -207,11 +207,17 @@ class Computed<T> extends Signal<T> implements Derivation {
     final hadCaughtException = context.hasCaughtException(this);
 
     final newValue = _computeValue(track: true);
-
     final changedException =
         hadCaughtException != context.hasCaughtException(this);
-    final changed =
-        wasSuspended || changedException || !areEqual(oldValue, newValue);
+    bool didAsyncTransition() =>
+        (oldValue == null) && (newValue != null) ||
+        (oldValue != null) && (newValue == null);
+    bool bothInReadyState() => (oldValue != null) && (newValue != null);
+
+    final changed = wasSuspended ||
+        changedException ||
+        didAsyncTransition() ||
+        (bothInReadyState() && !areEqual(oldValue!.unwrap, newValue!.unwrap));
 
     if (changed) {
       _previousValue = oldValue;
