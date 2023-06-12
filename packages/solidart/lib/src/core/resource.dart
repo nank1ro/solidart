@@ -26,13 +26,13 @@ class ResourceOptions {
 }
 
 /// {@macro resource}
-Resource<ResultType> createResource<ResultType>({
-  Future<ResultType> Function()? fetcher,
-  Stream<ResultType>? stream,
+Resource<T> createResource<T>({
+  Future<T> Function()? fetcher,
+  Stream<T>? stream,
   SignalBase<dynamic>? source,
   ResourceOptions? options,
 }) {
-  return Resource<ResultType>(
+  return Resource<T>(
     fetcher: fetcher,
     source: source,
     stream: stream,
@@ -116,7 +116,7 @@ Resource<ResultType> createResource<ResultType>({
 /// The `refetch` method forces an update and calls the `fetcher` function
 /// again.
 /// {@endtemplate}
-class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
+class Resource<T> extends Signal<ResourceState<T>> {
   /// {@macro resource}
   Resource({
     this.fetcher,
@@ -129,8 +129,8 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
         ),
         resourceOptions = options ?? const ResourceOptions(),
         super(
-          ResourceState<ResultType>.unresolved(),
-          options: SignalOptions<ResourceState<ResultType>>(
+          ResourceState<T>.unresolved(),
+          options: SignalOptions<ResourceState<T>>(
             name: options?.name,
           ),
         ) {
@@ -143,21 +143,21 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
   final SignalBase<dynamic>? source;
 
   /// The asynchrounous function used to retrieve data.
-  final Future<ResultType> Function()? fetcher;
+  final Future<T> Function()? fetcher;
 
   /// The resource options
   final ResourceOptions resourceOptions;
 
   /// The stream used to retrieve data.
-  final Stream<ResultType>? stream;
-  StreamSubscription<ResultType>? _streamSubscription;
+  final Stream<T>? stream;
+  StreamSubscription<T>? _streamSubscription;
 
   /// The current resource state
-  ResourceState<ResultType> get state => super.value;
+  ResourceState<T> get state => super.value;
 
   @Deprecated('Use state instead')
   @override
-  ResourceState<ResultType> get value {
+  ResourceState<T> get value {
     return super.value;
   }
 
@@ -170,7 +170,7 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
   /// This method must be called once during the life cycle of the resource.
   Future<void> resolve() async {
     assert(
-      state is ResourceUnresolved<ResultType>,
+      state is ResourceUnresolved<T>,
       """The resource has been already resolved, you can't resolve it more than once. Use `refetch()` instead if you want to refresh the value.""",
     );
     if (fetcher != null) {
@@ -196,27 +196,27 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
   Future<void> _fetch() async {
     assert(fetcher != null, 'You are trying to fetch, but fetcher is null');
     assert(
-      state is ResourceUnresolved<ResultType>,
+      state is ResourceUnresolved<T>,
       "Cannot fetch a resource that is already resolved, use 'refetch' instead",
     );
     try {
-      value = ResourceState<ResultType>.loading();
+      value = ResourceState<T>.loading();
       final result = await fetcher!();
-      value = ResourceState<ResultType>.ready(result);
+      value = ResourceState<T>.ready(result);
     } catch (e, s) {
-      value = ResourceState<ResultType>.error(e, stackTrace: s);
+      value = ResourceState<T>.error(e, stackTrace: s);
     }
   }
 
   /// Starts listening to the [stream] provided.
   void _listenToStream() {
-    value = ResourceState<ResultType>.loading();
+    value = ResourceState<T>.loading();
     _streamSubscription = stream!.listen(
       (data) {
-        value = ResourceState<ResultType>.ready(data);
+        value = ResourceState<T>.ready(data);
       },
       onError: (Object error, StackTrace stackTrace) {
-        value = ResourceState<ResultType>.error(error, stackTrace: stackTrace);
+        value = ResourceState<T>.error(error, stackTrace: stackTrace);
       },
     );
   }
@@ -225,25 +225,24 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
   Future<void> refetch() async {
     assert(fetcher != null, 'You are trying to refetch, but fetcher is null');
     try {
-      if (state is ResourceReady<ResultType>) {
+      if (state is ResourceReady<T>) {
         update(
-          (value) =>
-              (value as ResourceReady<ResultType>).copyWith(refreshing: true),
+          (value) => (value as ResourceReady<T>).copyWith(refreshing: true),
         );
       } else {
-        value = ResourceState<ResultType>.loading();
+        value = ResourceState<T>.loading();
       }
       final result = await fetcher!();
-      value = ResourceState<ResultType>.ready(result);
+      value = ResourceState<T>.ready(result);
     } catch (e, s) {
-      value = ResourceState<ResultType>.error(e, stackTrace: s);
+      value = ResourceState<T>.error(e, stackTrace: s);
     }
   }
 
   /// Returns a future that completes with the value when the Resource is ready
   /// If the resource is already ready, it completes immediately.
   @experimental
-  FutureOr<ResultType> firstWhereReady() async {
+  FutureOr<T> firstWhereReady() async {
     final state = await firstWhere((value) => value.isReady);
     return state.asReady!.value;
   }
@@ -252,7 +251,7 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
   /// If the resource is already ready, it completes immediately.
   @experimental
   @Deprecated('Use `firstWhereReady` instead')
-  FutureOr<ResultType> untilReady() {
+  FutureOr<T> untilReady() {
     return firstWhereReady();
   }
 
@@ -264,7 +263,7 @@ class Resource<ResultType> extends Signal<ResourceState<ResultType>> {
 
   @override
   String toString() =>
-      '''Resource<$ResultType>(state: $state, previousValue: $previousValue, options; $options)''';
+      '''Resource<$T>(state: $state, previousValue: $previousValue, options; $options)''';
 }
 
 /// Manages all the different states of a [Resource]:
