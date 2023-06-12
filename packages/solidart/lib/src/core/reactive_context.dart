@@ -120,12 +120,12 @@ class ReactiveContext {
     _bindDependencies(currentDerivation);
   }
 
-  T? trackDerivation<T>(Derivation d, T Function() fn) {
+  Wrapped<T>? trackDerivation<T>(Derivation d, T Function() fn) {
     final prevDerivation = startTracking(d);
-    T? result;
+    Wrapped<T>? result;
 
     try {
-      result = fn();
+      result = Wrapped(fn());
       d.errorValue = null;
     } on Object catch (e, s) {
       d.errorValue = SolidartCaughtException(e, stackTrace: s);

@@ -73,10 +73,10 @@ class Computed<T> extends Signal<T> implements Derivation {
         super(selector(), options: options);
 
   // Tracks the internal value
-  T? _value;
+  Wrapped<T>? _value;
 
   // Tracks the internal previous value
-  T? _previousValue;
+  Wrapped<T>? _previousValue;
 
   @override
   // ignore: overridden_fields
@@ -141,12 +141,12 @@ class Computed<T> extends Signal<T> implements Derivation {
     if (context.hasCaughtException(this)) {
       throw errorValue!;
     }
-    return _value as T;
+    return _value!.unwrap;
   }
 
   /// The previous value, if any.
   @override
-  T? get previousValue {
+  Wrapped<T>? get previousValue {
     final prevVal = _value;
     // get the actual value to cause observation
     final _ = value;
@@ -175,20 +175,20 @@ class Computed<T> extends Signal<T> implements Derivation {
 
       notifyChange();
 
-      _previousValue = newValue;
+      _previousValue = Wrapped(newValue);
     });
   }
 
-  T? _computeValue({required bool track}) {
+  Wrapped<T>? _computeValue({required bool track}) {
     _isComputing = true;
     context.pushComputation();
 
-    T? computedValue;
+    Wrapped<T>? computedValue;
     if (track) {
       computedValue = context.trackDerivation(this, selector);
     } else {
       try {
-        computedValue = selector();
+        computedValue = Wrapped(selector());
         errorValue = null;
       } on Object catch (e, s) {
         errorValue = SolidartCaughtException(e, stackTrace: s);

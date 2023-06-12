@@ -131,7 +131,7 @@ class Signal<T> extends ReadSignal<T> {
   // Tracks the internal value
   T _value;
   // Tracks the internal previous value
-  T? _previousValue;
+  Wrapped<T>? _previousValue;
 
   @override
   T get value {
@@ -155,7 +155,7 @@ class Signal<T> extends ReadSignal<T> {
     }
 
     // store the previous value
-    _previousValue = _value;
+    _previousValue = Wrapped(_value);
 
     // notify with the new value
     _value = newValue;
@@ -163,9 +163,9 @@ class Signal<T> extends ReadSignal<T> {
     _notifyListeners();
   }
 
-  /// Indicates if the [oldValue] and the [newValue] are equal
+  /// Indicates if the [oldValue] and the [newValue] are equal.
   @internal
-  bool areEqual(T? oldValue, T? newValue) {
+  bool areEqual(T oldValue, T newValue) {
     // skip if the value are equals
     if (options.equals && oldValue == newValue) {
       return true;
@@ -175,12 +175,13 @@ class Signal<T> extends ReadSignal<T> {
     if (!options.equals && options.comparator != null) {
       return options.comparator!(oldValue, newValue);
     }
+
     return false;
   }
 
   /// The previous value, if any.
   @override
-  T? get previousValue {
+  Wrapped<T>? get previousValue {
     reportObserved();
     return _previousValue;
   }

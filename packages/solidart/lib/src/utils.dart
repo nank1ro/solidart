@@ -10,7 +10,7 @@ typedef VoidCallback = void Function();
 typedef ErrorCallback = void Function(Object error);
 
 /// The callback fired by the observer
-typedef ObserveCallback<T> = void Function(T? previousValue, T value);
+typedef ObserveCallback<T> = void Function(Wrapped<T>? previousValue, T value);
 
 /// {@template solidartexception}
 /// An Exception class to capture Solidart specific exceptions

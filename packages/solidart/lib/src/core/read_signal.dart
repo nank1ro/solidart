@@ -48,7 +48,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   // coverage:ignore-start
   @override
-  T? get previousValue {
+  Wrapped<T>? get previousValue {
     // no-op
     return null;
   }

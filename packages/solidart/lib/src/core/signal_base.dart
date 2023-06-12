@@ -17,7 +17,7 @@ abstract class SignalBase<T> {
   /// The previous signal value
   ///
   /// Defaults to null when no previous value is present.
-  T? get previousValue;
+  Wrapped<T>? get previousValue;
 
   /// Options used to customize the behaviour of a signal
   SignalOptions<T> get options;

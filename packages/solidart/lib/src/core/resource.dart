@@ -4,6 +4,7 @@ import 'package:meta/meta.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_base.dart';
 import 'package:solidart/src/core/signal_options.dart';
+import 'package:solidart/src/utils.dart';
 
 /// {@template resource-options}
 /// {@macro signaloptions}
@@ -510,9 +511,9 @@ extension ResourceExtensions<T> on ResourceState<T> {
   ///
   /// On error, this will rethrow the error.
   /// If loading, will return `null`.
-  T? get value {
+  Wrapped<T>? get value {
     return map(
-      ready: (r) => r.value,
+      ready: (r) => Wrapped(r.value),
       // ignore: only_throw_errors
       error: (r) => throw r.error,
       loading: (_) => null,
@@ -523,7 +524,7 @@ extension ResourceExtensions<T> on ResourceState<T> {
   ///
   /// On error, this will rethrow the error.
   /// If loading, will return `null`.
-  T? call() => value;
+  Wrapped<T>? call() => value;
 
   /// Attempts to synchronously get the error of [ResourceError].
   ///
