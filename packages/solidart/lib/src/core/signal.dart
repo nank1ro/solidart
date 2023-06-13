@@ -133,6 +133,8 @@ class Signal<T> extends ReadSignal<T> {
   // Tracks the internal previous value
   T? _previousValue;
 
+  bool _hasPreviousValue = false;
+
   @override
   T get value {
     reportObserved();
@@ -156,6 +158,9 @@ class Signal<T> extends ReadSignal<T> {
 
     // store the previous value
     _previousValue = _value;
+    if (!_hasPreviousValue) {
+      _hasPreviousValue = true;
+    }
 
     // notify with the new value
     _value = newValue;
@@ -177,6 +182,34 @@ class Signal<T> extends ReadSignal<T> {
     }
     return false;
   }
+
+  /// Whether or not there has already been a previous value. It is helpful
+  /// if [T] is nullable. Usage example:
+  ///
+  /// ```dart
+  /// if (widget.counter.hasPreviousValue) {
+  ///   final v = widget.counter.previousValue; // null could be a valid value
+  ///   // do some stuff based on v (valid previous value)
+  /// } else {
+  ///   // widget.counter.previousValue has to be null in this case
+  /// 
+  ///   // do something knowing there has not been a previous value yet
+  /// }
+  /// ```
+  /// 
+  /// which is safer than:
+  /// 
+  /// ```dart
+  /// final v = widget.counter.previousValue;
+  /// if (v == null) {
+  ///   // does this mean the previous value is actually `null` (as valid
+  ///   // value), or the counter's value has not changed yet?
+  ///   // This branch is unclear...
+  /// } else {
+  ///   // do some stuff based on v (valid previous value)
+  /// }
+  /// ```
+  bool hasPreviousValue() => _hasPreviousValue;
 
   /// The previous value, if any.
   @override
