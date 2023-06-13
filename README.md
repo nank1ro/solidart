@@ -5,6 +5,7 @@
 [![GitHub pull-requests](https://img.shields.io/github/issues-pr/nank1ro/solidart.svg)](https://gitHub.com/nank1ro/solidart/pull/)
 [![solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/solidart?include_prereleases)](https://pub.dev/packages/solidart)
 [![flutter_solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/flutter_solidart?include_prereleases)](https://pub.dev/packages/flutter_solidart)
+[![All Contributors](https://img.shields.io/github/all-contributors/nank1ro/solidart?color=ee8449&style=flat-square)](#contributors)
 
 # A simple state-management library inspired by SolidJS.
 
@@ -283,3 +284,14 @@ Learn every feature of `flutter_solidart` including:
 6. `createResource` and `ResourceBuilder`
 7. `Solid` and its fine-grained reactivity
 8. Access signals in modals with `Solid.value`
+
+## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
