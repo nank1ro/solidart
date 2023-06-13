@@ -229,6 +229,10 @@ class Resource<T> extends Signal<ResourceState<T>> {
         update(
           (value) => (value as ResourceReady<T>).copyWith(refreshing: true),
         );
+      } else if (state is ResourceError<T>) {
+        update(
+          (value) => (value as ResourceError<T>).copyWith(refreshing: true),
+        );
       } else {
         value = ResourceState<T>.loading();
       }
@@ -404,6 +408,7 @@ class ResourceError<T> implements ResourceState<T> {
   const ResourceError(
     this.error, {
     this.stackTrace,
+    this.refreshing = false,
   });
 
   /// The error.
@@ -411,6 +416,9 @@ class ResourceError<T> implements ResourceState<T> {
 
   /// The stackTrace of [error], optional.
   final StackTrace? stackTrace;
+
+  /// Indicates if the data is being refreshed, defaults to false.
+  final bool refreshing;
 
   // coverage:ignore-start
   @override
@@ -424,7 +432,8 @@ class ResourceError<T> implements ResourceState<T> {
 
   @override
   String toString() {
-    return 'ResourceError<$T>(error: $error, stackTrace: $stackTrace)';
+    return 'ResourceError<$T>(error: $error, stackTrace: $stackTrace, '
+        'refreshing: $refreshing)';
   }
 
   @override
@@ -432,11 +441,23 @@ class ResourceError<T> implements ResourceState<T> {
     return runtimeType == other.runtimeType &&
         other is ResourceError<T> &&
         other.error == error &&
-        other.stackTrace == stackTrace;
+        other.stackTrace == stackTrace &&
+        other.refreshing == refreshing;
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, error, stackTrace);
+  int get hashCode => Object.hash(runtimeType, error, stackTrace, refreshing);
+
+  /// Convenience method to update the [refreshing] value of a [Resource]
+  ResourceError<T> copyWith({
+    bool? refreshing,
+  }) {
+    return ResourceError(
+      error,
+      stackTrace: stackTrace,
+      refreshing: refreshing ?? this.refreshing,
+    );
+  }
   // coverage:ignore-end
 }
 
@@ -565,12 +586,14 @@ extension ResourceExtensions<T> on ResourceState<T> {
   R on<R>({
     // ignore: avoid_positional_boolean_parameters
     required R Function(T data, bool refreshing) ready,
-    required R Function(Object error, StackTrace? stackTrace) error,
+    // ignore: avoid_positional_boolean_parameters
+    required R Function(Object error, StackTrace? stackTrace, bool refreshing)
+        error,
     required R Function() loading,
   }) {
     return map(
       ready: (r) => ready(r.value, r.refreshing),
-      error: (e) => error(e.error, e.stackTrace),
+      error: (e) => error(e.error, e.stackTrace, e.refreshing),
       loading: (l) => loading(),
     );
   }
@@ -581,7 +604,8 @@ extension ResourceExtensions<T> on ResourceState<T> {
     required R Function() orElse,
     // ignore: avoid_positional_boolean_parameters
     R Function(T data, bool refreshing)? ready,
-    R Function(Object error, StackTrace? stackTrace)? error,
+    // ignore: avoid_positional_boolean_parameters
+    R Function(Object error, StackTrace? stackTrace, bool refreshing)? error,
     R Function()? loading,
   }) {
     return map(
@@ -590,7 +614,7 @@ extension ResourceExtensions<T> on ResourceState<T> {
         return orElse();
       },
       error: (e) {
-        if (error != null) return error(e.error, e.stackTrace);
+        if (error != null) return error(e.error, e.stackTrace, e.refreshing);
         return orElse();
       },
       loading: (l) {
