@@ -28,6 +28,15 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "luketg8",
+      "name": "Luke Greenwood",
+      "avatar_url": "https://avatars.githubusercontent.com/u/10770936?v=4",
+      "profile": "https://github.com/luketg8",
+      "contributions": [
+        "doc"
+      ]
     }
   ],
   "contributorsPerLine": 7,
