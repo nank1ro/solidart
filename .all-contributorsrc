@@ -19,6 +19,15 @@
         "doc",
         "test"
       ]
+    },
+    {
+      "login": "manuel-plavsic",
+      "name": "manuel-plavsic",
+      "avatar_url": "https://avatars.githubusercontent.com/u/55398763?v=4",
+      "profile": "https://github.com/manuel-plavsic",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
