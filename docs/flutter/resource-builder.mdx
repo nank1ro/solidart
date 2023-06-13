@@ -86,14 +86,29 @@ class _ResourcePageState extends State<ResourcePage> {
                           title: Text(data),
                           subtitle: Text('refreshing: $refreshing'),
                         ),
-                        ElevatedButton(
-                          onPressed: user.refetch,
-                          child: const Text('Refresh'),
-                        ),
+                        if (refreshing) const CircularProgressIndicator(),
+                        if (!refreshing)
+                          ElevatedButton(
+                            onPressed: user.refetch,
+                            child: const Text('Refresh'),
+                          ),
                       ],
                     );
                   },
-                  error: (e, _) => Text(e.toString()),
+                  error: (e, _, refreshing) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(e.toString()),
+                        if (refreshing) const CircularProgressIndicator(),
+                        if (!refreshing)
+                          ElevatedButton(
+                            onPressed: user.refetch,
+                            child: const Text('Refresh'),
+                          ),
+                      ],
+                    );
+                  },
                   loading: () {
                     return const RepaintBoundary(
                       child: CircularProgressIndicator(),

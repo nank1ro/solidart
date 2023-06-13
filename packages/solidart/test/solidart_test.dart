@@ -470,7 +470,7 @@ void main() {
 
       resource.state.on(
         ready: (data, refreshing) {},
-        error: (error, stack) {},
+        error: (error, stack, refreshing) {},
         loading: () {},
       );
 
@@ -489,7 +489,8 @@ void main() {
       var dataCalledTimes = 0;
       var loadingCalledTimes = 0;
       var errorCalledTimes = 0;
-      var refreshingTrueTimes = 0;
+      var refreshingOnDataTimes = 0;
+      var refreshingOnErrorTimes = 0;
       final resource = createResource(fetcher: fetcher);
       resource.resolve().ignore();
 
@@ -498,13 +499,17 @@ void main() {
           resource.state.on(
             ready: (data, refreshing) {
               if (refreshing) {
-                refreshingTrueTimes++;
+                refreshingOnDataTimes++;
               } else {
                 dataCalledTimes++;
               }
             },
-            error: (error, stackTrace) {
-              errorCalledTimes++;
+            error: (error, stackTrace, refreshing) {
+              if (refreshing) {
+                refreshingOnErrorTimes++;
+              } else {
+                errorCalledTimes++;
+              }
             },
             loading: () {
               loadingCalledTimes++;
@@ -521,7 +526,7 @@ void main() {
 
       resource.refetch().ignore();
       await Future<void>.delayed(const Duration(milliseconds: 40));
-      expect(refreshingTrueTimes, 1);
+      expect(refreshingOnDataTimes, 1);
       await Future<void>.delayed(const Duration(milliseconds: 150));
       expect(dataCalledTimes, 2);
 
@@ -530,10 +535,21 @@ void main() {
       resource.refetch().ignore();
       await Future<void>.delayed(const Duration(milliseconds: 150));
       expect(errorCalledTimes, 1);
+      expect(refreshingOnErrorTimes, 0);
 
       resource.refetch().ignore();
       await Future<void>.delayed(const Duration(milliseconds: 150));
-      expect(loadingCalledTimes, 2);
+      expect(refreshingOnErrorTimes, 1);
+      expect(errorCalledTimes, 2);
+
+      shouldThrow = false;
+      resource.refetch().ignore();
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      expect(refreshingOnErrorTimes, 2);
+      expect(errorCalledTimes, 2);
+      expect(dataCalledTimes, 3);
+
+      expect(loadingCalledTimes, 1);
     });
 
     test(

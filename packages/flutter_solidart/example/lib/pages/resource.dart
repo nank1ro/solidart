@@ -16,7 +16,13 @@ class _ResourcePageState extends State<ResourcePage> {
   @override
   void initState() {
     super.initState();
-    user = createResource(fetcher: fetchUser, source: userId);
+    user = createResource(
+      fetcher: () async {
+        await Future.delayed(const Duration(seconds: 2));
+        return await fetchUser();
+      },
+      source: userId,
+    );
   }
 
   @override
@@ -70,14 +76,29 @@ class _ResourcePageState extends State<ResourcePage> {
                           title: Text(data),
                           subtitle: Text('refreshing: $refreshing'),
                         ),
-                        ElevatedButton(
-                          onPressed: user.refetch,
-                          child: const Text('Refresh'),
-                        ),
+                        if (refreshing) const CircularProgressIndicator(),
+                        if (!refreshing)
+                          ElevatedButton(
+                            onPressed: user.refetch,
+                            child: const Text('Refresh'),
+                          ),
                       ],
                     );
                   },
-                  error: (e, _) => Text(e.toString()),
+                  error: (e, _, refreshing) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(e.toString()),
+                        if (refreshing) const CircularProgressIndicator(),
+                        if (!refreshing)
+                          ElevatedButton(
+                            onPressed: user.refetch,
+                            child: const Text('Refresh'),
+                          ),
+                      ],
+                    );
+                  },
                   loading: () {
                     return const RepaintBoundary(
                       child: CircularProgressIndicator(),

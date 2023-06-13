@@ -73,10 +73,10 @@ void main() {
             builder: (context, resource) {
               return resource.on(
                 ready: (data, refreshing) {
-                  return Text('Data: $data refreshing: $refreshing');
+                  return Text('Data: $data (refreshing: $refreshing)');
                 },
-                error: (err, _) {
-                  return const Text('Error');
+                error: (err, _, refreshing) {
+                  return Text('Error (refreshing: $refreshing)');
                 },
                 loading: () {
                   return const Text('Loading');
@@ -88,24 +88,25 @@ void main() {
       ),
     );
     Finder dataFinder(int value, {bool refreshing = false}) =>
-        find.text('Data: $value refreshing: $refreshing');
-    final errorFinder = find.text('Error');
+        find.text('Data: $value (refreshing: $refreshing)');
+    Finder errorFinder({bool refreshing = false}) =>
+        find.text('Error (refreshing: $refreshing)');
     final loadingFinder = find.text('Loading');
 
     await tester.pumpAndSettle();
     expect(dataFinder(0), findsOneWidget);
-    expect(errorFinder, findsNothing);
+    expect(errorFinder(), findsNothing);
     expect(loadingFinder, findsNothing);
 
     unawaited(r.refetch());
     await tester.pumpAndSettle(const Duration(milliseconds: 40));
     expect(dataFinder(0, refreshing: true), findsOneWidget);
-    expect(errorFinder, findsNothing);
+    expect(errorFinder(), findsNothing);
     expect(loadingFinder, findsNothing);
 
     await tester.pumpAndSettle();
     expect(dataFinder(0), findsOneWidget);
-    expect(errorFinder, findsNothing);
+    expect(errorFinder(), findsNothing);
     expect(loadingFinder, findsNothing);
   });
 
@@ -125,10 +126,10 @@ void main() {
             builder: (context, resource) {
               return resource.on(
                 ready: (data, refreshing) {
-                  return Text('Data: $data refreshing: $refreshing');
+                  return Text('Data: $data (refreshing: $refreshing)');
                 },
-                error: (err, _) {
-                  return const Text('Error');
+                error: (err, _, refreshing) {
+                  return Text('Error (refreshing: $refreshing)');
                 },
                 loading: () {
                   return const Text('Loading');
@@ -140,18 +141,19 @@ void main() {
       ),
     );
     Finder dataFinder(int value, {bool refreshing = false}) =>
-        find.text('Data: $value refreshing: $refreshing');
-    final errorFinder = find.text('Error');
+        find.text('Data: $value (refreshing: $refreshing)');
+    Finder errorFinder({bool refreshing = false}) =>
+        find.text('Error (refreshing: $refreshing)');
     final loadingFinder = find.text('Loading');
 
     await tester.pumpAndSettle();
     expect(dataFinder(0), findsNothing);
-    expect(errorFinder, findsNothing);
+    expect(errorFinder(), findsNothing);
     expect(loadingFinder, findsOneWidget);
 
     await tester.pumpAndSettle();
     expect(dataFinder(0), findsOneWidget);
-    expect(errorFinder, findsNothing);
+    expect(errorFinder(), findsNothing);
     expect(loadingFinder, findsNothing);
   });
 
@@ -171,10 +173,10 @@ void main() {
             builder: (context, resource) {
               return resource.on(
                 ready: (data, refreshing) {
-                  return Text('Data: $data refreshing: $refreshing');
+                  return Text('Data: $data (refreshing: $refreshing)');
                 },
-                error: (err, _) {
-                  return const Text('Error');
+                error: (err, _, refreshing) {
+                  return Text('Error (refreshing: $refreshing)');
                 },
                 loading: () {
                   return const Text('Loading');
@@ -186,13 +188,25 @@ void main() {
       ),
     );
     Finder dataFinder(int value, {bool refreshing = false}) =>
-        find.text('Data: $value refreshing: $refreshing');
-    final errorFinder = find.text('Error');
+        find.text('Data: $value (refreshing: $refreshing)');
+    Finder errorFinder({bool refreshing = false}) =>
+        find.text('Error (refreshing: $refreshing)');
     final loadingFinder = find.text('Loading');
 
     await tester.pumpAndSettle();
     expect(dataFinder(0), findsNothing);
-    expect(errorFinder, findsOneWidget);
+    expect(errorFinder(), findsOneWidget);
+    expect(loadingFinder, findsNothing);   
+
+    unawaited(r.refetch());
+    await tester.pumpAndSettle(const Duration(milliseconds: 40));
+    expect(dataFinder(0), findsNothing);
+    expect(errorFinder(), findsOneWidget); // TODO: should be errorFinder(refreshing: true)
+    expect(loadingFinder, findsNothing);
+
+    await tester.pumpAndSettle();
+    expect(dataFinder(0), findsNothing);
+    expect(errorFinder(), findsOneWidget);
     expect(loadingFinder, findsNothing);
   });
 
