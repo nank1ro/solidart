@@ -66,18 +66,20 @@ class _ResourcePageState extends State<ResourcePage> {
             const SizedBox(height: 16),
             ResourceBuilder(
               resource: user,
-              builder: (_, userValue) {
-                return userValue.on(
-                  ready: (data, refreshing) {
+              builder: (_, userState) {
+                return userState.on(
+                  ready: (data) {
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ListTile(
                           title: Text(data),
-                          subtitle: Text('refreshing: $refreshing'),
+                          subtitle:
+                              Text('refreshing: ${userState.isRefreshing}'),
                         ),
-                        if (refreshing) const CircularProgressIndicator(),
-                        if (!refreshing)
+                        if (userState.isRefreshing)
+                          const CircularProgressIndicator(),
+                        if (!userState.isRefreshing)
                           ElevatedButton(
                             onPressed: user.refetch,
                             child: const Text('Refresh'),
@@ -85,13 +87,14 @@ class _ResourcePageState extends State<ResourcePage> {
                       ],
                     );
                   },
-                  error: (e, _, refreshing) {
+                  error: (e, _) {
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(e.toString()),
-                        if (refreshing) const CircularProgressIndicator(),
-                        if (!refreshing)
+                        if (userState.isRefreshing)
+                          const CircularProgressIndicator(),
+                        if (!userState.isRefreshing)
                           ElevatedButton(
                             onPressed: user.refetch,
                             child: const Text('Refresh'),
