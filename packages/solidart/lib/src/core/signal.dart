@@ -133,8 +133,6 @@ class Signal<T> extends ReadSignal<T> {
   // Tracks the internal previous value
   T? _previousValue;
 
-  bool _hasPreviousValue = false;
-
   @override
   T get value {
     reportObserved();
@@ -158,8 +156,8 @@ class Signal<T> extends ReadSignal<T> {
 
     // store the previous value
     _previousValue = _value;
-    if (!_hasPreviousValue) {
-      _hasPreviousValue = true;
+    if (!hasPreviousValue) {
+      hasPreviousValue = true;
     }
 
     // notify with the new value
@@ -182,49 +180,6 @@ class Signal<T> extends ReadSignal<T> {
     }
     return false;
   }
-
-  /// Whether or not there has already been a previous value. It is especially
-  /// helpful if [T] is nullable.
-  ///
-  /// Note: if [T] is non-nullable, [hasPreviousValue] does not have to be used;
-  /// [previousValue] suffices.
-  ///
-  /// **Example**
-  ///
-  /// It is given the following `counter`.
-  ///
-  /// ```dart
-  /// final counter = createSignal<int?>(0);
-  /// ```
-  ///
-  /// The previous value of `counter` is required somewhere in the widget
-  /// tree. It can be retrieved safely through [hasPreviousValue].
-  ///
-  /// ```dart
-  /// if (counter.hasPreviousValue) {
-  ///   final v = counter.previousValue; // null could be a valid value
-  ///   // do some stuff based on v (valid previous value)
-  /// } else {
-  ///   // do something knowing there has not been a previous value yet
-
-  ///   // Note: counter.previousValue has to be null in this case
-  /// }
-  /// ```
-  ///
-  /// The above snippet is safer than relying only on [previousValue], as shown
-  /// in the next block.
-  ///
-  /// ```dart
-  /// final v = counter.previousValue;
-  /// if (v == null) {
-  ///   // does this mean the previous value is actually `null` (as valid
-  ///   // value), or the counter's value has not changed yet?
-  ///   // It is unclear...
-  /// } else {
-  ///   // do some stuff based on v (valid previous value)
-  /// }
-  /// ```
-  bool hasPreviousValue() => _hasPreviousValue;
 
   /// The previous value, if any.
   @override
