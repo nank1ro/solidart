@@ -227,11 +227,11 @@ class Resource<T> extends Signal<ResourceState<T>> {
     try {
       if (state is ResourceReady<T>) {
         update(
-          (value) => (value as ResourceReady<T>).copyWith(refreshing: true),
+          (value) => (value as ResourceReady<T>).copyWith(isRefreshing: true),
         );
       } else if (state is ResourceError<T>) {
         update(
-          (value) => (value as ResourceError<T>).copyWith(refreshing: true),
+          (value) => (value as ResourceError<T>).copyWith(isRefreshing: true),
         );
       } else {
         value = ResourceState<T>.loading();
@@ -316,13 +316,13 @@ sealed class ResourceState<T> {
 @immutable
 class ResourceReady<T> implements ResourceState<T> {
   /// Creates an [ResourceState] with a data.
-  const ResourceReady(this.value, {this.refreshing = false});
+  const ResourceReady(this.value, {this.isRefreshing = false});
 
   /// The value currently exposed.
   final T value;
 
   /// Indicates if the data is being refreshed, defaults to false.
-  final bool refreshing;
+  final bool isRefreshing;
 
   // coverage:ignore-start
   @override
@@ -336,7 +336,7 @@ class ResourceReady<T> implements ResourceState<T> {
 
   @override
   String toString() {
-    return 'ResourceReady<$T>(value: $value, refreshing: $refreshing)';
+    return 'ResourceReady<$T>(value: $value, refreshing: $isRefreshing)';
   }
 
   @override
@@ -344,19 +344,19 @@ class ResourceReady<T> implements ResourceState<T> {
     return runtimeType == other.runtimeType &&
         other is ResourceReady<T> &&
         other.value == value &&
-        other.refreshing == refreshing;
+        other.isRefreshing == isRefreshing;
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, value, refreshing);
+  int get hashCode => Object.hash(runtimeType, value, isRefreshing);
 
-  /// Convenience method to update the [refreshing] value of a [Resource]
+  /// Convenience method to update the [isRefreshing] value of a [Resource]
   ResourceReady<T> copyWith({
-    bool? refreshing,
+    bool? isRefreshing,
   }) {
     return ResourceReady(
       value,
-      refreshing: refreshing ?? this.refreshing,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
     );
   }
   // coverage:ignore-end
@@ -408,7 +408,7 @@ class ResourceError<T> implements ResourceState<T> {
   const ResourceError(
     this.error, {
     this.stackTrace,
-    this.refreshing = false,
+    this.isRefreshing = false,
   });
 
   /// The error.
@@ -418,7 +418,7 @@ class ResourceError<T> implements ResourceState<T> {
   final StackTrace? stackTrace;
 
   /// Indicates if the data is being refreshed, defaults to false.
-  final bool refreshing;
+  final bool isRefreshing;
 
   // coverage:ignore-start
   @override
@@ -433,7 +433,7 @@ class ResourceError<T> implements ResourceState<T> {
   @override
   String toString() {
     return 'ResourceError<$T>(error: $error, stackTrace: $stackTrace, '
-        'refreshing: $refreshing)';
+        'refreshing: $isRefreshing)';
   }
 
   @override
@@ -442,20 +442,20 @@ class ResourceError<T> implements ResourceState<T> {
         other is ResourceError<T> &&
         other.error == error &&
         other.stackTrace == stackTrace &&
-        other.refreshing == refreshing;
+        other.isRefreshing == isRefreshing;
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, error, stackTrace, refreshing);
+  int get hashCode => Object.hash(runtimeType, error, stackTrace, isRefreshing);
 
-  /// Convenience method to update the [refreshing] value of a [Resource]
+  /// Convenience method to update the [isRefreshing] value of a [Resource]
   ResourceError<T> copyWith({
-    bool? refreshing,
+    bool? isRefreshing,
   }) {
     return ResourceError(
       error,
       stackTrace: stackTrace,
-      refreshing: refreshing ?? this.refreshing,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
     );
   }
   // coverage:ignore-end
@@ -505,6 +505,12 @@ extension ResourceExtensions<T> on ResourceState<T> {
 
   /// Indicates if the resource is ready.
   bool get isReady => this is ResourceReady<T>;
+
+  /// Indicates if the resource is refreshing. Loading is not considered as
+  /// refreshing.
+  bool get isRefreshing =>
+      this is ResourceReady<T> && this.asReady!.isRefreshing ||
+      this is ResourceError<T> && this.asError!.isRefreshing;
 
   /// Upcast [ResourceState] into a [ResourceReady], or return null if the
   /// [ResourceState] is in loading/error state.
@@ -585,15 +591,14 @@ extension ResourceExtensions<T> on ResourceState<T> {
   /// All cases are required.
   R on<R>({
     // ignore: avoid_positional_boolean_parameters
-    required R Function(T data, bool refreshing) ready,
+    required R Function(T data) ready,
     // ignore: avoid_positional_boolean_parameters
-    required R Function(Object error, StackTrace? stackTrace, bool refreshing)
-        error,
+    required R Function(Object error, StackTrace? stackTrace) error,
     required R Function() loading,
   }) {
     return map(
-      ready: (r) => ready(r.value, r.refreshing),
-      error: (e) => error(e.error, e.stackTrace, e.refreshing),
+      ready: (r) => ready(r.value),
+      error: (e) => error(e.error, e.stackTrace),
       loading: (l) => loading(),
     );
   }
@@ -603,18 +608,18 @@ extension ResourceExtensions<T> on ResourceState<T> {
   R maybeOn<R>({
     required R Function() orElse,
     // ignore: avoid_positional_boolean_parameters
-    R Function(T data, bool refreshing)? ready,
+    R Function(T data)? ready,
     // ignore: avoid_positional_boolean_parameters
-    R Function(Object error, StackTrace? stackTrace, bool refreshing)? error,
+    R Function(Object error, StackTrace? stackTrace)? error,
     R Function()? loading,
   }) {
     return map(
       ready: (r) {
-        if (ready != null) return ready(r.value, r.refreshing);
+        if (ready != null) return ready(r.value);
         return orElse();
       },
       error: (e) {
-        if (error != null) return error(e.error, e.stackTrace, e.refreshing);
+        if (error != null) return error(e.error, e.stackTrace);
         return orElse();
       },
       loading: (l) {
