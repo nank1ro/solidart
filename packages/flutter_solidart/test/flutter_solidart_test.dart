@@ -70,13 +70,17 @@ void main() {
         home: Scaffold(
           body: ResourceBuilder(
             resource: r,
-            builder: (context, resource) {
-              return resource.on(
-                ready: (data, refreshing) {
-                  return Text('Data: $data (refreshing: $refreshing)');
+            builder: (context, resourceState) {
+              return resourceState.on(
+                ready: (data) {
+                  return Text(
+                    'Data: $data (refreshing: ${resourceState.isRefreshing})',
+                  );
                 },
-                error: (err, _, refreshing) {
-                  return Text('Error (refreshing: $refreshing)');
+                error: (err, _) {
+                  return Text(
+                    'Error (refreshing: ${resourceState.isRefreshing})',
+                  );
                 },
                 loading: () {
                   return const Text('Loading');
@@ -101,7 +105,7 @@ void main() {
     unawaited(r.refetch());
     await tester.pumpAndSettle(const Duration(milliseconds: 40));
     expect(dataFinder(0, refreshing: true), findsOneWidget);
-    expect(errorFinder(), findsNothing);
+    expect(errorFinder(refreshing: true), findsNothing);
     expect(loadingFinder, findsNothing);
 
     await tester.pumpAndSettle();
@@ -123,13 +127,17 @@ void main() {
         home: Scaffold(
           body: ResourceBuilder(
             resource: r,
-            builder: (context, resource) {
-              return resource.on(
-                ready: (data, refreshing) {
-                  return Text('Data: $data (refreshing: $refreshing)');
+            builder: (context, resourceState) {
+              return resourceState.on(
+                ready: (data) {
+                  return Text(
+                    'Data: $data (refreshing: ${resourceState.isRefreshing})',
+                  );
                 },
-                error: (err, _, refreshing) {
-                  return Text('Error (refreshing: $refreshing)');
+                error: (err, _) {
+                  return Text(
+                    'Error (refreshing: ${resourceState.isRefreshing})',
+                  );
                 },
                 loading: () {
                   return const Text('Loading');
@@ -161,7 +169,10 @@ void main() {
       (tester) async {
     final s = createSignal(0);
     Future<int> fetcher() {
-      return Future.microtask(() => throw Exception());
+      return Future.delayed(
+        const Duration(milliseconds: 150),
+        () => throw Exception(),
+      );
     }
 
     final r = createResource(fetcher: fetcher, source: s);
@@ -170,13 +181,17 @@ void main() {
         home: Scaffold(
           body: ResourceBuilder(
             resource: r,
-            builder: (context, resource) {
-              return resource.on(
-                ready: (data, refreshing) {
-                  return Text('Data: $data (refreshing: $refreshing)');
+            builder: (context, resourceState) {
+              return resourceState.on(
+                ready: (data) {
+                  return Text(
+                    'Data: $data (refreshing: ${resourceState.isRefreshing})',
+                  );
                 },
-                error: (err, _, refreshing) {
-                  return Text('Error (refreshing: $refreshing)');
+                error: (err, _) {
+                  return Text(
+                    'Error (refreshing: ${resourceState.isRefreshing})',
+                  );
                 },
                 loading: () {
                   return const Text('Loading');
@@ -193,18 +208,18 @@ void main() {
         find.text('Error (refreshing: $refreshing)');
     final loadingFinder = find.text('Loading');
 
-    await tester.pumpAndSettle();
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
     expect(dataFinder(0), findsNothing);
     expect(errorFinder(), findsOneWidget);
-    expect(loadingFinder, findsNothing);   
+    expect(loadingFinder, findsNothing);
 
     unawaited(r.refetch());
     await tester.pumpAndSettle(const Duration(milliseconds: 40));
-    expect(dataFinder(0), findsNothing);
-    expect(errorFinder(), findsOneWidget); // TODO: should be errorFinder(refreshing: true)
+    expect(dataFinder(0, refreshing: true), findsNothing);
+    expect(errorFinder(refreshing: true), findsOneWidget);
     expect(loadingFinder, findsNothing);
 
-    await tester.pumpAndSettle();
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
     expect(dataFinder(0), findsNothing);
     expect(errorFinder(), findsOneWidget);
     expect(loadingFinder, findsNothing);

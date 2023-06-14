@@ -469,8 +469,8 @@ void main() {
       expect(resource.state.isReady, true);
 
       resource.state.on(
-        ready: (data, refreshing) {},
-        error: (error, stack, refreshing) {},
+        ready: (data) {},
+        error: (error, stack) {},
         loading: () {},
       );
 
@@ -497,15 +497,15 @@ void main() {
       createEffect(
         (_) {
           resource.state.on(
-            ready: (data, refreshing) {
-              if (refreshing) {
+            ready: (data) {
+              if (resource.state.isRefreshing) {
                 refreshingOnDataTimes++;
               } else {
                 dataCalledTimes++;
               }
             },
-            error: (error, stackTrace, refreshing) {
-              if (refreshing) {
+            error: (error, stackTrace) {
+              if (resource.state.isRefreshing) {
                 refreshingOnErrorTimes++;
               } else {
                 errorCalledTimes++;
