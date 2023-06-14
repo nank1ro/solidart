@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_solidart/src/widgets/signal_builder.dart';
 import 'package:solidart/solidart.dart';
 
-/// Builder function for a [resource]
+/// Builder function for a [Resource].
 typedef ResourceWidgetBuilder<T> = Widget Function(
   BuildContext context,
-  ResourceState<T> resource,
+  ResourceState<T> state,
 );
 
 /// {@template resourcebuilder}
