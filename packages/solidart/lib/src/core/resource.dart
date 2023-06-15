@@ -65,10 +65,10 @@ Resource<T> createResource<T>({
 ///
 /// // The fetcher
 /// Future<String> fetchUser() async {
-///     final response = await http.get(
-///       Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
-///     );
-///     return response.body;
+///   final response = await http.get(
+///     Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
+///   );
+///   return response.body;
 /// }
 ///
 /// // The resource (source is optional)
