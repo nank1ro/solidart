@@ -156,6 +156,9 @@ class Signal<T> extends ReadSignal<T> {
 
     // store the previous value
     _previousValue = _value;
+    if (!hasPreviousValue) {
+      hasPreviousValue = true;
+    }
 
     // notify with the new value
     _value = newValue;

@@ -33,6 +33,10 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   final T _value;
 
+  /// Whether or not there has already been a previous value. It is especially
+  /// helpful if [T] is nullable.
+  bool hasPreviousValue = false;
+
   /// All the observers
   @internal
   final List<ObserveCallback<T>> listeners = [];
