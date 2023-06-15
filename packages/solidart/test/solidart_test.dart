@@ -468,12 +468,6 @@ void main() {
       expect(resource.state.asReady, isNotNull);
       expect(resource.state.isReady, true);
 
-      resource.state.on(
-        ready: (data) {},
-        error: (error, stack) {},
-        loading: () {},
-      );
-
       resource.dispose();
     });
 
