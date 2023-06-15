@@ -27,11 +27,8 @@ class _ResourcePageState extends State<ResourcePage> {
   }
 
   Future<String> fetchUser() async {
-    // ignore: avoid_print
-    print('fetchUser function called (with 2s initial delay)');
     // simulating a delay to mimic a slow HTTP request
     await Future.delayed(const Duration(seconds: 2));
-    print('Now fetching user: ${userId.value}');
     final response = await http.get(
       Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
     );
