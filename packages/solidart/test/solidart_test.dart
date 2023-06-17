@@ -9,6 +9,7 @@ import 'package:solidart/src/core/read_signal.dart';
 import 'package:solidart/src/core/resource.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_options.dart';
+import 'package:solidart/src/extensions.dart';
 import 'package:solidart/src/utils.dart';
 import 'package:test/test.dart';
 
@@ -220,6 +221,13 @@ void main() {
       expect(s.hasObservers, true);
       addTearDown(s.dispose);
     });
+
+    test('Signal<bool> toggle', () {
+      final signal = createSignal(false);
+      expect(signal(), false);
+      signal.toggle();
+      expect(signal(), true);
+    });
   });
 
   group('createEffect tests = ', () {
@@ -333,19 +341,30 @@ void main() {
     test("selector's readable signal contains previous value", () async {
       final signal = createSignal(0);
       final derived = createComputed(() => signal() * 2);
+      expect(derived.hasPreviousValue, false);
       expect(derived.previousValue, null);
 
       signal.set(1);
       await pumpEventQueue();
+      expect(derived.hasPreviousValue, true);
       expect(derived.previousValue, 0);
 
       signal.set(2);
       await pumpEventQueue();
+      expect(derived.hasPreviousValue, true);
       expect(derived.previousValue, 2);
 
       signal.set(1);
       await pumpEventQueue();
+      expect(derived.hasPreviousValue, true);
       expect(derived.previousValue, 4);
+    });
+
+    test('signal has previous value', () {
+      final s = createSignal(0);
+      expect(s.hasPreviousValue, false);
+      s.set(1);
+      expect(s.hasPreviousValue, true);
     });
 
     test('derived signal disposes', () async {

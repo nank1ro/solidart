@@ -130,8 +130,12 @@ class Signal<T> extends ReadSignal<T> {
 
   // Tracks the internal value
   T _value;
+
   // Tracks the internal previous value
   T? _previousValue;
+
+  // Whether or not there is a previous value
+  bool _hasPreviousValue = false;
 
   @override
   T get value {
@@ -156,9 +160,7 @@ class Signal<T> extends ReadSignal<T> {
 
     // store the previous value
     _previousValue = _value;
-    if (!hasPreviousValue) {
-      hasPreviousValue = true;
-    }
+    _hasPreviousValue = true;
 
     // notify with the new value
     _value = newValue;
@@ -180,6 +182,9 @@ class Signal<T> extends ReadSignal<T> {
     }
     return false;
   }
+
+  @override
+  bool get hasPreviousValue => _hasPreviousValue;
 
   /// The previous value, if any.
   @override
