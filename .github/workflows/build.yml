@@ -40,10 +40,10 @@ jobs:
       - name: Install VeryGoodCLI
         run: dart pub global activate very_good_cli
 
-      - name: Analyze projects
+      - name: Analyze packages
         run: melos run analyze
 
-      - name: Test projects
+      - name: Test packages
         run: melos run test
 
       - name: Combine coverage
