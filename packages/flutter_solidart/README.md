@@ -112,28 +112,42 @@ Using `ResourceBuilder` you can react to the state of the resource:
 ```dart
 ResourceBuilder(
   resource: user,
-  builder: (_, resource) {
-    return resource.on(
-      // the call was successful
-      ready: (data, refreshing) {
+  builder: (_, userState) {
+    return userState.on(
+      ready: (data) {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               title: Text(data),
-              subtitle: Text('refreshing: $refreshing'),
+              subtitle:
+                  Text('refreshing: ${userState.isRefreshing}'),
             ),
-            ElevatedButton(
-              // you can refetch if you want to update the data
-              onPressed: user.refetch,
-              child: const Text('Refresh'),
-            ),
+            if (userState.isRefreshing)
+              const CircularProgressIndicator(),
+            if (!userState.isRefreshing)
+              ElevatedButton(
+                onPressed: user.refetch,
+                child: const Text('Refresh'),
+              ),
           ],
         );
       },
-      // the call failed.
-      error: (e, _) => Text(e.toString()),
-      // the call is loading.
+      error: (e, _) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(e.toString()),
+            if (userState.isRefreshing)
+              const CircularProgressIndicator(),
+            if (!userState.isRefreshing)
+              ElevatedButton(
+                onPressed: user.refetch,
+                child: const Text('Refresh'),
+              ),
+          ],
+        );
+      },
       loading: () {
         return const RepaintBoundary(
           child: CircularProgressIndicator(),
