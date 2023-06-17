@@ -78,6 +78,9 @@ class Computed<T> extends Signal<T> implements Derivation {
   // Tracks the internal previous value
   T? _previousValue;
 
+  // Whether or not there is a previous value
+  bool _hasPreviousValue = false;
+
   @override
   // ignore: overridden_fields
   final String name;
@@ -127,6 +130,7 @@ class Computed<T> extends Signal<T> implements Derivation {
       if (context.shouldCompute(this)) {
         context.startBatch();
         _value = _computeValue(track: false);
+        _hasPreviousValue = true;
         context.endBatch();
       }
     } else {
@@ -143,6 +147,9 @@ class Computed<T> extends Signal<T> implements Derivation {
     }
     return _value as T;
   }
+
+  @override
+  bool get hasPreviousValue => _hasPreviousValue;
 
   /// The previous value, if any.
   @override
@@ -216,6 +223,7 @@ class Computed<T> extends Signal<T> implements Derivation {
     if (changed) {
       _previousValue = oldValue;
       _value = newValue;
+      _hasPreviousValue = true;
     }
 
     return changed;

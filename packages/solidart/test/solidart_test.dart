@@ -333,19 +333,30 @@ void main() {
     test("selector's readable signal contains previous value", () async {
       final signal = createSignal(0);
       final derived = createComputed(() => signal() * 2);
+      expect(derived.hasPreviousValue, false);
       expect(derived.previousValue, null);
 
       signal.set(1);
       await pumpEventQueue();
+      expect(derived.hasPreviousValue, true);
       expect(derived.previousValue, 0);
 
       signal.set(2);
       await pumpEventQueue();
+      expect(derived.hasPreviousValue, true);
       expect(derived.previousValue, 2);
 
       signal.set(1);
       await pumpEventQueue();
+      expect(derived.hasPreviousValue, true);
       expect(derived.previousValue, 4);
+    });
+
+    test('signal has previous value', () {
+      final s = createSignal(0);
+      expect(s.hasPreviousValue, false);
+      s.set(1);
+      expect(s.hasPreviousValue, true);
     });
 
     test('derived signal disposes', () async {
