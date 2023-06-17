@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:meta/meta.dart';
+import 'package:solidart/solidart.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_base.dart';
 import 'package:solidart/src/core/signal_options.dart';
@@ -508,9 +509,11 @@ extension ResourceExtensions<T> on ResourceState<T> {
 
   /// Indicates if the resource is refreshing. Loading is not considered as
   /// refreshing.
-  bool get isRefreshing =>
-      this is ResourceReady<T> && this.asReady!.isRefreshing ||
-      this is ResourceError<T> && this.asError!.isRefreshing;
+  bool get isRefreshing => switch (this) {
+        ResourceReady<T>(:final isRefreshing) => isRefreshing,
+        ResourceError<T>(:final isRefreshing) => isRefreshing,
+        ResourceLoading<T>() || ResourceUnresolved<T>() => false,
+      };
 
   /// Upcast [ResourceState] into a [ResourceReady], or return null if the
   /// [ResourceState] is in loading/error state.
