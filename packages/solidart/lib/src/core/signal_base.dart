@@ -14,7 +14,7 @@ abstract class SignalBase<T> {
   /// The current signal value
   T call();
 
-  /// Whether or not there has already been a previous value. It is especially
+  /// Indicates if there is a previous value. It is especially
   /// helpful if [T] is nullable.
   bool get hasPreviousValue;
 
