@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: dart-lang/setup-dart@v1.3
+      - uses: dart-lang/setup-dart@v1.5.0
 
       # Dart
       - name: Install dependencies
@@ -27,7 +27,7 @@ jobs:
         working-directory: ./packages/solidart
 
       # Flutter
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2.10.0
         with:
           channel: "stable"
       - name: Install dependencies
