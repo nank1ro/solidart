@@ -9,6 +9,7 @@ import 'package:solidart/src/core/read_signal.dart';
 import 'package:solidart/src/core/resource.dart';
 import 'package:solidart/src/core/signal.dart';
 import 'package:solidart/src/core/signal_options.dart';
+import 'package:solidart/src/extensions.dart';
 import 'package:solidart/src/utils.dart';
 import 'package:test/test.dart';
 
@@ -219,6 +220,13 @@ void main() {
       });
       expect(s.hasObservers, true);
       addTearDown(s.dispose);
+    });
+
+    test('Signal<bool> toggle', () {
+      final signal = createSignal(false);
+      expect(signal(), false);
+      signal.toggle();
+      expect(signal(), true);
     });
   });
 
