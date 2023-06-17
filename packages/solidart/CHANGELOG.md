@@ -1,3 +1,8 @@
+## 1.0.0-dev4
+
+- Move `refreshing` from `ResourceWidgetBuilder` into the `ResourceState`.
+- Add `hasPreviousValue` getter to `ReadSignal`.
+
 ## 1.0.0-dev3
 
 - Deprecate `value` getter in the `Resource`. Use `state` instead.

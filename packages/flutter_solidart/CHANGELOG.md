@@ -1,3 +1,12 @@
+## 1.0.0-dev5
+
+- Rename `resource` parameter of `ResourceWidgetBuilder` into `resourceState`.
+
+### Changes from solidart
+
+- Move `refreshing` from `ResourceWidgetBuilder` into the `ResourceState`.
+- Add `hasPreviousValue` getter to `ReadSignal`.
+
 ## 1.0.0-dev4
 
 - Converting a `ValueNotifier` into a `Signal` now uses the `equals` comparator to keep the consistency.
