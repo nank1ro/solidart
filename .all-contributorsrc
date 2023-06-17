@@ -1,0 +1,50 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "nank1ro",
+      "name": "Alexandru Mariuti",
+      "avatar_url": "https://avatars.githubusercontent.com/u/60045235?v=4",
+      "profile": "http://www.bestofcode.dev",
+      "contributions": [
+        "code",
+        "bug",
+        "maintenance",
+        "question",
+        "review",
+        "doc",
+        "test"
+      ]
+    },
+    {
+      "login": "manuel-plavsic",
+      "name": "manuel-plavsic",
+      "avatar_url": "https://avatars.githubusercontent.com/u/55398763?v=4",
+      "profile": "https://github.com/manuel-plavsic",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "luketg8",
+      "name": "Luke Greenwood",
+      "avatar_url": "https://avatars.githubusercontent.com/u/10770936?v=4",
+      "profile": "https://github.com/luketg8",
+      "contributions": [
+        "doc"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "solidart",
+  "projectOwner": "nank1ro",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true,
+  "commitType": "docs",
+  "commitConvention": "angular"
+}

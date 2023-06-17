@@ -5,6 +5,7 @@
 [![GitHub pull-requests](https://img.shields.io/github/issues-pr/nank1ro/solidart.svg)](https://gitHub.com/nank1ro/solidart/pull/)
 [![solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/solidart?include_prereleases)](https://pub.dev/packages/solidart)
 [![flutter_solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/flutter_solidart?include_prereleases)](https://pub.dev/packages/flutter_solidart)
+[![All Contributors](https://img.shields.io/github/all-contributors/nank1ro/solidart?color=ee8449&style=flat-square)](#contributors)
 
 # A simple state-management library inspired by SolidJS.
 
@@ -113,28 +114,42 @@ If you're using `ResourceBuilder` you can react to the state of the resource:
 ```dart
 ResourceBuilder(
   resource: user,
-  builder: (_, resource) {
-    return resource.on(
-      // the call was successful
-      ready: (data, refreshing) {
+  builder: (_, userState) {
+    return userState.on(
+      ready: (data) {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               title: Text(data),
-              subtitle: Text('refreshing: $refreshing'),
+              subtitle:
+                  Text('refreshing: ${userState.isRefreshing}'),
             ),
-            ElevatedButton(
-              // you can refetch if you want to update the data
-              onPressed: user.refetch,
-              child: const Text('Refresh'),
-            ),
+            if (userState.isRefreshing)
+              const CircularProgressIndicator(),
+            if (!userState.isRefreshing)
+              ElevatedButton(
+                onPressed: user.refetch,
+                child: const Text('Refresh'),
+              ),
           ],
         );
       },
-      // the call failed.
-      error: (e, _) => Text(e.toString()),
-      // the call is loading.
+      error: (e, _) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(e.toString()),
+            if (userState.isRefreshing)
+              const CircularProgressIndicator(),
+            if (!userState.isRefreshing)
+              ElevatedButton(
+                onPressed: user.refetch,
+                child: const Text('Refresh'),
+              ),
+          ],
+        );
+      },
       loading: () {
         return const RepaintBoundary(
           child: CircularProgressIndicator(),
@@ -284,3 +299,23 @@ Learn every feature of `flutter_solidart` including:
 6. `createResource` and `ResourceBuilder`
 7. `Solid` and its fine-grained reactivity
 8. Access signals in modals with `Solid.value`
+
+## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="http://www.bestofcode.dev"><img src="https://avatars.githubusercontent.com/u/60045235?v=4?s=100" width="100px;" alt="Alexandru Mariuti"/><br /><sub><b>Alexandru Mariuti</b></sub></a><br /><a href="https://github.com/nank1ro/solidart/commits?author=nank1ro" title="Code">💻</a> <a href="https://github.com/nank1ro/solidart/issues?q=author%3Anank1ro" title="Bug reports">🐛</a> <a href="#maintenance-nank1ro" title="Maintenance">🚧</a> <a href="#question-nank1ro" title="Answering Questions">💬</a> <a href="https://github.com/nank1ro/solidart/pulls?q=is%3Apr+reviewed-by%3Anank1ro" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/nank1ro/solidart/commits?author=nank1ro" title="Documentation">📖</a> <a href="https://github.com/nank1ro/solidart/commits?author=nank1ro" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/manuel-plavsic"><img src="https://avatars.githubusercontent.com/u/55398763?v=4?s=100" width="100px;" alt="manuel-plavsic"/><br /><sub><b>manuel-plavsic</b></sub></a><br /><a href="https://github.com/nank1ro/solidart/commits?author=manuel-plavsic" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/luketg8"><img src="https://avatars.githubusercontent.com/u/10770936?v=4?s=100" width="100px;" alt="Luke Greenwood"/><br /><sub><b>Luke Greenwood</b></sub></a><br /><a href="https://github.com/nank1ro/solidart/commits?author=luketg8" title="Documentation">📖</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->

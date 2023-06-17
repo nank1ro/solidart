@@ -50,7 +50,6 @@ typedef ResourceWidgetBuilder<T> = Widget Function(
 ///
 ///   // fetcher
 ///   Future<String> fetchUser() async {
-///     print('Fetch user: ${userId.value}');
 ///     final response = await http.get(
 ///       Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
 ///     );

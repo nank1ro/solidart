@@ -27,8 +27,8 @@ class _ResourcePageState extends State<ResourcePage> {
   }
 
   Future<String> fetchUser() async {
-    // ignore: avoid_print
-    print('Fetch user: ${userId.value}');
+    // simulating a delay to mimic a slow HTTP request
+    await Future.delayed(const Duration(seconds: 2));
     final response = await http.get(
       Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
     );
@@ -60,24 +60,42 @@ class _ResourcePageState extends State<ResourcePage> {
             const SizedBox(height: 16),
             ResourceBuilder(
               resource: user,
-              builder: (_, userValue) {
-                return userValue.on(
-                  ready: (data, refreshing) {
+              builder: (_, userState) {
+                return userState.on(
+                  ready: (data) {
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ListTile(
                           title: Text(data),
-                          subtitle: Text('refreshing: $refreshing'),
+                          subtitle:
+                              Text('refreshing: ${userState.isRefreshing}'),
                         ),
-                        ElevatedButton(
-                          onPressed: user.refetch,
-                          child: const Text('Refresh'),
-                        ),
+                        if (userState.isRefreshing)
+                          const CircularProgressIndicator(),
+                        if (!userState.isRefreshing)
+                          ElevatedButton(
+                            onPressed: user.refetch,
+                            child: const Text('Refresh'),
+                          ),
                       ],
                     );
                   },
-                  error: (e, _) => Text(e.toString()),
+                  error: (e, _) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(e.toString()),
+                        if (userState.isRefreshing)
+                          const CircularProgressIndicator(),
+                        if (!userState.isRefreshing)
+                          ElevatedButton(
+                            onPressed: user.refetch,
+                            child: const Text('Refresh'),
+                          ),
+                      ],
+                    );
+                  },
                   loading: () {
                     return const RepaintBoundary(
                       child: CircularProgressIndicator(),
