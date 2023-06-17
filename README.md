@@ -125,13 +125,12 @@ ResourceBuilder(
               subtitle:
                   Text('refreshing: ${userState.isRefreshing}'),
             ),
-            if (userState.isRefreshing)
-              const CircularProgressIndicator(),
-            if (!userState.isRefreshing)
-              ElevatedButton(
-                onPressed: user.refetch,
-                child: const Text('Refresh'),
-              ),
+            userState.isRefreshing
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: user.refetch,
+                    child: const Text('Refresh'),
+                  ),
           ],
         );
       },
@@ -140,13 +139,12 @@ ResourceBuilder(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(e.toString()),
-            if (userState.isRefreshing)
-              const CircularProgressIndicator(),
-            if (!userState.isRefreshing)
-              ElevatedButton(
-                onPressed: user.refetch,
-                child: const Text('Refresh'),
-              ),
+            userState.isRefreshing
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: user.refetch,
+                    child: const Text('Refresh'),
+                  ),
           ],
         );
       },

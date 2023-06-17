@@ -71,13 +71,12 @@ class _ResourcePageState extends State<ResourcePage> {
                           subtitle:
                               Text('refreshing: ${userState.isRefreshing}'),
                         ),
-                        if (userState.isRefreshing)
-                          const CircularProgressIndicator(),
-                        if (!userState.isRefreshing)
-                          ElevatedButton(
-                            onPressed: user.refetch,
-                            child: const Text('Refresh'),
-                          ),
+                        userState.isRefreshing
+                            ? const CircularProgressIndicator()
+                            : ElevatedButton(
+                                onPressed: user.refetch,
+                                child: const Text('Refresh'),
+                              ),
                       ],
                     );
                   },
@@ -86,13 +85,12 @@ class _ResourcePageState extends State<ResourcePage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(e.toString()),
-                        if (userState.isRefreshing)
-                          const CircularProgressIndicator(),
-                        if (!userState.isRefreshing)
-                          ElevatedButton(
-                            onPressed: user.refetch,
-                            child: const Text('Refresh'),
-                          ),
+                        userState.isRefreshing
+                            ? const CircularProgressIndicator()
+                            : ElevatedButton(
+                                onPressed: user.refetch,
+                                child: const Text('Refresh'),
+                              ),
                       ],
                     );
                   },
