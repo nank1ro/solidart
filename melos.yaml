@@ -1,7 +1,8 @@
 name: Melos
 
 packages:
-  - packages/*
+  - packages/solidart
+  - packages/flutter_solidart
 
 scripts:
   analyze:
