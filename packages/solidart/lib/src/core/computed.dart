@@ -151,6 +151,13 @@ class Computed<T> extends Signal<T> implements Derivation {
   @override
   bool get hasPreviousValue => _hasPreviousValue;
 
+  /// The previous value, if any.
+  @override
+  T? get previousValue {
+    reportObserved();
+    return _previousValue;
+  }
+
   @override
   DisposeEffect observe(
     ObserveCallback<T> listener, {
