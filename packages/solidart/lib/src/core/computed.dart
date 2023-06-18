@@ -81,6 +81,10 @@ class Computed<T> extends Signal<T> implements Derivation {
   // Whether or not there is a previous value
   bool _hasPreviousValue = false;
 
+  /// Used internally to determine if it is already possible to set
+  /// [_hasPreviousValue] to true
+  bool _computedFirstValue = false;
+
   @override
   // ignore: overridden_fields
   final String name;
@@ -223,7 +227,15 @@ class Computed<T> extends Signal<T> implements Derivation {
     if (changed) {
       _previousValue = oldValue;
       _value = newValue;
-      _hasPreviousValue = true;
+    }
+
+    if (_computedFirstValue) {
+      if (!_hasPreviousValue) {
+        _hasPreviousValue = true;
+        reportChanged();
+      }
+    } else {
+      _computedFirstValue = true;
     }
 
     return changed;
