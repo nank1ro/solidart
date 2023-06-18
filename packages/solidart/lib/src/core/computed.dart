@@ -227,15 +227,12 @@ class Computed<T> extends Signal<T> implements Derivation {
     if (changed) {
       _previousValue = oldValue;
       _value = newValue;
-    }
-
-    if (_computedFirstValue) {
-      if (!_hasPreviousValue) {
+      if (_computedFirstValue) {
         _hasPreviousValue = true;
-        reportChanged();
       }
-    } else {
-      _computedFirstValue = true;
+      if (!_computedFirstValue) {
+        _computedFirstValue = true;
+      }
     }
 
     return changed;
