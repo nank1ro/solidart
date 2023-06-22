@@ -89,7 +89,10 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   T call() => value;
 
   @override
-  bool get hasPreviousValue => _hasPreviousValue;
+  bool get hasPreviousValue {
+    _reportObserved();
+    return _hasPreviousValue;
+  }
 
   /// The previous value, if any.
   @override
