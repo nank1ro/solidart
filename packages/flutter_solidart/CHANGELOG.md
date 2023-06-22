@@ -1,3 +1,9 @@
+## 1.0.0-dev6
+
+### Changes from solidart
+
+- **BUGFIX** Refactor the core of the library in order to fix issues with `previousValue` and `hasPreviousValue` of `Computed` and simplify the logic.
+
 ## 1.0.0-dev5
 
 - Rename `resource` parameter of `ResourceWidgetBuilder` into `resourceState`. (thanks to @manuel-plavsic)

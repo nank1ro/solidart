@@ -1,3 +1,7 @@
+## 1.0.0-dev5
+
+- **BUGFIX** Refactor the core of the library in order to fix issues with `previousValue` and `hasPreviousValue` of `Computed` and simplify the logic.
+
 ## 1.0.0-dev4
 
 - Move `refreshing` from `ResourceWidgetBuilder` into the `ResourceState`. (thanks to @manuel-plavsic)

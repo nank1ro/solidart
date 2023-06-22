@@ -1,8 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-import 'package:meta/meta.dart';
-import 'package:solidart/src/core/atom.dart';
-import 'package:solidart/src/utils.dart';
+part of 'core.dart';
 
 /// The state of the derivation
 enum DerivationState {
@@ -29,15 +27,15 @@ enum DerivationState {
 }
 
 abstract class Derivation {
-  late Set<Atom> observables;
-  Set<Atom>? newObservables;
+  late Set<Atom> _observables;
+  Set<Atom>? _newObservables;
 
-  SolidartCaughtException? errorValue;
+  SolidartCaughtException? _errorValue;
 
-  @internal
-  late DerivationState dependenciesState;
+  late DerivationState _dependenciesState;
 
-  void onBecomeStale();
+  void _onBecomeStale();
 
-  void suspend();
+  // ignore: unused_element
+  void _suspend();
 }

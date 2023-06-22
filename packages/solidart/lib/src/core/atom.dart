@@ -1,8 +1,5 @@
 // ignore_for_file: public_member_api_docs
-
-import 'package:meta/meta.dart';
-import 'package:solidart/src/core/derivation.dart';
-import 'package:solidart/src/core/reactive_context.dart';
+part of 'core.dart';
 
 /// {@template atom}
 /// Creates a simple Atom for tracking its usage in a reactive context. This is
@@ -16,51 +13,45 @@ class Atom {
     String? name,
   }) : name = name ?? ReactiveContext.main.nameFor('Atom');
 
-  @internal
-  final ReactiveContext context = ReactiveContext.main;
+  final ReactiveContext _context = ReactiveContext.main;
 
   final String name;
 
-  @internal
-  bool isPendingUnobservation = false;
-
-  @internal
-  DerivationState lowestObserverState = DerivationState.notTracking;
+  // ignore this lint, is a false statement, because the values is changed by
+  // reactive context.
+  // ignore: prefer_final_fields
+  bool _isPendingUnobservation = false;
+  DerivationState _lowestObserverState = DerivationState.notTracking;
 
   bool isBeingObserved = false;
 
-  @internal
-  final Set<Derivation> observers = {};
+  final Set<Derivation> _observers = {};
 
-  bool get hasObservers => observers.isNotEmpty;
+  bool get hasObservers => _observers.isNotEmpty;
 
-  @internal
-  void reportObserved() {
-    context.reportObserved(this);
+  void _reportObserved() {
+    _context.reportObserved(this);
   }
 
-  @internal
-  void reportChanged() {
-    context
+  void _reportChanged() {
+    _context
       ..startBatch()
       ..propagateChanged(this)
       ..endBatch();
   }
 
-  @internal
-  void addObserver(Derivation d) {
-    observers.add(d);
+  void _addObserver(Derivation d) {
+    _observers.add(d);
 
-    if (lowestObserverState.index > d.dependenciesState.index) {
-      lowestObserverState = d.dependenciesState;
+    if (_lowestObserverState.index > d._dependenciesState.index) {
+      _lowestObserverState = d._dependenciesState;
     }
   }
 
-  @internal
-  void removeObserver(Derivation d) {
-    observers.remove(d);
-    if (observers.isEmpty) {
-      context.enqueueForUnobservation(this);
+  void _removeObserver(Derivation d) {
+    _observers.remove(d);
+    if (_observers.isEmpty) {
+      _context.enqueueForUnobservation(this);
     }
   }
 }

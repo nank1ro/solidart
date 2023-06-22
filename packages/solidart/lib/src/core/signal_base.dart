@@ -1,7 +1,6 @@
 // coverage:ignore-file
 
-import 'package:solidart/src/core/signal_options.dart';
-import 'package:solidart/src/utils.dart';
+part of 'core.dart';
 
 /// A callback that stops an observation when called
 typedef DisposeObservation = void Function();

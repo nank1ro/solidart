@@ -1,10 +1,4 @@
-import 'dart:async';
-
-import 'package:meta/meta.dart';
-import 'package:solidart/src/core/atom.dart';
-import 'package:solidart/src/core/derivation.dart';
-import 'package:solidart/src/core/reactive_context.dart';
-import 'package:solidart/src/utils.dart';
+part of 'core.dart';
 
 /// Dispose function
 typedef DisposeEffect = void Function();
@@ -169,22 +163,24 @@ class Effect implements ReactionInterface {
   bool _isRunning = false;
 
   @override
-  DerivationState dependenciesState = DerivationState.notTracking;
+  // ignore: prefer_final_fields
+  DerivationState _dependenciesState = DerivationState.notTracking;
 
   @override
-  SolidartCaughtException? errorValue;
+  SolidartCaughtException? _errorValue;
 
   @override
-  Set<Atom>? newObservables;
+  Set<Atom>? _newObservables;
 
   @override
-  Set<Atom> observables = {};
+  // ignore: prefer_final_fields
+  Set<Atom> _observables = {};
 
   @override
   bool get isDisposed => _isDisposed;
 
   @override
-  void onBecomeStale() {
+  void _onBecomeStale() {
     schedule();
   }
 
@@ -214,10 +210,10 @@ class Effect implements ReactionInterface {
 
     if (_context.hasCaughtException(this)) {
       if (_onError != null) {
-        _onError!.call(errorValue!);
+        _onError!.call(_errorValue!);
       } // coverage:ignore-start
       else {
-        throw errorValue!;
+        throw _errorValue!;
       }
 // coverage:ignore-end
     }
@@ -239,11 +235,11 @@ class Effect implements ReactionInterface {
       } on Object catch (e, s) {
         // coverage:ignore-start
         // Note: "on Object" accounts for both Error and Exception
-        errorValue = SolidartCaughtException(e, stackTrace: s);
+        _errorValue = SolidartCaughtException(e, stackTrace: s);
         if (_onError != null) {
-          _onError!.call(errorValue!);
+          _onError!.call(_errorValue!);
         } else {
-          throw errorValue!;
+          throw _errorValue!;
         }
         // coverage:ignore-end
       }
@@ -253,9 +249,9 @@ class Effect implements ReactionInterface {
   }
 
   // coverage:ignore-start
-  /// No-op
   @override
-  void suspend() {}
+  // ignore: unused_element
+  void _suspend() {}
   // coverage:ignore-end
 
   /// Invalidates the effect.
