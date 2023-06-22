@@ -121,7 +121,7 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
       if (_context.shouldCompute(this)) {
         _context.startBatch();
         final newValue = _computeValue(track: false);
-        if (newValue != null) _setValue(newValue);
+        if (newValue is T) _setValue(newValue);
         _context.endBatch();
       }
     } else {
@@ -207,7 +207,7 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
     final changed =
         wasSuspended || changedException || !_areEqual(oldValue, newValue);
 
-    if (changed && newValue != null) {
+    if (changed && newValue is T) {
       _setValue(newValue);
     }
 

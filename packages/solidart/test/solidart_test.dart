@@ -363,6 +363,25 @@ void main() {
       expect(s.hasPreviousValue, true);
     });
 
+    test('nullable derived signal', () async {
+      final count = createSignal<int?>(0);
+      final doubleCount = createComputed(() {
+        if (count() == null) return null;
+        return count()! * 2;
+      });
+
+      await pumpEventQueue();
+      expect(doubleCount.value, 0);
+
+      count.set(1);
+      await pumpEventQueue();
+      expect(doubleCount.value, 2);
+
+      count.set(null);
+      await pumpEventQueue();
+      expect(doubleCount.value, null);
+    });
+
     test('derived signal disposes', () async {
       final count = createSignal(0);
       final doubleCount = createComputed(() => count() * 2);
