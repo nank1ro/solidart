@@ -1,4 +1,4 @@
-import 'package:solidart/src/core/signal.dart';
+import 'package:solidart/src/core/core.dart';
 
 /// Adds the [toggle] method to boolean signals
 extension ToggleBoolSignal on Signal<bool> {

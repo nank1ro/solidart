@@ -1,11 +1,5 @@
 // ignore_for_file: public_member_api_docs
-
-import 'package:meta/meta.dart';
-import 'package:solidart/src/core/atom.dart';
-import 'package:solidart/src/core/computed.dart';
-import 'package:solidart/src/core/derivation.dart';
-import 'package:solidart/src/core/effect.dart';
-import 'package:solidart/src/utils.dart';
+part of 'core.dart';
 
 class _ReactiveState {
   /// Current batch depth. This is used to track the depth of `transaction` / `action`.
@@ -87,16 +81,16 @@ class ReactiveContext {
 
       for (var i = 0; i < _state.pendingUnobservations.length; i++) {
         final ob = _state.pendingUnobservations[i]
-          ..isPendingUnobservation = false;
+          .._isPendingUnobservation = false;
 
-        if (ob.observers.isEmpty) {
+        if (ob._observers.isEmpty) {
           if (ob.isBeingObserved) {
             // if this observable had reactive observers, trigger the hooks
             ob.isBeingObserved = false;
           }
 
           if (ob is Computed) {
-            ob.suspend();
+            ob._suspend();
           }
         }
       }
@@ -110,7 +104,7 @@ class ReactiveContext {
     _state.trackingDerivation = derivation;
 
     _resetDerivationState(derivation);
-    derivation.newObservables = {};
+    derivation._newObservables = {};
 
     return prevDerivation;
   }
@@ -126,9 +120,9 @@ class ReactiveContext {
 
     try {
       result = fn();
-      d.errorValue = null;
+      d._errorValue = null;
     } on Object catch (e, s) {
-      d.errorValue = SolidartCaughtException(e, stackTrace: s);
+      d._errorValue = SolidartCaughtException(e, stackTrace: s);
     }
 
     endTracking(d, prevDerivation);
@@ -139,7 +133,7 @@ class ReactiveContext {
     final derivation = _state.trackingDerivation;
 
     if (derivation != null) {
-      derivation.newObservables!.add(atom);
+      derivation._newObservables!.add(atom);
       if (!atom.isBeingObserved) {
         atom.isBeingObserved = true;
       }
@@ -148,38 +142,38 @@ class ReactiveContext {
 
   void _bindDependencies(Derivation derivation) {
     final staleObservables =
-        derivation.observables.difference(derivation.newObservables!);
+        derivation._observables.difference(derivation._newObservables!);
     final newObservables =
-        derivation.newObservables!.difference(derivation.observables);
+        derivation._newObservables!.difference(derivation._observables);
     var lowestNewDerivationState = DerivationState.upToDate;
 
     // Add newly found observables
     for (final observable in newObservables) {
-      observable.addObserver(derivation);
+      observable._addObserver(derivation);
 
       // Computed = Observable + Derivation
       if (observable is Computed) {
-        if (observable.dependenciesState.index >
+        if (observable._dependenciesState.index >
             lowestNewDerivationState.index) {
-          lowestNewDerivationState = observable.dependenciesState;
+          lowestNewDerivationState = observable._dependenciesState;
         }
       }
     }
 
     // Remove previous observables
     for (final ob in staleObservables) {
-      ob.removeObserver(derivation);
+      ob._removeObserver(derivation);
     }
 
     if (lowestNewDerivationState != DerivationState.upToDate) {
       derivation
-        ..dependenciesState = lowestNewDerivationState
-        ..onBecomeStale();
+        .._dependenciesState = lowestNewDerivationState
+        .._onBecomeStale();
     }
 
     derivation
-      ..observables = derivation.newObservables!
-      ..newObservables = {}; // No need for newObservables beyond this point
+      .._observables = derivation._newObservables!
+      .._newObservables = {}; // No need for newObservables beyond this point
   }
 
   void addPendingReaction(ReactionInterface reaction) {
@@ -228,85 +222,85 @@ Probably there is a cycle in the reactive function: $failingReaction ''');
   }
 
   void propagateChanged(Atom atom) {
-    if (atom.lowestObserverState == DerivationState.stale) {
+    if (atom._lowestObserverState == DerivationState.stale) {
       return;
     }
 
-    atom.lowestObserverState = DerivationState.stale;
+    atom._lowestObserverState = DerivationState.stale;
 
-    for (final observer in atom.observers) {
-      if (observer.dependenciesState == DerivationState.upToDate) {
-        observer.onBecomeStale();
+    for (final observer in atom._observers) {
+      if (observer._dependenciesState == DerivationState.upToDate) {
+        observer._onBecomeStale();
       }
-      observer.dependenciesState = DerivationState.stale;
+      observer._dependenciesState = DerivationState.stale;
     }
   }
 
   void propagatePossiblyChanged(Atom atom) {
-    if (atom.lowestObserverState != DerivationState.upToDate) {
+    if (atom._lowestObserverState != DerivationState.upToDate) {
       return;
     }
 
-    atom.lowestObserverState = DerivationState.possiblyStale;
+    atom._lowestObserverState = DerivationState.possiblyStale;
 
-    for (final observer in atom.observers) {
-      if (observer.dependenciesState == DerivationState.upToDate) {
+    for (final observer in atom._observers) {
+      if (observer._dependenciesState == DerivationState.upToDate) {
         observer
-          ..dependenciesState = DerivationState.possiblyStale
-          ..onBecomeStale();
+          .._dependenciesState = DerivationState.possiblyStale
+          .._onBecomeStale();
       }
     }
   }
 
   void propagateChangeConfirmed(Atom atom) {
-    if (atom.lowestObserverState == DerivationState.stale) {
+    if (atom._lowestObserverState == DerivationState.stale) {
       return;
     }
 
-    atom.lowestObserverState = DerivationState.stale;
+    atom._lowestObserverState = DerivationState.stale;
 
-    for (final observer in atom.observers) {
-      if (observer.dependenciesState == DerivationState.possiblyStale) {
-        observer.dependenciesState = DerivationState.stale;
-      } else if (observer.dependenciesState == DerivationState.upToDate) {
-        atom.lowestObserverState = DerivationState.upToDate;
+    for (final observer in atom._observers) {
+      if (observer._dependenciesState == DerivationState.possiblyStale) {
+        observer._dependenciesState = DerivationState.stale;
+      } else if (observer._dependenciesState == DerivationState.upToDate) {
+        atom._lowestObserverState = DerivationState.upToDate;
       }
     }
   }
 
   void clearObservables(Derivation derivation) {
-    final observables = derivation.observables;
-    derivation.observables = {};
+    final observables = derivation._observables;
+    derivation._observables = {};
 
     for (final x in observables) {
-      x.removeObserver(derivation);
+      x._removeObserver(derivation);
     }
 
-    derivation.dependenciesState = DerivationState.notTracking;
+    derivation._dependenciesState = DerivationState.notTracking;
   }
 
   void enqueueForUnobservation(Atom atom) {
-    if (atom.isPendingUnobservation) {
+    if (atom._isPendingUnobservation) {
       return;
     }
 
-    atom.isPendingUnobservation = true;
+    atom._isPendingUnobservation = true;
     _state.pendingUnobservations.add(atom);
   }
 
   void _resetDerivationState(Derivation d) {
-    if (d.dependenciesState == DerivationState.upToDate) {
+    if (d._dependenciesState == DerivationState.upToDate) {
       return;
     }
 
-    d.dependenciesState = DerivationState.upToDate;
-    for (final obs in d.observables) {
-      obs.lowestObserverState = DerivationState.upToDate;
+    d._dependenciesState = DerivationState.upToDate;
+    for (final obs in d._observables) {
+      obs._lowestObserverState = DerivationState.upToDate;
     }
   }
 
   bool shouldCompute(Derivation derivation) {
-    switch (derivation.dependenciesState) {
+    switch (derivation._dependenciesState) {
       case DerivationState.upToDate:
         return false;
 
@@ -316,7 +310,7 @@ Probably there is a cycle in the reactive function: $failingReaction ''');
 
       case DerivationState.possiblyStale:
         return untracked(() {
-          for (final obs in derivation.observables) {
+          for (final obs in derivation._observables) {
             if (obs is Computed) {
               // Force a computation
               try {
@@ -325,7 +319,7 @@ Probably there is a cycle in the reactive function: $failingReaction ''');
                 return true;
               }
 
-              if (derivation.dependenciesState == DerivationState.stale) {
+              if (derivation._dependenciesState == DerivationState.stale) {
                 return true;
               }
             }
@@ -338,7 +332,7 @@ Probably there is a cycle in the reactive function: $failingReaction ''');
   }
 
   bool hasCaughtException(Derivation d) =>
-      d.errorValue is SolidartCaughtException;
+      d._errorValue is SolidartCaughtException;
 
   Derivation? startUntracked() {
     final prevDerivation = _state.trackingDerivation;

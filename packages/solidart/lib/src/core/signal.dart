@@ -1,9 +1,4 @@
-import 'package:meta/meta.dart';
-import 'package:solidart/src/core/reactive_context.dart';
-import 'package:solidart/src/core/read_signal.dart';
-import 'package:solidart/src/core/signal_base.dart';
-import 'package:solidart/src/core/signal_options.dart';
-import 'package:solidart/src/utils.dart';
+part of 'core.dart';
 
 /// {@macro signal}
 Signal<T> createSignal<T>(
@@ -126,22 +121,7 @@ class Signal<T> extends ReadSignal<T> {
   Signal(
     super.initialValue, {
     super.options,
-  }) : _value = initialValue;
-
-  // Tracks the internal value
-  T _value;
-
-  // Tracks the internal previous value
-  T? _previousValue;
-
-  // Whether or not there is a previous value
-  bool _hasPreviousValue = false;
-
-  @override
-  T get value {
-    reportObserved();
-    return _value;
-  }
+  });
 
   /// {@macro set-signal-value}
   set value(T newValue) => set(newValue);
@@ -152,56 +132,7 @@ class Signal<T> extends ReadSignal<T> {
   /// This operation may be skipped if the value is equal to the previous one,
   /// check [SignalOptions.equals] and [SignalOptions.comparator].
   /// {@endtemplate}
-  void set(T newValue) {
-    // skip if the value are equals
-    if (areEqual(_value, newValue)) {
-      return;
-    }
-
-    // store the previous value
-    _previousValue = _value;
-    _hasPreviousValue = true;
-
-    // notify with the new value
-    _value = newValue;
-    reportChanged();
-    _notifyListeners();
-  }
-
-  /// Indicates if the [oldValue] and the [newValue] are equal
-  @internal
-  bool areEqual(T? oldValue, T? newValue) {
-    // skip if the value are equals
-    if (options.equals && oldValue == newValue) {
-      return true;
-    }
-
-    // skip if the [comparator] returns true
-    if (!options.equals && options.comparator != null) {
-      return options.comparator!(oldValue, newValue);
-    }
-    return false;
-  }
-
-  @override
-  bool get hasPreviousValue => _hasPreviousValue;
-
-  /// The previous value, if any.
-  @override
-  T? get previousValue {
-    reportObserved();
-    return _previousValue;
-  }
-
-  void _notifyListeners() {
-    if (listeners.isNotEmpty) {
-      context.untracked(() {
-        for (final listener in listeners.toList(growable: false)) {
-          listener(_previousValue, _value);
-        }
-      });
-    }
-  }
+  void set(T newValue) => _setValue(newValue);
 
   /// Calls a function with the current [value] and assigns the result as the
   /// new value.
@@ -210,20 +141,6 @@ class Signal<T> extends ReadSignal<T> {
   /// Converts this [Signal] into a [ReadSignal]
   /// Use this method to remove the visility to the value setter.
   ReadSignal<T> toReadSignal() => this;
-
-  @override
-  DisposeObservation observe(
-    ObserveCallback<T> listener, {
-    bool fireImmediately = false,
-  }) {
-    if (fireImmediately == true) {
-      listener(_previousValue, _value);
-    }
-
-    listeners.add(listener);
-
-    return () => listeners.remove(listener);
-  }
 
   @override
   String toString() =>

@@ -3,12 +3,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
-import 'package:solidart/src/core/computed.dart';
-import 'package:solidart/src/core/effect.dart';
-import 'package:solidart/src/core/read_signal.dart';
-import 'package:solidart/src/core/resource.dart';
-import 'package:solidart/src/core/signal.dart';
-import 'package:solidart/src/core/signal_options.dart';
+import 'package:solidart/src/core/core.dart';
 import 'package:solidart/src/extensions.dart';
 import 'package:solidart/src/utils.dart';
 import 'package:test/test.dart';
@@ -341,6 +336,7 @@ void main() {
     test("selector's readable signal contains previous value", () async {
       final signal = createSignal(0);
       final derived = createComputed(() => signal() * 2);
+      await pumpEventQueue();
       expect(derived.hasPreviousValue, false);
       expect(derived.previousValue, null);
 

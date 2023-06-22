@@ -1,9 +1,4 @@
-import 'dart:async';
-
-import 'package:meta/meta.dart';
-import 'package:solidart/src/core/signal.dart';
-import 'package:solidart/src/core/signal_base.dart';
-import 'package:solidart/src/core/signal_options.dart';
+part of 'core.dart';
 
 /// {@template resource-options}
 /// {@macro signaloptions}

@@ -1,18 +1,16 @@
-import 'package:solidart/src/core/atom.dart';
-import 'package:solidart/src/core/derivation.dart';
-import 'package:solidart/src/core/effect.dart';
-import 'package:solidart/src/core/reactive_context.dart';
-import 'package:solidart/src/core/read_signal.dart';
-import 'package:solidart/src/core/signal.dart';
-import 'package:solidart/src/core/signal_options.dart';
-import 'package:solidart/src/utils.dart';
+part of 'core.dart';
 
 /// {@macro computed}
 ReadSignal<T> createComputed<T>(
   T Function() selector, {
   SignalOptions<T>? options,
-}) =>
-    Computed<T>(selector: selector, options: options).toReadSignal();
+}) {
+  return Computed<T>(
+    selector(),
+    selector: selector,
+    options: options,
+  );
+}
 
 /// {@template computed}
 /// A special [Signal] that notifies only whenever the selected
@@ -64,22 +62,13 @@ ReadSignal<T> createComputed<T>(
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-class Computed<T> extends Signal<T> implements Derivation {
+class Computed<T> extends ReadSignal<T> implements Derivation {
   /// {@macro computed}
-  Computed({
+  Computed(
+    super.initialValue, {
     required this.selector,
-    SignalOptions<T>? options,
-  })  : name = options?.name ?? ReactiveContext.main.nameFor('Computed'),
-        super(selector(), options: options);
-
-  // Tracks the internal value
-  T? _value;
-
-  // Tracks the internal previous value
-  T? _previousValue;
-
-  // Whether or not there is a previous value
-  bool _hasPreviousValue = false;
+    super.options,
+  }) : name = options?.name ?? ReactiveContext.main.nameFor('Computed');
 
   @override
   // ignore: overridden_fields
@@ -89,16 +78,18 @@ class Computed<T> extends Signal<T> implements Derivation {
   final T Function() selector;
 
   @override
-  SolidartCaughtException? errorValue;
+  SolidartCaughtException? _errorValue;
 
   @override
-  Set<Atom> observables = {};
+  // ignore: prefer_final_fields
+  Set<Atom> _observables = {};
 
   @override
-  Set<Atom>? newObservables;
+  Set<Atom>? _newObservables;
 
   @override
-  DerivationState dependenciesState = DerivationState.notTracking;
+  // ignore: prefer_final_fields
+  DerivationState _dependenciesState = DerivationState.notTracking;
 
   bool _isComputing = false;
 
@@ -109,12 +100,12 @@ class Computed<T> extends Signal<T> implements Derivation {
   }
 
   @override
-  void onBecomeStale() {
+  void _onBecomeStale() {
     context.propagatePossiblyChanged(this);
   }
 
   @override
-  void suspend() {
+  void _suspend() {
     context.clearObservables(this);
   }
 
@@ -126,15 +117,15 @@ class Computed<T> extends Signal<T> implements Derivation {
       );
     }
 
-    if (!context.isWithinBatch && observers.isEmpty) {
+    if (!context.isWithinBatch && _observers.isEmpty) {
       if (context.shouldCompute(this)) {
         context.startBatch();
-        _value = _computeValue(track: false);
-        _hasPreviousValue = true;
+        final newValue = _computeValue(track: false);
+        if (newValue != null) _setValue(newValue);
         context.endBatch();
       }
     } else {
-      reportObserved();
+      _reportObserved();
       if (context.shouldCompute(this)) {
         if (_trackAndCompute()) {
           context.propagateChangeConfirmed(this);
@@ -143,47 +134,43 @@ class Computed<T> extends Signal<T> implements Derivation {
     }
 
     if (context.hasCaughtException(this)) {
-      throw errorValue!;
+      throw _errorValue!;
     }
-    return _value as T;
+    return _value;
   }
 
-  @override
-  bool get hasPreviousValue => _hasPreviousValue;
-
-  /// The previous value, if any.
   @override
   T? get previousValue {
-    final prevVal = _value;
-    // get the actual value to cause observation
-    final _ = value;
-    return _previousValue = prevVal;
+    // cause observation
+    value;
+    return super.previousValue;
   }
 
   @override
-  DisposeEffect observe(
+  bool get hasPreviousValue {
+    // cause observation
+    value;
+    return _hasPreviousValue;
+  }
+
+  @override
+  DisposeObservation observe(
     ObserveCallback<T> listener, {
     bool fireImmediately = false,
   }) {
-    var ignore = !fireImmediately;
-
-    void notifyChange() {
-      if (ignore) {
-        ignore = false;
-        return;
-      }
-      context.untracked(() {
-        listener(_previousValue, value);
-      });
-    }
-
-    return createEffect((_) {
-      final newValue = value;
-
-      notifyChange();
-
-      _previousValue = newValue;
+    // cause observation
+    final disposeEffect = createEffect((_) {
+      value;
     });
+    final disposeObservation = super.observe(
+      listener,
+      fireImmediately: fireImmediately,
+    );
+
+    return () {
+      disposeEffect();
+      disposeObservation();
+    };
   }
 
   T? _computeValue({required bool track}) {
@@ -196,9 +183,9 @@ class Computed<T> extends Signal<T> implements Derivation {
     } else {
       try {
         computedValue = selector();
-        errorValue = null;
+        _errorValue = null;
       } on Object catch (e, s) {
-        errorValue = SolidartCaughtException(e, stackTrace: s);
+        _errorValue = SolidartCaughtException(e, stackTrace: s);
       }
     }
 
@@ -210,7 +197,7 @@ class Computed<T> extends Signal<T> implements Derivation {
 
   bool _trackAndCompute() {
     final oldValue = _value;
-    final wasSuspended = dependenciesState == DerivationState.notTracking;
+    final wasSuspended = _dependenciesState == DerivationState.notTracking;
     final hadCaughtException = context.hasCaughtException(this);
 
     final newValue = _computeValue(track: true);
@@ -218,12 +205,10 @@ class Computed<T> extends Signal<T> implements Derivation {
     final changedException =
         hadCaughtException != context.hasCaughtException(this);
     final changed =
-        wasSuspended || changedException || !areEqual(oldValue, newValue);
+        wasSuspended || changedException || !_areEqual(oldValue, newValue);
 
-    if (changed) {
-      _previousValue = oldValue;
-      _value = newValue;
-      _hasPreviousValue = true;
+    if (changed && newValue != null) {
+      _setValue(newValue);
     }
 
     return changed;

@@ -1,12 +1,4 @@
-import 'dart:async';
-
-import 'package:meta/meta.dart';
-import 'package:solidart/src/core/atom.dart';
-import 'package:solidart/src/core/effect.dart';
-import 'package:solidart/src/core/signal.dart';
-import 'package:solidart/src/core/signal_base.dart';
-import 'package:solidart/src/core/signal_options.dart';
-import 'package:solidart/src/utils.dart';
+part of 'core.dart';
 
 /// {@macro readsignal}
 @Deprecated(
@@ -27,11 +19,19 @@ typedef ReadableSignal<T> = ReadSignal<T>;
 class ReadSignal<T> extends Atom implements SignalBase<T> {
   /// {@macro readsignal}
   ReadSignal(
-    this._value, {
+    T initialValue, {
     SignalOptions<T>? options,
-  }) : options = options ?? SignalOptions<T>();
+  })  : _value = initialValue,
+        options = options ?? SignalOptions<T>();
 
-  final T _value;
+  // Tracks the internal value
+  T _value;
+
+  // Tracks the internal previous value
+  T? _previousValue;
+
+  // Whether or not there is a previous value
+  bool _hasPreviousValue = false;
 
   /// All the observers
   @internal
@@ -39,23 +39,65 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   @override
   T get value {
-    reportObserved();
+    _reportObserved();
     return _value;
+  }
+
+  /// {@template set-signal-value}
+  /// Sets the current signal value with [newValue].
+  ///
+  /// This operation may be skipped if the value is equal to the previous one,
+  /// check [SignalOptions.equals] and [SignalOptions.comparator].
+  /// {@endtemplate}
+  void _setValue(T newValue) {
+    // skip if the value are equals
+    if (_areEqual(_value, newValue)) {
+      return;
+    }
+
+    // store the previous value
+    _previousValue = _value;
+    _hasPreviousValue = true;
+
+    // notify with the new value
+    _value = newValue;
+    _reportChanged();
+    _notifyListeners();
+  }
+
+  void _notifyListeners() {
+    if (listeners.isNotEmpty) {
+      context.untracked(() {
+        for (final listener in listeners.toList(growable: false)) {
+          listener(_previousValue, _value);
+        }
+      });
+    }
+  }
+
+  /// Indicates if the [oldValue] and the [newValue] are equal
+  bool _areEqual(T? oldValue, T? newValue) {
+    // skip if the value are equals
+    if (options.equals) {
+      return oldValue == newValue;
+    }
+
+    // return the [comparator] result
+    return options.comparator!(oldValue, newValue);
   }
 
   @override
   T call() => value;
 
   @override
-  bool get hasPreviousValue => false;
+  bool get hasPreviousValue => _hasPreviousValue;
 
-  // coverage:ignore-start
+  /// The previous value, if any.
   @override
   T? get previousValue {
-    // no-op
-    return null;
+    _reportObserved();
+    return _previousValue;
   }
-  // coverage:ignore-end
 
   @override
   final SignalOptions<T> options;
@@ -68,7 +110,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   /// Returns the number of listeners listening to this signal.
   @override
-  int get listenerCount => observers.length + listeners.length;
+  int get listenerCount => _observers.length + listeners.length;
 
   @override
   bool get disposed => _disposed;
@@ -88,16 +130,19 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   }
 
   /// Observe the signal and trigger the [listener] every time the value changes
-  // coverage:ignore-start
   @override
-  DisposeEffect observe(
+  DisposeObservation observe(
     ObserveCallback<T> listener, {
     bool fireImmediately = false,
   }) {
-    // no-op
-    return () {};
+    if (fireImmediately == true) {
+      listener(_previousValue, _value);
+    }
+
+    listeners.add(listener);
+
+    return () => listeners.remove(listener);
   }
-  // coverage:ignore-end
 
   @override
   void onDispose(VoidCallback cb) {

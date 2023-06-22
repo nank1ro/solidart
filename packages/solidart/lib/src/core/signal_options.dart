@@ -1,4 +1,4 @@
-import 'package:meta/meta.dart';
+part of 'core.dart';
 
 /// A custom comparator function
 typedef ValueComparator<T> = bool Function(T a, T b);
