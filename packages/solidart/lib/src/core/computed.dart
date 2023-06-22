@@ -13,7 +13,7 @@ ReadSignal<T> createComputed<T>(
 }
 
 /// {@template computed}
-/// A special [Signal] that notifies only whenever the selected
+/// A special Signal that notifies only whenever the selected
 /// values change.
 ///
 /// You may want to subscribe only to sub-field of a `Signal` value or to
