@@ -38,7 +38,7 @@ dependencies:
   cupertino_icons: ^1.0.2
 
 dev_dependencies:
-  custom_lint: ^0.3.2
+  custom_lint: ^0.4.0
   flutter_test:
     sdk: flutter
 
@@ -48,7 +48,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^2.0.0
-  solidart_lint: ^1.0.0-dev1
+  solidart_lint: ^1.0.0-dev2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
