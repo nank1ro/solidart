@@ -2,7 +2,7 @@
 
 ### Changes from solidart
 
-- Refactor the core of the library in order to fix issues with `previousValue` and `hasPreviousValue` of `Computed` and simplify the logic.
+- **BUGFIX** Refactor the core of the library in order to fix issues with `previousValue` and `hasPreviousValue` of `Computed` and simplify the logic.
 
 ## 1.0.0-dev5
 
