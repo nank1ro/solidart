@@ -34,8 +34,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   bool _hasPreviousValue = false;
 
   /// All the observers
-  @internal
-  final List<ObserveCallback<T>> listeners = [];
+  final List<ObserveCallback<T>> _listeners = [];
 
   @override
   T get value {
@@ -66,9 +65,9 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   }
 
   void _notifyListeners() {
-    if (listeners.isNotEmpty) {
-      context.untracked(() {
-        for (final listener in listeners.toList(growable: false)) {
+    if (_listeners.isNotEmpty) {
+      _context.untracked(() {
+        for (final listener in _listeners.toList(growable: false)) {
           listener(_previousValue, _value);
         }
       });
@@ -110,7 +109,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   /// Returns the number of listeners listening to this signal.
   @override
-  int get listenerCount => _observers.length + listeners.length;
+  int get listenerCount => _observers.length + _listeners.length;
 
   @override
   bool get disposed => _disposed;
@@ -121,7 +120,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     if (_disposed) return;
     _disposed = true;
 
-    listeners.clear();
+    _listeners.clear();
 
     for (final cb in _onDisposeCallbacks) {
       cb();
@@ -139,9 +138,9 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
       listener(_previousValue, _value);
     }
 
-    listeners.add(listener);
+    _listeners.add(listener);
 
-    return () => listeners.remove(listener);
+    return () => _listeners.remove(listener);
   }
 
   @override

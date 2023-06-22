@@ -95,18 +95,18 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
 
   @override
   void dispose() {
-    context.clearObservables(this);
+    _context.clearObservables(this);
     super.dispose();
   }
 
   @override
   void _onBecomeStale() {
-    context.propagatePossiblyChanged(this);
+    _context.propagatePossiblyChanged(this);
   }
 
   @override
   void _suspend() {
-    context.clearObservables(this);
+    _context.clearObservables(this);
   }
 
   @override
@@ -117,23 +117,23 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
       );
     }
 
-    if (!context.isWithinBatch && _observers.isEmpty) {
-      if (context.shouldCompute(this)) {
-        context.startBatch();
+    if (!_context.isWithinBatch && _observers.isEmpty) {
+      if (_context.shouldCompute(this)) {
+        _context.startBatch();
         final newValue = _computeValue(track: false);
         if (newValue != null) _setValue(newValue);
-        context.endBatch();
+        _context.endBatch();
       }
     } else {
       _reportObserved();
-      if (context.shouldCompute(this)) {
+      if (_context.shouldCompute(this)) {
         if (_trackAndCompute()) {
-          context.propagateChangeConfirmed(this);
+          _context.propagateChangeConfirmed(this);
         }
       }
     }
 
-    if (context.hasCaughtException(this)) {
+    if (_context.hasCaughtException(this)) {
       throw _errorValue!;
     }
     return _value;
@@ -175,11 +175,11 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
 
   T? _computeValue({required bool track}) {
     _isComputing = true;
-    context.pushComputation();
+    _context.pushComputation();
 
     T? computedValue;
     if (track) {
-      computedValue = context.trackDerivation(this, selector);
+      computedValue = _context.trackDerivation(this, selector);
     } else {
       try {
         computedValue = selector();
@@ -189,7 +189,7 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
       }
     }
 
-    context.popComputation();
+    _context.popComputation();
     _isComputing = false;
 
     return computedValue;
@@ -198,12 +198,12 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   bool _trackAndCompute() {
     final oldValue = _value;
     final wasSuspended = _dependenciesState == DerivationState.notTracking;
-    final hadCaughtException = context.hasCaughtException(this);
+    final hadCaughtException = _context.hasCaughtException(this);
 
     final newValue = _computeValue(track: true);
 
     final changedException =
-        hadCaughtException != context.hasCaughtException(this);
+        hadCaughtException != _context.hasCaughtException(this);
     final changed =
         wasSuspended || changedException || !_areEqual(oldValue, newValue);
 

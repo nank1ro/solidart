@@ -13,8 +13,7 @@ class Atom {
     String? name,
   }) : name = name ?? ReactiveContext.main.nameFor('Atom');
 
-  @internal
-  final ReactiveContext context = ReactiveContext.main;
+  final ReactiveContext _context = ReactiveContext.main;
 
   final String name;
 
@@ -31,11 +30,11 @@ class Atom {
   bool get hasObservers => _observers.isNotEmpty;
 
   void _reportObserved() {
-    context.reportObserved(this);
+    _context.reportObserved(this);
   }
 
   void _reportChanged() {
-    context
+    _context
       ..startBatch()
       ..propagateChanged(this)
       ..endBatch();
@@ -52,7 +51,7 @@ class Atom {
   void _removeObserver(Derivation d) {
     _observers.remove(d);
     if (_observers.isEmpty) {
-      context.enqueueForUnobservation(this);
+      _context.enqueueForUnobservation(this);
     }
   }
 }
