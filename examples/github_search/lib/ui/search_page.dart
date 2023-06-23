@@ -110,8 +110,6 @@ class _SearchBody extends StatefulWidget {
 class __SearchBodyState extends State<_SearchBody> {
   @override
   Widget build(BuildContext context) {
-    final bloc = context.get<GithubSearchBloc>();
-
     return SignalBuilder(
       signal: context.get<Signal<bool>>(Signals.isSearchEmpty),
       builder: (context, isSearchEmpty, child) {
@@ -119,7 +117,7 @@ class __SearchBodyState extends State<_SearchBody> {
           return const Text('Please enter a term to begin');
         }
         return ResourceBuilder(
-          resource: bloc.searchState,
+          resource: context.get<GithubSearchBloc>().searchState,
           builder: (context, resourceState) {
             return resourceState.on(
               ready: (value) {
