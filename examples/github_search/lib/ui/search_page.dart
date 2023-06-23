@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:github_search/bloc/github_search_bloc.dart';
+import 'package:github_search/bloc/github_search_state.dart';
 import 'package:github_search/models/models.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-
-enum Signals {
-  isSearchEmpty,
-}
 
 class SearchPage extends StatelessWidget {
   const SearchPage({super.key});
@@ -34,19 +31,14 @@ class SearchPageBody extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Github Search'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Solid(
-          signals: {
-            Signals.isSearchEmpty: () => createSignal<bool>(true),
-          },
-          child: const Column(
-            children: [
-              _SearchBar(),
-              SizedBox(height: 16),
-              Expanded(child: _SearchBody()),
-            ],
-          ),
+      body: const Padding(
+        padding: EdgeInsets.all(8.0),
+        child: Column(
+          children: [
+            _SearchBar(),
+            SizedBox(height: 16),
+            _SearchBody(),
+          ],
         ),
       ),
     );
@@ -63,6 +55,7 @@ class _SearchBar extends StatefulWidget {
 
 class __SearchBarState extends State<_SearchBar> {
   final textController = TextEditingController();
+  late final bloc = context.get<GithubSearchBloc>();
 
   @override
   void dispose() {
@@ -70,8 +63,9 @@ class __SearchBarState extends State<_SearchBar> {
     super.dispose();
   }
 
-  void setIsSearchEmpty(bool isEmpty) {
-    context.update(Signals.isSearchEmpty, (_) => isEmpty);
+  void onClear() {
+    textController.clear();
+    bloc.search('');
   }
 
   @override
@@ -81,67 +75,37 @@ class __SearchBarState extends State<_SearchBar> {
       decoration: InputDecoration(
         hintText: 'Enter a search term',
         suffixIcon: IconButton(
-          onPressed: () {
-            textController.clear();
-            setIsSearchEmpty(true);
-          },
+          onPressed: onClear,
           icon: const Icon(Icons.clear),
         ),
       ),
-      onChanged: (search) {
-        setIsSearchEmpty(search.isEmpty);
-      },
       onSubmitted: (value) {
-        context.get<GithubSearchBloc>().search(value);
+        bloc.search(value);
       },
     );
   }
 }
 
-class _SearchBody extends StatefulWidget {
+class _SearchBody extends StatelessWidget {
   // ignore: unused_element
   const _SearchBody({super.key});
 
   @override
-  State<_SearchBody> createState() => __SearchBodyState();
-}
-
-class __SearchBodyState extends State<_SearchBody> {
-  @override
   Widget build(BuildContext context) {
     return SignalBuilder(
-      signal: context.get<Signal<bool>>(Signals.isSearchEmpty),
-      builder: (context, isSearchEmpty, child) {
-        if (isSearchEmpty) {
-          return const Text('Please enter a term to begin and press ENTER');
-        }
-        return ResourceBuilder(
-          resource: context.get<GithubSearchBloc>().searchState,
-          builder: (context, resourceState) {
-            return resourceState.on(
-              ready: (searchResult) {
-                if (searchResult.items.isEmpty) {
-                  return const Text('No results');
-                }
-                return Stack(
-                  children: [
-                    _SearchResults(items: searchResult.items),
-                    if (resourceState.isRefreshing)
-                      Positioned.fill(
-                        child: Container(
-                          alignment: Alignment.center,
-                          color: Colors.black.withOpacity(0.4),
-                          child: const CircularProgressIndicator(),
-                        ),
-                      ),
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stackTrace) => Center(child: Text('$error')),
-            );
-          },
-        );
+      signal: context.get<GithubSearchBloc>().searchState,
+      builder: (context, searchState, _) {
+        return switch (searchState) {
+          GithubSearchStateEmpty() =>
+            const Text('Please enter a term to begin'),
+          GithubSearchStateLoading() => const CircularProgressIndicator(),
+          GithubSearchStateError() => Text(searchState.error),
+          GithubSearchStateSuccess() => searchState.items.isEmpty
+              ? const Text('No Results')
+              : Expanded(
+                  child: _SearchResults(items: searchState.items),
+                ),
+        };
       },
     );
   }
