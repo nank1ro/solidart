@@ -119,18 +119,13 @@ class __SearchBodyState extends State<_SearchBody> {
           resource: context.get<GithubSearchBloc>().searchState,
           builder: (context, resourceState) {
             return resourceState.on(
-              ready: (value) {
-                if (value.items.isEmpty) {
+              ready: (searchResult) {
+                if (searchResult.items.isEmpty) {
                   return const Text('No results');
                 }
                 return Stack(
                   children: [
-                    ListView.builder(
-                      itemCount: value.items.length,
-                      itemBuilder: (BuildContext context, int index) {
-                        return _SearchResultItem(item: value.items[index]);
-                      },
-                    ),
+                    _SearchResults(items: searchResult.items),
                     if (resourceState.isRefreshing)
                       Positioned.fill(
                         child: Container(
@@ -147,6 +142,26 @@ class __SearchBodyState extends State<_SearchBody> {
             );
           },
         );
+      },
+    );
+  }
+}
+
+class _SearchResults extends StatelessWidget {
+  const _SearchResults({
+    // ignore: unused_element
+    super.key,
+    required this.items,
+  });
+
+  final List<SearchResultItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: items.length,
+      itemBuilder: (BuildContext context, int index) {
+        return _SearchResultItem(item: items[index]);
       },
     );
   }
