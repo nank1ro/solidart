@@ -113,7 +113,7 @@ class __SearchBodyState extends State<_SearchBody> {
       signal: context.get<Signal<bool>>(Signals.isSearchEmpty),
       builder: (context, isSearchEmpty, child) {
         if (isSearchEmpty) {
-          return const Text('Please enter a term to begin');
+          return const Text('Please enter a term to begin and press ENTER');
         }
         return ResourceBuilder(
           resource: context.get<GithubSearchBloc>().searchState,

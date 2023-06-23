@@ -1,4 +1,5 @@
 import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:github_search/models/search_result.dart';
 import 'package:github_search/repo/repository.dart';
 import 'package:github_search/service/client.dart';
 import 'package:github_search/service/in_memory_cache.dart';
@@ -19,7 +20,12 @@ class GithubSearchBloc {
   final _searchTerm = createSignal('');
 
   late final searchState = createResource(
-    fetcher: () => repository.search(_searchTerm()),
+    fetcher: () {
+      if (_searchTerm().isEmpty) {
+        return Future.value(const SearchResult(items: []));
+      }
+      return repository.search(_searchTerm());
+    },
     source: _searchTerm,
   );
 
