@@ -1,4 +1,5 @@
 import 'package:github_search/models/models.dart';
+import 'package:github_search/service/client.dart';
 import 'package:github_search/service/in_memory_cache.dart';
 
 class GithubRepository {
@@ -8,7 +9,7 @@ class GithubRepository {
   });
 
   final InMemoryCache cache;
-  final dynamic client;
+  final GithubClient client;
 
   Future<SearchResult> search(String term) async {
     return await cache.fetch(() => client.search(term));
