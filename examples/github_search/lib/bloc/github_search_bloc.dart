@@ -31,7 +31,7 @@ class GithubSearchBloc {
 
     try {
       final results = await _repository.search(term);
-      searchState.set(GithubSearchStateSuccess(results.items));
+      searchState.value = GithubSearchStateSuccess(results.items);
     } catch (error) {
       searchState.value = error is SearchResultError
           ? GithubSearchStateError(error.message)
