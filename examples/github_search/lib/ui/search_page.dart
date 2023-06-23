@@ -76,7 +76,6 @@ class __SearchBarState extends State<_SearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    final bloc = context.get<GithubSearchBloc>();
     return TextField(
       controller: textController,
       decoration: InputDecoration(
@@ -93,7 +92,7 @@ class __SearchBarState extends State<_SearchBar> {
         setIsSearchEmpty(search.isEmpty);
       },
       onSubmitted: (value) {
-        bloc.search(value);
+        context.get<GithubSearchBloc>().search(value);
       },
     );
   }
