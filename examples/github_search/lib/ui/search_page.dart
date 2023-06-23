@@ -99,8 +99,8 @@ class _SearchBody extends StatelessWidget {
           GithubSearchStateEmpty() =>
             const Text('Please enter a term to begin'),
           GithubSearchStateLoading() => const CircularProgressIndicator(),
-          GithubSearchStateError() => Text(searchState.error),
-          GithubSearchStateSuccess() => searchState.items.isEmpty
+          GithubSearchStateError(:final error) => Text(error),
+          GithubSearchStateSuccess(:final items) => items.isEmpty
               ? const Text('No Results')
               : Expanded(
                   child: _SearchResults(items: searchState.items),

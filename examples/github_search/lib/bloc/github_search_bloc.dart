@@ -20,9 +20,7 @@ class GithubSearchBloc {
 
   final searchState = createSignal<GithubSearchState>(GithubSearchStateEmpty());
 
-  Future<void> search(
-    String term,
-  ) async {
+  Future<void> search(String term) async {
     if (term.isEmpty) {
       return searchState.set(GithubSearchStateEmpty());
     }
