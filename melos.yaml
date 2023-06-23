@@ -3,6 +3,7 @@ name: Melos
 packages:
   - packages/solidart
   - packages/flutter_solidart
+  - packages/solidart_lint
 
 scripts:
   analyze:
