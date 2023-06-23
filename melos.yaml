@@ -3,10 +3,11 @@ name: Melos
 packages:
   - packages/solidart
   - packages/flutter_solidart
+  - packages/solidart_lint
 
 scripts:
   analyze:
-    run: melos exec -- dart analyze .
+    run: melos exec --ignore="solidart_lint" -- dart analyze .
     description: Run `dart analyze` in all packages.
 
   test:

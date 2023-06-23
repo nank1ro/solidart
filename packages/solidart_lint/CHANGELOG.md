@@ -1,3 +1,7 @@
+## 1.0.0-dev3
+
+- **BUGFIX** Remove `isRefreshing` from ResourceBuilder assist
+
 ## 1.0.0-dev2
 
 Rename ResourceValue into ResourceState
