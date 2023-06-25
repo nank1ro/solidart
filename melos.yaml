@@ -13,7 +13,7 @@ scripts:
   test:
     run: |
       yes 2>/dev/null | very_good --analytics false && \
-      melos exec -- very_good test --recursive --coverage --min-coverage 85
+      melos exec --ignore="solidart_lint" -- very_good test --recursive --coverage --min-coverage 85
     description: Run Dart and Flutter tests
     select-package:
       flutter: true
