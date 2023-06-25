@@ -1,0 +1,305 @@
+---
+title: Github Search example
+description: Github search example using flutter_solidart
+---
+
+# Github Search example
+
+A simple Github Search example that shows the usage of a `Resource` and the `Solid` widget.
+
+<Image src="/assets/github-search-demo.gif" alt="Github Search Demo" />
+
+<Zapp id="z94s069q94t0" />
+
+Let's start seeing how the services are strucuted:
+```dart title=service/client.dart
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:github_search/models/models.dart';
+import 'package:http/http.dart' as http;
+
+class GithubClient {
+  GithubClient({
+    http.Client? httpClient,
+    this.baseUrl = 'https://api.github.com/search/repositories?q=',
+  }) : httpClient = httpClient ?? http.Client();
+
+  final String baseUrl;
+  final http.Client httpClient;
+
+  Future<SearchResult> search(String term) async {
+    final response = await httpClient.get(Uri.parse('$baseUrl$term'));
+    final results = json.decode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode == 200) {
+      return SearchResult.fromJson(results);
+    } else {
+      throw SearchResultError.fromJson(results);
+    }
+  }
+}
+```
+
+The GithubClient has a `search` Future that calls the `baseUrl` and converts the JSON response into a `SearchResult`.
+
+```dart title=service/in_memory_cache.dart
+import 'package:meta/meta.dart';
+
+/// Provides an inmemory cache used to avoid repeating an async callback within a
+/// certain [duration]
+@immutable
+class InMemoryCache<T> {
+  InMemoryCache(this.duration);
+
+  final Duration duration;
+  final Map<Object, _CacheEntry<T>?> _cache = {};
+
+  void _cacheValue(T value, Object key) {
+    _cache[key] = _CacheEntry(
+      timestamp: DateTime.now(),
+      data: value,
+    );
+  }
+
+  /// Returns a cached value from a previous call to [fetch], or runs [callback]
+  /// to compute a new one.
+  ///
+  /// If [fetch] has been called recently enough, returns its previous return
+  /// value. Otherwise, runs [callback] and returns its new return value.
+  Future<T> fetch(
+    Future<T> Function() callback, {
+    String? key,
+  }) async {
+    final effectiveKey = key ?? callback;
+    final entry = _cache[effectiveKey];
+
+    Future<T> fetchAndCache() async {
+      final value = await callback();
+      _cacheValue(value, effectiveKey);
+      return value;
+    }
+
+    if (entry == null) {
+      return fetchAndCache();
+    } else {
+      final now = DateTime.now();
+      final difference = now.difference(entry.timestamp);
+      if (difference > duration) {
+        return fetchAndCache();
+      }
+    }
+
+    return entry.data;
+  }
+}
+
+class _CacheEntry<T> {
+  _CacheEntry({
+    required this.timestamp,
+    required this.data,
+  });
+
+  final DateTime timestamp;
+  final T data;
+}
+```
+
+Starting it from the `0` value.
+
+In the `dispose()` method we dispose the signal:
+```dart
+@override
+void dispose() {
+  counter.dispose();
+  super.dispose();
+}
+```
+
+The `InMemoryCache` class caches the future being passed to the `fetch` method for a given `duration`.
+
+---
+
+Let's see the repository:
+```dart title=repo/repository.dart
+import 'package:github_search/models/models.dart';
+import 'package:github_search/service/client.dart';
+import 'package:github_search/service/in_memory_cache.dart';
+
+class GithubRepository {
+  GithubRepository({
+    required this.client,
+    required this.cache,
+  });
+
+  final InMemoryCache cache;
+  final GithubClient client;
+
+  Future<SearchResult> search(String term) async {
+    return await cache.fetch(() => client.search(term));
+  }
+}
+```
+
+The `GithubRepository`, given a [cache] and a [client] provides the `search` future which value is cached by default.
+
+---
+
+Now let's see the `GithubBloc`, the core of this example:
+```dart title=bloc/github_search_bloc.dart
+import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:github_search/models/models.dart';
+import 'package:github_search/repo/repository.dart';
+import 'package:github_search/service/client.dart';
+import 'package:github_search/service/in_memory_cache.dart';
+
+import 'package:meta/meta.dart';
+
+@immutable
+class GithubSearchBloc {
+  GithubSearchBloc({GithubRepository? repository})
+      : _repository = repository ??
+            GithubRepository(
+              client: GithubClient(),
+              cache: InMemoryCache(const Duration(minutes: 5)),
+            );
+
+  final GithubRepository _repository;
+
+  final _searchTerm = createSignal('');
+  late final searchResult =
+      createResource(fetcher: _search, source: _searchTerm);
+
+  void search(String term) => _searchTerm.set(term);
+
+  Future<SearchResult> _search() async {
+    if (_searchTerm().isEmpty) return SearchResult.empty();
+    return _repository.search(_searchTerm());
+  }
+
+  void dispose() {
+    _searchTerm.dispose();
+    searchResult.dispose();
+  }
+}
+```
+
+The `GithubSearchBloc` has a `searchResult` resource.
+This resource is responsible for managing the state of the future `_search`.
+The Resource takes a `_searchTerm`, so the Future will be repeated every time the source changes. 
+
+---
+
+The relevant parts of the UI are:
+```dart title=ui/search_page.dart
+class SearchPage extends StatelessWidget {
+  const SearchPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Solid(
+      providers: [
+        SolidProvider<GithubSearchBloc>(
+          create: () => GithubSearchBloc(),
+          dispose: (bloc) => bloc.dispose(),
+        ),
+      ],
+      child: const SearchPageBody(),
+    );
+  }
+}
+```
+
+Here we're creating and providing to descendats the `GithubSearchBloc`.
+
+```dart title=ui/search_page.dart
+class _SearchBar extends StatefulWidget {
+  // ignore: unused_element
+  const _SearchBar({super.key});
+
+  @override
+  State<_SearchBar> createState() => __SearchBarState();
+}
+
+class __SearchBarState extends State<_SearchBar> {
+  final textController = TextEditingController();
+  late final bloc = context.get<GithubSearchBloc>();
+
+  @override
+  void dispose() {
+    textController.dispose();
+    super.dispose();
+  }
+
+  void onClear() {
+    textController.clear();
+    bloc.search('');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: textController,
+      decoration: InputDecoration(
+        hintText: 'Enter a search term',
+        suffixIcon: IconButton(
+          onPressed: onClear,
+          icon: const Icon(Icons.clear),
+        ),
+      ),
+      onSubmitted: (value) {
+        bloc.search(value);
+      },
+    );
+  }
+}
+```
+
+The `_SearchBar` gets access to the `GithubSearchBloc` ancestor by using `late final bloc = context.get<GithubSearchBloc>`.
+Additionally, when the TextField value is submitted or cleared, the `bloc.search(value)` sets the current search value.
+
+Finally the `_SearchBody`:
+```dart title=ui/search_page.dart
+class _SearchBody extends StatelessWidget {
+  // ignore: unused_element
+  const _SearchBody({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.expand(
+      child: ResourceBuilder(
+        resource: context.get<GithubSearchBloc>().searchResult,
+        builder: (context, searchResultState) {
+          return Stack(
+            children: [
+              searchResultState.on(
+                ready: (searchResult) {
+                  if (searchResult.items.isEmpty) {
+                    return const Text('No Results');
+                  }
+                  return _SearchResults(items: searchResult.items);
+                },
+                error: (error, _) => Text(error.toString()),
+                loading: () => const CircularProgressIndicator(),
+              ),
+              if (searchResultState.isRefreshing)
+                Positioned.fill(
+                  child: Container(
+                    alignment: Alignment.center,
+                    color: Colors.black.withOpacity(0.3),
+                    child: const CircularProgressIndicator(),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+```
+
+Here we're accessing the `searchResult` resource by using `context.get<GithubSearchBloc>().searchResult` and passing it to a `ResourceBuilder`.
+Whenever the `searchResult` state changes, the ResourceBuilder will rebuild and will render the current state correcly.
+
+In addition, we're displaying a `CircularProgressIndicator` with some background opacity when the state of the resource is refreshing.
