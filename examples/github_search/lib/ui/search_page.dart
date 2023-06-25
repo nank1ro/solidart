@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:github_search/bloc/github_search_bloc.dart';
-import 'package:github_search/bloc/github_search_state.dart';
 import 'package:github_search/models/models.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
@@ -37,7 +36,7 @@ class SearchPageBody extends StatelessWidget {
           children: [
             _SearchBar(),
             SizedBox(height: 16),
-            _SearchBody(),
+            Expanded(child: _SearchBody()),
           ],
         ),
       ),
@@ -92,21 +91,34 @@ class _SearchBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SignalBuilder(
-      signal: context.get<GithubSearchBloc>().searchState,
-      builder: (context, searchState, _) {
-        return switch (searchState) {
-          GithubSearchStateEmpty() =>
-            const Text('Please enter a term to begin'),
-          GithubSearchStateLoading() => const CircularProgressIndicator(),
-          GithubSearchStateError(:final error) => Text(error),
-          GithubSearchStateSuccess(:final items) => items.isEmpty
-              ? const Text('No Results')
-              : Expanded(
-                  child: _SearchResults(items: searchState.items),
+    return SizedBox.expand(
+      child: ResourceBuilder(
+        resource: context.get<GithubSearchBloc>().searchResult,
+        builder: (context, searchResultState) {
+          return Stack(
+            children: [
+              searchResultState.on(
+                ready: (searchResult) {
+                  if (searchResult.items.isEmpty) {
+                    return const Text('No Results');
+                  }
+                  return _SearchResults(items: searchResult.items);
+                },
+                error: (error, _) => Text(error.toString()),
+                loading: () => const CircularProgressIndicator(),
+              ),
+              if (searchResultState.isRefreshing)
+                Positioned.fill(
+                  child: Container(
+                    alignment: Alignment.center,
+                    color: Colors.black.withOpacity(0.3),
+                    child: const CircularProgressIndicator(),
+                  ),
                 ),
-        };
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 }

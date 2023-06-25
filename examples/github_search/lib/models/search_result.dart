@@ -8,6 +8,8 @@ part 'search_result.g.dart';
 class SearchResult extends Equatable {
   const SearchResult({required this.items});
 
+  factory SearchResult.empty() => const SearchResult(items: []);
+
   factory SearchResult.fromJson(Map<String, dynamic> json) =>
       _$SearchResultFromJson(json);
 

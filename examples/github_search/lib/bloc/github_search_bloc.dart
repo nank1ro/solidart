@@ -1,5 +1,4 @@
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:github_search/bloc/github_search_state.dart';
 import 'package:github_search/models/models.dart';
 import 'package:github_search/repo/repository.dart';
 import 'package:github_search/service/client.dart';
@@ -18,26 +17,19 @@ class GithubSearchBloc {
 
   final GithubRepository _repository;
 
-  final searchState = createSignal<GithubSearchState>(GithubSearchStateEmpty());
+  final _searchTerm = createSignal('');
+  late final searchResult =
+      createResource(fetcher: _search, source: _searchTerm);
 
-  Future<void> search(String term) async {
-    if (term.isEmpty) {
-      return searchState.set(GithubSearchStateEmpty());
-    }
+  void search(String term) => _searchTerm.set(term);
 
-    searchState.set(GithubSearchStateLoading());
-
-    try {
-      final results = await _repository.search(term);
-      searchState.value = GithubSearchStateSuccess(results.items);
-    } catch (error) {
-      searchState.value = error is SearchResultError
-          ? GithubSearchStateError(error.message)
-          : const GithubSearchStateError('something went wrong');
-    }
+  Future<SearchResult> _search() async {
+    if (_searchTerm().isEmpty) return SearchResult.empty();
+    return _repository.search(_searchTerm());
   }
 
   void dispose() {
-    searchState.dispose();
+    _searchTerm.dispose();
+    searchResult.dispose();
   }
 }
