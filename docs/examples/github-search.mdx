@@ -105,17 +105,6 @@ class _CacheEntry<T> {
 }
 ```
 
-Starting it from the `0` value.
-
-In the `dispose()` method we dispose the signal:
-```dart
-@override
-void dispose() {
-  counter.dispose();
-  super.dispose();
-}
-```
-
 The `InMemoryCache` class caches the future being passed to the `fetch` method for a given `duration`.
 
 ---
@@ -141,7 +130,7 @@ class GithubRepository {
 }
 ```
 
-The `GithubRepository`, given a [cache] and a [client] provides the `search` future which value is cached by default.
+The `GithubRepository`, given a `cache` and a `client` provides the `search` future which value is cached by default.
 
 ---
 
@@ -186,7 +175,7 @@ class GithubSearchBloc {
 
 The `GithubSearchBloc` has a `searchResult` resource.
 This resource is responsible for managing the state of the future `_search`.
-The Resource takes a `_searchTerm`, so the Future will be repeated every time the source changes. 
+The Resource takes a `_searchTerm` source, so the Future will be repeated every time it changes. 
 
 ---
 
@@ -210,7 +199,9 @@ class SearchPage extends StatelessWidget {
 }
 ```
 
-Here we're creating and providing to descendats the `GithubSearchBloc`.
+Here we're creating and providing to descendants the `GithubSearchBloc`.
+
+---
 
 ```dart title=ui/search_page.dart
 class _SearchBar extends StatefulWidget {
@@ -257,6 +248,8 @@ class __SearchBarState extends State<_SearchBar> {
 
 The `_SearchBar` gets access to the `GithubSearchBloc` ancestor by using `late final bloc = context.get<GithubSearchBloc>`.
 Additionally, when the TextField value is submitted or cleared, the `bloc.search(value)` sets the current search value.
+
+---
 
 Finally the `_SearchBody`:
 ```dart title=ui/search_page.dart
