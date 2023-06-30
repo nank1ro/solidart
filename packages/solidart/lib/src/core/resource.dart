@@ -23,14 +23,14 @@ class ResourceOptions {
 /// {@macro resource}
 Resource<T> createResource<T>({
   Future<T> Function()? fetcher,
-  Stream<T>? stream,
+  Stream<T> Function()? stream,
   SignalBase<dynamic>? source,
   ResourceOptions? options,
 }) {
   return Resource<T>(
     fetcher: fetcher,
-    source: source,
     stream: stream,
+    source: source,
     options: options,
   );
 }
@@ -42,12 +42,13 @@ Resource<T> createResource<T>({
 /// and __loading__.
 ///
 /// Resources can be driven by a `source` signal that provides the query to an
-/// async data `fetcher` function that returns a `Future`.
+/// async data `fetcher` function that returns a `Future` or to a `stream` that
+/// is listened again when the source changes.
 ///
 /// The contents of the `fetcher` function can be anything. You can hit typical
 /// REST endpoints or GraphQL or anything that generates a future. Resources
 /// are not opinionated on the means of loading the data, only that they are
-/// driven by futures.
+/// driven by an async operation.
 ///
 /// Let's create a Resource:
 ///
@@ -73,8 +74,6 @@ Resource<T> createResource<T>({
 /// A Resource can also be driven from a [stream] instead of a Future.
 /// In this case you just need to pass the `stream` field to the
 /// `createResource` method.
-/// The [source] field is ignored for the [stream] and used only for a
-/// [fetcher].
 ///
 /// If you are using the `flutter_solidart` library, check
 /// `ResourceBuilder` to learn how to react to the state of the resource in the
@@ -106,7 +105,8 @@ Resource<T> createResource<T>({
 /// resource.
 /// If runs the `fetcher` for the first time and then it listen to the
 /// [source], if provided.
-/// If you're passing a [stream] it subscribes to it.
+/// If you're passing a [stream] it subscribes to it, and every time the source
+/// changes, it resubscribes again.
 ///
 /// The `refetch` method forces an update and calls the `fetcher` function
 /// again.
@@ -144,7 +144,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   final ResourceOptions resourceOptions;
 
   /// The stream used to retrieve data.
-  final Stream<T>? stream;
+  final Stream<T>? Function()? stream;
   StreamSubscription<T>? _streamSubscription;
 
   /// The current resource state
@@ -154,6 +154,13 @@ class Resource<T> extends Signal<ResourceState<T>> {
   @override
   ResourceState<T> get value {
     return super.value;
+  }
+
+  // The stream trasformed in a broadcast stream, if needed
+  Stream<T> get _stream {
+    final s = stream!()!;
+    if (s.isBroadcast) return s;
+    return s.asBroadcastStream();
   }
 
   /// Resolves the [Resource].
@@ -171,16 +178,22 @@ class Resource<T> extends Signal<ResourceState<T>> {
     if (fetcher != null) {
       // start fetching
       await _fetch();
-      // react to the [source], if provided.
-
-      if (source != null) {
-        final unobserve = source!.observe((_, __) => refetch());
-        source!.onDispose(unobserve);
-      }
     }
     // React the the [stream], if provided
     if (stream != null) {
-      _listenToStream();
+      subscribe();
+    }
+
+    // react to the [source], if provided.
+    if (source != null) {
+      final unobserve = source!.observe((_, __) {
+        if (fetcher != null) {
+          refetch();
+        } else {
+          subscribe();
+        }
+      });
+      source!.onDispose(unobserve);
     }
   }
 
@@ -204,9 +217,27 @@ class Resource<T> extends Signal<ResourceState<T>> {
   }
 
   /// Starts listening to the [stream] provided.
-  void _listenToStream() {
-    value = ResourceState<T>.loading();
-    _streamSubscription = stream!.listen(
+  ///
+  /// If the stream is already listened, it cancels the previous subscription
+  /// and re-subscribes.
+  void subscribe() {
+    assert(
+      stream != null,
+      'You are trying to listen to a stream, but stream is null',
+    );
+    _streamSubscription?.cancel();
+    if (state.isReady) {
+      update(
+        (state) => (state as ResourceReady<T>).copyWith(isRefreshing: true),
+      );
+    } else if (state.hasError) {
+      update(
+        (state) => (state as ResourceError<T>).copyWith(isRefreshing: true),
+      );
+    } else {
+      value = ResourceState<T>.loading();
+    }
+    _streamSubscription = _stream.listen(
       (data) {
         value = ResourceState<T>.ready(data);
       },
@@ -222,11 +253,11 @@ class Resource<T> extends Signal<ResourceState<T>> {
     try {
       if (state is ResourceReady<T>) {
         update(
-          (value) => (value as ResourceReady<T>).copyWith(isRefreshing: true),
+          (state) => (state as ResourceReady<T>).copyWith(isRefreshing: true),
         );
       } else if (state is ResourceError<T>) {
         update(
-          (value) => (value as ResourceError<T>).copyWith(isRefreshing: true),
+          (state) => (state as ResourceError<T>).copyWith(isRefreshing: true),
         );
       } else {
         value = ResourceState<T>.loading();
@@ -253,6 +284,12 @@ class Resource<T> extends Signal<ResourceState<T>> {
   FutureOr<T> untilReady() {
     return firstWhereReady();
   }
+
+  @override
+  ResourceState<T> update(
+    ResourceState<T> Function(ResourceState<T> state) callback,
+  ) =>
+      value = callback(state);
 
   @override
   void dispose() {
