@@ -147,6 +147,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
   final Stream<T>? Function()? stream;
   StreamSubscription<T>? _streamSubscription;
 
+  // The source dispose observation
+  DisposeObservation? _sourceDisposeObservation;
+
   /// The current resource state
   ResourceState<T> get state => super.value;
 
@@ -186,14 +189,14 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
     // react to the [source], if provided.
     if (source != null) {
-      final unobserve = source!.observe((_, __) {
+      _sourceDisposeObservation = source!.observe((_, __) {
         if (fetcher != null) {
           refetch();
         } else {
           subscribe();
         }
       });
-      source!.onDispose(unobserve);
+      source!.onDispose(_sourceDisposeObservation!);
     }
   }
 
@@ -294,6 +297,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   @override
   void dispose() {
     _streamSubscription?.cancel();
+    _sourceDisposeObservation?.call();
     super.dispose();
   }
 
