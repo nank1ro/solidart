@@ -475,7 +475,6 @@ void main() {
         resource.state,
         isA<ResourceReady<int>>().having((p0) => p0.value, 'equal to 0', 0),
       );
-      expect(resource.state.value, 0);
 
       count.set(5);
       await pumpEventQueue();
