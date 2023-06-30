@@ -507,7 +507,7 @@ void main() {
         return Future.value(User(id: userId()));
       }
 
-      final resource = createResource(fetcher: getUser);
+      final resource = createResource(fetcher: getUser, source: userId);
 
       await resource.resolve();
       await pumpEventQueue();
