@@ -654,7 +654,7 @@ void main() {
     );
   });
 
-  testWidgets('Test Solid context.get with providers', (tester) async {
+  testWidgets('Test Solid context.getProvider', (tester) async {
     final nameProvider = MockNameProvider('Ale');
     await tester.pumpWidget(
       MaterialApp(
@@ -668,22 +668,32 @@ void main() {
               SolidProvider<NumberProvider>(
                 create: () => const NumberProvider(1),
                 lazy: false,
+                id: 1,
+              ),
+              SolidProvider<NumberProvider>(
+                create: () => const NumberProvider(100),
+                lazy: false,
+                id: 2,
               ),
             ],
             child: Builder(
               builder: (context) {
                 final nameProvider = context.getProvider<NameProvider>();
-                final numberProvider = context.getProvider<NumberProvider>();
-                return Text('${nameProvider.name} ${numberProvider.number}');
+                final numberProvider1 = context.getProvider<NumberProvider>(1);
+                final numberProvider2 = context.getProvider<NumberProvider>(2);
+                return Text(
+                  '''${nameProvider.name} ${numberProvider1.number} ${numberProvider2.number}''',
+                );
               },
             ),
           ),
         ),
       ),
     );
-    Finder providerFinder(String value1, int value2) =>
-        find.text('$value1 $value2');
-    expect(providerFinder('Ale', 1), findsOneWidget);
+    Finder providerFinder(String value1, int value2, int value3) =>
+        find.text('$value1 $value2 $value3');
+
+    expect(providerFinder('Ale', 1, 100), findsOneWidget);
 
     // mock NameProvider dispose method
     when(nameProvider.dispose()).thenReturn(null);

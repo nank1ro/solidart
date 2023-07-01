@@ -592,7 +592,7 @@ The signal id that caused this issue is $id
     final createdProvider =
         state._createdProviders.entries.firstWhereOrNull((element) {
       return element.value is P && element.key.id == id;
-    });
+    })?.value;
 
     if (createdProvider != null) return createdProvider as P;
     // if the provider is not already present, create it lazily
