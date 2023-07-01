@@ -1,3 +1,11 @@
+## 1.0.0-dev7
+
+### Changes from solidart
+
+- **FEAT** Before, only the `fetcher` reacted to the `source`.
+Now also the `stream` reacts to the `source` changes by subscribing again to the stream.
+In addition, the `stream` parameter of the Resource has been changed from `Stream` into a `Stream Function()` in order to be able to listen to a new stream if it changed
+
 ## 1.0.0-dev6
 
 ### Changes from solidart

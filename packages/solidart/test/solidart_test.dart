@@ -433,7 +433,7 @@ void main() {
       final streamController = StreamController<int>();
       addTearDown(streamController.close);
 
-      final resource = createResource(stream: streamController.stream);
+      final resource = createResource(stream: () => streamController.stream);
       expect(resource.state, isA<ResourceUnresolved<int>>());
       resource.resolve().ignore();
       expect(resource.state, isA<ResourceLoading<int>>());
@@ -451,6 +451,37 @@ void main() {
       await pumpEventQueue();
       expect(resource.state, isA<ResourceError<int>>());
       expect(resource.state.error, isUnimplementedError);
+    });
+
+    test('check createResource with stream and source', () async {
+      final count = createSignal(-1);
+
+      final resource = createResource(
+        stream: () {
+          if (count() < 1) return Stream.value(0);
+          return Stream.value(count());
+        },
+        source: count,
+        options: const ResourceOptions(lazy: false),
+      );
+
+      addTearDown(() {
+        resource.dispose();
+        count.dispose();
+      });
+
+      await pumpEventQueue();
+      expect(
+        resource.state,
+        isA<ResourceReady<int>>().having((p0) => p0.value, 'equal to 0', 0),
+      );
+
+      count.set(5);
+      await pumpEventQueue();
+      expect(
+        resource.state,
+        isA<ResourceReady<int>>().having((p0) => p0.value, 'equal to 5', 5),
+      );
     });
 
     test('check createResource with future that throws', () async {
