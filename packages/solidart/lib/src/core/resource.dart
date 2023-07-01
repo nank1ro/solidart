@@ -184,7 +184,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     }
     // React the the [stream], if provided
     if (stream != null) {
-      subscribe();
+      _subscribe();
     }
 
     // react to the [source], if provided.
@@ -193,7 +193,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
         if (fetcher != null) {
           refetch();
         } else {
-          subscribe();
+          resubscribe();
         }
       });
       source!.onDispose(_sourceDisposeObservation!);
@@ -219,27 +219,43 @@ class Resource<T> extends Signal<ResourceState<T>> {
     }
   }
 
-  /// Starts listening to the [stream] provided.
+  /// Subscribes to the provided [stream].
+  void _subscribe() {
+    assert(
+      stream != null,
+      'You are trying to listen to a stream, but stream is null',
+    );
+    value = ResourceState<T>.loading();
+    _streamSubscription = _stream.listen(
+      (data) {
+        value = ResourceState<T>.ready(data);
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        value = ResourceState<T>.error(error, stackTrace: stackTrace);
+      },
+    );
+  }
+
+  /// Resubscribes to the [stream].
   ///
-  /// If the stream is already listened, it cancels the previous subscription
-  /// and re-subscribes.
-  void subscribe() {
+  /// Cancels the previous subscription and resubscribes.
+  void resubscribe() {
     assert(
       stream != null,
       'You are trying to listen to a stream, but stream is null',
     );
     _streamSubscription?.cancel();
-    if (state.isReady) {
-      update(
-        (state) => (state as ResourceReady<T>).copyWith(isRefreshing: true),
-      );
-    } else if (state.hasError) {
-      update(
-        (state) => (state as ResourceError<T>).copyWith(isRefreshing: true),
-      );
-    } else {
-      value = ResourceState<T>.loading();
-    }
+    state.map(
+      ready: (ready) {
+        value = ready.copyWith(isRefreshing: true);
+      },
+      error: (error) {
+        value = error.copyWith(isRefreshing: true);
+      },
+      loading: (_) {
+        value = ResourceState<T>.loading();
+      },
+    );
     _streamSubscription = _stream.listen(
       (data) {
         value = ResourceState<T>.ready(data);
@@ -254,17 +270,17 @@ class Resource<T> extends Signal<ResourceState<T>> {
   Future<void> refetch() async {
     assert(fetcher != null, 'You are trying to refetch, but fetcher is null');
     try {
-      if (state is ResourceReady<T>) {
-        update(
-          (state) => (state as ResourceReady<T>).copyWith(isRefreshing: true),
-        );
-      } else if (state is ResourceError<T>) {
-        update(
-          (state) => (state as ResourceError<T>).copyWith(isRefreshing: true),
-        );
-      } else {
-        value = ResourceState<T>.loading();
-      }
+      state.map(
+        ready: (ready) {
+          value = ready.copyWith(isRefreshing: true);
+        },
+        error: (error) {
+          value = error.copyWith(isRefreshing: true);
+        },
+        loading: (_) {
+          value = ResourceState<T>.loading();
+        },
+      );
       final result = await fetcher!();
       value = ResourceState<T>.ready(result);
     } catch (e, s) {
