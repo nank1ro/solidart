@@ -21,7 +21,7 @@ class _ToolbarState extends State<Toolbar> {
   void initState() {
     super.initState();
     // retrieve the todos from TodosController.
-    final todos = context.get<TodosController>().todos;
+    final todos = context.getProvider<TodosController>().todos;
 
     // create derived signals based on the list of todos
 
@@ -30,11 +30,11 @@ class _ToolbarState extends State<Toolbar> {
 
     // retrieve the list of completed count and select just the length.
     final completedTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
+        context.getSignal<ReadSignal<List<Todo>>>(SignalId.completedTodos);
     completedTodosCount = createComputed(() => completedTodos().length);
     // retrieve the list of incomplete count and select just the length.
     final incompleteTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
+        context.getSignal<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
     incompleteTodosCount = createComputed(() => incompleteTodos().length);
   }
 

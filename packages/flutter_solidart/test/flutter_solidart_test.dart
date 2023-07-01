@@ -351,9 +351,9 @@ void main() {
             },
             child: Builder(
               builder: (context) {
-                final counter = context.get<Signal<int>>('counter');
+                final counter = context.getSignal<Signal<int>>('counter');
                 final doubleCounter =
-                    context.get<ReadSignal<int>>('double-counter');
+                    context.getSignal<ReadSignal<int>>('double-counter');
                 return DualSignalBuilder(
                   firstSignal: counter,
                   secondSignal: doubleCounter,
@@ -387,7 +387,8 @@ void main() {
             },
             child: Builder(
               builder: (context) {
-                final counter = context.get<Signal<int>>('invalid-counter');
+                final counter =
+                    context.getSignal<Signal<int>>('invalid-counter');
                 return SignalBuilder(
                   signal: counter,
                   builder: (context, value, _) {
@@ -468,9 +469,9 @@ void main() {
             signalIds: const ['counter', 'double-counter'],
             child: Builder(
               builder: (innerContext) {
-                final counter = innerContext.get<Signal<int>>('counter');
+                final counter = innerContext.getSignal<Signal<int>>('counter');
                 final doubleCounter =
-                    innerContext.get<ReadSignal<int>>('double-counter');
+                    innerContext.getSignal<ReadSignal<int>>('double-counter');
                 return DualSignalBuilder(
                   firstSignal: counter,
                   secondSignal: doubleCounter,
@@ -538,7 +539,7 @@ void main() {
             },
             child: Builder(
               builder: (context) {
-                final counter = context.get<Signal<int>>('counter');
+                final counter = context.getSignal<Signal<int>>('counter');
                 return SignalBuilder(
                   signal: counter,
                   builder: (context, value, _) {
@@ -563,7 +564,7 @@ void main() {
             },
             child: Builder(
               builder: (context) {
-                final counter = context.get<ReadSignal<int>>('counter');
+                final counter = context.getSignal<ReadSignal<int>>('counter');
                 return SignalBuilder(
                   signal: counter,
                   builder: (context, value, _) {
@@ -671,8 +672,8 @@ void main() {
             ],
             child: Builder(
               builder: (context) {
-                final nameProvider = context.get<NameProvider>();
-                final numberProvider = context.get<NumberProvider>();
+                final nameProvider = context.getProvider<NameProvider>();
+                final numberProvider = context.getProvider<NumberProvider>();
                 return Text('${nameProvider.name} ${numberProvider.number}');
               },
             ),
@@ -706,7 +707,7 @@ void main() {
             child: Builder(
               builder: (context) {
                 // NameProvider is not present
-                final nameProvider = context.get<NameProvider>();
+                final nameProvider = context.getProvider<NameProvider>();
                 return Text(nameProvider.name);
               },
             ),
@@ -724,10 +725,11 @@ void main() {
         builder: (dialogContext) {
           return Solid.value(
             context: context,
-            providerTypes: const [NumberProvider],
+            providerTypesOrIds: const [NumberProvider],
             child: Builder(
               builder: (innerContext) {
-                final numberProvider = innerContext.get<NumberProvider>();
+                final numberProvider =
+                    innerContext.getProvider<NumberProvider>();
                 return Text('${numberProvider.number}');
               },
             ),

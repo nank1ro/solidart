@@ -7,6 +7,9 @@ typedef Create<T> = T Function();
 /// A function that disposes an object of type [T].
 typedef DisposeValue<T> = void Function(T value);
 
+/// The idenfifier of the provider.
+typedef ProviderIdentifier = Object;
+
 /// {@template solidprovider}
 /// A Provider that manages the lifecycle of the value it provides by
 // delegating to a pair of `create` and `dispose`.
@@ -27,6 +30,7 @@ class SolidProvider<T> {
   const SolidProvider({
     required this.create,
     this.dispose,
+    this.id,
     this.lazy = true,
   });
 
@@ -36,6 +40,10 @@ class SolidProvider<T> {
   /// An optional dispose function called when the Solid that created this
   /// provider disposes
   final DisposeValue<T>? dispose;
+
+  /// The identifier of the provider, useful to distinguish between providers
+  /// with the same Type.
+  final ProviderIdentifier? id;
 
   /// Make the provider creation lazy, defaults to true.
   ///

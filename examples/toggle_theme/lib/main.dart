@@ -45,7 +45,7 @@ class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // retrieve the theme mode signal
-    final themeMode = context.get<Signal<ThemeMode>>(SignalId.themeMode);
+    final themeMode = context.getSignal<Signal<ThemeMode>>(SignalId.themeMode);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Toggle theme'),

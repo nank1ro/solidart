@@ -41,11 +41,9 @@ class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // expect_lint: missing_solid_get_type
-    final myClass = context.get();
-    // expect_lint: invalid_signal_type
-    final invalidSignalType = context.get<MyClass>('1');
+    final myClass = context.getProvider();
     // expect_lint: invalid_provider_type
-    final invalidProviderType = context.get<Signal>();
+    final invalidProviderType = context.getProvider<Signal>();
     // expect_lint: invalid_observe_type
     final counter = context.observe<Signal<int>>('counter');
 

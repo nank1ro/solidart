@@ -58,13 +58,17 @@ class _SolidReactivityPageState extends State<SolidReactivityPage> {
               children: [
                 TextButton(
                   onPressed: () {
-                    context.get<Signal<int>>(SignalId.firstCounter).value++;
+                    context
+                        .getSignal<Signal<int>>(SignalId.firstCounter)
+                        .value++;
                   },
                   child: const Text('+1 counter1'),
                 ),
                 TextButton(
                   onPressed: () {
-                    context.get<Signal<int>>(SignalId.secondCounter).value++;
+                    context
+                        .getSignal<Signal<int>>(SignalId.secondCounter)
+                        .value++;
                   },
                   child: const Text('+1 counter2'),
                 ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/src/widgets/solid.dart';
-import 'package:solidart/solidart.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
 
 /// Convenience extensions to interact with the [Solid] InheritedModel.
 extension SolidExtensions on BuildContext {
@@ -25,8 +24,33 @@ extension SolidExtensions on BuildContext {
   /// Doesn't listen to the signal so it won't cause the widget to rebuild.
   ///
   /// You may call this method inside the `initState` or `build` methods.
-  S get<S>([SignalIdentifier? id]) {
-    return Solid.get<S>(this, id);
+  S getSignal<S extends SignalBase<dynamic>>(SignalIdentifier id) {
+    return Solid.getSignal<S>(this, id);
+  }
+
+  /// Obtains the Provider of the given type P and [id] corresponding to the
+  /// nearest [Solid] widget.
+  ///
+  /// Throws if no such element or [Solid] widget is found.
+  ///
+  /// Calling this method is O(N) with a small constant factor where N is the
+  /// number of [Solid] ancestors needed to traverse to find the provider with
+  /// the given [id].
+  ///
+  /// If you've a single Solid widget in the whole app N is equal to 1.
+  /// If you have two Solid ancestors and the provider is present in the nearest
+  /// ancestor, N is still 1.
+  /// If you have two Solid ancestors and the provider is present in the farest
+  /// ancestor, N is 2, and so on.
+  ///
+  /// This method should not be called from State.dispose because the element
+  /// tree is no longer stable at that time.
+  ///
+  /// Doesn't listen to the provider so it won't cause the widget to rebuild.
+  ///
+  /// You may call this method inside the `initState` or `build` methods.
+  P getProvider<P>([ProviderIdentifier? id]) {
+    return Solid.getProvider<P>(this, id);
   }
 
   /// Subscribe to the [Signal] of the given type and [id] corresponding to the
