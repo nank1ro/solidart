@@ -40,7 +40,6 @@ class _Counter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // final counter = context.getProvider<Signal<int>>();
     final counter = context.observe<int>();
     return Center(
       child: Column(
