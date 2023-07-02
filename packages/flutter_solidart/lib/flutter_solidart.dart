@@ -3,7 +3,6 @@ library flutter_solidart;
 
 export 'package:solidart/solidart.dart';
 
-export 'src/models/solid_provider.dart';
 export 'src/utils/extensions.dart';
 export 'src/utils/solid_extensions.dart';
 export 'src/utils/solid_options.dart';

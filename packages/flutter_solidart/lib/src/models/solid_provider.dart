@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:meta/meta.dart';
+part of '../widgets/solid.dart';
 
 /// A function that creates an object of type [T].
 typedef Create<T> = T Function();
@@ -7,8 +6,29 @@ typedef Create<T> = T Function();
 /// A function that disposes an object of type [T].
 typedef DisposeValue<T> = void Function(T value);
 
-/// The idenfifier of the provider.
-typedef ProviderIdentifier = Object;
+/// The idenfifier of the element.
+typedef Identifier = Object;
+
+/// {@template solidelement}
+/// The base class of a solid provider
+/// {@endtemplate}
+abstract class SolidElement<T> {
+  /// {@macro solidelement}
+  const SolidElement({
+    required this.create,
+    this.id,
+  });
+
+  /// The function called to create the element.
+  final Create<T> create;
+
+  /// The identifier of the provider, useful to distinguish between providers
+  /// with the same Type.
+  final Identifier? id;
+
+  /// Returns the type of the value
+  Type get _valueType => T;
+}
 
 /// {@template solidprovider}
 /// A Provider that manages the lifecycle of the value it provides by
@@ -25,25 +45,18 @@ typedef ProviderIdentifier = Object;
 /// This behavior can be disabled by passing lazy: false to Provider.
 /// {@endtemplate}
 @immutable
-class SolidProvider<T> {
+class SolidProvider<T> extends SolidElement<T> {
   /// {@macro solidprovider}
   const SolidProvider({
-    required this.create,
+    required super.create,
     this.dispose,
-    this.id,
     this.lazy = true,
+    super.id,
   });
-
-  /// The function called to create the provider.
-  final Create<T> create;
 
   /// An optional dispose function called when the Solid that created this
   /// provider disposes
   final DisposeValue<T>? dispose;
-
-  /// The identifier of the provider, useful to distinguish between providers
-  /// with the same Type.
-  final ProviderIdentifier? id;
 
   /// Make the provider creation lazy, defaults to true.
   ///
@@ -51,13 +64,27 @@ class SolidProvider<T> {
   /// when retrieved from descendants.
   final bool lazy;
 
-  /// Returns the type of the value, do not use.
-  @internal
-  Type get valueType => T;
-
   /// Dispose function, do no use.
-  @internal
-  void disposeFn(BuildContext context, dynamic value) {
+  void _disposeFn(BuildContext context, dynamic value) {
     dispose?.call(value as T);
   }
+}
+
+/// {@template solidsignal}
+/// A Provider that manages the lifecycle of the signal it provides.
+///
+/// It is usually used to avoid making a StatefulWidget for something trivial,
+/// such as instantiating a Signal.
+/// {@endtemplate}
+@immutable
+class SolidSignal<T> extends SolidElement<T> {
+  /// {@macro solidsignal}
+  const SolidSignal({
+    required super.create,
+    super.id,
+    this.autodispose = true,
+  });
+
+  /// Whether to auto dispose the signal, defaults to true.
+  final bool autodispose;
 }

@@ -3,19 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-/// The id of a signal
-typedef SignalIdentifier = Object;
+part '../models/solid_provider.dart';
 
-/// A map of signals with their ids.
-typedef SignalsMapper = Map<SignalIdentifier, SignalBase<dynamic> Function()>;
-
-enum _SolidElement {
-  provider,
-  signal,
-}
-
-/// Provides [signals] and [providers] to descendants.
-
+/// {@template solid}
+/// Provides [providers] to descendants.
+///
 /// The Flutter framework works like a Tree. There are ancestors and there are
 /// descendants.
 ///
@@ -281,20 +273,19 @@ enum _SolidElement {
 ///   );
 /// }
 /// ```
+/// {@endtemplate}
 @immutable
 class Solid extends StatefulWidget {
-  /// Default constructor
+  /// {@macro solid}
   const Solid({
     super.key,
     required this.child,
-    this.signals = const {},
     this.providers = const [],
   }) : _autoDispose = true;
 
   /// Private constructor used internally to hide the `autoDispose` field
   const Solid._internal({
     super.key,
-    this.signals = const {},
     this.providers = const [],
     required this.child,
     required bool autoDispose,
@@ -307,8 +298,8 @@ class Solid extends StatefulWidget {
   /// The [child] parameter is the target that inherit the signals and
   /// providers.
   ///
-  /// To provide signals, provide a list of [signalIds], while for providers
-  /// provide a list of provider [Type]s
+  /// Pass the Type of the[providers] to the [providerTypesOrIds]
+  /// or the identifiers.
   ///
   /// This is useful for passing signals and providers to modals, because are
   /// spawned in a new tree.
@@ -316,25 +307,15 @@ class Solid extends StatefulWidget {
     Key? key,
     required BuildContext context,
     required Widget child,
-    List<SignalIdentifier> signalIds = const [],
     List<Object> providerTypesOrIds = const [],
   }) {
-    // retrieve the signals
-    final signals = <SignalIdentifier, SignalBase<dynamic> Function()>{};
-    for (final id in signalIds) {
-      final stateContainingSignal = _findState(
-        context,
-        aspect: id,
-        element: _SolidElement.signal,
-      );
-      signals[id] = stateContainingSignal.widget.signals[id]!;
-    }
-
     // retrieve the providers
-    final providers = <SolidProvider<dynamic>>[];
+    final providers = <SolidElement<dynamic>>[];
     for (final type in providerTypesOrIds) {
-      final stateContainingProvider =
-          _findState(context, aspect: type, element: _SolidElement.provider);
+      final stateContainingProvider = _findState(
+        context,
+        aspect: type,
+      );
       final provider = stateContainingProvider.widget.providers.firstWhere(
         (element) =>
             stateContainingProvider._getProviderOfType(type) == element,
@@ -343,25 +324,17 @@ class Solid extends StatefulWidget {
     }
     return Solid._internal(
       key: key,
-      signals: signals,
       providers: providers,
       autoDispose: false,
       child: child,
     );
   }
 
-  /// The widget child that gets access to the [signals] and [providers].
+  /// The widget child that gets access to the [providers].
   final Widget child;
 
-  /// All the signals provided to all the descendants of [Solid].
-  ///
-  /// The key is the signal identifier.
-  /// The function must return a signal.
-  /// The value is a function in order to create signals lazily only when needed
-  final SignalsMapper signals;
-
   /// All the providers provided to all the descendants of [Solid].
-  final List<SolidProvider<dynamic>> providers;
+  final List<SolidElement<dynamic>> providers;
 
   /// By default signals and providers are going to be auto-disposed when the
   //  Solid widget disposes.
@@ -379,104 +352,14 @@ class Solid extends StatefulWidget {
     BuildContext context, {
     required Object aspect,
     bool listen = false,
-    required _SolidElement element,
   }) {
     final state = _InheritedSolid.inheritFromNearest(
       context,
       aspect: aspect,
       listen: listen,
     )?.state;
-    if (state == null) {
-      switch (element) {
-        case _SolidElement.provider:
-          throw SolidProviderError(aspect);
-        case _SolidElement.signal:
-          throw SolidSignalError(signalId: aspect);
-      }
-    }
+    if (state == null) throw SolidProviderError(aspect);
     return state;
-  }
-
-  // Checks that the signal type correspondes to the given type provided.
-  // If you created a [Signal] you cannot get it as a [ReadSignal], and
-  // vice versa.
-  // This operation is performed only in development mode.
-  static void _checkSignalType<S>({
-    required SolidState state,
-    required SignalIdentifier id,
-  }) {
-    assert(
-      () {
-        Type typeOf<X>() => X;
-        final t = typeOf<S>();
-        final isTypeReadable = t.toString().startsWith('ReadSignal');
-        final isSignalReadable = state.isReadSignal(id: id);
-
-        // ignore: avoid_positional_boolean_parameters
-        String typeString(bool isReadable) {
-          return isReadable ? 'ReadSignal' : 'Signal';
-        }
-
-        if (isTypeReadable != isSignalReadable) {
-          throw Exception('''
-You're trying to access a ${typeString(isSignalReadable)} as a ${typeString(isTypeReadable)}
-The signal id that caused this issue is $id
-''');
-        }
-        return true;
-      }(),
-      '',
-    );
-  }
-
-  /// Obtains the [Signal] of the given type and [id] corresponding to the
-  /// nearest [Solid] widget.
-  static S _getOrCreateSignal<S>(
-    BuildContext context,
-    SignalIdentifier id, {
-    bool listen = false,
-  }) {
-    final state = _findState(
-      context,
-      aspect: id,
-      listen: listen,
-      element: _SolidElement.signal,
-    );
-    _checkSignalType<S>(state: state, id: id);
-
-    final createdSignal = state._createdSignals[id] as S?;
-    // if the signal is not already present, create it lazily
-    return createdSignal ?? state.createSignal<S>(id: id);
-  }
-
-  /// Obtains the [Signal] of the given type corresponding
-  /// to the nearest [Solid] widget.
-  ///
-  /// The [id] is mandatory only if targeting a Signal and ignored for providers
-  ///
-  /// Throws if no such element or [Solid] widget is found.
-  ///
-  /// Calling this method is O(N) with a small constant factor where N is the
-  /// number of [Solid] ancestors needed to traverse to find the signal with
-  /// the given [id].
-  ///
-  /// If you've a single Solid widget in the whole app N is equal to 1.
-  /// If you have two Solid ancestors and the signal is present in the nearest
-  /// ancestor, N is still 1.
-  /// If you have two Solid ancestors and the signal is present in the farest
-  /// ancestor, N is 2, and so on.
-  ///
-  /// This method should not be called from State.dispose because the element
-  /// tree is no longer stable at that time.
-  ///
-  /// Doesn't listen to the signal so it won't cause the widget to rebuild.
-  ///
-  /// You may call this method inside the `initState` or `build` methods.
-  static S getSignal<S extends SignalBase<dynamic>>(
-    BuildContext context,
-    SignalIdentifier id,
-  ) {
-    return _getOrCreateSignal<S>(context, id);
   }
 
   /// Obtains the Provider of the given type P and [id] corresponding to the
@@ -500,16 +383,13 @@ The signal id that caused this issue is $id
   /// Doesn't listen to the provider so it won't cause the widget to rebuild.
   ///
   /// You may call this method inside the `initState` or `build` methods.
-  static P getProvider<P>(
-    BuildContext context, [
-    ProviderIdentifier? id,
-  ]) {
+  static P get<P>(BuildContext context, [Identifier? id]) {
     return _getOrCreateProvider<P>(context, id: id);
   }
 
-  /// Subscribe to the [Signal] of the given type and [id] corresponding to the
-  /// nearest [Solid] widget rebuilding the widget when the value exposed by the
-  /// [Signal] changes.
+  /// Subscribe to the [Signal] of the given value type and [id] corresponding
+  /// to the nearest [Solid] widget rebuilding the widget when the value exposed
+  /// by the [Signal] changes.
   ///
   /// Throws if no such element or [Solid] widget is found.
   ///
@@ -529,27 +409,60 @@ The signal id that caused this issue is $id
   /// Listens to the signal so it causes the widget to rebuild.
   ///
   /// You must call this method only from the `build` method.
-  static T observe<T>(BuildContext context, SignalIdentifier id) {
-    final state = _findState(
-      context,
-      aspect: id,
-      listen: true,
-      element: _SolidElement.signal,
-    );
+  static T observe<T>(BuildContext context, [Identifier? id]) {
+    SolidState? state;
+    Type? signalType;
+    if (id != null) {
+      state = _findState(
+        context,
+        aspect: id,
+        listen: true,
+      );
+      signalType = state.widget.providers
+          .whereType<SolidSignal<dynamic>>()
+          .firstWhere((element) => element.id == id)
+          ._valueType;
+    } else {
+      final possibleTypes = [Signal<T>, ReadSignal<T>, Resource<T>];
+      for (final type in possibleTypes) {
+        try {
+          state = _findState(
+            context,
+            aspect: type,
+            listen: true,
+          );
+          signalType = type;
+          break;
+        } catch (_) {}
+      }
+    }
+    final effectiveId = id ?? signalType ?? Never;
 
-    // retrieve the signal
-    var createdSignal = state._createdSignals[id];
+    if (state == null) {
+      throw SolidProviderError(effectiveId);
+    }
+
+    var createdSignal = state._createdProviders.entries
+        .firstWhereOrNull(
+          (element) =>
+              // ignore: avoid_dynamic_calls
+              element.value.runtimeType == signalType && element.key.id == id,
+        )
+        ?.value;
 
     // if the signal is not already present, create it lazily
     if (createdSignal == null) {
-      if (state.isReadSignal(id: id)) {
-        createdSignal = state.createSignal<ReadSignal<T>>(id: id);
-      } else {
-        createdSignal = state.createSignal<Signal<T>>(id: id);
+      if (signalType == Signal<T>) {
+        createdSignal = state.createProvider<Signal<T>>(effectiveId);
+      } else if (signalType == ReadSignal<T>) {
+        createdSignal = state.createProvider<ReadSignal<T>>(effectiveId);
+      } else if (signalType == Resource<T>) {
+        createdSignal = state.createProvider<Resource<T>>(effectiveId);
       }
     }
+
     // return the signal value
-    return createdSignal.value as T;
+    return (createdSignal as SignalBase).value as T;
   }
 
   /// Convenience method to update a `Signal` value.
@@ -568,25 +481,21 @@ The signal id that caused this issue is $id
   /// but shorter when you don't need the signal for anything else.
   static void update<T>(
     BuildContext context,
-    SignalIdentifier id,
-    T Function(T value) callback,
-  ) {
+    T Function(T value) callback, [
+    Identifier? id,
+  ]) {
     // retrieve the signal and update its value
-    getSignal<Signal<T>>(context, id).update(callback);
+    get<Signal<T>>(context, id).update(callback);
   }
 
   /// Tries to find a provider of type P from the created providers and returns
   /// it.
   ///
   /// The provider is created in case the find fails.
-  static P _getOrCreateProvider<P>(
-    BuildContext context, {
-    ProviderIdentifier? id,
-  }) {
+  static P _getOrCreateProvider<P>(BuildContext context, {Identifier? id}) {
     final state = _findState(
       context,
       aspect: id ?? P,
-      element: _SolidElement.provider,
     );
 
     final createdProvider =
@@ -602,16 +511,13 @@ The signal id that caused this issue is $id
 
 /// The state of the [Solid] widget
 class SolidState extends State<Solid> {
-  // Stores all the created signals.
-  final Map<SignalIdentifier, SignalBase<dynamic>> _createdSignals = {};
-
   // Stores all the created providers.
   // The key is the provider, while the value is its value.
-  final Map<SolidProvider<dynamic>, dynamic> _createdProviders = {};
+  final Map<SolidElement<dynamic>, dynamic> _createdProviders = {};
 
   // Keeps track of the value of each signal, used to detect which signal
   // updated and to implement fine-grained reactivity.
-  Map<SignalIdentifier, dynamic> _signalValues = {};
+  Map<Identifier, dynamic> _signalValues = {};
 
   // Stores all the disposeFn for each signal
   final _signalDisposeCallbacks = <DisposeEffect>[];
@@ -623,17 +529,22 @@ class SolidState extends State<Solid> {
     // check if there are multiple providers of the same type
     final types = <Type>[];
     for (final provider in widget.providers) {
-      final type = provider.valueType;
+      final type = provider._valueType;
       if (type == dynamic) throw SolidProviderDynamicError();
 
       if (types.contains(type) && provider.id == null) {
-        throw SolidProviderMultipleProviderOfSameTypeError(providerType: type);
+        throw SolidProviderMultipleProviderOfSameTypeError(
+          providerType: type,
+        );
       } else {
         types.add(type);
       }
     }
     // create non lazy providers.
-    widget.providers.where((element) => !element.lazy).forEach((provider) {
+    widget.providers
+        .whereType<SolidProvider<dynamic>>()
+        .where((element) => !element.lazy)
+        .forEach((provider) {
       // create and store the provider
       _createdProviders[provider] = provider.create();
     });
@@ -645,60 +556,43 @@ class SolidState extends State<Solid> {
     for (final disposeFn in _signalDisposeCallbacks) {
       disposeFn();
     }
-    for (final signal in _createdSignals.values) {
-      var autoDispose = widget._autoDispose;
 
-      // check if the signal as an overriden autoDispose
-      if (autoDispose) {
-        if (signal.options is SolidSignalOptions) {
-          autoDispose = (signal.options as SolidSignalOptions).autoDispose;
-        }
-
-        if (signal.options is SolidResourceOptions) {
-          autoDispose = (signal.options as SolidResourceOptions).autoDispose;
-        }
-      }
-
-      if (autoDispose) signal.dispose();
-    }
     // dispose all the created providers
     if (widget._autoDispose) {
       _createdProviders.forEach((provider, value) {
-        provider.disposeFn(context, value);
+        switch (provider) {
+          case SolidProvider():
+            provider._disposeFn(context, value);
+          case SolidSignal():
+            if (provider.autodispose) {
+              (value as SignalBase).dispose();
+            }
+        }
       });
     }
 
     _signalDisposeCallbacks.clear();
-    _createdSignals.clear();
     _signalValues.clear();
     _createdProviders.clear();
     super.dispose();
   }
 
   /// -- Signals logic
-
-  // Indicates is the signal is readable.
-  bool isReadSignal({required SignalIdentifier id}) {
-    return widget.signals[id] is! Signal<dynamic> Function();
-  }
-
-  /// Creates a signal with a value of type T:
-  S createSignal<S>({required SignalIdentifier id}) {
-    final signal = widget.signals[id]!();
-    // store the created signal
-    _createdSignals[id] = signal;
-
-    _initializeSignal(signal, id: id);
-
-    return signal as S;
-  }
-
-  void _initializeSignal(
-    SignalBase<dynamic> signal, {
-    required SignalIdentifier id,
-  }) {
-    final unobserve =
-        signal.observe((previousValue, value) => _onSignalChange());
+  void _initializeSignal(SignalBase<dynamic> signal, {required Identifier id}) {
+    final unobserve = signal.observe((_, value) {
+      setState(() {
+        _signalValues = Map<Identifier, dynamic>.fromEntries(
+          _createdProviders.entries
+              .where((element) => element.key is SolidSignal)
+              .map(
+                (entry) => MapEntry(
+                  entry.key.id ?? entry.key._valueType,
+                  entry.key == id ? value : (entry.value as SignalBase).value,
+                ),
+              ),
+        );
+      });
+    });
     signal.onDispose(unobserve);
 
     _signalDisposeCallbacks.add(unobserve);
@@ -707,27 +601,10 @@ class SolidState extends State<Solid> {
     _signalValues[id] = signal.value;
   }
 
-  /// Used to determine if the requested signal for the given
-  /// [id]entifier is present in the current scope
-  bool isSignalInScope(SignalIdentifier id) {
-    return widget.signals.containsKey(id);
-  }
-
-  void _onSignalChange() {
-    setState(() {
-      // update the map that keeps track of each signal value
-      _signalValues = Map<SignalIdentifier, dynamic>.fromEntries(
-        _createdSignals.entries.map(
-          (entry) => MapEntry(entry.key, entry.value.value),
-        ),
-      );
-    });
-  }
-
   /// -- Providers logic
 
   /// Try to find a [SolidProvider] of type or id [Type] and returns it
-  SolidProvider<dynamic>? _getProviderOfType(
+  SolidElement<dynamic>? _getProviderOfType(
     Object typeOrId,
   ) {
     // search by id first
@@ -736,7 +613,7 @@ class SolidState extends State<Solid> {
     );
     // search by type next
     provider ??= widget.providers.firstWhereOrNull(
-      (element) => element.valueType == typeOrId,
+      (element) => element._valueType == typeOrId,
     );
 
     if (provider == null) return null;
@@ -749,6 +626,10 @@ class SolidState extends State<Solid> {
     final provider = _getProviderOfType(id ?? P)!;
     // create and return it
     final value = provider.create() as P;
+
+    if (provider is SolidSignal && value is SignalBase) {
+      _initializeSignal(value, id: id ?? P);
+    }
 
     // store the created provider
     _createdProviders[provider] = value;
@@ -776,19 +657,12 @@ class SolidState extends State<Solid> {
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties
-      ..add(
-        IterableProperty(
-          'createdSignals',
-          _createdSignals.values,
-        ),
-      )
-      ..add(
-        IterableProperty(
-          'createdProviders',
-          _createdProviders.values,
-        ),
-      );
+    properties.add(
+      IterableProperty(
+        'createdProviders',
+        _createdProviders.values,
+      ),
+    );
   }
   // coverage:ignore-end
 }
@@ -804,7 +678,7 @@ class _InheritedSolid extends InheritedModel<Object> {
   });
 
   final SolidState state;
-  final Map<SignalIdentifier, dynamic> signalValues;
+  final Map<Identifier, dynamic> signalValues;
 
   @override
   bool updateShouldNotify(covariant _InheritedSolid oldWidget) {
@@ -815,7 +689,7 @@ class _InheritedSolid extends InheritedModel<Object> {
   // Used to determine in which ancestor is the given [aspect].
   @override
   bool isSupportedAspect(Object aspect) {
-    return state.isSignalInScope(aspect) || state.isProviderInScope(aspect);
+    return state.isProviderInScope(aspect);
   }
 
   /// Fine-grained rebuilding of signals that changed value
@@ -900,7 +774,7 @@ class _InheritedSolid extends InheritedModel<Object> {
   /// If no ancestor of type T exists, null is returned.
   static _InheritedSolid? inheritFromNearest(
     BuildContext context, {
-    required SignalIdentifier aspect,
+    required Identifier aspect,
     // Whether to listen to the [InheritedModel], defaults to false.
     bool listen = false,
   }) {
@@ -937,17 +811,20 @@ class SolidProviderError extends Error {
   @override
   String toString() {
     return '''
-Error could not fint a Solid containing the given SolidProvider type or id $typeOrId
+Error could not fint a Solid containing the given SolidProvider type or id: $typeOrId
 To fix, please:
           
   * Be sure to have a Solid ancestor, the context used must be a descendant.
-  * Provide types to context.getProvider<ProviderType>() 
+  * Provide types to context.get<ProviderType>() 
   * Create providers providing types: 
     ```
     Solid(
       providers: [
           SolidProvider<NameProvider>(
             create: () => const NameProvider('Ale'),
+          ),
+          SolidSignal<Signal<int>>(
+            create: () => createSignal(0),
           ),
       ],
     )
@@ -967,43 +844,6 @@ class SolidProviderDynamicError extends Error {
     return '''
     Seems like that you forgot to declare the provider type.
     You have `SolidProvider()` but it should be `SolidProvider<ProviderType>()`.
-      ''';
-  }
-}
-
-/// {@template solidsignalerror}
-/// Error thrown when the Signal with id [signalId] cannot be found
-/// {$endtemplate}
-class SolidSignalError extends Error {
-  /// {@macro solidsignalerror}
-  SolidSignalError({
-    required this.signalId,
-  });
-
-  /// The id of the signal
-  final SignalIdentifier signalId;
-
-  @override
-  String toString() {
-    return '''
-Error: Could not find a Solid containing the given Signal with id $signalId.
-    
-To fix, please:
-          
-  * Be sure to have a Solid ancestor, the context used must be a descendant.
-  * Provide types to context.get<SignalType>('some-id') 
-  * Create signals providing types: 
-    ```
-    Solid(
-      signals: {
-        'counter': () => createSignal<int>(0),
-      },
-    )
-    ```
-  * The type and id you use to create and consume a signal must match.
-  
-If none of these solutions work, please file a bug at:
-https://github.com/nank1ro/solidart/issues/new
       ''';
   }
 }
