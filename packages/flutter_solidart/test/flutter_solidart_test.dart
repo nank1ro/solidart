@@ -614,7 +614,7 @@ void main() {
     );
   });
 
-  testWidgets('Test Solid context.getProvider', (tester) async {
+  testWidgets('Test Solid context.get with SolidProvider', (tester) async {
     final nameProvider = MockNameProvider('Ale');
     await tester.pumpWidget(
       MaterialApp(
