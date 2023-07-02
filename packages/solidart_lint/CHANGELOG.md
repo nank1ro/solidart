@@ -1,3 +1,7 @@
+## 1.0.0-dev4
+
+- **CHORE**: Update `flutter_solidart` dependency, update `avoid_dynamic_solid_signal` lint and remove unnecessary lints
+
 ## 1.0.0-dev3
 
 - **BUGFIX** Remove `isRefreshing` from ResourceBuilder assist
