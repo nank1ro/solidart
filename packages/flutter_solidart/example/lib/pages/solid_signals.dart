@@ -6,25 +6,27 @@ enum SolidSignalIds {
   sentence,
 }
 
-class SolidPage extends StatefulWidget {
-  const SolidPage({super.key});
+class SolidSignalsPage extends StatefulWidget {
+  const SolidSignalsPage({super.key});
 
   @override
-  State<SolidPage> createState() => _SolidPageState();
+  State<SolidSignalsPage> createState() => _SolidSignalsPageState();
 }
 
-class _SolidPageState extends State<SolidPage> {
+class _SolidSignalsPageState extends State<SolidSignalsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Solid'),
+        title: const Text('SolidSignals'),
       ),
       body: Solid(
-        signals: {
-          SolidSignalIds.counter: () => createSignal<int>(0),
-          SolidSignalIds.sentence: () => createSignal<String>("Hello"),
-        },
+        providers: [
+          SolidSignal<Signal<int>>(
+            create: () => createSignal(0),
+          ),
+          SolidSignal<Signal<String>>(create: () => createSignal("Hello")),
+        ],
         // somewhere deep in the tree
         child: const _Counter(),
       ),
@@ -38,22 +40,18 @@ class _Counter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter = context.getSignal<Signal<int>>(SolidSignalIds.counter);
+    // final counter = context.getProvider<Signal<int>>();
+    final counter = context.observe<int>();
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SignalBuilder(
-            signal: counter,
-            builder: (_, value, __) {
-              return Text(value.toString());
-            },
-          ),
+          Text(counter.toString()),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              counter.value++;
+              context.update<int>((value) => value += 1);
             },
             child: const Text('Increase'),
           ),
@@ -76,7 +74,7 @@ class _Sentence extends StatefulWidget {
 class _SentenceState extends State<_Sentence> {
   @override
   Widget build(BuildContext context) {
-    final sentence = context.getSignal<Signal<String>>(SolidSignalIds.sentence);
+    final sentence = context.get<Signal<String>>();
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,

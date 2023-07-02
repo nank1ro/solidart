@@ -40,11 +40,16 @@ class _SignalsInModalsPageState extends State<SignalsInModalsPage> {
         title: const Text('Access Signals in Modals'),
       ),
       body: Solid(
-        signals: {
-          _SignalId.counter: () => counter,
-          _SignalId.doubleCounter: () =>
-              createComputed<int>(() => counter() * 2),
-        },
+        providers: [
+          SolidSignal<Signal<int>>(
+            create: () => counter,
+            id: _SignalId.counter,
+          ),
+          SolidSignal<ReadSignal<int>>(
+            create: () => createComputed<int>(() => counter() * 2),
+            id: _SignalId.doubleCounter,
+          ),
+        ],
         child: Builder(
           builder: (context) {
             final counter = context.observe<int>(_SignalId.counter);
@@ -81,7 +86,10 @@ class _SignalsInModalsPageState extends State<SignalsInModalsPage> {
           // the context passed must have access to the Solid signals
           context: context,
           // the signals ids that we want to provide to the modal
-          signalIds: const [_SignalId.counter, _SignalId.doubleCounter],
+          providerTypesOrIds: const [
+            _SignalId.counter,
+            _SignalId.doubleCounter
+          ],
           child: Builder(
             builder: (innerContext) {
               final counter = innerContext.observe<int>(_SignalId.counter);

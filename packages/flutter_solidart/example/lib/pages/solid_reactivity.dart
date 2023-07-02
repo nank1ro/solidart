@@ -20,10 +20,10 @@ class _SolidReactivityPageState extends State<SolidReactivityPage> {
   @override
   Widget build(BuildContext context) {
     return Solid(
-      signals: {
-        SignalId.firstCounter: () => createSignal<int>(0),
-        SignalId.secondCounter: () => createSignal<int>(0),
-      },
+      providers: [
+        SolidSignal(create: () => createSignal(0), id: SignalId.firstCounter),
+        SolidSignal(create: () => createSignal(0), id: SignalId.secondCounter),
+      ],
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Solid Reactivity'),
@@ -58,17 +58,15 @@ class _SolidReactivityPageState extends State<SolidReactivityPage> {
               children: [
                 TextButton(
                   onPressed: () {
-                    context
-                        .getSignal<Signal<int>>(SignalId.firstCounter)
-                        .value++;
+                    context.update<int>(
+                        (value) => value++, SignalId.firstCounter);
                   },
                   child: const Text('+1 counter1'),
                 ),
                 TextButton(
                   onPressed: () {
-                    context
-                        .getSignal<Signal<int>>(SignalId.secondCounter)
-                        .value++;
+                    context.update<int>(
+                        (value) => value++, SignalId.secondCounter);
                   },
                   child: const Text('+1 counter2'),
                 ),

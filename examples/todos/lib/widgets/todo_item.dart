@@ -22,7 +22,7 @@ class TodoItem extends StatelessWidget {
       direction: DismissDirection.endToStart,
       onDismissed: (_) {
         // remove the todo
-        context.getProvider<TodosController>().remove(todo.id);
+        context.get<TodosController>().remove(todo.id);
       },
       background: Container(
         decoration: const BoxDecoration(color: Colors.red),

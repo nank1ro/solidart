@@ -54,7 +54,7 @@ class _SearchBar extends StatefulWidget {
 
 class __SearchBarState extends State<_SearchBar> {
   final textController = TextEditingController();
-  late final bloc = context.getProvider<GithubSearchBloc>();
+  late final bloc = context.get<GithubSearchBloc>();
 
   @override
   void dispose() {
@@ -93,7 +93,7 @@ class _SearchBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox.expand(
       child: ResourceBuilder(
-        resource: context.getProvider<GithubSearchBloc>().searchResult,
+        resource: context.get<GithubSearchBloc>().searchResult,
         builder: (context, searchResultState) {
           return Stack(
             children: [

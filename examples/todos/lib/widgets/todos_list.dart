@@ -33,11 +33,11 @@ class _TodoListState extends State<TodoList> {
     // to show you that it's possible.
     // NOTE: If you need to `select` a value from a signal, do it always in the `initState`.
     //       The `select` method creates a new signal every time it runs, and you don't want this to happen.
-    todos = context.getProvider<TodosController>().todos;
+    todos = context.get<TodosController>().todos;
     completedTodos =
-        context.getSignal<ReadSignal<List<Todo>>>(SignalId.completedTodos);
+        context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
     incompleteTodos =
-        context.getSignal<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
+        context.get<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
   }
 
   // Given a [filter] return the correct list of todos
@@ -55,8 +55,7 @@ class _TodoListState extends State<TodoList> {
   @override
   Widget build(BuildContext context) {
     // rebuilds this BuildContext every time the `activeFilter` value changes
-    final activeFilter =
-        context.observe<TodosFilter>(SignalId.activeTodoFilter);
+    final activeFilter = context.observe<TodosFilter>();
 
     return SignalBuilder(
       // react to the correct list of todos list

@@ -24,7 +24,7 @@ class SolidProvidersPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Solid'),
+        title: const Text('SolidProviders'),
       ),
       body: Solid(
         providers: [
@@ -61,9 +61,9 @@ class SomeChildThatNeedsProviders extends StatelessWidget {
         providerTypesOrIds: const [NameProvider, 1, 2],
         child: Dialog(
           child: Builder(builder: (innerContext) {
-            final nameProvider = innerContext.getProvider<NameProvider>();
-            final numberProvider1 = innerContext.getProvider<NumberProvider>(1);
-            final numberProvider2 = innerContext.getProvider<NumberProvider>(2);
+            final nameProvider = innerContext.get<NameProvider>();
+            final numberProvider1 = innerContext.get<NumberProvider>(1);
+            final numberProvider2 = innerContext.get<NumberProvider>(2);
             return SizedBox.square(
               dimension: 100,
               child: Center(
@@ -82,9 +82,9 @@ class SomeChildThatNeedsProviders extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nameProvider = context.getProvider<NameProvider>();
-    final numberProvider = context.getProvider<NumberProvider>(1);
-    final numberProvider2 = context.getProvider<NumberProvider>(2);
+    final nameProvider = context.get<NameProvider>();
+    final numberProvider = context.get<NumberProvider>(1);
+    final numberProvider2 = context.get<NumberProvider>(2);
     return Center(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,

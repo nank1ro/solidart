@@ -3,3 +3,5 @@ dependency_overrides:
     path: ../../flutter_solidart
   solidart:
     path: ../../solidart
+  solidart_lint:
+    path: ../../solidart_lint
