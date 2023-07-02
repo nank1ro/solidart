@@ -22,9 +22,7 @@ class _SolidSignalsPageState extends State<SolidSignalsPage> {
       ),
       body: Solid(
         providers: [
-          SolidSignal<Signal<int>>(
-            create: () => createSignal(0),
-          ),
+          SolidSignal<Signal<int>>(create: () => createSignal(0)),
           SolidSignal<Signal<String>>(create: () => createSignal("Hello")),
         ],
         // somewhere deep in the tree
