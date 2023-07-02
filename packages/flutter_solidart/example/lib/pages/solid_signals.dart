@@ -50,7 +50,7 @@ class _Counter extends StatelessWidget {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              context.update<int>((value) => value += 1);
+              context.update<int>((value) => value++);
             },
             child: const Text('Increase'),
           ),
