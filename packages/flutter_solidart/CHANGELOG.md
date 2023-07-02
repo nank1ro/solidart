@@ -1,6 +1,7 @@
 ## 1.0.0-dev8
 
 - **FEAT** Allow multiple providers of the same type by specifying an `id`entifier.
+
   ### Provider declaration:
   ```dart
   SolidProvider<NumberProvider>(
@@ -12,11 +13,13 @@
     id: 2,
   ),
   ```
+
   ### Access a specific provider
   ```dart
   final numberProvider1 = context.get<NumberProvider>(1);
   final numberProvider2 = context.get<NumberProvider>(2);
   ```
+
 - **BREAKING CHANGE** Removed the `signals` map from `Solid`, now to provide signals to descendants
   use `SolidSignal` inside providers:
 
