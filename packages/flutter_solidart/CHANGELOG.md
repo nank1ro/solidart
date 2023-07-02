@@ -1,3 +1,56 @@
+## 1.0.0-dev8
+
+- **FEAT** Allow multiple providers of the same type by specifying an `id`entifier.
+  ### Provider declaration:
+  ```dart
+  SolidProvider<NumberProvider>(
+    create: () => const NumberProvider(1),
+    id: 1,
+  ),
+  SolidProvider<NumberProvider>(
+    create: () => const NumberProvider(10),
+    id: 2,
+  ),
+  ```
+  ### Access a specific provider
+  ```dart
+  final numberProvider1 = context.get<NumberProvider>(1);
+  final numberProvider2 = context.get<NumberProvider>(2);
+  ```
+- **BREAKING CHANGE** Removed the `signals` map from `Solid`, now to provide signals to descendants
+  use `SolidSignal` inside providers:
+
+  ### Before
+
+  ```dart
+   Solid(
+    signals: {
+      SignalId.themeMode: () => createSignal<ThemeMode>(ThemeMode.light),
+    },
+   ),
+  ```
+
+  ### After
+
+  ```dart
+   Solid(
+    providers: [
+      SolidSignal<Signal<ThemeMode>>(
+        create: () => createSignal(ThemeMode.light),
+      ),
+    ],
+   ),
+  ```
+
+- **FEAT** You can access a specific Signal without specifing an `id`entifier, for example:
+  ```dart
+  // to get the signal
+  context.get<Signal<ThemeMode>>();
+  // to observe the signal's value
+  context.observe<ThemeMode>()
+  ```
+  > NOTICE: If you have multiple signals of the same type, you must specify a different `id` for each one.
+
 ## 1.0.0-dev7
 
 ### Changes from solidart
