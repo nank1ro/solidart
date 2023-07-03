@@ -3,6 +3,7 @@ import 'package:analyzer/error/error.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:collection/collection.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:solidart_lint/src/types.dart';
 
 class AvoidDynamicSolidSignal extends DartLintRule {
   const AvoidDynamicSolidSignal() : super(code: _code);
@@ -10,7 +11,7 @@ class AvoidDynamicSolidSignal extends DartLintRule {
   static const _code = LintCode(
     name: 'avoid_dynamic_solid_signal',
     errorSeverity: ErrorSeverity.ERROR,
-    problemMessage: 'The solid signal cannot be dynamic',
+    problemMessage: 'The SolidSignal cannot be dynamic',
   );
 
   @override
@@ -19,44 +20,18 @@ class AvoidDynamicSolidSignal extends DartLintRule {
     ErrorReporter reporter,
     CustomLintContext context,
   ) {
-    context.registry.addMapLiteralEntry(
-      (node) {
-        if (node.value is FunctionExpression) {
-          final fnExp = node.value as FunctionExpression;
+    context.registry.addInstanceCreationExpression((node) {
+      if (node.staticParameterElement != null) return;
 
-          Expression? expression;
-          if (fnExp.body is BlockFunctionBody) {
-            final fnBody = fnExp.body as BlockFunctionBody;
-            final returnStatement = fnBody.block.childEntities
-                .whereType<ReturnStatement>()
-                .firstOrNull;
-            expression = returnStatement?.expression;
-          } else if (fnExp.body is ExpressionFunctionBody) {
-            final fnBody = fnExp.body as ExpressionFunctionBody;
-            expression = fnBody.expression;
-          }
-
-          if (expression == null) return;
-
-          final type = expression.staticType;
-          if (type == null) return;
-          final name = type.getDisplayString(withNullability: false);
-          if (name == "Signal<dynamic>") {
-            reporter.reportErrorForToken(_code, expression.beginToken);
-          }
-
-          if (name == "ReadSignal<dynamic>") {
-            final childEntities =
-                expression.childEntities.whereType<SimpleIdentifier>();
-            for (final entity in childEntities) {
-              if (entity.name == 'select' || entity.name == 'createComputed') {
-                reporter.reportErrorForNode(_code, entity);
-              }
-            }
-          }
-        }
-      },
-    );
+      final type = node.staticType;
+      if (type == null) return;
+      final name = type.getDisplayString(withNullability: false);
+      if (solidSignalType.isExactlyType(type) &&
+          name == 'SolidSignal<dynamic>') {
+        reporter.reportErrorForToken(_code, node.beginToken);
+        return;
+      }
+    });
   }
 
   @override
@@ -72,51 +47,53 @@ class _SolidSignalTypeFix extends DartFix {
     AnalysisError analysisError,
     List<AnalysisError> others,
   ) {
-    context.registry.addMapLiteralEntry(
+    context.registry.addInstanceCreationExpression(
       (node) {
-        if (node.value is FunctionExpression) {
-          final fnExp = node.value as FunctionExpression;
+        if (!analysisError.sourceRange.intersects(node.sourceRange)) return;
 
-          Expression? expression;
-          if (fnExp.body is BlockFunctionBody) {
-            final fnBody = fnExp.body as BlockFunctionBody;
-            final returnStatement = fnBody.block.childEntities
+        final argumentList =
+            node.childEntities.whereType<ArgumentList>().firstOrNull;
+
+        final namedExpression = argumentList?.childEntities
+            .whereType<NamedExpression>()
+            .firstOrNull;
+        if (namedExpression == null) return;
+
+        Expression? expression;
+
+        for (final child in namedExpression.expression.childEntities) {
+          if (child is ExpressionFunctionBody) {
+            expression = child.expression;
+            break;
+          } else if (child is BlockFunctionBody) {
+            final returnStatement = child.block.childEntities
                 .whereType<ReturnStatement>()
                 .firstOrNull;
             expression = returnStatement?.expression;
-          } else if (fnExp.body is ExpressionFunctionBody) {
-            final fnBody = fnExp.body as ExpressionFunctionBody;
-            expression = fnBody.expression;
-          }
-
-          if (expression == null) return;
-          if (expression is MethodInvocation) {
-            final argList =
-                expression.childEntities.whereType<ArgumentList>().firstOrNull;
-            final fnExp2 =
-                argList?.arguments.whereType<FunctionExpression>().firstOrNull;
-            final innerExp =
-                argList?.arguments.whereType<Expression>().firstOrNull;
-            final returnType =
-                fnExp2?.declaredElement?.returnType ?? innerExp?.staticType;
-
-            if (returnType == null || returnType.isDartCoreNull) return;
-
-            final changeBuilder = reporter.createChangeBuilder(
-              message: "Specify the '$returnType' type",
-              priority: 1,
-            );
-
-            changeBuilder.addDartFileEdit(
-              (builder) {
-                builder.addSimpleInsertion(
-                  analysisError.offset + analysisError.length,
-                  '<$returnType>',
-                );
-              },
-            );
+            break;
           }
         }
+
+        final dartType = expression?.staticType;
+        if (dartType == null) return;
+
+        final changeBuilder = reporter.createChangeBuilder(
+          message: 'Convert SolidSignal to SolidSignal<$dartType>',
+          priority: 1,
+        );
+        final constructorName =
+            node.childEntities.whereType<ConstructorName>().firstOrNull;
+        final name = constructorName?.toString();
+        if (name != 'SolidSignal') return;
+
+        changeBuilder.addDartFileEdit(
+          (builder) {
+            builder.addSimpleInsertion(
+              constructorName!.offset + constructorName.length,
+              '<$dartType>',
+            );
+          },
+        );
       },
     );
   }

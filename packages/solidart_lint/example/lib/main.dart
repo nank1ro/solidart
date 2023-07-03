@@ -20,13 +20,14 @@ class MyApp extends StatelessWidget {
       providers: [
         // expect_lint: avoid_dynamic_solid_provider
         SolidProvider(create: () => MyClass()),
+        // expect_lint: avoid_dynamic_solid_signal
+        SolidSignal(create: () => createSignal(0), id: 'counter'),
+        // expect_lint: avoid_dynamic_solid_signal
+        SolidSignal(
+          create: () => createComputed(() => counter() * 2),
+          id: 'double-counter',
+        ),
       ],
-      signals: {
-        // expect_lint: avoid_dynamic_solid_signal
-        'counter': () => createSignal(0),
-        // expect_lint: avoid_dynamic_solid_signal
-        'double-counter': () => createComputed(() => counter() * 2),
-      },
       child: const MaterialApp(
         title: 'Flutter Demo',
         home: MyHomePage(),
@@ -42,10 +43,6 @@ class MyHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     // expect_lint: missing_solid_get_type
     final myClass = context.get();
-    // expect_lint: invalid_signal_type
-    final invalidSignalType = context.get<MyClass>('1');
-    // expect_lint: invalid_provider_type
-    final invalidProviderType = context.get<Signal>();
     // expect_lint: invalid_observe_type
     final counter = context.observe<Signal<int>>('counter');
 
@@ -54,7 +51,7 @@ class MyHomePage extends StatelessWidget {
       onPressed: () {
         // expect_lint: invalid_update_type
         context.update<Signal<int>>(
-            'counter', (value) => throw UnimplementedError());
+            (value) => throw UnimplementedError(), 'counter');
       },
     );
   }

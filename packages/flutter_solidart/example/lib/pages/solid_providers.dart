@@ -24,7 +24,7 @@ class SolidProvidersPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Solid'),
+        title: const Text('SolidProviders'),
       ),
       body: Solid(
         providers: [
@@ -37,6 +37,11 @@ class SolidProvidersPage extends StatelessWidget {
             create: () => const NumberProvider(1),
             // Do not create the provider lazily, but immediately
             lazy: false,
+            id: 1,
+          ),
+          SolidProvider<NumberProvider>(
+            create: () => const NumberProvider(10),
+            id: 2,
           ),
         ],
         child: const SomeChildThatNeedsProviders(),
@@ -53,14 +58,20 @@ class SomeChildThatNeedsProviders extends StatelessWidget {
       context: context,
       builder: (_) => Solid.value(
         context: context,
-        providerTypes: const [NameProvider],
+        providerTypesOrIds: const [NameProvider, 1, 2],
         child: Dialog(
           child: Builder(builder: (innerContext) {
             final nameProvider = innerContext.get<NameProvider>();
+            final numberProvider1 = innerContext.get<NumberProvider>(1);
+            final numberProvider2 = innerContext.get<NumberProvider>(2);
             return SizedBox.square(
               dimension: 100,
               child: Center(
-                child: Text('name: ${nameProvider.name}'),
+                child: Text(
+                  'name: ${nameProvider.name}\n'
+                  'number1: ${numberProvider1.number}\n'
+                  'number2: ${numberProvider2.number}',
+                ),
               ),
             );
           }),
@@ -72,7 +83,8 @@ class SomeChildThatNeedsProviders extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nameProvider = context.get<NameProvider>();
-    final numberProvider = context.get<NumberProvider>();
+    final numberProvider = context.get<NumberProvider>(1);
+    final numberProvider2 = context.get<NumberProvider>(2);
     return Center(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -80,6 +92,8 @@ class SomeChildThatNeedsProviders extends StatelessWidget {
           Text('name: ${nameProvider.name}'),
           const SizedBox(height: 8),
           Text('number: ${numberProvider.number}'),
+          const SizedBox(height: 8),
+          Text('number2: ${numberProvider2.number}'),
           const SizedBox(height: 8),
           ElevatedButton(
             onPressed: () => openDialog(context),

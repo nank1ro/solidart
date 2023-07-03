@@ -10,7 +10,7 @@ A simple __toggle-theme__ feature built using `flutter_solidart`
 <Zapp id="github/nank1ro/solidart/tree/dev/examples/toggle_theme" />
 
 This simple example uses a powerful feature of `flutter_solidart`, the `Solid` widget.
-The `Solid` widget is used to provide `signals` to descendants without passing them as parameters.
+The `Solid` widget is used to provide signals to descendants without passing them as parameters.
 
 <Warning>You are discouraged in passing signals as parameters, even inside modals you may use Solid.value</Warning>
 
@@ -36,12 +36,14 @@ Solid(
 )
 ```
 
-`Solid` takes a `signals` map, let's create our `themeMode` signal:
+`Solid` takes a `providers` list, let's create our `themeMode` signal:
 ```dart
 Solid(
-  signals: {
-    SignalId.themeMode: () => createSignal<ThemeMode>(ThemeMode.light),
-  },
+  providers: [
+    SolidSignal<Signal<ThemeMode>>(
+      create: () => createSignal(ThemeMode.light),
+    ),
+  ],
   child: MaterialApp(
     theme: ThemeData.light(),
     darkTheme: ThemeData.dark(),
@@ -49,15 +51,7 @@ Solid(
 )
 ```
 
-The key of the `Map` is the signal identifier, here we've used an `Enum` but you may use a `String`, and `int` or whatever you want.
-```dart
-/// The identifiers used for [Solid] signals.
-enum SignalId {
-  themeMode,
-}
-```
-
-<Warning>Don't forget to define the signal value type to `createSignal` otherwise you may encounter unexpected errors</Warning>
+<Warning>Don't forget to define the signal value type to `SolidSignal` otherwise you may encounter unexpected errors</Warning>
 
 Now we've provided the `themeMode` signal to descendants, but we've to observe the `themeMode` signal in order to rebuilt the `MaterialApp`.
 Since we need a `BuildContext` that is a descendant of `Solid` we wrap the `MaterialApp` inside a `Builder`.
@@ -77,7 +71,7 @@ Now using the `context.observe` method we effectively listen to the `themeMode` 
 ```dart
 Builder(
   builder: (context) {
-    final themeMode = context.observe<ThemeMode>(SignalId.themeMode);
+    final themeMode = context.observe<ThemeMode>();
 
     return MaterialApp(
       theme: ThemeData.light(),
@@ -99,14 +93,14 @@ The page retrieves the `themeMode` signal using the `context.get()` method:
 ```dart
  @override
   Widget build(BuildContext context) {
-  final themeMode = context.get<Signal<ThemeMode>>(SignalId.themeMode);
-  ...
+    final themeMode = context.get<Signal<ThemeMode>>();
+    ...
 }
 ```
 
 <Info>Note that the type passed to the get method contains also the signal type, it can be `Signal` or `ReadSignal` if you need to access a __read-only__ signal</Info>
 
-The `get` method obtains the signal for the given identifier without listening to it. You may use this method inside the `initState()`, `build()` methods and inside callbacks like `onTap` or `onPressed`. 
+The `get` method obtains the signal for the given identifier (optional) without listening to it. You may use this method inside the `initState()`, `build()` methods and inside callbacks like `onTap` or `onPressed`. 
 
 To react to the signal we've used a `SignalBuilder`:
 ```dart

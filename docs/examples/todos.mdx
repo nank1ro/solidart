@@ -7,7 +7,7 @@ description: Todos example using flutter_solidart
 
 <Zapp id="github/nank1ro/solidart/tree/dev/examples/todos" />
 
-This example leverages the power of the `Solid` widgets using `signals` and `providers`.
+This example leverages the power of the `Solid` widgets using `providers`.
 
 ### TodosPage
 
@@ -147,30 +147,36 @@ class _TodosBodyState extends State<TodosBody> {
     final todosController = context.get<TodosController>();
 
     return Solid(
-      signals: {
+      providers: [
         // make the active filter signal visible only to descendants.
         // created here because this is where it starts to be necessary.
-        SignalId.activeTodoFilter: () =>
-            createSignal<TodosFilter>(TodosFilter.all),
+        SolidSignal<Signal<TodosFilter>>(
+            create: () => createSignal(TodosFilter.all)),
         // Registering two new signals, the list of completed and incomplete todos.
         // These are derived [ReadSignal]s.
         // Provided through a [Solid] because their value is used by the [TodoList]
         // and [Toolbar].
         // This is preferable over passing the signals as parameters down to descendants,
         // expecially when the usage is very deep in the tree.
-        SignalId.completedTodos: () => createComputed<List<Todo>>(
-              () => todosController
-                  .todos()
-                  .where((element) => element.completed)
-                  .toList(),
-            ),
-        SignalId.incompleteTodos: () => createComputed<List<Todo>>(
-              () => todosController
-                  .todos()
-                  .where((element) => !element.completed)
-                  .toList(),
-            ),
-      },
+        SolidSignal<ReadSignal<List<Todo>>>(
+          create: () => createComputed(
+            () => todosController
+                .todos()
+                .where((element) => element.completed)
+                .toList(),
+          ),
+          id: SignalId.completedTodos,
+        ),
+        SolidSignal<ReadSignal<List<Todo>>>(
+          create: () => createComputed(
+            () => todosController
+                .todos()
+                .where((element) => !element.completed)
+                .toList(),
+          ),
+          id: SignalId.incompleteTodos,
+        ),
+      ],
       child: Column(
         children: [
           TextFormField(
@@ -211,9 +217,9 @@ class _TodosBodyState extends State<TodosBody> {
 The important parts here are two.
 1. We're retrieving the `todosController` with the syntax `context.get<TodosController>()`.
    This is how we access providers from descendants. You can safely run this method in the `initState`, in the `build` method or even inside a callback like `onPressed`.
-2. We're creating a new `Solid` widget. Yes, you can create many Solid widgets inside your app, this the ideal usage. Don't use a single `Solid` widget but many. Place the `signals` and `providers` only where needed.
+2. We're creating a new `Solid` widget. Yes, you can create many Solid widgets inside your app, this the ideal usage. Don't use a single `Solid` widget but many. Place the `providers` only where needed.
 
-Here we're creating the a signal with id `SignalId.activeTodoFilter` with an initial value of `TodosFilter.all`. This signals keeps the state of the current selected tab.
+Here we're creating a signal with an initial value of `TodosFilter.all`. This signals keeps the state of the current selected tab.
 
 We're also creating two derived signals, the list of `completedTodos` and `incompleteTodos` using the `select` method of the todos list signal.
 
@@ -306,7 +312,6 @@ class _ToolbarState extends State<Toolbar> {
         onTap: (index) {
           // update the current active filter
           context.update<TodosFilter>(
-            SignalId.activeTodoFilter,
             (_) => TodosFilter.values[index],
           );
         },
@@ -379,8 +384,7 @@ class _TodoListState extends State<TodoList> {
   @override
   Widget build(BuildContext context) {
     // rebuilds this BuildContext every time the `activeFilter` value changes
-    final activeFilter =
-        context.observe<TodosFilter>(SignalId.activeTodoFilter);
+    final activeFilter = context.observe<TodosFilter>();
 
     return SignalBuilder(
       // react to the correct list of todos list

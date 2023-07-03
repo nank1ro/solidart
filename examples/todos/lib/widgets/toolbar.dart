@@ -71,10 +71,7 @@ class _ToolbarState extends State<Toolbar> {
         ).toList(),
         onTap: (index) {
           // update the current active filter
-          context.update<TodosFilter>(
-            SignalId.activeTodoFilter,
-            (_) => TodosFilter.values[index],
-          );
+          context.update<TodosFilter>((_) => TodosFilter.values[index]);
         },
       ),
     );
