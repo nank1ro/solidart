@@ -206,7 +206,7 @@ part '../models/solid_element.dart';
 ///
 /// ## Solid.value
 ///
-/// The `Solid.value` factory is useful for passing `signals` and `providers`
+/// The `Solid.value` factory is useful for passing `providers`
 /// to modals, because they are spawned in a new tree.
 /// This is necessary because modals are spawned in a new tree.
 /// `Solid.value` takes just a:

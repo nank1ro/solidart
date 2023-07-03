@@ -179,28 +179,24 @@ Let's see an example to grasp the concept.
 You're going to see how to build a toggle theme feature using `Solid`, this example is present also here https://github.com/nank1ro/solidart/tree/main/examples/toggle_theme
 
 ```dart
-/// The identifiers used for [Solid] signals.
-enum SignalId { // [1]
-  themeMode,
-}
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     // Provide the theme mode signal to descendats
-    return Solid( // [2]
-      signals: {
-          // the id of the signal and the signal associated.
-        SignalId.themeMode: () => createSignal<ThemeMode>(ThemeMode.light),
-      },
+    return Solid( // [1]
+      providers: [
+        SolidSignal<Signal<ThemeMode>>(
+          create: () => createSignal(ThemeMode.light),
+        ),
+      ],
       child:
           // using a builder here because the `context` must be a descendant of [Solid]
           Builder(
         builder: (context) {
           // observe the theme mode value this will rebuild every time the themeMode signal changes.
-          final themeMode = context.observe<ThemeMode>(SignalId.themeMode); // [3]
+          final themeMode = context.observe<ThemeMode>(); // [2]
           return MaterialApp(
             title: 'Toggle theme',
             themeMode: themeMode,
@@ -220,7 +216,7 @@ class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // retrieve the theme mode signal
-    final themeMode = context.get<Signal<ThemeMode>>(SignalId.themeMode); // [4]
+    final themeMode = context.get<Signal<ThemeMode>>(); // [3]
     return Scaffold(
       appBar: AppBar(
         title: const Text('Toggle theme'),
@@ -228,11 +224,11 @@ class MyHomePage extends StatelessWidget {
       body: Center(
         child:
             // Listen to the theme mode signal rebuilding only the IconButton
-            SignalBuilder( // [5]
+            SignalBuilder( // [4]
           signal: themeMode,
           builder: (_, mode, __) {
             return IconButton(
-              onPressed: () { // [6]
+              onPressed: () { // [5]
                 // toggle the theme mode
                 if (themeMode.value == ThemeMode.light) {
                   themeMode.value = ThemeMode.dark;
@@ -252,28 +248,33 @@ class MyHomePage extends StatelessWidget {
 }
 ```
 
-In this example many things occured, first at `[1]` we've used an _Enum_ to store all the [SignalId]s.
-You may use a `String`, an `int` or wethever you want. Just be sure to use the same id to retrieve the signal.
+First at `[1]` we've used the `Solid` widget to provide the `themeMode` signal to descendants.
 
-Then at `[2]` we've used the `Solid` widget to provide the `themeMode` signal to descendants.
+The `Solid` widgets takes a list of providers:
+ The `SolidSignal` has a `create` function that returns a `SignalBase`.
+You may create a signal or a derived signal. The value is a Function
+because the signal is created lazily only when used for the first time, if
+you never access the signal it never gets created.
+In the `SolidSignal` you can also specify an `id`entifier for having multiple
+signals of the same type.
 
-The `Solid` widgets takes a Map of `signals`:
+At `[2]` we `observe` the value of a signal. The `observe` method listen to the signal value and rebuilds the widget when the value changes. It takes an optional `id` that is the signal identifier that you want to use. This method must be called only inside the `build` method.
 
-- The key of the Map is the signal id, in this case `SignalId.themeMode`.
-- The value of the Map is a function that returns a `SignalBase`. You may create a signal or a derived signal. The value is a Function because the signal is created lazily only when used for the first time, if you never access the signal it never gets created.
+At `[3]` we `get` the signal with the given signal type. This doesn't listen to signal value. You may use this method inside the `initState` and `build` methods.
 
-At `[3]` we `observe` the value of a signal. The `observe` method listen to the signal value and rebuilds the widget when the value changes. It takes an `id` that is the signal identifier that you want to use. This method must be called only inside the `build` method.
+At `[4]` using the `SignalBuilder` widget we rebuild the `IconButton` every time the signal value changes.
 
-At `[4]` we `get` the signal with the given `id`. This doesn't listen to signal value. You may use this method inside the `initState` and `build` methods.
-
-At `[5]` using the `SignalBuilder` widget we rebuild the `IconButton` every time the signal value changes.
-
-And finally at `[6]` we update the signal value.
+And finally at `[5]` we update the signal value.
 
 > It is mandatory to pass the type of signal value otherwise you're going to encounter an error, for example:
 
-1. `createSignal<ThemeMode>` and `context.observe<ThemeMode>` where ThemeMode is the type of the signal value.
-2. `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
+```dart
+SolidSignal<Signal<ThemeMode>>(create: () => createSignal(ThemeMode.light))
+```
+and `context.observe<ThemeMode>` where ThemeMode is the type of the signal
+value.
+`context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type
+of signal with its type value.
 
 ## Examples
 
