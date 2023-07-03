@@ -23,26 +23,24 @@
 - **BREAKING CHANGE** Removed the `signals` map from `Solid`, now to provide signals to descendants
   use `SolidSignal` inside providers:
 
-  ### Before
+  _Before_:
 
   ```dart
-   Solid(
+  Solid(
     signals: {
       SignalId.themeMode: () => createSignal<ThemeMode>(ThemeMode.light),
     },
-   ),
+  ),
   ```
 
-  ### After
+  _Now_:
 
   ```dart
-   Solid(
+  Solid(
     providers: [
-      SolidSignal<Signal<ThemeMode>>(
-        create: () => createSignal(ThemeMode.light),
-      ),
+      SolidSignal<Signal<ThemeMode>>(create: () => createSignal(ThemeMode.light)),
     ],
-   ),
+  ),
   ```
 
 - **FEAT** You can access a specific Signal without specifing an `id`entifier, for example:
