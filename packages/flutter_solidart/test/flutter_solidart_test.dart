@@ -747,9 +747,7 @@ void main() {
         home: Scaffold(
           body: Solid(
             providers: [
-              SolidProvider(
-                create: () => const NumberProvider(1),
-              ),
+              SolidProvider(create: () => const NumberProvider(1)),
             ],
             child: const SizedBox(),
           ),
@@ -794,9 +792,7 @@ void main() {
         home: Scaffold(
           body: Solid(
             providers: [
-              SolidSignal<Signal<int>>(
-                create: () => createSignal(0),
-              ),
+              SolidSignal<Signal<int>>(create: () => createSignal(0)),
             ],
             child: Builder(
               builder: (context) {
@@ -850,4 +846,45 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
+
+  testWidgets('Test Solid multiple ancestor providers of the same Type',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Solid(
+            providers: [
+              SolidProvider<NumberProvider>(
+                create: () => const NumberProvider(1),
+                lazy: false,
+                id: 1,
+              ),
+            ],
+            child: Solid(
+              providers: [
+                SolidProvider<NumberProvider>(
+                  create: () => const NumberProvider(100),
+                  lazy: false,
+                  id: 2,
+                ),
+              ],
+              child: Builder(
+                builder: (context) {
+                  final numberProvider1 = context.get<NumberProvider>(1);
+                  final numberProvider2 = context.get<NumberProvider>(2);
+                  return Text(
+                    '''${numberProvider1.number} ${numberProvider2.number}''',
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    Finder providerFinder(int value1, int value2) =>
+        find.text('$value1 $value2');
+
+    expect(providerFinder(1, 100), findsOneWidget);
+  });
 }
