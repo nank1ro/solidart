@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
 part '../models/solid_provider.dart';
@@ -281,7 +282,7 @@ class Solid extends StatefulWidget {
     super.key,
     required this.child,
     this.providers = const [],
-  }) : _autoDispose = true;
+  }) : _canAutoDisposeProviders = true;
 
   /// Private constructor used internally to hide the `autoDispose` field
   const Solid._internal({
@@ -289,7 +290,7 @@ class Solid extends StatefulWidget {
     this.providers = const [],
     required this.child,
     required bool autoDispose,
-  }) : _autoDispose = autoDispose;
+  }) : _canAutoDisposeProviders = autoDispose;
 
   /// Provide signals and providers to modals.
   ///
@@ -340,7 +341,7 @@ class Solid extends StatefulWidget {
   //  Solid widget disposes.
   /// When using Solid.value this is not wanted because the signals and
   // providers are already managed by another Solid widget.
-  final bool _autoDispose;
+  final bool _canAutoDisposeProviders;
 
   @override
   State<Solid> createState() => SolidState();
@@ -497,10 +498,17 @@ class Solid extends StatefulWidget {
       context,
       aspect: id ?? P,
     );
-
     final createdProvider =
         state._createdProviders.entries.firstWhereOrNull((element) {
-      return element.value is P && element.key.id == id;
+      // ignore: avoid_dynamic_calls
+      return (element.value.runtimeType == P ||
+              // this is a workaround to distinguish between the types of
+              // Signals.
+              // When you get a ReadSignal created with `createComputed` the
+              // runtime type is not `ReadSignal` but `Computed`.
+              // Using toString we correctly get the real target class name
+              element.value.toString().startsWith(P.toString())) &&
+          element.key.id == id;
     })?.value;
 
     if (createdProvider != null) return createdProvider as P;
@@ -558,7 +566,7 @@ class SolidState extends State<Solid> {
     }
 
     // dispose all the created providers
-    if (widget._autoDispose) {
+    if (widget._canAutoDisposeProviders) {
       _createdProviders.forEach((provider, value) {
         switch (provider) {
           case SolidProvider():
@@ -580,18 +588,17 @@ class SolidState extends State<Solid> {
   /// -- Signals logic
   void _initializeSignal(SignalBase<dynamic> signal, {required Identifier id}) {
     final unobserve = signal.observe((_, value) {
-      setState(() {
-        _signalValues = Map<Identifier, dynamic>.fromEntries(
-          _createdProviders.entries
-              .where((element) => element.key is SolidSignal)
-              .map(
-                (entry) => MapEntry(
-                  entry.key.id ?? entry.key._valueType,
-                  entry.key == id ? value : (entry.value as SignalBase).value,
-                ),
+      _signalValues = Map<Identifier, dynamic>.fromEntries(
+        _createdProviders.entries
+            .where((element) => element.key is SolidSignal)
+            .map(
+              (entry) => MapEntry(
+                entry.key.id ?? entry.key._valueType,
+                entry.key == id ? value : (entry.value as SignalBase).value,
               ),
-        );
-      });
+            ),
+      );
+      _rebuildAfterPaint();
     });
     signal.onDispose(unobserve);
 
@@ -642,6 +649,22 @@ class SolidState extends State<Solid> {
   bool isProviderInScope(Object providerType) {
     // Find the provider by type
     return _getProviderOfType(providerType) != null;
+  }
+
+  /// Rebuilds the Solid widget after paint, if needed
+  /// and only if the widget is still mounted.
+  void _rebuildAfterPaint() {
+    final isPainting = WidgetsBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks;
+    if (mounted) {
+      if (isPainting) {
+        // rebuild after paint
+        WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {}));
+      } else {
+        // not painting, rebuild now
+        setState(() {});
+      }
+    }
   }
 
   @override
