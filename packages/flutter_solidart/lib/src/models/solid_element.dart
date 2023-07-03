@@ -82,9 +82,9 @@ class SolidSignal<T> extends SolidElement<T> {
   const SolidSignal({
     required super.create,
     super.id,
-    this.autodispose = true,
+    this.autoDispose = true,
   });
 
   /// Whether to auto dispose the signal, defaults to true.
-  final bool autodispose;
+  final bool autoDispose;
 }
