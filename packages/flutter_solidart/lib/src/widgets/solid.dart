@@ -1,7 +1,6 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
 part '../models/solid_provider.dart';
@@ -598,7 +597,7 @@ class SolidState extends State<Solid> {
               ),
             ),
       );
-      _rebuildAfterPaint();
+      Future.microtask(() => setState(() {}));
     });
     signal.onDispose(unobserve);
 
@@ -649,22 +648,6 @@ class SolidState extends State<Solid> {
   bool isProviderInScope(Object providerType) {
     // Find the provider by type
     return _getProviderOfType(providerType) != null;
-  }
-
-  /// Rebuilds the Solid widget after paint, if needed
-  /// and only if the widget is still mounted.
-  void _rebuildAfterPaint() {
-    final isPainting = WidgetsBinding.instance.schedulerPhase ==
-        SchedulerPhase.persistentCallbacks;
-    if (mounted) {
-      if (isPainting) {
-        // rebuild after paint
-        WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {}));
-      } else {
-        // not painting, rebuild now
-        setState(() {});
-      }
-    }
   }
 
   @override
