@@ -85,7 +85,7 @@ part '../models/solid_element.dart';
 ///                 }
 ///               },
 ///               icon: Icon(
-///                 mode == ThemeMode.light ? Icons.dark_mode : Icons.light_mode,
+///                 mode == ThemeMode.light ? Icons.dark_mode : Icons.light_mode
 ///               ),
 ///             );
 ///           },
@@ -98,17 +98,31 @@ part '../models/solid_element.dart';
 ///
 ///
 /// The `Solid` widgets takes a List of `providers`:
-/// The `SolidSignal` has a `create` function that returns a `SignalBase`. You may create a signal or a derived signal. The value is a Function because the signal is created lazily only when used for the first time, if you never access the signal it never gets created.
-/// In the `SolidSignal` you can also specify an identifier for having multiple signals of the same type.
+/// The `SolidSignal` has a `create` function that returns a `SignalBase`.
+/// You may create a signal or a derived signal. The value is a Function
+/// because the signal is created lazily only when used for the first time, if
+/// you never access the signal it never gets created.
+/// In the `SolidSignal` you can also specify an identifier for having multiple
+/// signals of the same type.
 ///
-/// The `context.observe()` method listen to the signal value and rebuilds the widget when the value changes. It takes an optional `id` that is the signal identifier that you want to use. This method must be called only inside the `build` method.
+/// The `context.observe()` method listen to the signal value and rebuilds the
+/// widget when the value changes. It takes an optional `id` that is the signal
+/// identifier that you want to use. This method must be called only inside the
+/// `build` method.
 ///
-/// The `context.get()` method doesn't listen to the signal value. You may use this method inside the `initState` and `build` methods.
+/// The `context.get()` method doesn't listen to the signal value. You may use
+/// this method inside the `initState` and `build` methods.
 ///
-/// > It is mandatory to set the type of signal to the `SolidSignal` otherwise you're going to encounter an error, for example:
+/// > It is mandatory to set the type of signal to the `SolidSignal` otherwise
+/// you're going to encounter an error, for example:
 ///
-/// 1. `SolidSignal<Signal<ThemeMode>>(create: () => createSignal(ThemeMode.light))` and `context.observe<ThemeMode>` where ThemeMode is the type of the signal value.
-/// 2. `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
+/// ```dart
+/// SolidSignal<Signal<ThemeMode>>(create: () => createSignal(ThemeMode.light))
+/// ```
+/// and `context.observe<ThemeMode>` where ThemeMode is the type of the signal
+/// value.
+/// `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type
+/// of signal with its type value.
 ///
 /// ## Providers
 ///
@@ -192,7 +206,8 @@ part '../models/solid_element.dart';
 ///
 /// ## Solid.value
 ///
-/// The `Solid.value` factory is useful for passing `signals` and `providers` to modals, because they are spawned in a new tree.
+/// The `Solid.value` factory is useful for passing `signals` and `providers`
+/// to modals, because they are spawned in a new tree.
 /// This is necessary because modals are spawned in a new tree.
 /// `Solid.value` takes just a:
 /// - `context` a BuildContext that has access to signals
