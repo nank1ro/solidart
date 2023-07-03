@@ -597,7 +597,9 @@ class SolidState extends State<Solid> {
               ),
             ),
       );
-      Future.microtask(() => setState(() {}));
+      Future.microtask(() {
+        if (mounted) setState(() {});
+      });
     });
     signal.onDispose(unobserve);
 
