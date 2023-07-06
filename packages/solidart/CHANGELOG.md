@@ -1,6 +1,6 @@
 ## 1.0.0-dev7
 
-- **CHORE**: `createComputed` now returns a `Computed` instead of a `ReadSignal`.
+- **CHORE**: `createComputed` now returns a `Computed` class instead of a `ReadSignal`.
 
 ## 1.0.0-dev6
 
