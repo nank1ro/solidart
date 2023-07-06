@@ -1,3 +1,11 @@
+## 1.0.0-dev9
+
+- **FIX**: A small fix of the `Solid` widget now allows to correctly retrieve a `Computed` signal
+
+### Changes from solidart
+
+- **CHORE**: `createComputed` now returns a `Computed` class instead of a `ReadSignal`.
+
 ## 1.0.0-dev8
 
 - **FEAT** Allow multiple providers of the same type by specifying an `id`entifier.

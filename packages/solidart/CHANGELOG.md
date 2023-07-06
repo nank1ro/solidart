@@ -1,3 +1,7 @@
+## 1.0.0-dev7
+
+- **CHORE**: `createComputed` now returns a `Computed` class instead of a `ReadSignal`.
+
 ## 1.0.0-dev6
 
 - **FEAT** Before, only the `fetcher` reacted to the `source`.

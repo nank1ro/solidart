@@ -1,7 +1,7 @@
 part of 'core.dart';
 
 /// {@macro computed}
-ReadSignal<T> createComputed<T>(
+Computed<T> createComputed<T>(
   T Function() selector, {
   SignalOptions<T>? options,
 }) {
