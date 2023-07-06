@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-// Using an Enum as a key for SolidSignals, you can use any type of key
+// Using an Enum as a key for SolidSignals, you can use any type of Object
 enum SignalId {
   firstName,
   lastName,

@@ -17,7 +17,7 @@ class NumberProvider {
   final int number;
 }
 
-// Using an Enum as a key for SolidProviders, you can use any type of key, like int, string, etc.
+// Using an Enum as a key for SolidProviders, you can use any type of Object, like int, string, etc.
 enum ProviderId {
   firstNumber,
   secondNumber,
