@@ -412,6 +412,8 @@ class Solid extends StatefulWidget {
   /// Listens to the signal so it causes the widget to rebuild.
   ///
   /// You must call this method only from the `build` method.
+  ///
+  /// WARNING: Doesn't support observing a Resource.
   static T observe<T>(BuildContext context, [Identifier? id]) {
     SolidState? state;
     Type? signalType;
@@ -426,7 +428,11 @@ class Solid extends StatefulWidget {
           .firstWhere((element) => element.id == id)
           ._valueType;
     } else {
-      final possibleTypes = [Signal<T>, ReadSignal<T>, Resource<T>];
+      final possibleTypes = [
+        Signal<T>,
+        Computed<T>,
+        ReadSignal<T>,
+      ];
       for (final type in possibleTypes) {
         try {
           state = _findState(
@@ -459,13 +465,11 @@ class Solid extends StatefulWidget {
         createdSignal = state.createProvider<Signal<T>>(effectiveId);
       } else if (signalType == ReadSignal<T>) {
         createdSignal = state.createProvider<ReadSignal<T>>(effectiveId);
-      } else if (signalType == Resource<T>) {
-        createdSignal = state.createProvider<Resource<T>>(effectiveId);
+      } else if (signalType == Computed<T>) {
+        createdSignal = state.createProvider<Computed<T>>(effectiveId);
       }
     }
-
-    // return the signal value
-    return (createdSignal as SignalBase).value as T;
+    return (createdSignal as SignalBase<T>).value;
   }
 
   /// Convenience method to update a `Signal` value.
@@ -482,6 +486,8 @@ class Solid extends StatefulWidget {
   /// signal.update((value) => value * 2);
   /// ```
   /// but shorter when you don't need the signal for anything else.
+  ///
+  /// WARNING: Supports only the `Signal<T>` type
   static void update<T>(
     BuildContext context,
     T Function(T value) callback, [
