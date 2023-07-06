@@ -17,6 +17,12 @@ class NumberProvider {
   final int number;
 }
 
+// Using an Enum as a key for SolidProviders, you can use any type of key, like int, string, etc.
+enum ProviderId {
+  firstNumber,
+  secondNumber,
+}
+
 class SolidProvidersPage extends StatelessWidget {
   const SolidProvidersPage({super.key});
 
@@ -24,7 +30,7 @@ class SolidProvidersPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SolidProviders'),
+        title: const Text('Solid Providers'),
       ),
       body: Solid(
         providers: [
@@ -37,41 +43,49 @@ class SolidProvidersPage extends StatelessWidget {
             create: () => const NumberProvider(1),
             // Do not create the provider lazily, but immediately
             lazy: false,
-            id: 1,
+            id: ProviderId.firstNumber,
           ),
           SolidProvider<NumberProvider>(
-            create: () => const NumberProvider(10),
-            id: 2,
+            create: () => const NumberProvider(100),
+            // Do not create the provider lazily, but immediately
+            lazy: false,
+            id: ProviderId.secondNumber,
           ),
         ],
-        child: const SomeChildThatNeedsProviders(),
+        child: const SomeChild(),
       ),
     );
   }
 }
 
-class SomeChildThatNeedsProviders extends StatelessWidget {
-  const SomeChildThatNeedsProviders({super.key});
+class SomeChild extends StatelessWidget {
+  const SomeChild({super.key});
 
   Future<void> openDialog(BuildContext context) {
     return showDialog(
       context: context,
       builder: (_) => Solid.value(
         context: context,
-        providerTypesOrIds: const [NameProvider, 1, 2],
+        providerTypesOrIds: const [
+          NameProvider,
+          ProviderId.firstNumber,
+          ProviderId.secondNumber
+        ],
         child: Dialog(
           child: Builder(builder: (innerContext) {
             final nameProvider = innerContext.get<NameProvider>();
-            final numberProvider1 = innerContext.get<NumberProvider>(1);
-            final numberProvider2 = innerContext.get<NumberProvider>(2);
+            final numberProvider1 =
+                innerContext.get<NumberProvider>(ProviderId.firstNumber);
+            final numberProvider2 =
+                innerContext.get<NumberProvider>(ProviderId.secondNumber);
             return SizedBox.square(
               dimension: 100,
               child: Center(
-                child: Text(
-                  'name: ${nameProvider.name}\n'
-                  'number1: ${numberProvider1.number}\n'
-                  'number2: ${numberProvider2.number}',
-                ),
+                child: Text('''
+name: ${nameProvider.name}
+number1: ${numberProvider1.number}
+number2: ${numberProvider2.number}
+'''),
               ),
             );
           }),
@@ -83,22 +97,24 @@ class SomeChildThatNeedsProviders extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nameProvider = context.get<NameProvider>();
-    final numberProvider = context.get<NumberProvider>(1);
-    final numberProvider2 = context.get<NumberProvider>(2);
+    final numberProvider = context.get<NumberProvider>(ProviderId.firstNumber);
+    final numberProvider2 =
+        context.get<NumberProvider>(ProviderId.secondNumber);
+
     return Center(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text('name: ${nameProvider.name}'),
           const SizedBox(height: 8),
-          Text('number: ${numberProvider.number}'),
+          Text('number1: ${numberProvider.number}'),
           const SizedBox(height: 8),
           Text('number2: ${numberProvider2.number}'),
           const SizedBox(height: 8),
           ElevatedButton(
             onPressed: () => openDialog(context),
-            child: const Text('Access providers in modals'),
-          )
+            child: const Text('Open dialog'),
+          ),
         ],
       ),
     );
