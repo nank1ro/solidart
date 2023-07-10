@@ -80,8 +80,7 @@ class SignalBuilder<T> extends StatefulWidget {
 
 class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
   late T value;
-  late DisposeEffect disposeFn;
-  bool initialized = false;
+  DisposeObservation? disposeObservation;
 
   @override
   void initState() {
@@ -89,28 +88,27 @@ class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
     _initializeSignal();
   }
 
+  @override
+  void dispose() {
+    disposeObservation?.call();
+    super.dispose();
+  }
+
   // coverage:ignore-start
   @override
   void didUpdateWidget(SignalBuilder<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.signal != widget.signal) {
-      disposeFn();
+      disposeObservation?.call();
       _initializeSignal();
     }
   }
   // coverage:ignore-end
 
-  @override
-  void dispose() {
-    disposeFn();
-    super.dispose();
-  }
-
   void _initializeSignal() {
-    disposeFn = createEffect((dispose) {
-      value = widget.signal();
-      if (initialized) setState(() {});
-      initialized = true;
+    value = widget.signal.value;
+    disposeObservation = widget.signal.observe((_, newValue) {
+      setState(() => value = newValue);
     });
   }
 
@@ -180,39 +178,49 @@ class DualSignalBuilder<T, U> extends StatefulWidget {
 class _DualSignalBuilderState<T, U> extends State<DualSignalBuilder<T, U>> {
   late T firstValue;
   late U secondValue;
-  late DisposeEffect disposeFn;
-  bool initialized = false;
+  DisposeObservation? disposeObservation1;
+  DisposeObservation? disposeObservation2;
 
   @override
   void initState() {
     super.initState();
-    _initializeSignals();
+    listenFirst();
+    listenSecond();
+  }
+
+  @override
+  void dispose() {
+    disposeObservation1?.call();
+    disposeObservation2?.call();
+    super.dispose();
   }
 
   // coverage:ignore-start
   @override
   void didUpdateWidget(DualSignalBuilder<T, U> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.firstSignal != widget.firstSignal ||
-        oldWidget.secondSignal != widget.secondSignal) {
-      disposeFn();
-      _initializeSignals();
+    if (oldWidget.firstSignal != widget.firstSignal) {
+      disposeObservation1?.call();
+      listenFirst();
+    }
+    if (oldWidget.secondSignal != widget.secondSignal) {
+      disposeObservation2?.call();
+      listenSecond();
     }
   }
   // coverage:ignore-end
 
-  @override
-  void dispose() {
-    disposeFn();
-    super.dispose();
+  void listenFirst() {
+    firstValue = widget.firstSignal.value;
+    disposeObservation1 = widget.firstSignal.observe((_, newValue) {
+      setState(() => firstValue = newValue);
+    });
   }
 
-  void _initializeSignals() {
-    disposeFn = createEffect((_) {
-      firstValue = widget.firstSignal();
-      secondValue = widget.secondSignal();
-      if (initialized) setState(() {});
-      initialized = true;
+  void listenSecond() {
+    secondValue = widget.secondSignal.value;
+    disposeObservation2 = widget.secondSignal.observe((_, newValue) {
+      setState(() => secondValue = newValue);
     });
   }
 
@@ -294,42 +302,63 @@ class _TripleSignalBuilderState<T, U, R>
   late T firstValue;
   late U secondValue;
   late R thirdValue;
-
-  late DisposeEffect disposeFn;
-  bool initialized = false;
+  DisposeObservation? disposeObservation1;
+  DisposeObservation? disposeObservation2;
+  DisposeObservation? disposeObservation3;
 
   @override
   void initState() {
     super.initState();
-    _initializeSignals();
+    listenFirst();
+    listenSecond();
+    listenThird();
+  }
+
+  @override
+  void dispose() {
+    disposeObservation1?.call();
+    disposeObservation2?.call();
+    disposeObservation3?.call();
+    super.dispose();
   }
 
   // coverage:ignore-start
   @override
   void didUpdateWidget(TripleSignalBuilder<T, U, R> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.firstSignal != widget.firstSignal ||
-        oldWidget.secondSignal != widget.secondSignal ||
-        oldWidget.thirdSignal != widget.thirdSignal) {
-      disposeFn();
-      _initializeSignals();
+    if (oldWidget.firstSignal != widget.firstSignal) {
+      disposeObservation1?.call();
+      listenFirst();
+    }
+    if (oldWidget.secondSignal != widget.secondSignal) {
+      disposeObservation2?.call();
+      listenSecond();
+    }
+    if (oldWidget.thirdSignal != widget.thirdSignal) {
+      disposeObservation3?.call();
+      listenThird();
     }
   }
   // coverage:ignore-end
 
-  @override
-  void dispose() {
-    disposeFn();
-    super.dispose();
+  void listenFirst() {
+    firstValue = widget.firstSignal.value;
+    disposeObservation1 = widget.firstSignal.observe((_, newValue) {
+      setState(() => firstValue = newValue);
+    });
   }
 
-  void _initializeSignals() {
-    disposeFn = createEffect((_) {
-      firstValue = widget.firstSignal();
-      secondValue = widget.secondSignal();
-      thirdValue = widget.thirdSignal();
-      if (initialized) setState(() {});
-      initialized = true;
+  void listenSecond() {
+    secondValue = widget.secondSignal.value;
+    disposeObservation2 = widget.secondSignal.observe((_, newValue) {
+      setState(() => secondValue = newValue);
+    });
+  }
+
+  void listenThird() {
+    thirdValue = widget.thirdSignal.value;
+    disposeObservation3 = widget.thirdSignal.observe((_, newValue) {
+      setState(() => thirdValue = newValue);
     });
   }
 
