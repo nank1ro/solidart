@@ -30,7 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_solidart: ^1.0.0-dev9
+  flutter_solidart: ^1.0.0-dev10
   json_annotation: ^4.8.1
   equatable: ^2.0.5
   http: ^1.0.0
