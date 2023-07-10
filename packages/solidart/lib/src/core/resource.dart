@@ -226,6 +226,11 @@ class Resource<T> extends Signal<ResourceState<T>> {
       'You are trying to listen to a stream, but stream is null',
     );
     value = ResourceState<T>.loading();
+    _listenStream();
+  }
+
+  /// Listens to the stream
+  void _listenStream() {
     _streamSubscription = _stream.listen(
       (data) {
         value = ResourceState<T>.ready(data);
@@ -256,14 +261,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
         value = ResourceState<T>.loading();
       },
     );
-    _streamSubscription = _stream.listen(
-      (data) {
-        value = ResourceState<T>.ready(data);
-      },
-      onError: (Object error, StackTrace stackTrace) {
-        value = ResourceState<T>.error(error, stackTrace: stackTrace);
-      },
-    );
+    _listenStream();
   }
 
   /// Force a refresh of the [fetcher].
