@@ -209,65 +209,37 @@ part '../models/solid_element.dart';
 /// The `Solid.value` factory is useful for passing `providers`
 /// to modals, because they are spawned in a new tree.
 /// This is necessary because modals are spawned in a new tree.
-/// `Solid.value` takes just a:
-/// - `context` a BuildContext that has access to signals
-/// - `providerTypesOrIds` a list of provider types or ids
-///
-/// ### Access signals in modals
-/// ```dart
-/// Future<void> showCounterDialog(BuildContext context) {
-///   return showDialog(
-///     context: context,
-///     builder: (dialogContext) {
-///       // using `Solid.value` we provide the existing signal(s) to the dialog
-///       return Solid.value(
-///         // the context passed must have access to the Solid signals
-///         context: context,
-///         // the signals ids that we want to provide to the modal
-///         providerTypesOrIds: const [
-///             _SignalId.counter,
-///             _SignalId.doubleCounter,
-///         ],
-///         child: Builder(
-///           builder: (innerContext) {
-///             final counter = innerContext.observe<int>(_SignalId.counter);
-///             final doubleCounter =
-///                 innerContext.observe<int>(_SignalId.doubleCounter);
-///             return Dialog(
-///               child: SizedBox(
-///                 width: 200,
-///                 height: 100,
-///                 child: Center(
-///                   child: ListTile(
-///                     title: Text("The counter is $counter"),
-///                     subtitle: Text('The doubleCounter is $doubleCounter'),
-///                   ),
-///                 ),
-///               ),
-///             );
-///           },
-///         ),
-///       );
-///     },
-///   );
-/// }
-/// ```
+/// `Solid.value` takes a list of `ProviderElement`s.
 ///
 /// ### Access providers in modals
+///
 /// ```dart
 /// Future<void> openDialog(BuildContext context) {
-///   return showDialog(
-///     context: context,
-///     builder: (_) => Solid.value(
-///       context: context,
-///       providerTypesOrIds: const [NameProvider],
-///       child: Dialog(
-///         child: Builder(builder: (innerContext) {
-///           final nameProvider = innerContext.get<NameProvider>();
-///           return SizedBox.square(
-///             dimension: 100,
-///             child: Center(
-///               child: Text('name: ${nameProvider.name}'),
+///    return showDialog(
+///      context: context,
+///      builder: (_) =>
+///       // using `Solid.value` we provide the existing provider(s) to the dialog
+///       Solid.value(
+///        elements: [
+///          context.getElement<NameProvider>(),
+///          context.getElement<NumberProvider>(ProviderId.firstNumber),
+///          context.getElement<NumberProvider>(ProviderId.secondNumber),
+///        ],
+///        child: Dialog(
+///          child: Builder(builder: (innerContext) {
+///            final nameProvider = innerContext.get<NameProvider>();
+///            final numberProvider1 =
+///                innerContext.get<NumberProvider>(ProviderId.firstNumber);
+///            final numberProvider2 =
+///                innerContext.get<NumberProvider>(ProviderId.secondNumber);
+///            return SizedBox.square(
+///              dimension: 100,
+///              child: Center(
+///                child: Text('''
+///  name: ${nameProvider.name}
+///  number1: ${numberProvider1.number}
+///  number2: ${numberProvider2.number}
+///  '''),
 ///             ),
 ///           );
 ///         }),
@@ -344,7 +316,7 @@ class Solid extends StatefulWidget {
       id: id,
       listen: listen,
     )?.state;
-    if (state == null) throw SolidProviderError(id ?? T);
+    if (state == null) throw SolidProviderError<T>(id);
     return state;
   }
 
@@ -399,7 +371,7 @@ class Solid extends StatefulWidget {
     final element = state.widget.providers.firstWhereOrNull((element) {
       return element is SolidElement<T> && element.id == id;
     });
-    if (element == null) throw SolidProviderError(id ?? T);
+    if (element == null) throw SolidProviderError<T>(id);
     return element as SolidElement<T>;
   }
 
@@ -812,19 +784,19 @@ class _InheritedSolid extends InheritedModel<Object> {
 }
 
 /// {@template solidprovidererror}
-/// Error thrown when the [SolidProvider] of type [typeOrId] cannot be found
+/// Error thrown when the [SolidProvider] of type [id] cannot be found
 /// {$endtemplate}
-class SolidProviderError extends Error {
+class SolidProviderError<T> extends Error {
   /// {@macro solidprovidererror}
-  SolidProviderError(this.typeOrId);
+  SolidProviderError(this.id);
 
-  /// The type of provider
-  final Object? typeOrId;
+  /// The id of the provider
+  final Identifier? id;
 
   @override
   String toString() {
     return '''
-Error could not fint a Solid containing the given SolidProvider type or id: $typeOrId
+Error could not fint a Solid containing the given SolidProvider type $T and id $id
 To fix, please:
           
   * Be sure to have a Solid ancestor, the context used must be a descendant.
@@ -842,7 +814,7 @@ To fix, please:
       ],
     )
     ```
-  * The type NameProvider is the provider type.
+  * The type `NameProvider` and `Signal<int>` are the provider's types.
   
 If none of these solutions work, please file a bug at:
 https://github.com/nank1ro/solidart/issues/new

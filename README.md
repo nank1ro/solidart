@@ -298,7 +298,6 @@ Learn every feature of `flutter_solidart` including:
 5. `SignalBuilder`, `DualSignalBuilder` and `TripleSignalBuilder`
 6. `createResource` and `ResourceBuilder`
 7. `Solid` and its fine-grained reactivity
-8. Access signals in modals with `Solid.value`
 
 ## Contributors
 
