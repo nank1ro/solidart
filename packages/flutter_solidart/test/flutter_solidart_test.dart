@@ -409,7 +409,14 @@ void main() {
         ),
       ),
     );
-    expect(tester.takeException(), const TypeMatcher<SolidProviderError>());
+    expect(
+      tester.takeException(),
+      const TypeMatcher<SolidProviderError<Signal<int>>>().having(
+        (p0) => p0.id,
+        'Check error id',
+        equals('invalid-counter'),
+      ),
+    );
   });
 
   testWidgets('Test Solid.value with observe', (tester) async {
@@ -686,7 +693,14 @@ void main() {
         ),
       ),
     );
-    expect(tester.takeException(), const TypeMatcher<SolidProviderError>());
+    expect(
+      tester.takeException(),
+      const TypeMatcher<SolidProviderError<NameProvider>>().having(
+        (p0) => p0.id,
+        'Check error id null',
+        isNull,
+      ),
+    );
   });
 
   testWidgets('Test Solid.value for providers', (tester) async {
