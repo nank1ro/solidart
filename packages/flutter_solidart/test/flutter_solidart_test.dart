@@ -409,7 +409,14 @@ void main() {
         ),
       ),
     );
-    expect(tester.takeException(), const TypeMatcher<SolidProviderError>());
+    expect(
+      tester.takeException(),
+      const TypeMatcher<SolidProviderError<Signal<int>>>().having(
+        (p0) => p0.id,
+        'Check error id',
+        equals('invalid-counter'),
+      ),
+    );
   });
 
   testWidgets('Test Solid.value with observe', (tester) async {
@@ -418,8 +425,7 @@ void main() {
         context: context,
         builder: (dialogContext) {
           return Solid.value(
-            context: context,
-            providerTypesOrIds: const ['counter'],
+            element: context.getElement<Signal<int>>('counter'),
             child: Builder(
               builder: (innerContext) {
                 final counter = innerContext.observe<int>('counter');
@@ -473,8 +479,10 @@ void main() {
         context: context,
         builder: (dialogContext) {
           return Solid.value(
-            context: context,
-            providerTypesOrIds: const ['counter', 'double-counter'],
+            elements: [
+              context.getElement<Signal<int>>('counter'),
+              context.getElement<ReadSignal<int>>('double-counter'),
+            ],
             child: Builder(
               builder: (innerContext) {
                 final counter = innerContext.get<Signal<int>>('counter');
@@ -506,7 +514,7 @@ void main() {
                 create: () => s,
                 id: 'counter',
               ),
-              SolidSignal<ReadSignal<int>>(
+              SolidSignal<Computed<int>>(
                 create: () => createComputed(() => s() * 2),
                 id: 'double-counter',
               ),
@@ -685,7 +693,14 @@ void main() {
         ),
       ),
     );
-    expect(tester.takeException(), const TypeMatcher<SolidProviderError>());
+    expect(
+      tester.takeException(),
+      const TypeMatcher<SolidProviderError<NameProvider>>().having(
+        (p0) => p0.id,
+        'Check error id null',
+        isNull,
+      ),
+    );
   });
 
   testWidgets('Test Solid.value for providers', (tester) async {
@@ -694,8 +709,7 @@ void main() {
         context: context,
         builder: (dialogContext) {
           return Solid.value(
-            context: context,
-            providerTypesOrIds: const [NumberProvider],
+            element: context.getElement<NumberProvider>(),
             child: Builder(
               builder: (innerContext) {
                 final numberProvider = innerContext.get<NumberProvider>();

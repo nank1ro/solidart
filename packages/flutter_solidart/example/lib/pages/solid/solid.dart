@@ -1,5 +1,6 @@
 import 'package:example/pages/solid/multiple_signals_page.dart';
 import 'package:example/pages/solid/solid_providers.dart';
+import 'package:example/pages/solid/solid_reactivity.dart';
 import 'package:example/pages/solid/solid_signals.dart';
 import 'package:flutter/material.dart';
 
@@ -10,6 +11,7 @@ final _pages = {
   'Solid Signals': () => const SolidSignalsPage(),
   'Observe Signal': () => const ObserveSignalPage(),
   'Multiple Signals': () => const MultipleSignalsPage(),
+  'Reactivity': () => const SolidReactivityPage(),
 };
 
 class SolidPage extends StatelessWidget {

@@ -209,65 +209,37 @@ part '../models/solid_element.dart';
 /// The `Solid.value` factory is useful for passing `providers`
 /// to modals, because they are spawned in a new tree.
 /// This is necessary because modals are spawned in a new tree.
-/// `Solid.value` takes just a:
-/// - `context` a BuildContext that has access to signals
-/// - `providerTypesOrIds` a list of provider types or ids
-///
-/// ### Access signals in modals
-/// ```dart
-/// Future<void> showCounterDialog(BuildContext context) {
-///   return showDialog(
-///     context: context,
-///     builder: (dialogContext) {
-///       // using `Solid.value` we provide the existing signal(s) to the dialog
-///       return Solid.value(
-///         // the context passed must have access to the Solid signals
-///         context: context,
-///         // the signals ids that we want to provide to the modal
-///         providerTypesOrIds: const [
-///             _SignalId.counter,
-///             _SignalId.doubleCounter,
-///         ],
-///         child: Builder(
-///           builder: (innerContext) {
-///             final counter = innerContext.observe<int>(_SignalId.counter);
-///             final doubleCounter =
-///                 innerContext.observe<int>(_SignalId.doubleCounter);
-///             return Dialog(
-///               child: SizedBox(
-///                 width: 200,
-///                 height: 100,
-///                 child: Center(
-///                   child: ListTile(
-///                     title: Text("The counter is $counter"),
-///                     subtitle: Text('The doubleCounter is $doubleCounter'),
-///                   ),
-///                 ),
-///               ),
-///             );
-///           },
-///         ),
-///       );
-///     },
-///   );
-/// }
-/// ```
+/// `Solid.value` takes a list of `ProviderElement`s.
 ///
 /// ### Access providers in modals
+///
 /// ```dart
 /// Future<void> openDialog(BuildContext context) {
-///   return showDialog(
-///     context: context,
-///     builder: (_) => Solid.value(
-///       context: context,
-///       providerTypesOrIds: const [NameProvider],
-///       child: Dialog(
-///         child: Builder(builder: (innerContext) {
-///           final nameProvider = innerContext.get<NameProvider>();
-///           return SizedBox.square(
-///             dimension: 100,
-///             child: Center(
-///               child: Text('name: ${nameProvider.name}'),
+///    return showDialog(
+///      context: context,
+///      builder: (_) =>
+///       // using `Solid.value` we provide the existing provider(s) to the dialog
+///       Solid.value(
+///        elements: [
+///          context.getElement<NameProvider>(),
+///          context.getElement<NumberProvider>(ProviderId.firstNumber),
+///          context.getElement<NumberProvider>(ProviderId.secondNumber),
+///        ],
+///        child: Dialog(
+///          child: Builder(builder: (innerContext) {
+///            final nameProvider = innerContext.get<NameProvider>();
+///            final numberProvider1 =
+///                innerContext.get<NumberProvider>(ProviderId.firstNumber);
+///            final numberProvider2 =
+///                innerContext.get<NumberProvider>(ProviderId.secondNumber);
+///            return SizedBox.square(
+///              dimension: 100,
+///              child: Center(
+///                child: Text('''
+///  name: ${nameProvider.name}
+///  number1: ${numberProvider1.number}
+///  number2: ${numberProvider2.number}
+///  '''),
 ///             ),
 ///           );
 ///         }),
@@ -294,40 +266,23 @@ class Solid extends StatefulWidget {
     required bool autoDispose,
   }) : _canAutoDisposeProviders = autoDispose;
 
-  /// Provide signals and providers to modals.
+  /// Provide a single or multiple [SolidElement]s to a new route.
   ///
-  /// The [context] parameter being passed must be a valid descendant of the
-  /// [Solid] widget that contains the signals and providers.
-  /// The [child] parameter is the target that inherit the signals and
-  /// providers.
-  ///
-  /// Pass the Type of the[providers] to the [providerTypesOrIds]
-  /// or the identifiers.
-  ///
-  /// This is useful for passing signals and providers to modals, because are
+  /// This is useful for passing multiple providers to modals, because are
   /// spawned in a new tree.
   factory Solid.value({
     Key? key,
-    required BuildContext context,
+    SolidElement<dynamic>? element,
+    List<SolidElement<dynamic>>? elements,
     required Widget child,
-    List<Object> providerTypesOrIds = const [],
   }) {
-    // retrieve the providers
-    final providers = <SolidElement<dynamic>>[];
-    for (final type in providerTypesOrIds) {
-      final stateContainingProvider = _findState(
-        context,
-        aspect: type,
-      );
-      final provider = stateContainingProvider.widget.providers.firstWhere(
-        (element) =>
-            stateContainingProvider._getProviderOfType(type) == element,
-      );
-      providers.add(provider);
-    }
+    assert(
+      (element != null) ^ (elements != null),
+      'Provide either a single element or multiple elements',
+    );
     return Solid._internal(
       key: key,
-      providers: providers,
+      providers: elements ?? [element!],
       autoDispose: false,
       child: child,
     );
@@ -348,24 +303,24 @@ class Solid extends StatefulWidget {
   @override
   State<Solid> createState() => SolidState();
 
-  /// Finds the first SolidState ancestor that satifies the given [aspect].
+  /// Finds the first SolidState ancestor that satifies the given [id].
   ///
   /// If [listen] is true, the [context] gets subscribed to the given value.
-  static SolidState _findState(
+  static SolidState _findState<T>(
     BuildContext context, {
-    required Object aspect,
+    Identifier? id,
     bool listen = false,
   }) {
-    final state = _InheritedSolid.inheritFromNearest(
+    final state = _InheritedSolid.inheritFromNearest<T>(
       context,
-      aspect: aspect,
+      id: id,
       listen: listen,
     )?.state;
-    if (state == null) throw SolidProviderError(aspect);
+    if (state == null) throw SolidProviderError<T>(id);
     return state;
   }
 
-  /// Obtains the Provider of the given type P and [id] corresponding to the
+  /// Obtains the Provider of the given type T and [id] corresponding to the
   /// nearest [Solid] widget.
   ///
   /// Throws if no such element or [Solid] widget is found.
@@ -386,8 +341,38 @@ class Solid extends StatefulWidget {
   /// Doesn't listen to the provider so it won't cause the widget to rebuild.
   ///
   /// You may call this method inside the `initState` or `build` methods.
-  static P get<P>(BuildContext context, [Identifier? id]) {
-    return _getOrCreateProvider<P>(context, id: id);
+  static T get<T>(BuildContext context, [Identifier? id]) {
+    return _getOrCreateProvider<T>(context, id: id);
+  }
+
+  /// Obtains the SolidElement of a Provider of the given type T and [id]
+  /// corresponding to the nearest [Solid] widget.
+  ///
+  /// Throws if no such element or [Solid] widget is found.
+  ///
+  /// Calling this method is O(N) with a small constant factor where N is the
+  /// number of [Solid] ancestors needed to traverse to find the provider with
+  /// the given [id].
+  ///
+  /// If you've a single Solid widget in the whole app N is equal to 1.
+  /// If you have two Solid ancestors and the provider is present in the nearest
+  /// ancestor, N is still 1.
+  /// If you have two Solid ancestors and the provider is present in the farest
+  /// ancestor, N is 2, and so on.
+  ///
+  /// This method should not be called from State.dispose because the element
+  /// tree is no longer stable at that time.
+  ///
+  /// Doesn't listen to the provider so it won't cause the widget to rebuild.
+  ///
+  /// You may call this method inside the `initState` or `build` methods.
+  static SolidElement<T> getElement<T>(BuildContext context, [Identifier? id]) {
+    final state = _findState<T>(context, id: id);
+    final element = state.widget.providers.firstWhereOrNull((element) {
+      return element is SolidElement<T> && element.id == id;
+    });
+    if (element == null) throw SolidProviderError<T>(id);
+    return element as SolidElement<T>;
   }
 
   /// Subscribe to the [Signal] of the given value type and [id] corresponding
@@ -418,9 +403,9 @@ class Solid extends StatefulWidget {
     SolidState? state;
     Type? signalType;
     if (id != null) {
-      state = _findState(
+      state = _findState<Never>(
         context,
-        aspect: id,
+        id: id,
         listen: true,
       );
       signalType = state.widget.providers
@@ -428,27 +413,18 @@ class Solid extends StatefulWidget {
           .firstWhere((element) => element.id == id)
           ._valueType;
     } else {
-      final possibleTypes = [
-        Signal<T>,
-        Computed<T>,
-        ReadSignal<T>,
-      ];
-      for (final type in possibleTypes) {
+      try {
+        state = _findState<Signal<T>>(context, listen: true);
+        signalType = Signal<T>;
+      } catch (_) {
         try {
-          state = _findState(
-            context,
-            aspect: type,
-            listen: true,
-          );
-          signalType = type;
-          break;
-        } catch (_) {}
+          state = _findState<Computed<T>>(context, listen: true);
+          signalType = Computed<T>;
+        } catch (e) {
+          state = _findState<ReadSignal<T>>(context, listen: true);
+          signalType = ReadSignal<T>;
+        }
       }
-    }
-    final effectiveId = id ?? signalType ?? Never;
-
-    if (state == null) {
-      throw SolidProviderError(effectiveId);
     }
 
     var createdSignal = state._createdProviders.entries
@@ -462,11 +438,11 @@ class Solid extends StatefulWidget {
     // if the signal is not already present, create it lazily
     if (createdSignal == null) {
       if (signalType == Signal<T>) {
-        createdSignal = state.createProvider<Signal<T>>(effectiveId);
+        createdSignal = state.createProvider<Signal<T>>(id);
       } else if (signalType == ReadSignal<T>) {
-        createdSignal = state.createProvider<ReadSignal<T>>(effectiveId);
+        createdSignal = state.createProvider<ReadSignal<T>>(id);
       } else if (signalType == Computed<T>) {
-        createdSignal = state.createProvider<Computed<T>>(effectiveId);
+        createdSignal = state.createProvider<Computed<T>>(id);
       }
     }
     return (createdSignal as SignalBase<T>).value;
@@ -497,31 +473,20 @@ class Solid extends StatefulWidget {
     get<Signal<T>>(context, id).update(callback);
   }
 
-  /// Tries to find a provider of type P from the created providers and returns
+  /// Tries to find a provider of type T from the created providers and returns
   /// it.
   ///
   /// The provider is created in case the find fails.
-  static P _getOrCreateProvider<P>(BuildContext context, {Identifier? id}) {
-    final state = _findState(
-      context,
-      aspect: id ?? P,
-    );
+  static T _getOrCreateProvider<T>(BuildContext context, {Identifier? id}) {
+    final state = _findState<T>(context, id: id);
     final createdProvider =
         state._createdProviders.entries.firstWhereOrNull((element) {
-      // ignore: avoid_dynamic_calls
-      return (element.value.runtimeType == P ||
-              // this is a workaround to distinguish between the types of
-              // Signals.
-              // When you get a ReadSignal created with `createComputed` the
-              // runtime type is not `ReadSignal` but `Computed`.
-              // Using toString we correctly get the real target class name
-              element.value.toString().startsWith(P.toString())) &&
-          element.key.id == id;
+      return element.value is T && element.key.id == id;
     })?.value;
 
-    if (createdProvider != null) return createdProvider as P;
+    if (createdProvider != null) return createdProvider as T;
     // if the provider is not already present, create it lazily
-    return state.createProvider<P>(id);
+    return state.createProvider<T>(id);
   }
 }
 
@@ -620,32 +585,37 @@ class SolidState extends State<Solid> {
 
   /// -- Providers logic
 
-  /// Try to find a [SolidProvider] of type or id [Type] and returns it
-  SolidElement<dynamic>? _getProviderOfType(
-    Object typeOrId,
+  /// Try to find a [SolidProvider] of type <T> or [id] and returns it
+  SolidElement<dynamic>? _getProvider<T>(
+    Identifier? id,
   ) {
-    // search by id first
-    var provider = widget.providers.firstWhereOrNull(
-      (element) => element.id == typeOrId,
-    );
+    SolidElement<dynamic>? provider;
+    if (id != null) {
+      provider = widget.providers.firstWhereOrNull(
+        (element) => element.id == id,
+      );
+    } else {
+      provider = widget.providers.firstWhereOrNull(
+        (element) {
+          return element is SolidElement<T>;
+        },
+      );
+    }
     // search by type next
-    provider ??= widget.providers.firstWhereOrNull(
-      (element) => element._valueType == typeOrId,
-    );
 
     if (provider == null) return null;
     return provider;
   }
 
-  /// Creates a provider of type P and stores it
-  P createProvider<P>(Object? id) {
+  /// Creates a provider of type T and stores it
+  T createProvider<T>(Identifier? id) {
     // find the provider in the list
-    final provider = _getProviderOfType(id ?? P)!;
+    final provider = _getProvider<T>(id)!;
     // create and return it
-    final value = provider.create() as P;
+    final value = provider.create() as T;
 
     if (provider is SolidSignal && value is SignalBase) {
-      _initializeSignal(value, id: id ?? P);
+      _initializeSignal(value, id: id ?? T);
     }
 
     // store the created provider
@@ -656,9 +626,9 @@ class SolidState extends State<Solid> {
 
   /// Used to determine if the requested provider is present in the current
   /// scope
-  bool isProviderInScope(Object providerType) {
+  bool isProviderInScope<T>(Identifier? id) {
     // Find the provider by type
-    return _getProviderOfType(providerType) != null;
+    return _getProvider<T>(id) != null;
   }
 
   @override
@@ -703,10 +673,8 @@ class _InheritedSolid extends InheritedModel<Object> {
         .equals(oldWidget.signalValues, signalValues);
   }
 
-  // Used to determine in which ancestor is the given [aspect].
-  @override
-  bool isSupportedAspect(Object aspect) {
-    return state.isProviderInScope(aspect);
+  bool isSupportedAspectWithType<T>(Identifier? id) {
+    return state.isProviderInScope<T>(id);
   }
 
   /// Fine-grained rebuilding of signals that changed value
@@ -734,9 +702,9 @@ class _InheritedSolid extends InheritedModel<Object> {
   // ancestors.
   // The [result] will be a single _InheritedSolid of context's type T ancestor
   // that supports the specified model [aspect].
-  static InheritedElement? _findNearestModel(
+  static InheritedElement? _findNearestModel<T>(
     BuildContext context, {
-    required Object aspect,
+    Identifier? id,
   }) {
     final model =
         context.getElementForInheritedWidgetOfExactType<_InheritedSolid>();
@@ -752,7 +720,7 @@ class _InheritedSolid extends InheritedModel<Object> {
     final modelWidget = model.widget as _InheritedSolid;
 
     // The model contains the aspect, the ancestor has been found, return it.
-    if (modelWidget.isSupportedAspect(aspect)) {
+    if (modelWidget.isSupportedAspectWithType<T>(id)) {
       return model;
     }
 
@@ -768,38 +736,38 @@ class _InheritedSolid extends InheritedModel<Object> {
       return null;
     }
 
-    return _findNearestModel(
+    return _findNearestModel<T>(
       modelParent!,
-      aspect: aspect,
+      id: id,
     );
   }
 
-  /// Makes [context] dependent on the specified [aspect] of an
+  /// Makes [context] dependent on the specified [id] of an
   /// [_InheritedSolid]
   ///
-  /// When the given [aspect] of the model changes, the [context] will be
+  /// When the given [id] of the model changes, the [context] will be
   /// rebuilt if [listen] is set to true.
   ///
   /// The dependencies created by this method target the nearest
   /// [_InheritedSolid] ancestor which [isSupportedAspect]  returns true.
   ///
-  /// If [aspect] is null this method is the same as
+  /// If [id] is null this method is the same as
   /// `context.dependOnInheritedWidgetOfExactType<T>()` if [listen] is true,
   /// otherwise it's a simple
   /// `context.getElementForInheritedWidgetOfExactType<T>()`.
   ///
   /// If no ancestor of type T exists, null is returned.
-  static _InheritedSolid? inheritFromNearest(
+  static _InheritedSolid? inheritFromNearest<T>(
     BuildContext context, {
-    required Identifier aspect,
+    Identifier? id,
     // Whether to listen to the [InheritedModel], defaults to false.
     bool listen = false,
   }) {
     // Try finding a model in the ancestors for which isSupportedAspect(aspect)
     // is true.
-    final model = _findNearestModel(
+    final model = _findNearestModel<T>(
       context,
-      aspect: aspect,
+      id: id,
     );
     if (model == null) {
       return null;
@@ -807,7 +775,7 @@ class _InheritedSolid extends InheritedModel<Object> {
 
     // depend on the inherited element if [listen] is true
     if (listen) {
-      context.dependOnInheritedElement(model, aspect: aspect)
+      context.dependOnInheritedElement(model, aspect: id ?? T)
           as _InheritedSolid;
     }
 
@@ -816,19 +784,19 @@ class _InheritedSolid extends InheritedModel<Object> {
 }
 
 /// {@template solidprovidererror}
-/// Error thrown when the [SolidProvider] of type [typeOrId] cannot be found
+/// Error thrown when the [SolidProvider] of type [id] cannot be found
 /// {$endtemplate}
-class SolidProviderError extends Error {
+class SolidProviderError<T> extends Error {
   /// {@macro solidprovidererror}
-  SolidProviderError(this.typeOrId);
+  SolidProviderError(this.id);
 
-  /// The type of provider
-  final Object? typeOrId;
+  /// The id of the provider
+  final Identifier? id;
 
   @override
   String toString() {
     return '''
-Error could not fint a Solid containing the given SolidProvider type or id: $typeOrId
+Error could not fint a Solid containing the given SolidProvider type $T and id $id
 To fix, please:
           
   * Be sure to have a Solid ancestor, the context used must be a descendant.
@@ -846,7 +814,7 @@ To fix, please:
       ],
     )
     ```
-  * The type NameProvider is the provider type.
+  * The type `NameProvider` and `Signal<int>` are the provider's types.
   
 If none of these solutions work, please file a bug at:
 https://github.com/nank1ro/solidart/issues/new

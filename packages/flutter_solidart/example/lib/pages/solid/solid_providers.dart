@@ -65,11 +65,10 @@ class SomeChild extends StatelessWidget {
     return showDialog(
       context: context,
       builder: (_) => Solid.value(
-        context: context,
-        providerTypesOrIds: const [
-          NameProvider,
-          ProviderId.firstNumber,
-          ProviderId.secondNumber
+        elements: [
+          context.getElement<NameProvider>(),
+          context.getElement<NumberProvider>(ProviderId.firstNumber),
+          context.getElement<NumberProvider>(ProviderId.secondNumber),
         ],
         child: Dialog(
           child: Builder(builder: (innerContext) {

@@ -1,3 +1,7 @@
+## 1.0.0-dev10
+
+- **FEAT**: Now you can get any instance of (any subclass of) the provider type.
+
 ## 1.0.0-dev9
 
 - **FIX**: A small fix of the `Solid` widget now allows to correctly retrieve a `Computed` signal
