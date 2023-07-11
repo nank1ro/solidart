@@ -79,7 +79,7 @@ Resource<T> createResource<T>({
 /// `ResourceBuilder` to learn how to react to the state of the resource in the
 /// UI.
 ///
-/// The resource has a value named `ResourceState`, that provides many useful
+/// The resource has a [state] named [ResourceState], that provides many useful
 /// convenience methods to correctly handle the state of the resource.
 ///
 /// The `on` method forces you to handle all the states of a Resource
@@ -153,11 +153,16 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// The current resource state
   ResourceState<T> get state => super.value;
 
+  /// Updates the current resource state
+  set state(ResourceState<T> state) => super.value = state;
+
   @Deprecated('Use state instead')
   @override
-  ResourceState<T> get value {
-    return super.value;
-  }
+  ResourceState<T> get value => state;
+
+  @Deprecated('Use state instead')
+  @override
+  set value(ResourceState<T> value) => state = value;
 
   // The stream trasformed in a broadcast stream, if needed
   Stream<T> get _stream {
@@ -211,11 +216,11 @@ class Resource<T> extends Signal<ResourceState<T>> {
       "Cannot fetch a resource that is already resolved, use 'refetch' instead",
     );
     try {
-      value = ResourceState<T>.loading();
+      state = ResourceState<T>.loading();
       final result = await fetcher!();
-      value = ResourceState<T>.ready(result);
+      state = ResourceState<T>.ready(result);
     } catch (e, s) {
-      value = ResourceState<T>.error(e, stackTrace: s);
+      state = ResourceState<T>.error(e, stackTrace: s);
     }
   }
 
@@ -225,7 +230,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
       stream != null,
       'You are trying to listen to a stream, but stream is null',
     );
-    value = ResourceState<T>.loading();
+    state = ResourceState<T>.loading();
     _listenStream();
   }
 
@@ -233,10 +238,10 @@ class Resource<T> extends Signal<ResourceState<T>> {
   void _listenStream() {
     _streamSubscription = _stream.listen(
       (data) {
-        value = ResourceState<T>.ready(data);
+        state = ResourceState<T>.ready(data);
       },
       onError: (Object error, StackTrace stackTrace) {
-        value = ResourceState<T>.error(error, stackTrace: stackTrace);
+        state = ResourceState<T>.error(error, stackTrace: stackTrace);
       },
     );
   }
@@ -252,13 +257,13 @@ class Resource<T> extends Signal<ResourceState<T>> {
     _streamSubscription?.cancel();
     state.map(
       ready: (ready) {
-        value = ready.copyWith(isRefreshing: true);
+        state = ready.copyWith(isRefreshing: true);
       },
       error: (error) {
-        value = error.copyWith(isRefreshing: true);
+        state = error.copyWith(isRefreshing: true);
       },
       loading: (_) {
-        value = ResourceState<T>.loading();
+        state = ResourceState<T>.loading();
       },
     );
     _listenStream();
@@ -270,19 +275,19 @@ class Resource<T> extends Signal<ResourceState<T>> {
     try {
       state.map(
         ready: (ready) {
-          value = ready.copyWith(isRefreshing: true);
+          state = ready.copyWith(isRefreshing: true);
         },
         error: (error) {
-          value = error.copyWith(isRefreshing: true);
+          state = error.copyWith(isRefreshing: true);
         },
         loading: (_) {
-          value = ResourceState<T>.loading();
+          state = ResourceState<T>.loading();
         },
       );
       final result = await fetcher!();
-      value = ResourceState<T>.ready(result);
+      state = ResourceState<T>.ready(result);
     } catch (e, s) {
-      value = ResourceState<T>.error(e, stackTrace: s);
+      state = ResourceState<T>.error(e, stackTrace: s);
     }
   }
 
@@ -306,7 +311,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   ResourceState<T> update(
     ResourceState<T> Function(ResourceState<T> state) callback,
   ) =>
-      value = callback(state);
+      state = callback(state);
 
   @override
   void dispose() {
