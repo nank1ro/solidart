@@ -1,3 +1,7 @@
+## 1.0.0-dev902
+
+- **CHORE**: Deprecate the value setter in the `Resource` in favor of the state setter
+
 ## 1.0.0-dev901
 
 - **FEAT**: Now you can get any instance of (any subclass of) the provider type.
