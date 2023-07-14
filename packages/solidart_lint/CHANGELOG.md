@@ -1,3 +1,7 @@
+## 1.0.0-dev5
+
+- **BUGFIX**: Fix issues with the `invalid_observe_type` and `invalid_update_type` lints not linting for a dynamic type
+
 ## 1.0.0-dev4
 
 - **CHORE**: Update `flutter_solidart` dependency, update `avoid_dynamic_solid_signal` lint and remove unnecessary lints

@@ -1,3 +1,10 @@
+## 1.0.0-dev8
+
+- **FEAT**: Add the select method on the Resource class.
+The select function allows filtering the Resource's data by reading only the properties that you care about.
+The advantage is that you keep handling the loading and error states.
+- **FEAT**: Make the Resource to auto-resolve when accessing its state
+
 ## 1.0.0-dev7
 
 - **CHORE**: `createComputed` now returns a `Computed` class instead of a `ReadSignal`.
