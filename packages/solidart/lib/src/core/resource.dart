@@ -131,7 +131,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
         'Provide a fetcher or a stream',
       );
     }
-
     // resolve the resource immediately if not lazy
     if (!resourceOptions.lazy) resolve();
   }
@@ -191,9 +190,10 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   /// Resolves the [Resource].
   ///
-  /// If you provided a [fetcher], it run the async call and then it
-  /// will subscribe to the [source], if provided.
+  /// If you provided a [fetcher], it run the async call.
   /// Otherwise it starts listening to the [stream].
+  ///
+  /// Then will subscribe to the [source], if provided.
   ///
   /// This method must be called once during the life cycle of the resource.
   Future<void> resolve() async {
@@ -202,6 +202,10 @@ class Resource<T> extends Signal<ResourceState<T>> {
       """The resource has been already resolved, you can't resolve it more than once. Use `refetch()` instead if you want to refresh the value.""",
     );
     _resolved = true;
+
+    // no need to resolve a resource selector
+    if (this is ResourceSelector) return;
+
     if (fetcher != null) {
       // start fetching
       await _fetch();
@@ -226,9 +230,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   /// Resolves the resource, if needed
   void _resolveIfNeeded() {
-    if (!_resolved) {
-      resolve();
-    }
+    if (!_resolved) resolve();
   }
 
   /// Runs the [fetcher] for the first time.
@@ -599,8 +601,12 @@ class ResourceSelector<Input, Output> extends Resource<Output> {
     required this.resource,
     required this.selector,
   }) {
+    // set current state
     state = _mapInputState(resource.state);
+    // listen next states
     _addListener();
+    // dispose the selector when the input resource is disposed
+    resource.onDispose(dispose);
   }
 
   /// The input resource
@@ -616,6 +622,17 @@ class ResourceSelector<Input, Output> extends Resource<Output> {
       state = _mapInputState(curr);
     });
   }
+
+  @override
+  Future<void> resolve() async {
+    if (!resource._resolved) return resource.resolve();
+  }
+
+  @override
+  Future<void> refetch() => resource.refetch();
+
+  @override
+  void resubscribe() => resource.resubscribe();
 
   ResourceState<Output> _mapInputState(ResourceState<Input> input) {
     return input.map(
