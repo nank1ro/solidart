@@ -39,21 +39,18 @@ part '../models/solid_element.dart';
 ///           create: () => createSignal(ThemeMode.light),
 ///         ),
 ///       ],
-///       child:
-///           // using a builder here because the `context` must be a descendant of [Solid]
-///           Builder(
-///         builder: (context) {
-///           // observe the theme mode value this will rebuild every time the themeMode signal changes.
-///           final themeMode = context.observe<ThemeMode>();
-///           return MaterialApp(
-///             title: 'Toggle theme',
-///             themeMode: themeMode,
-///             theme: ThemeData.light(),
-///             darkTheme: ThemeData.dark(),
-///             home: const MyHomePage(),
-///           );
-///         },
-///       ),
+///       // using the builder method to immediately access the signal
+///       builder: (context) {
+///         // observe the theme mode value this will rebuild every time the themeMode signal changes.
+///         final themeMode = context.observe<ThemeMode>();
+///         return MaterialApp(
+///           title: 'Toggle theme',
+///           themeMode: themeMode,
+///           theme: ThemeData.light(),
+///           darkTheme: ThemeData.dark(),
+///           home: const MyHomePage(),
+///         );
+///       },
 ///     );
 ///   }
 /// }
@@ -254,17 +251,27 @@ class Solid extends StatefulWidget {
   /// {@macro solid}
   const Solid({
     super.key,
-    required this.child,
+    this.child,
+    this.builder,
     this.providers = const [],
-  }) : _canAutoDisposeProviders = true;
+  })  : assert(
+          (child != null) ^ (builder != null),
+          'Provide either a child or a builder',
+        ),
+        _canAutoDisposeProviders = true;
 
   /// Private constructor used internally to hide the `autoDispose` field
   const Solid._internal({
     super.key,
     this.providers = const [],
-    required this.child,
+    this.child,
+    this.builder,
     required bool autoDispose,
-  }) : _canAutoDisposeProviders = autoDispose;
+  })  : assert(
+          (child != null) ^ (builder != null),
+          'Provide either a child or a builder',
+        ),
+        _canAutoDisposeProviders = autoDispose;
 
   /// Provide a single or multiple [SolidElement]s to a new route.
   ///
@@ -289,7 +296,10 @@ class Solid extends StatefulWidget {
   }
 
   /// The widget child that gets access to the [providers].
-  final Widget child;
+  final Widget? child;
+
+  /// The widget builder that gets access to the [providers].
+  final WidgetBuilder? builder;
 
   /// All the providers provided to all the descendants of [Solid].
   final List<SolidElement<dynamic>> providers;
@@ -636,7 +646,9 @@ class SolidState extends State<Solid> {
     return _InheritedSolid(
       state: this,
       signalValues: _signalValues,
-      child: widget.child,
+      child: widget.builder != null
+          ? Builder(builder: (context) => widget.builder!(context))
+          : widget.child!,
     );
   }
 

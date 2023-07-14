@@ -23,11 +23,15 @@ class InvalidObserveType extends DartLintRule {
       (node) async {
         if (node.methodName.name == 'observe') {
           if (node.target?.staticType == null) return;
-          if (node.argumentList.arguments.isEmpty) return;
+
           final isContext =
               buildContextType.isExactlyType(node.target!.staticType!);
           if (!isContext) return;
           if (node.staticType == null) return;
+          final typeArgument = node.typeArguments?.arguments.firstOrNull?.type;
+          if (typeArgument == null) {
+            return reporter.reportErrorForNode(_code, node);
+          }
           final isSignalBase =
               signalBaseType.isAssignableFromType(node.staticType!);
           if (isSignalBase) {

@@ -434,7 +434,6 @@ void main() {
       addTearDown(streamController.close);
 
       final resource = createResource(stream: () => streamController.stream);
-      expect(resource.state, isA<ResourceUnresolved<int>>());
       resource.resolve().ignore();
       expect(resource.state, isA<ResourceLoading<int>>());
       streamController.add(1);
@@ -534,6 +533,45 @@ void main() {
       expect(resource.state.isReady, true);
 
       resource.dispose();
+    });
+
+    test('check ResourceSelector with future', () async {
+      final userId = createSignal(0);
+
+      Future<User> getUser() {
+        if (userId() == 2) throw Exception();
+        return Future.value(User(id: userId()));
+      }
+
+      final resource = createResource(fetcher: getUser, source: userId);
+      final idResource = resource.select((data) => data.id);
+
+      await pumpEventQueue();
+      expect(idResource.state, isA<ResourceReady<int>>());
+      expect(idResource.state.value, 0);
+
+      userId.set(1);
+      await pumpEventQueue();
+      expect(idResource.state, isA<ResourceReady<int>>());
+      expect(idResource.state(), 1);
+
+      userId.set(2);
+      await pumpEventQueue();
+      expect(idResource.state, isA<ResourceError<int>>());
+      expect(idResource.state.error, isException);
+
+      userId.set(3);
+      await pumpEventQueue();
+      await idResource.refetch();
+      expect(idResource.state, isA<ResourceReady<int>>());
+      expect(idResource.state.hasError, false);
+      expect(idResource.state.asError, isNull);
+      expect(idResource.state.isLoading, false);
+      expect(idResource.state.asReady, isNotNull);
+      expect(idResource.state.isReady, true);
+
+      resource.dispose();
+      expect(idResource.disposed, true);
     });
 
     test('check ResourceState.on', () async {

@@ -1,3 +1,15 @@
+## 1.0.0-dev903
+
+- **FEAT**: The `Solid` widget now acceps a `builder` method that provides a descendant context.
+- **CHORE**: The `ResourceBuilder` no longer resolves the resource, because now the `Resource` knows when to resolve automatically.
+
+### Changes from solidart
+
+- **FEAT**: Add the select method on the Resource class.
+The select function allows filtering the Resource's data by reading only the properties that you care about.
+The advantage is that you keep handling the loading and error states.
+- **FEAT**: Make the Resource to auto-resolve when accessing its state
+
 ## 1.0.0-dev902
 
 - **CHORE**: Deprecate the value setter in the `Resource` in favor of the state setter

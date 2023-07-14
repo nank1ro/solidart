@@ -157,10 +157,6 @@ class _ResourceBuilderState<T> extends State<ResourceBuilder<T>> {
 
   void initialize() {
     effectiveResource = widget.resource;
-    // Resolve the resource if it's not resolved yet
-    if (widget.resource.state is ResourceUnresolved<T>) {
-      widget.resource.resolve();
-    }
   }
 
   @override
