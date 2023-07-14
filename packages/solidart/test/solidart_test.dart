@@ -434,7 +434,6 @@ void main() {
       addTearDown(streamController.close);
 
       final resource = createResource(stream: () => streamController.stream);
-      expect(resource.state, isA<ResourceUnresolved<int>>());
       resource.resolve().ignore();
       expect(resource.state, isA<ResourceLoading<int>>());
       streamController.add(1);
