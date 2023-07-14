@@ -1,5 +1,6 @@
 ## 1.0.0-dev903
 
+- **FEAT**: The `Solid` widget now acceps a `builder` method that provides a descendant context.
 - **CHORE**: The `ResourceBuilder` no longer resolves the resource, because now the `Resource` knows when to resolve automatically.
 
 ### Changes from solidart
