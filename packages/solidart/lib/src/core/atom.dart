@@ -23,7 +23,8 @@ class Atom {
   bool _isPendingUnobservation = false;
   DerivationState _lowestObserverState = DerivationState.notTracking;
 
-  bool isBeingObserved = false;
+  // ignore: prefer_final_fields
+  bool _isBeingObserved = false;
 
   final Set<Derivation> _observers = {};
 
