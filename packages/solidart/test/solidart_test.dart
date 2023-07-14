@@ -535,6 +535,45 @@ void main() {
       resource.dispose();
     });
 
+    test('check ResourceSelector with future', () async {
+      final userId = createSignal(0);
+
+      Future<User> getUser() {
+        if (userId() == 2) throw Exception();
+        return Future.value(User(id: userId()));
+      }
+
+      final resource = createResource(fetcher: getUser, source: userId);
+      final idResource = resource.select((data) => data.id);
+
+      await pumpEventQueue();
+      expect(idResource.state, isA<ResourceReady<int>>());
+      expect(idResource.state.value, 0);
+
+      userId.set(1);
+      await pumpEventQueue();
+      expect(idResource.state, isA<ResourceReady<int>>());
+      expect(idResource.state(), 1);
+
+      userId.set(2);
+      await pumpEventQueue();
+      expect(idResource.state, isA<ResourceError<int>>());
+      expect(idResource.state.error, isException);
+
+      userId.set(3);
+      await pumpEventQueue();
+      await idResource.refetch();
+      expect(idResource.state, isA<ResourceReady<int>>());
+      expect(idResource.state.hasError, false);
+      expect(idResource.state.asError, isNull);
+      expect(idResource.state.isLoading, false);
+      expect(idResource.state.asReady, isNotNull);
+      expect(idResource.state.isReady, true);
+
+      resource.dispose();
+      expect(idResource.disposed, true);
+    });
+
     test('check ResourceState.on', () async {
       var shouldThrow = false;
       Future<int> fetcher() {

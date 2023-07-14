@@ -163,6 +163,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// Updates the current resource state
   set state(ResourceState<T> state) => super.value = state;
 
+  // coverage:ignore-start
   @Deprecated('Use state instead')
   @override
   ResourceState<T> get value => state;
@@ -171,15 +172,24 @@ class Resource<T> extends Signal<ResourceState<T>> {
   @override
   set value(ResourceState<T> value) => state = value;
 
+  @Deprecated('Use previousState instead')
+  @override
+  ResourceState<T>? get previousValue => previousState;
+
+  /// Returns a future that completes with the value when the Resource is ready
+  /// If the resource is already ready, it completes immediately.
+  @experimental
+  @Deprecated('Use `firstWhereReady` instead')
+  FutureOr<T> untilReady() {
+    return firstWhereReady();
+  }
+  // coverage:ignore-end
+
   /// The previous resource state
   ResourceState<T>? get previousState {
     _resolveIfNeeded();
     return super.previousValue;
   }
-
-  @Deprecated('Use previousState instead')
-  @override
-  ResourceState<T>? get previousValue => previousState;
 
   // The stream trasformed in a broadcast stream, if needed
   Stream<T> get _stream {
@@ -333,14 +343,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
   FutureOr<T> firstWhereReady() async {
     final state = await firstWhere((value) => value.isReady);
     return state.asReady!.value;
-  }
-
-  /// Returns a future that completes with the value when the Resource is ready
-  /// If the resource is already ready, it completes immediately.
-  @experimental
-  @Deprecated('Use `firstWhereReady` instead')
-  FutureOr<T> untilReady() {
-    return firstWhereReady();
   }
 
   @override
