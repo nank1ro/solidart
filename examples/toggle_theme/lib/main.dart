@@ -17,21 +17,18 @@ class MyApp extends StatelessWidget {
           create: () => createSignal(ThemeMode.light),
         ),
       ],
-      child:
-          // using a builder here because the `context` must be a descendant of [Solid]
-          Builder(
-        builder: (context) {
-          // observe the theme mode value this will rebuild every time the themeMode signal changes.
-          final themeMode = context.observe<ThemeMode>();
-          return MaterialApp(
-            title: 'Toggle theme',
-            themeMode: themeMode,
-            theme: ThemeData.light(),
-            darkTheme: ThemeData.dark(),
-            home: const MyHomePage(),
-          );
-        },
-      ),
+      // using the builder method to immediately access the signal
+      builder: (context) {
+        // observe the theme mode value this will rebuild every time the themeMode signal changes.
+        final themeMode = context.observe<ThemeMode>();
+        return MaterialApp(
+          title: 'Toggle theme',
+          themeMode: themeMode,
+          theme: ThemeData.light(),
+          darkTheme: ThemeData.dark(),
+          home: const MyHomePage(),
+        );
+      },
     );
   }
 }
