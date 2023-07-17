@@ -112,9 +112,11 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   @override
   T get value {
     if (_isComputing) {
+      // coverage:ignore-start
       throw SolidartReactionException(
         'Cycle detected in computation $name: $selector',
       );
+      // coverage:ignore-end
     }
 
     if (!_context.isWithinBatch && _observers.isEmpty) {

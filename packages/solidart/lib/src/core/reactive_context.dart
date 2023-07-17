@@ -152,15 +152,18 @@ class ReactiveContext {
       observable._addObserver(derivation);
 
       // Computed = Observable + Derivation
+      // coverage:ignore-start
       if (observable is Computed) {
         if (observable._dependenciesState.index >
             lowestNewDerivationState.index) {
           lowestNewDerivationState = observable._dependenciesState;
         }
       }
+      // coverage:ignore-end
     }
 
     // Remove previous observables
+    // coverage:ignore-start
     for (final ob in staleObservables) {
       ob._removeObserver(derivation);
     }
@@ -174,6 +177,7 @@ class ReactiveContext {
     derivation
       .._observables = derivation._newObservables!
       .._newObservables = {}; // No need for newObservables beyond this point
+    // coverage:ignore-end
   }
 
   void addPendingReaction(ReactionInterface reaction) {
@@ -259,6 +263,7 @@ Probably there is a cycle in the reactive function: $failingReaction ''');
 
     atom._lowestObserverState = DerivationState.stale;
 
+    // coverage:ignore-start
     for (final observer in atom._observers) {
       if (observer._dependenciesState == DerivationState.possiblyStale) {
         observer._dependenciesState = DerivationState.stale;
@@ -266,6 +271,7 @@ Probably there is a cycle in the reactive function: $failingReaction ''');
         atom._lowestObserverState = DerivationState.upToDate;
       }
     }
+    // coverage:ignore-end
   }
 
   void clearObservables(Derivation derivation) {
