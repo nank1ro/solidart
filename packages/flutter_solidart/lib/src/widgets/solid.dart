@@ -378,10 +378,9 @@ class Solid extends StatefulWidget {
   /// You may call this method inside the `initState` or `build` methods.
   static SolidElement<T> getElement<T>(BuildContext context, [Identifier? id]) {
     final state = _findState<T>(context, id: id);
-    final element = state.widget.providers.firstWhereOrNull((element) {
+    final element = state.widget.providers.firstWhere((element) {
       return element is SolidElement<T> && element.id == id;
     });
-    if (element == null) throw SolidProviderError<T>(id);
     return element as SolidElement<T>;
   }
 
