@@ -132,7 +132,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
       );
     }
     // resolve the resource immediately if not lazy
-    if (!resourceOptions.lazy) resolve();
+    if (!resourceOptions.lazy) _resolve();
   }
 
   /// Reactive signal values passed to the fetcher, optional.
@@ -194,9 +194,13 @@ class Resource<T> extends Signal<ResourceState<T>> {
   // The stream trasformed in a broadcast stream, if needed
   Stream<T> get _stream {
     final s = stream!()!;
-    if (s.isBroadcast) return s;
-    return s.asBroadcastStream();
+    if (!_broadcastStreams.keys.contains(s)) {
+      _broadcastStreams[s] = s.isBroadcast ? s : s.asBroadcastStream();
+    }
+    return _broadcastStreams[s]!;
   }
+
+  final _broadcastStreams = <Stream<T>, Stream<T>>{};
 
   /// Resolves the [Resource].
   ///
@@ -206,7 +210,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// Then will subscribe to the [source], if provided.
   ///
   /// This method must be called once during the life cycle of the resource.
-  Future<void> resolve() async {
+  Future<void> _resolve() async {
     assert(
       _resolved == false,
       """The resource has been already resolved, you can't resolve it more than once. Use `refetch()` instead if you want to refresh the value.""",
@@ -240,7 +244,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   /// Resolves the resource, if needed
   void _resolveIfNeeded() {
-    if (!_resolved) resolve();
+    if (!_resolved) _resolve();
   }
 
   /// Runs the [fetcher] for the first time.
@@ -355,6 +359,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   void dispose() {
     _streamSubscription?.cancel();
     _sourceDisposeObservation?.call();
+    _broadcastStreams.clear();
     super.dispose();
   }
 
@@ -626,8 +631,8 @@ class ResourceSelector<Input, Output> extends Resource<Output> {
   }
 
   @override
-  Future<void> resolve() async {
-    if (!resource._resolved) return resource.resolve();
+  Future<void> _resolve() async {
+    if (!resource._resolved) return resource._resolve();
   }
 
   @override
