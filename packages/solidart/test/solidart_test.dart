@@ -434,7 +434,6 @@ void main() {
       addTearDown(streamController.close);
 
       final resource = createResource(stream: () => streamController.stream);
-      resource.resolve().ignore();
       expect(resource.state, isA<ResourceLoading<int>>());
       streamController.add(1);
       await pumpEventQueue();
@@ -505,9 +504,12 @@ void main() {
         return Future.value(User(id: userId()));
       }
 
-      final resource = createResource(fetcher: getUser, source: userId);
+      final resource = createResource(
+        fetcher: getUser,
+        source: userId,
+        options: const ResourceOptions(lazy: false),
+      );
 
-      await resource.resolve();
       await pumpEventQueue();
       expect(resource.state, isA<ResourceReady<User>>());
       expect(resource.state.value, const User(id: 0));
@@ -535,6 +537,52 @@ void main() {
       resource.dispose();
     });
 
+    test('update ResourceState', () async {
+      Future<int> fetcher() => Future.value(1);
+      final resource = createResource(fetcher: fetcher);
+      expect(resource.state, isA<ResourceLoading<int>>());
+      await pumpEventQueue();
+      expect(
+        resource.state,
+        isA<ResourceReady<int>>()
+            .having((p0) => p0.value, 'value equal to 1', 1),
+      );
+
+      resource.update((state) => const ResourceReady(2));
+      expect(
+        resource.state,
+        isA<ResourceReady<int>>()
+            .having((p0) => p0.value, 'value equal to 2', 2),
+      );
+    });
+    test('refetch Resource with fetcher while loading', () async {
+      Future<int> fetcher() => Future.delayed(
+            const Duration(seconds: 1),
+            () => 1,
+          );
+      final resource = createResource(fetcher: fetcher);
+      expect(resource.state, isA<ResourceLoading<int>>());
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(resource.state, isA<ResourceLoading<int>>());
+
+      resource.refetch().ignore();
+      expect(resource.state, isA<ResourceLoading<int>>());
+
+      await Future<void>.delayed(const Duration(seconds: 1));
+      expect(resource.state, isA<ResourceReady<int>>());
+    });
+    test('refetch Resource with stream while loading', () async {
+      final controller = StreamController<int>();
+      final resource = createResource(stream: () => controller.stream);
+      expect(resource.state, isA<ResourceLoading<int>>());
+
+      resource.resubscribe();
+      expect(resource.state, isA<ResourceLoading<int>>());
+
+      controller.add(1);
+      await pumpEventQueue();
+      expect(resource.state, isA<ResourceReady<int>>());
+    });
     test('check ResourceSelector with future', () async {
       final userId = createSignal(0);
 
@@ -574,6 +622,45 @@ void main() {
       expect(idResource.disposed, true);
     });
 
+    test('check ResourceSelector with stream', () async {
+      final userId = createSignal(0);
+
+      Stream<User> getUser() {
+        if (userId() == 2) return Stream<User>.error(Exception());
+        return Stream.value(User(id: userId()));
+      }
+
+      final resource = createResource(stream: getUser, source: userId);
+      final idResource = resource.select((data) => data.id);
+
+      await pumpEventQueue();
+      expect(idResource.state, isA<ResourceReady<int>>());
+      expect(idResource.state.value, 0);
+
+      userId.set(1);
+      await pumpEventQueue();
+      expect(idResource.state, isA<ResourceReady<int>>());
+      expect(idResource.state(), 1);
+
+      userId.set(2);
+      await pumpEventQueue();
+      expect(idResource.state, isA<ResourceError<int>>());
+      expect(idResource.state.error, isException);
+
+      userId.set(3);
+      await pumpEventQueue();
+      idResource.resubscribe();
+      expect(idResource.state, isA<ResourceReady<int>>());
+      expect(idResource.state.hasError, false);
+      expect(idResource.state.asError, isNull);
+      expect(idResource.state.isLoading, false);
+      expect(idResource.state.asReady, isNotNull);
+      expect(idResource.state.isReady, true);
+
+      resource.dispose();
+      expect(idResource.disposed, true);
+    });
+
     test('check ResourceState.on', () async {
       var shouldThrow = false;
       Future<int> fetcher() {
@@ -589,7 +676,6 @@ void main() {
       var refreshingOnDataTimes = 0;
       var refreshingOnErrorTimes = 0;
       final resource = createResource(fetcher: fetcher);
-      resource.resolve().ignore();
 
       createEffect(
         (_) {
@@ -657,7 +743,6 @@ void main() {
               () => 1,
             );
         final count = createResource(fetcher: fetcher);
-        count.resolve().ignore();
 
         await expectLater(count.firstWhereReady(), completion(1));
       },
@@ -665,8 +750,10 @@ void main() {
     );
 
     test('check toString()', () async {
-      final r = createResource(fetcher: () => Future.value(1));
-      await r.resolve();
+      final r = createResource(
+        fetcher: () => Future.value(1),
+        options: const ResourceOptions(lazy: false),
+      );
       await pumpEventQueue();
       expect(
         r.toString(),
