@@ -39,3 +39,5 @@ coverage/
 lcov.info
 .fvm
 .vscode/settings.json
+.flutter-plugins-dependencies
+.flutter-plugins

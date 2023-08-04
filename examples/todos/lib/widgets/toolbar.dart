@@ -14,7 +14,7 @@ class Toolbar extends StatefulWidget {
 class _ToolbarState extends State<Toolbar> {
   /// All the derived signals
   late final ReadSignal<int> allTodosCount;
-  late final ReadSignal<int> uncompletedTodosCount;
+  late final ReadSignal<int> incompleteTodosCount;
   late final ReadSignal<int> completedTodosCount;
 
   @override
@@ -24,18 +24,22 @@ class _ToolbarState extends State<Toolbar> {
     final todos = context.get<TodosController>().todos;
 
     // create derived signals based on the list of todos
-
-    // no need to dispose them because they already dispose when the parent (todos) disposes.
-    allTodosCount = todos.select((value) => value.length);
+    allTodosCount = createComputed(() => todos().length);
 
     // retrieve the list of completed count and select just the length.
     final completedTodos =
         context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
-    completedTodosCount = completedTodos.select((value) => value.length);
-    // retrieve the list of uncompleted count and select just the length.
-    final uncompletedTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.uncompletedTodos);
-    uncompletedTodosCount = uncompletedTodos.select((value) => value.length);
+    completedTodosCount = createComputed(() => completedTodos().length);
+    // retrieve the list of incomplete count and select just the length.
+    final incompleteTodos =
+        context.get<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
+    incompleteTodosCount = createComputed(() => incompleteTodos().length);
+  }
+
+  @override
+  void dispose() {
+    allTodosCount.dispose();
+    super.dispose();
   }
 
   /// Maps the given [filter] to the correct list of todos
@@ -43,8 +47,8 @@ class _ToolbarState extends State<Toolbar> {
     switch (filter) {
       case TodosFilter.all:
         return allTodosCount;
-      case TodosFilter.uncompleted:
-        return uncompletedTodosCount;
+      case TodosFilter.incomplete:
+        return incompleteTodosCount;
       case TodosFilter.completed:
         return completedTodosCount;
     }
@@ -71,10 +75,7 @@ class _ToolbarState extends State<Toolbar> {
         ).toList(),
         onTap: (index) {
           // update the current active filter
-          context.update<TodosFilter>(
-            SignalId.activeTodoFilter,
-            (_) => TodosFilter.values[index],
-          );
+          context.update<TodosFilter>((_) => TodosFilter.values[index]);
         },
       ),
     );

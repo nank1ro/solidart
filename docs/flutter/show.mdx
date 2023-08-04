@@ -39,4 +39,18 @@ Widget build(BuildContext context) {
 The `Show` widget conditionally renders its `builder` or the `fallback` widget based on the `when` evaluation.
 The `fallback` widget builder is optional, by default nothing is rendered.
 
-The `Show` widget takes a `Signal` of type `bool`, see [Derived Signals](/learning/derived-signals) to learn how to create a derived signal if your Signal is not of type `bool`.
+The `Show` widget takes a functions that returns a `bool`.
+You can easily convert any type to `bool`, for example:
+
+```dart
+final count = createSignal(0);
+
+@override
+Widget build(BuildContext context) {
+  return Show(
+    when: () => count() > 5,
+    builder: (context) => const Text('Count is greater than 5'),
+    fallback: (context) => const Text('Count is lower than 6'),
+  );
+}
+```

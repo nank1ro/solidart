@@ -29,25 +29,36 @@ class _TodosBodyState extends State<TodosBody> {
     final todosController = context.get<TodosController>();
 
     return Solid(
-      signals: {
+      providers: [
         // make the active filter signal visible only to descendants.
         // created here because this is where it starts to be necessary.
-        SignalId.activeTodoFilter: () =>
-            createSignal<TodosFilter>(TodosFilter.all),
-        // Registering two new signals, the list of completed and uncompleted todos.
+        SolidSignal<Signal<TodosFilter>>(
+            create: () => createSignal(TodosFilter.all)),
+        // Registering two new signals, the list of completed and incomplete todos.
         // These are derived [ReadSignal]s.
         // Provided through a [Solid] because their value is used by the [TodoList]
         // and [Toolbar].
         // This is preferable over passing the signals as parameters down to descendants,
         // expecially when the usage is very deep in the tree.
-        SignalId.completedTodos: () => todosController.todos.select<List<Todo>>(
-              (value) => value.where((element) => element.completed).toList(),
-            ),
-        SignalId.uncompletedTodos: () =>
-            todosController.todos.select<List<Todo>>(
-              (value) => value.where((element) => !element.completed).toList(),
-            ),
-      },
+        SolidSignal<ReadSignal<List<Todo>>>(
+          create: () => createComputed(
+            () => todosController
+                .todos()
+                .where((element) => element.completed)
+                .toList(),
+          ),
+          id: SignalId.completedTodos,
+        ),
+        SolidSignal<ReadSignal<List<Todo>>>(
+          create: () => createComputed(
+            () => todosController
+                .todos()
+                .where((element) => !element.completed)
+                .toList(),
+          ),
+          id: SignalId.incompleteTodos,
+        ),
+      ],
       child: Column(
         children: [
           TextFormField(

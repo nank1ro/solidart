@@ -5,9 +5,9 @@ description: Todos example using flutter_solidart
 
 # Todos example
 
-<Zapp id="zu9i063zu9j0" />
+<Zapp id="github/nank1ro/solidart/tree/main/examples/todos" />
 
-This example leverages the power of the `Solid` widgets using `signals` and `providers`.
+This example leverages the power of the `Solid` widgets using `providers`.
 
 ### TodosPage
 
@@ -147,25 +147,36 @@ class _TodosBodyState extends State<TodosBody> {
     final todosController = context.get<TodosController>();
 
     return Solid(
-      signals: {
+      providers: [
         // make the active filter signal visible only to descendants.
         // created here because this is where it starts to be necessary.
-        SignalId.activeTodoFilter: () =>
-            createSignal<TodosFilter>(TodosFilter.all),
-        // Registering two new signals, the list of completed and uncompleted todos.
+        SolidSignal<Signal<TodosFilter>>(
+            create: () => createSignal(TodosFilter.all)),
+        // Registering two new signals, the list of completed and incomplete todos.
         // These are derived [ReadSignal]s.
         // Provided through a [Solid] because their value is used by the [TodoList]
         // and [Toolbar].
         // This is preferable over passing the signals as parameters down to descendants,
         // expecially when the usage is very deep in the tree.
-        SignalId.completedTodos: () => todosController.todos.select<List<Todo>>(
-              (value) => value.where((element) => element.completed).toList(),
-            ),
-        SignalId.uncompletedTodos: () =>
-            todosController.todos.select<List<Todo>>(
-              (value) => value.where((element) => !element.completed).toList(),
-            ),
-      },
+        SolidSignal<ReadSignal<List<Todo>>>(
+          create: () => createComputed(
+            () => todosController
+                .todos()
+                .where((element) => element.completed)
+                .toList(),
+          ),
+          id: SignalId.completedTodos,
+        ),
+        SolidSignal<ReadSignal<List<Todo>>>(
+          create: () => createComputed(
+            () => todosController
+                .todos()
+                .where((element) => !element.completed)
+                .toList(),
+          ),
+          id: SignalId.incompleteTodos,
+        ),
+      ],
       child: Column(
         children: [
           TextFormField(
@@ -206,11 +217,11 @@ class _TodosBodyState extends State<TodosBody> {
 The important parts here are two.
 1. We're retrieving the `todosController` with the syntax `context.get<TodosController>()`.
    This is how we access providers from descendants. You can safely run this method in the `initState`, in the `build` method or even inside a callback like `onPressed`.
-2. We're creating a new `Solid` widget. Yes, you can create many Solid widgets inside your app, this the ideal usage. Don't use a single `Solid` widget but many. Place the `signals` and `providers` only where needed.
+2. We're creating a new `Solid` widget. Yes, you can create many Solid widgets inside your app, this the ideal usage. Don't use a single `Solid` widget but many. Place the `providers` only where needed.
 
-Here we're creating the a signal with id `SignalId.activeTodoFilter` with an initial value of `TodosFilter.all`. This signals keeps the state of the current selected tab.
+Here we're creating a signal with an initial value of `TodosFilter.all`. This signals keeps the state of the current selected tab.
 
-We're also creating two derived signals, the list of `completedTodos` and `uncompletedTodos` using the `select` method of the todos list signal.
+We're also creating two derived signals, the list of `completedTodos` and `incompleteTodos` using the `select` method of the todos list signal.
 
 In the `TextFormField` when the field is submitted we add the new todo simply using:
 ```dart
@@ -228,7 +239,7 @@ textController.clear();
 
 The toolbar shows 3 tabs (or filters).
 - All the todos
-- The uncompleted todos list
+- The incomplete todos list
 - The completed todos list
 
 Each tab contain the number of todos present in the current tab.
@@ -243,7 +254,7 @@ class Toolbar extends StatefulWidget {
 class _ToolbarState extends State<Toolbar> {
   /// All the derived signals
   late final ReadSignal<int> allTodosCount;
-  late final ReadSignal<int> uncompletedTodosCount;
+  late final ReadSignal<int> incompleteTodosCount;
   late final ReadSignal<int> completedTodosCount;
 
   @override
@@ -254,17 +265,22 @@ class _ToolbarState extends State<Toolbar> {
 
     // create derived signals based on the list of todos
 
-    // no need to dispose them because they already dispose when the parent (todos) disposes.
-    allTodosCount = todos.select((value) => value.length);
+    allTodosCount = createComputed(() => todos().length);
 
     // retrieve the list of completed count and select just the length.
     final completedTodos =
         context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
-    completedTodosCount = completedTodos.select((value) => value.length);
-    // retrieve the list of uncompleted count and select just the length.
-    final uncompletedTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.uncompletedTodos);
-    uncompletedTodosCount = uncompletedTodos.select((value) => value.length);
+    completedTodosCount = createComputed(() => completedTodos().length);
+    // retrieve the list of incomplete count and select just the length.
+    final incompleteTodos =
+        context.get<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
+    incompleteTodosCount = createComputed(() => incompleteTodos().length);
+  }
+
+  @override
+  void dispose() {
+    allTodosCount.dispose();
+    super.dispose();
   }
 
   /// Maps the given [filter] to the correct list of todos
@@ -272,8 +288,8 @@ class _ToolbarState extends State<Toolbar> {
     switch (filter) {
       case TodosFilter.all:
         return allTodosCount;
-      case TodosFilter.uncompleted:
-        return uncompletedTodosCount;
+      case TodosFilter.incomplete:
+        return incompleteTodosCount;
       case TodosFilter.completed:
         return completedTodosCount;
     }
@@ -301,7 +317,6 @@ class _ToolbarState extends State<Toolbar> {
         onTap: (index) {
           // update the current active filter
           context.update<TodosFilter>(
-            SignalId.activeTodoFilter,
             (_) => TodosFilter.values[index],
           );
         },
@@ -339,7 +354,7 @@ class TodoList extends StatefulWidget {
 class _TodoListState extends State<TodoList> {
   late final ReadSignal<List<Todo>> todos;
   late final ReadSignal<List<Todo>> completedTodos;
-  late final ReadSignal<List<Todo>> uncompletedTodos;
+  late final ReadSignal<List<Todo>> incompleteTodos;
 
   @override
   void initState() {
@@ -355,8 +370,8 @@ class _TodoListState extends State<TodoList> {
     todos = context.get<TodosController>().todos;
     completedTodos =
         context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
-    uncompletedTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.uncompletedTodos);
+    incompleteTodos =
+        context.get<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
   }
 
   // Given a [filter] return the correct list of todos
@@ -364,8 +379,8 @@ class _TodoListState extends State<TodoList> {
     switch (filter) {
       case TodosFilter.all:
         return todos;
-      case TodosFilter.uncompleted:
-        return uncompletedTodos;
+      case TodosFilter.incomplete:
+        return incompleteTodos;
       case TodosFilter.completed:
         return completedTodos;
     }
@@ -374,8 +389,7 @@ class _TodoListState extends State<TodoList> {
   @override
   Widget build(BuildContext context) {
     // rebuilds this BuildContext every time the `activeFilter` value changes
-    final activeFilter =
-        context.observe<TodosFilter>(SignalId.activeTodoFilter);
+    final activeFilter = context.observe<TodosFilter>();
 
     return SignalBuilder(
       // react to the correct list of todos list

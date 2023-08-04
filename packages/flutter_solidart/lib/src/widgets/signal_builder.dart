@@ -80,6 +80,7 @@ class SignalBuilder<T> extends StatefulWidget {
 
 class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
   late T value;
+  DisposeObservation? disposeObservation;
 
   @override
   void initState() {
@@ -87,31 +88,27 @@ class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
     _initializeSignal();
   }
 
+  @override
+  void dispose() {
+    disposeObservation?.call();
+    super.dispose();
+  }
+
   // coverage:ignore-start
   @override
   void didUpdateWidget(SignalBuilder<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.signal != widget.signal) {
-      oldWidget.signal.removeListener(_valueChanged);
+      disposeObservation?.call();
       _initializeSignal();
     }
   }
   // coverage:ignore-end
 
-  @override
-  void dispose() {
-    widget.signal.removeListener(_valueChanged);
-    super.dispose();
-  }
-
   void _initializeSignal() {
     value = widget.signal.value;
-    widget.signal.addListener(_valueChanged);
-  }
-
-  void _valueChanged() {
-    setState(() {
-      value = widget.signal.value;
+    disposeObservation = widget.signal.observe((_, newValue) {
+      setState(() => value = newValue);
     });
   }
 
@@ -181,14 +178,21 @@ class DualSignalBuilder<T, U> extends StatefulWidget {
 class _DualSignalBuilderState<T, U> extends State<DualSignalBuilder<T, U>> {
   late T firstValue;
   late U secondValue;
+  DisposeObservation? disposeObservation1;
+  DisposeObservation? disposeObservation2;
 
   @override
   void initState() {
     super.initState();
-    firstValue = widget.firstSignal.value;
-    widget.firstSignal.addListener(_valueChanged);
-    secondValue = widget.secondSignal.value;
-    widget.secondSignal.addListener(_valueChanged);
+    listenFirst();
+    listenSecond();
+  }
+
+  @override
+  void dispose() {
+    disposeObservation1?.call();
+    disposeObservation2?.call();
+    super.dispose();
   }
 
   // coverage:ignore-start
@@ -196,29 +200,27 @@ class _DualSignalBuilderState<T, U> extends State<DualSignalBuilder<T, U>> {
   void didUpdateWidget(DualSignalBuilder<T, U> oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.firstSignal != widget.firstSignal) {
-      oldWidget.firstSignal.removeListener(_valueChanged);
-      firstValue = widget.firstSignal.value;
-      widget.firstSignal.addListener(_valueChanged);
+      disposeObservation1?.call();
+      listenFirst();
     }
     if (oldWidget.secondSignal != widget.secondSignal) {
-      oldWidget.secondSignal.removeListener(_valueChanged);
-      secondValue = widget.secondSignal.value;
-      widget.secondSignal.addListener(_valueChanged);
+      disposeObservation2?.call();
+      listenSecond();
     }
   }
   // coverage:ignore-end
 
-  @override
-  void dispose() {
-    widget.firstSignal.removeListener(_valueChanged);
-    widget.secondSignal.removeListener(_valueChanged);
-    super.dispose();
+  void listenFirst() {
+    firstValue = widget.firstSignal.value;
+    disposeObservation1 = widget.firstSignal.observe((_, newValue) {
+      setState(() => firstValue = newValue);
+    });
   }
 
-  void _valueChanged() {
-    setState(() {
-      firstValue = widget.firstSignal.value;
-      secondValue = widget.secondSignal.value;
+  void listenSecond() {
+    secondValue = widget.secondSignal.value;
+    disposeObservation2 = widget.secondSignal.observe((_, newValue) {
+      setState(() => secondValue = newValue);
     });
   }
 
@@ -300,16 +302,24 @@ class _TripleSignalBuilderState<T, U, R>
   late T firstValue;
   late U secondValue;
   late R thirdValue;
+  DisposeObservation? disposeObservation1;
+  DisposeObservation? disposeObservation2;
+  DisposeObservation? disposeObservation3;
 
   @override
   void initState() {
     super.initState();
-    firstValue = widget.firstSignal.value;
-    widget.firstSignal.addListener(_valueChanged);
-    secondValue = widget.secondSignal.value;
-    widget.secondSignal.addListener(_valueChanged);
-    thirdValue = widget.thirdSignal.value;
-    widget.thirdSignal.addListener(_valueChanged);
+    listenFirst();
+    listenSecond();
+    listenThird();
+  }
+
+  @override
+  void dispose() {
+    disposeObservation1?.call();
+    disposeObservation2?.call();
+    disposeObservation3?.call();
+    super.dispose();
   }
 
   // coverage:ignore-start
@@ -317,36 +327,38 @@ class _TripleSignalBuilderState<T, U, R>
   void didUpdateWidget(TripleSignalBuilder<T, U, R> oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.firstSignal != widget.firstSignal) {
-      oldWidget.firstSignal.removeListener(_valueChanged);
-      firstValue = widget.firstSignal.value;
-      widget.firstSignal.addListener(_valueChanged);
+      disposeObservation1?.call();
+      listenFirst();
     }
     if (oldWidget.secondSignal != widget.secondSignal) {
-      oldWidget.secondSignal.removeListener(_valueChanged);
-      secondValue = widget.secondSignal.value;
-      widget.secondSignal.addListener(_valueChanged);
+      disposeObservation2?.call();
+      listenSecond();
     }
     if (oldWidget.thirdSignal != widget.thirdSignal) {
-      oldWidget.thirdSignal.removeListener(_valueChanged);
-      thirdValue = widget.thirdSignal.value;
-      widget.thirdSignal.addListener(_valueChanged);
+      disposeObservation3?.call();
+      listenThird();
     }
   }
   // coverage:ignore-end
 
-  @override
-  void dispose() {
-    widget.firstSignal.removeListener(_valueChanged);
-    widget.secondSignal.removeListener(_valueChanged);
-    widget.thirdSignal.removeListener(_valueChanged);
-    super.dispose();
+  void listenFirst() {
+    firstValue = widget.firstSignal.value;
+    disposeObservation1 = widget.firstSignal.observe((_, newValue) {
+      setState(() => firstValue = newValue);
+    });
   }
 
-  void _valueChanged() {
-    setState(() {
-      firstValue = widget.firstSignal.value;
-      secondValue = widget.secondSignal.value;
-      thirdValue = widget.thirdSignal.value;
+  void listenSecond() {
+    secondValue = widget.secondSignal.value;
+    disposeObservation2 = widget.secondSignal.observe((_, newValue) {
+      setState(() => secondValue = newValue);
+    });
+  }
+
+  void listenThird() {
+    thirdValue = widget.thirdSignal.value;
+    disposeObservation3 = widget.thirdSignal.observe((_, newValue) {
+      setState(() => thirdValue = newValue);
     });
   }
 
