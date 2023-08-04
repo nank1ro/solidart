@@ -278,7 +278,7 @@ of signal with its type value.
 - [Counter](https://zapp.run/github/nank1ro/solidart/tree/main/examples/counter)
 - [Toggle theme (dark/light mode)](https://zapp.run/github/nank1ro/solidart/tree/main/examples/toggle_theme)
 - [Todos](https://zapp.run/github/nank1ro/solidart/tree/main/examples/todos)
-- [Github Search](https://zapp.run/github/nank1ro/solidart/tree/dev/examples/github_search)
+- [Github Search](https://zapp.run/github/nank1ro/solidart/tree/main/examples/github_search)
 
 ### Showcase of all flutter_solidart features
 
