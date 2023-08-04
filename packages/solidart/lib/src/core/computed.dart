@@ -4,13 +4,8 @@ part of 'core.dart';
 Computed<T> createComputed<T>(
   T Function() selector, {
   SignalOptions<T>? options,
-}) {
-  return Computed<T>(
-    selector(),
-    selector: selector,
-    options: options,
-  );
-}
+}) =>
+    Computed<T>(selector, options: options);
 
 /// {@template computed}
 /// A special Signal that notifies only whenever the selected
@@ -64,11 +59,9 @@ Computed<T> createComputed<T>(
 /// {@endtemplate}
 class Computed<T> extends ReadSignal<T> implements Derivation {
   /// {@macro computed}
-  Computed(
-    super.initialValue, {
-    required this.selector,
-    super.options,
-  }) : name = options?.name ?? ReactiveContext.main.nameFor('Computed');
+  Computed(this.selector, {super.options})
+      : name = options?.name ?? ReactiveContext.main.nameFor('Computed'),
+        super(selector());
 
   @override
   // ignore: overridden_fields
@@ -112,9 +105,11 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   @override
   T get value {
     if (_isComputing) {
+      // coverage:ignore-start
       throw SolidartReactionException(
         'Cycle detected in computation $name: $selector',
       );
+      // coverage:ignore-end
     }
 
     if (!_context.isWithinBatch && _observers.isEmpty) {

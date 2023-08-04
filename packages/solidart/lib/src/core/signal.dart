@@ -1,14 +1,8 @@
 part of 'core.dart';
 
 /// {@macro signal}
-Signal<T> createSignal<T>(
-  T value, {
-  SignalOptions<T>? options,
-}) {
-  final name = options?.name ?? ReactiveContext.main.nameFor('Signal');
-  final effectiveOptions = options ?? SignalOptions<T>(name: name);
-  return Signal<T>(value, options: effectiveOptions);
-}
+Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
+    Signal<T>(value, options: options);
 
 /// {@template signal}
 /// # Signals
@@ -120,8 +114,13 @@ class Signal<T> extends ReadSignal<T> {
   /// {@macro signal}
   Signal(
     super.initialValue, {
-    super.options,
-  });
+    SignalOptions<T>? options,
+  }) : super(
+          options: options ??
+              SignalOptions<T>(
+                name: ReactiveContext.main.nameFor('Signal'),
+              ),
+        );
 
   /// {@macro set-signal-value}
   set value(T newValue) => set(newValue);

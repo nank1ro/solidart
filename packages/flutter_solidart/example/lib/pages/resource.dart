@@ -76,7 +76,7 @@ class _ResourcePageState extends State<ResourcePage> {
                         userState.isRefreshing
                             ? const CircularProgressIndicator()
                             : ElevatedButton(
-                                onPressed: user.refetch,
+                                onPressed: user.refresh,
                                 child: const Text('Refresh'),
                               ),
                       ],
@@ -90,7 +90,7 @@ class _ResourcePageState extends State<ResourcePage> {
                         userState.isRefreshing
                             ? const CircularProgressIndicator()
                             : ElevatedButton(
-                                onPressed: user.refetch,
+                                onPressed: user.refresh,
                                 child: const Text('Refresh'),
                               ),
                       ],

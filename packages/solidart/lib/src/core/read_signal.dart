@@ -115,9 +115,6 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   int get listenerCount => _observers.length + _listeners.length;
 
   @override
-  bool get disposed => _disposed;
-
-  @override
   void dispose() {
     // ignore if already disposed
     if (_disposed) return;
@@ -130,6 +127,9 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     }
     _onDisposeCallbacks.clear();
   }
+
+  @override
+  bool get disposed => _disposed;
 
   /// Observe the signal and trigger the [listener] every time the value changes
   @override
@@ -169,11 +169,13 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   /// Returns the future that completes when the [condition] evalutes to true.
   /// If the [condition] is already true, it completes immediately.
+  /// coverage:ignore-start
   @experimental
   @Deprecated('Use firstWhere instead')
   FutureOr<T> until(bool Function(T value) condition) {
     return firstWhere(condition);
   }
+  // coverage:ignore-end
 
   @override
   String toString() =>

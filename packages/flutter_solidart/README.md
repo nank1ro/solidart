@@ -126,7 +126,7 @@ ResourceBuilder(
             userState.isRefreshing
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
-                    onPressed: user.refetch,
+                    onPressed: user.refresh,
                     child: const Text('Refresh'),
                   ),
           ],
@@ -140,7 +140,7 @@ ResourceBuilder(
             userState.isRefreshing
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
-                    onPressed: user.refetch,
+                    onPressed: user.refresh,
                     child: const Text('Refresh'),
                   ),
           ],

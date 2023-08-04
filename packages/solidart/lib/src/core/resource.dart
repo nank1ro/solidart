@@ -99,7 +99,7 @@ Resource<T> createResource<T>({
 /// - `value` attempts to synchronously get the value of `ResourceReady`
 /// - `error` attempts to synchronously get the error of `ResourceError`
 ///
-/// A `Resource` provides the `resolve` and `refetch` methods.
+/// A `Resource` provides the `resolve` and `refresh` methods.
 ///
 /// The `resolve` method must be called only once for the lifecycle of the
 /// resource.
@@ -108,8 +108,8 @@ Resource<T> createResource<T>({
 /// If you're passing a [stream] it subscribes to it, and every time the source
 /// changes, it resubscribes again.
 ///
-/// The `refetch` method forces an update and calls the `fetcher` function
-/// again.
+/// The `refresh` method forces an update and calls the `fetcher` function
+/// again or subscribes againg to the [stream].
 /// {@endtemplate}
 class Resource<T> extends Signal<ResourceState<T>> {
   /// {@macro resource}
@@ -118,11 +118,12 @@ class Resource<T> extends Signal<ResourceState<T>> {
     this.stream,
     this.source,
     ResourceOptions? options,
-  })  : resourceOptions = options ?? const ResourceOptions(),
+  })  : resourceOptions = options ??
+            ResourceOptions(name: ReactiveContext.main.nameFor('Resource')),
         super(
           ResourceState<T>.unresolved(),
           options: SignalOptions<ResourceState<T>>(
-            name: options?.name,
+            name: options?.name ?? ReactiveContext.main.nameFor('Resource'),
           ),
         ) {
     if (this is! ResourceSelector) {
@@ -132,7 +133,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
       );
     }
     // resolve the resource immediately if not lazy
-    if (!resourceOptions.lazy) resolve();
+    if (!resourceOptions.lazy) _resolve();
   }
 
   /// Reactive signal values passed to the fetcher, optional.
@@ -194,9 +195,13 @@ class Resource<T> extends Signal<ResourceState<T>> {
   // The stream trasformed in a broadcast stream, if needed
   Stream<T> get _stream {
     final s = stream!()!;
-    if (s.isBroadcast) return s;
-    return s.asBroadcastStream();
+    if (!_broadcastStreams.keys.contains(s)) {
+      _broadcastStreams[s] = s.isBroadcast ? s : s.asBroadcastStream();
+    }
+    return _broadcastStreams[s]!;
   }
+
+  final _broadcastStreams = <Stream<T>, Stream<T>>{};
 
   /// Resolves the [Resource].
   ///
@@ -206,10 +211,10 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// Then will subscribe to the [source], if provided.
   ///
   /// This method must be called once during the life cycle of the resource.
-  Future<void> resolve() async {
+  Future<void> _resolve() async {
     assert(
       _resolved == false,
-      """The resource has been already resolved, you can't resolve it more than once. Use `refetch()` instead if you want to refresh the value.""",
+      """The resource has been already resolved, you can't resolve it more than once. Use `refresh()` instead if you want to refresh the value.""",
     );
     _resolved = true;
 
@@ -227,20 +232,14 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
     // react to the [source], if provided.
     if (source != null) {
-      _sourceDisposeObservation = source!.observe((_, __) {
-        if (fetcher != null) {
-          refetch();
-        } else {
-          resubscribe();
-        }
-      });
+      _sourceDisposeObservation = source!.observe((_, __) => refresh());
       source!.onDispose(_sourceDisposeObservation!);
     }
   }
 
   /// Resolves the resource, if needed
   void _resolveIfNeeded() {
-    if (!_resolved) resolve();
+    if (!_resolved) _resolve();
   }
 
   /// Runs the [fetcher] for the first time.
@@ -280,10 +279,21 @@ class Resource<T> extends Signal<ResourceState<T>> {
     );
   }
 
+  /// Forces a refresh of the [fetcher] or the [stream].
+  ///
+  /// In case of the [stream], cancels the previous subscription and
+  /// resubscribes.
+  Future<void> refresh() async {
+    if (fetcher != null) {
+      return _refetch();
+    }
+    return _resubscribe();
+  }
+
   /// Resubscribes to the [stream].
   ///
   /// Cancels the previous subscription and resubscribes.
-  void resubscribe() {
+  void _resubscribe() {
     assert(
       stream != null,
       'You are trying to listen to a stream, but stream is null',
@@ -304,7 +314,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   }
 
   /// Force a refresh of the [fetcher].
-  Future<void> refetch() async {
+  Future<void> _refetch() async {
     assert(fetcher != null, 'You are trying to refetch, but fetcher is null');
     try {
       state.map(
@@ -355,6 +365,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   void dispose() {
     _streamSubscription?.cancel();
     _sourceDisposeObservation?.call();
+    _broadcastStreams.clear();
     super.dispose();
   }
 
@@ -626,15 +637,12 @@ class ResourceSelector<Input, Output> extends Resource<Output> {
   }
 
   @override
-  Future<void> resolve() async {
-    if (!resource._resolved) return resource.resolve();
+  Future<void> _resolve() async {
+    if (!resource._resolved) return resource._resolve();
   }
 
   @override
-  Future<void> refetch() => resource.refetch();
-
-  @override
-  void resubscribe() => resource.resubscribe();
+  Future<void> refresh() => resource.refresh();
 
   ResourceState<Output> _mapInputState(ResourceState<Input> input) {
     return input.map(
