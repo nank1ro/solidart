@@ -231,13 +231,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
     // react to the [source], if provided.
     if (source != null) {
-      _sourceDisposeObservation = source!.observe((_, __) {
-        if (fetcher != null) {
-          refetch();
-        } else {
-          resubscribe();
-        }
-      });
+      _sourceDisposeObservation = source!.observe((_, __) => refresh());
       source!.onDispose(_sourceDisposeObservation!);
     }
   }
@@ -284,10 +278,21 @@ class Resource<T> extends Signal<ResourceState<T>> {
     );
   }
 
+  /// Forces a refresh of the [fetcher] or the [stream].
+  ///
+  /// In case of the [stream], cancels the previous subscription and
+  /// resubscribes.
+  Future<void> refresh() async {
+    if (fetcher != null) {
+      return _refetch();
+    }
+    return _resubscribe();
+  }
+
   /// Resubscribes to the [stream].
   ///
   /// Cancels the previous subscription and resubscribes.
-  void resubscribe() {
+  void _resubscribe() {
     assert(
       stream != null,
       'You are trying to listen to a stream, but stream is null',
@@ -308,7 +313,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   }
 
   /// Force a refresh of the [fetcher].
-  Future<void> refetch() async {
+  Future<void> _refetch() async {
     assert(fetcher != null, 'You are trying to refetch, but fetcher is null');
     try {
       state.map(
@@ -636,10 +641,7 @@ class ResourceSelector<Input, Output> extends Resource<Output> {
   }
 
   @override
-  Future<void> refetch() => resource.refetch();
-
-  @override
-  void resubscribe() => resource.resubscribe();
+  Future<void> refresh() => resource.refresh();
 
   ResourceState<Output> _mapInputState(ResourceState<Input> input) {
     return input.map(
