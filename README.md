@@ -14,6 +14,7 @@ The objectives of this project are:
 1. Being simple and easy to learn
 2. Do not go against the framework (e.g. Flutter) with weird workarounds.
 3. Do not have a single global state, but put multiple states only in the most appropriate places
+4. No code generation
 
 ## Learning
 
