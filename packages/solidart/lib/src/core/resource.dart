@@ -118,11 +118,12 @@ class Resource<T> extends Signal<ResourceState<T>> {
     this.stream,
     this.source,
     ResourceOptions? options,
-  })  : resourceOptions = options ?? const ResourceOptions(),
+  })  : resourceOptions = options ??
+            ResourceOptions(name: ReactiveContext.main.nameFor('Resource')),
         super(
           ResourceState<T>.unresolved(),
           options: SignalOptions<ResourceState<T>>(
-            name: options?.name,
+            name: options?.name ?? ReactiveContext.main.nameFor('Resource'),
           ),
         ) {
     if (this is! ResourceSelector) {

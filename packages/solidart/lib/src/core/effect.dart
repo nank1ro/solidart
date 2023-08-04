@@ -27,48 +27,7 @@ DisposeEffect createEffect(
   ErrorCallback? onError,
   EffectOptions options = const EffectOptions(),
 }) {
-  late Effect effect;
-
-  if (options.delay == null) {
-    effect = Effect(
-      callback: () => effect.track(() => callback(effect.dispose)),
-      onError: onError,
-      options: options,
-    );
-  } else {
-    final scheduler = createDelayedScheduler(options.delay!);
-    var isScheduled = false;
-    Timer? timer;
-
-    effect = Effect(
-      callback: () {
-        if (!isScheduled) {
-          isScheduled = true;
-
-          // coverage:ignore-start
-          timer?.cancel();
-          // coverage:ignore-end
-          timer = null;
-
-          timer = scheduler(() {
-            isScheduled = false;
-            if (!effect.isDisposed) {
-              effect.track(() => callback(effect.dispose));
-            } else {
-              // coverage:ignore-start
-              timer?.cancel();
-              // coverage:ignore-end
-            }
-          });
-        }
-      },
-      options: options,
-      onError: onError,
-    );
-  }
-  // ignore: cascade_invocations
-  effect.schedule();
-  return effect.dispose;
+  return Effect(callback, onError: onError, options: options).dispose;
 }
 
 /// The reaction interface
@@ -140,7 +99,57 @@ abstract class ReactionInterface implements Derivation {
 /// {@endtemplate}
 class Effect implements ReactionInterface {
   /// {@macro effect}
-  Effect({
+  factory Effect(
+    void Function(DisposeEffect dispose) callback, {
+    ErrorCallback? onError,
+    EffectOptions options = const EffectOptions(),
+  }) {
+    late Effect effect;
+
+    if (options.delay == null) {
+      effect = Effect._internal(
+        callback: () => effect.track(() => callback(effect.dispose)),
+        onError: onError,
+        options: options,
+      );
+    } else {
+      final scheduler = createDelayedScheduler(options.delay!);
+      var isScheduled = false;
+      Timer? timer;
+
+      effect = Effect._internal(
+        callback: () {
+          if (!isScheduled) {
+            isScheduled = true;
+
+            // coverage:ignore-start
+            timer?.cancel();
+            // coverage:ignore-end
+            timer = null;
+
+            timer = scheduler(() {
+              isScheduled = false;
+              if (!effect.isDisposed) {
+                effect.track(() => callback(effect.dispose));
+              } else {
+                // coverage:ignore-start
+                timer?.cancel();
+                // coverage:ignore-end
+              }
+            });
+          }
+        },
+        options: options,
+        onError: onError,
+      );
+    }
+    // ignore: cascade_invocations
+    effect.schedule();
+    return effect;
+  }
+
+  /// {@macro effect}
+  Effect._internal({
     required VoidCallback callback,
     EffectOptions? options,
     ErrorCallback? onError,
