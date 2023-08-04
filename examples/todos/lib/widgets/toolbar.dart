@@ -24,8 +24,6 @@ class _ToolbarState extends State<Toolbar> {
     final todos = context.get<TodosController>().todos;
 
     // create derived signals based on the list of todos
-
-    // no need to dispose them because they already dispose when the parent (todos) disposes.
     allTodosCount = createComputed(() => todos().length);
 
     // retrieve the list of completed count and select just the length.
@@ -36,6 +34,12 @@ class _ToolbarState extends State<Toolbar> {
     final incompleteTodos =
         context.get<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
     incompleteTodosCount = createComputed(() => incompleteTodos().length);
+  }
+
+  @override
+  void dispose() {
+    allTodosCount.dispose();
+    super.dispose();
   }
 
   /// Maps the given [filter] to the correct list of todos

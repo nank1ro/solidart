@@ -9,14 +9,13 @@ class DerivedSignalsPage extends StatefulWidget {
 }
 
 class _DerivedSignalsPageState extends State<DerivedSignalsPage> {
-  late final count = createSignal(0);
-  late final doubleCount = createComputed(() => count() * 2);
+  late final count = Signal(0);
+  late final doubleCount = Computed(() => count() * 2);
 
   @override
   void dispose() {
     count.dispose();
-    // No need to dispose a SignalSelector because it disposes automatically when the parent disposes
-    // doubleCount.dispose();
+    doubleCount.dispose();
     super.dispose();
   }
 
