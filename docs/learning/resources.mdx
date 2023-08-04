@@ -30,11 +30,12 @@ Future<String> fetchUser() async {
 
 // The resource (source is optional)
 final user = createResource(fetcher: fetchUser, source: userId);
+// or
+final user = Resource(fetcher: fetchUser, source: userId);
 ```
 
 A Resource can also be driven from a [stream] instead of a Future.
 In this case you just need to pass the `stream` field to the `createResource` method.
-The [source] field is ignored for the [stream] and used only for a [fetcher].
 
 If you are using the `flutter_solidart` library, check [ResourceBuilder](/flutter/resource-builder) to learn how to react to the state of the resource in the UI.
 

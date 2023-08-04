@@ -106,7 +106,6 @@ final user = createResource(fetcher: fetchUser, source: userId);
 
 A Resource can also be driven from a [stream] instead of a Future.
 In this case you just need to pass the `stream` field to the `createResource` method.
-The [source] field is ignored for the [stream] and used only for a [fetcher].
 
 Using `ResourceBuilder` you can react to the state of the resource:
 

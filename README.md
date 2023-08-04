@@ -35,6 +35,8 @@ To create a signal, you have to use the `createSignal` method:
 
 ```dart
 final counter = createSignal(0);
+// or
+final counter = Signal(0);
 ```
 
 The argument passed to the create call is the initial value, and the return value is the signal.
@@ -78,6 +80,10 @@ So let's create an Effect that reruns whenever `counter` changes:
 final disposeFn = createEffect((_) {
     print("The count is now ${counter.value}");
 });
+// or
+final effect = Effect((disposeFn) {
+    print("The count is now ${counter.value}");
+});
 ```
 
 ### Resources
@@ -104,11 +110,12 @@ Future<String> fetchUser() async {
 
 // The resource
 final user = createResource(fetcher: fetchUser, source: userId);
+// or
+final user = Resource(fetcher: fetchUser, source: userId);
 ```
 
 A Resource can also be driven from a [stream] instead of a Future.
 In this case you just need to pass the `stream` field to the `createResource` method.
-The [source] field is ignored for the [stream] and used only for a [fetcher].
 
 If you're using `ResourceBuilder` you can react to the state of the resource:
 

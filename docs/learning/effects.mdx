@@ -19,6 +19,10 @@ final counter = createSignal(0);
 final disposeFn = createEffect((_) {
     print("The count is now ${counter.value}");
 });
+// or
+final effect = Effect((disposeFn) {
+    print("The count is now ${counter.value}");
+});
 
 // The effect run immediately and prints `The count is now 0`;
 
