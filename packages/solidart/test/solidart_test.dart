@@ -586,7 +586,7 @@ void main() {
 
         userId.set(3);
         await pumpEventQueue();
-        await resource.refetch();
+        await resource.refresh();
         expect(resource.state, isA<ResourceReady<User>>());
         expect(resource.state.hasError, false);
         expect(resource.state.asError, isNull);
@@ -615,7 +615,7 @@ void main() {
               .having((p0) => p0.value, 'value equal to 2', 2),
         );
       });
-      test('refetch Resource with fetcher while loading', () async {
+      test('refresh Resource with fetcher while loading', () async {
         Future<int> fetcher() => Future.delayed(
               const Duration(milliseconds: 200),
               () => 1,
@@ -625,18 +625,18 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 100));
         expect(resource.state, isA<ResourceLoading<int>>());
 
-        resource.refetch().ignore();
+        resource.refresh().ignore();
         expect(resource.state, isA<ResourceLoading<int>>());
 
         await Future<void>.delayed(const Duration(milliseconds: 200));
         expect(resource.state, isA<ResourceReady<int>>());
       });
-      test('refetch Resource with stream while loading', () async {
+      test('refresh Resource with stream while loading', () async {
         final controller = StreamController<int>();
         final resource = createResource(stream: () => controller.stream);
         expect(resource.state, isA<ResourceLoading<int>>());
 
-        resource.resubscribe();
+        await resource.refresh();
         expect(resource.state, isA<ResourceLoading<int>>());
 
         controller.add(1);
@@ -670,7 +670,7 @@ void main() {
 
         userId.set(3);
         await pumpEventQueue();
-        await idResource.refetch();
+        await idResource.refresh();
         expect(idResource.state, isA<ResourceReady<int>>());
         expect(idResource.state.hasError, false);
         expect(idResource.state.asError, isNull);
@@ -709,7 +709,7 @@ void main() {
 
         userId.set(3);
         await pumpEventQueue();
-        idResource.resubscribe();
+        await idResource.refresh();
         expect(idResource.state, isA<ResourceReady<int>>());
         expect(idResource.state.hasError, false);
         expect(idResource.state.asError, isNull);
@@ -767,7 +767,7 @@ void main() {
         expect(dataCalledTimes, 1);
         expect(errorCalledTimes, 0);
 
-        resource.refetch().ignore();
+        resource.refresh().ignore();
         await Future<void>.delayed(const Duration(milliseconds: 40));
         expect(refreshingOnDataTimes, 1);
         await Future<void>.delayed(const Duration(milliseconds: 150));
@@ -775,18 +775,18 @@ void main() {
 
         expect(resource.state, const TypeMatcher<ResourceReady<int>>());
         shouldThrow = true;
-        resource.refetch().ignore();
+        resource.refresh().ignore();
         await Future<void>.delayed(const Duration(milliseconds: 150));
         expect(errorCalledTimes, 1);
         expect(refreshingOnErrorTimes, 0);
 
-        resource.refetch().ignore();
+        resource.refresh().ignore();
         await Future<void>.delayed(const Duration(milliseconds: 150));
         expect(refreshingOnErrorTimes, 1);
         expect(errorCalledTimes, 2);
 
         shouldThrow = false;
-        resource.refetch().ignore();
+        resource.refresh().ignore();
         await Future<void>.delayed(const Duration(milliseconds: 150));
         expect(refreshingOnErrorTimes, 2);
         expect(errorCalledTimes, 2);
