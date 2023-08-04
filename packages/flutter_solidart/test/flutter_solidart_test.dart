@@ -102,7 +102,7 @@ void main() {
     expect(errorFinder(), findsNothing);
     expect(loadingFinder, findsNothing);
 
-    unawaited(r.refetch());
+    unawaited(r.refresh());
     await tester.pumpAndSettle(const Duration(milliseconds: 40));
     expect(dataFinder(0, refreshing: true), findsOneWidget);
     expect(errorFinder(refreshing: true), findsNothing);
@@ -213,7 +213,7 @@ void main() {
     expect(errorFinder(), findsOneWidget);
     expect(loadingFinder, findsNothing);
 
-    unawaited(r.refetch());
+    unawaited(r.refresh());
     await tester.pumpAndSettle(const Duration(milliseconds: 40));
     expect(dataFinder(0, refreshing: true), findsNothing);
     expect(errorFinder(refreshing: true), findsOneWidget);
