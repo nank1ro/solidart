@@ -1,3 +1,369 @@
+## 1.0.0
+
+The core of the library has been rewritten in order to support automatic dependency tracking like SolidJS.
+
+- The `Show` widget now takes a functions that returns a `bool`.
+  You can easily convert any type to `bool`, for example:
+  ```dart
+  final count = createSignal(0);
+
+  @override
+  Widget build(BuildContext context) {
+    return Show(
+      when: () => count() > 5,
+      builder: (context) => const Text('Count is greater than 5'),
+      fallback: (context) => const Text('Count is lower than 6'),
+    );
+  }
+  ```
+- Converting a `ValueNotifier` into a `Signal` now uses the `equals` comparator to keep the consistency.
+- Rename `resource` parameter of `ResourceWidgetBuilder` into `resourceState`. (thanks to @manuel-plavsic)
+- **FEAT** Allow multiple providers of the same type by specifying an `id`entifier.
+
+  ### Provider declaration:
+  ```dart
+  SolidProvider<NumberProvider>(
+    create: () => const NumberProvider(1),
+    id: 1,
+  ),
+  SolidProvider<NumberProvider>(
+    create: () => const NumberProvider(10),
+    id: 2,
+  ),
+  ```
+
+  ### Access a specific provider
+  ```dart
+  final numberProvider1 = context.get<NumberProvider>(1);
+  final numberProvider2 = context.get<NumberProvider>(2);
+  ```
+
+- **BREAKING CHANGE** Removed the `signals` map from `Solid`, now to provide signals to descendants
+  use `SolidSignal` inside providers:
+
+  _Before_:
+
+  ```dart
+  Solid(
+    signals: {
+      SignalId.themeMode: () => createSignal<ThemeMode>(ThemeMode.light),
+    },
+  ),
+  ```
+
+  _Now_:
+
+  ```dart
+  Solid(
+    providers: [
+      SolidSignal<Signal<ThemeMode>>(create: () => createSignal(ThemeMode.light)),
+    ],
+  ),
+  ```
+- **FEAT** You can access a specific `Signal` without specifing an `id`entifier, for example:
+  ```dart
+  // to get the signal
+  context.get<Signal<ThemeMode>>();
+  // to observe the signal's value
+  context.observe<ThemeMode>()
+  ```
+  > NOTICE: If you have multiple signals of the same type, you must specify a different `id` for each one.
+- **FEAT**: Now you can get any instance of (any subclass of) the provider type.
+- **FEAT**: The `Solid` widget now acceps a `builder` method that provides a descendant context.
+- **CHORE**: The `ResourceBuilder` no longer resolves the resource, because now the `Resource` knows when to resolve automatically.
+
+### Changes from solidart
+
+- **FEAT**: Add automatic dependency tracking
+- **BREAKING CHANGE**: To create derived signals now you should use `createComputed` instead of `signalName.select`
+  This allows you to derive from many signals instead of only 1.
+
+  _Before_:
+
+  ```dart
+  final count = createSignal(0);
+  final doubleCount = count.select((value) => value * 2);
+  ```
+
+  _Now_:
+
+  ```dart
+  final count = createSignal(0);
+  final doubleCount = createComputed(() => count() * 2);
+  ```
+
+- **FEAT**: The `createEffect` no longer needs a `signals` array, it automatically track each signal.
+
+  _Before_:
+
+  ```dart
+  final effect = createEffect(() {
+    print('The counter is now ${counter.value}');
+  }, signals: [counter]);
+  ```
+
+  _Now_:
+
+  ```dart
+  final disposeFn = createEffect((disposeFn) {
+    print('The counter is now ${counter.value}');
+  })
+  ```
+
+- **BREAKING CHANGE**: The `fireImmediately` field on effects has been removed. Now an effect runs immediately by default.
+- **FEAT**: Add `observe` method on `Signal`. Use it to easily observe the previous and current value instead of creating an effect.
+  ```dart
+  final count = createSignal(0);
+  final disposeFn = count.observe((previousValue, value) {
+    print('The counter changed from $previousValue to $value');
+  }, fireImmediately: true);
+  ```
+- **FEAT**: Add `firstWhere` method on `Signal`. It returns a future that completes when the condition evalutes to true and it returns the current signal value.
+  ```dart
+  final count = createSignal(0);
+  // wait until the count is greater than 5
+  final value = await count.firstWhere((value) => value > 5);
+  ```
+- **FEAT**: Add `firstWhereReady` method on `Resource`. Now you can wait until the resource is ready.
+  ```dart
+  final resource = createResource(..);
+  final data = await resource.firstWhereReady();
+  ```
+- **FEAT**: The `Resource` now accepts `ResourceOptions`. You can customize the `lazy` value of the resource (defaults to true), if you want your resource to resolve immediately.
+- **CHORE**: `ResourceValue` has been renamed into `ResourceState`. Now you can get the state of the resource with the `state` getter.
+- **CHORE**: Move `refreshing` from `ResourceWidgetBuilder` into the `ResourceState`. (thanks to @manuel-plavsic)
+- **FEAT**: Add `hasPreviousValue` getter to `ReadSignal`. (thanks to @manuel-plavsic)
+- **FEAT** Before, only the `fetcher` reacted to the `source`.
+Now also the `stream` reacts to the `source` changes by subscribing again to the stream.
+In addition, the `stream` parameter of the Resource has been changed from `Stream` into a `Stream Function()` in order to be able to listen to a new stream if it changed.
+- **FEAT**: Add the `select` method on the `Resource` class.
+The `select` function allows filtering the `Resource`'s data by reading only the properties that you care about.
+The advantage is that you keep handling the loading and error states.
+- **FEAT**: Make the `Resource` to auto-resolve when accessing its `state`.
+- **CHORE**: The `refetch` method of a `Resource` has been renamed to `refresh`.
+- **FEAT**: You can decide whether to use `createSignal()` or directly the `Signal()` constructor, now the're equivalent. The same applies to all the other `create` functions.
+
+## 1.0.0-dev903
+
+- **FEAT**: The `Solid` widget now acceps a `builder` method that provides a descendant context.
+- **CHORE**: The `ResourceBuilder` no longer resolves the resource, because now the `Resource` knows when to resolve automatically.
+
+### Changes from solidart
+
+- **FEAT**: Add the select method on the Resource class.
+The select function allows filtering the Resource's data by reading only the properties that you care about.
+The advantage is that you keep handling the loading and error states.
+- **FEAT**: Make the Resource to auto-resolve when accessing its state
+
+## 1.0.0-dev902
+
+- **CHORE**: Deprecate the value setter in the `Resource` in favor of the state setter
+
+## 1.0.0-dev901
+
+- **FEAT**: Now you can get any instance of (any subclass of) the provider type.
+
+## 1.0.0-dev9
+
+- **FIX**: A small fix of the `Solid` widget now allows to correctly retrieve a `Computed` signal
+
+### Changes from solidart
+
+- **CHORE**: `createComputed` now returns a `Computed` class instead of a `ReadSignal`.
+
+## 1.0.0-dev8
+
+- **FEAT** Allow multiple providers of the same type by specifying an `id`entifier.
+
+  ### Provider declaration:
+  ```dart
+  SolidProvider<NumberProvider>(
+    create: () => const NumberProvider(1),
+    id: 1,
+  ),
+  SolidProvider<NumberProvider>(
+    create: () => const NumberProvider(10),
+    id: 2,
+  ),
+  ```
+
+  ### Access a specific provider
+  ```dart
+  final numberProvider1 = context.get<NumberProvider>(1);
+  final numberProvider2 = context.get<NumberProvider>(2);
+  ```
+
+- **BREAKING CHANGE** Removed the `signals` map from `Solid`, now to provide signals to descendants
+  use `SolidSignal` inside providers:
+
+  _Before_:
+
+  ```dart
+  Solid(
+    signals: {
+      SignalId.themeMode: () => createSignal<ThemeMode>(ThemeMode.light),
+    },
+  ),
+  ```
+
+  _Now_:
+
+  ```dart
+  Solid(
+    providers: [
+      SolidSignal<Signal<ThemeMode>>(create: () => createSignal(ThemeMode.light)),
+    ],
+  ),
+  ```
+
+- **FEAT** You can access a specific Signal without specifing an `id`entifier, for example:
+  ```dart
+  // to get the signal
+  context.get<Signal<ThemeMode>>();
+  // to observe the signal's value
+  context.observe<ThemeMode>()
+  ```
+  > NOTICE: If you have multiple signals of the same type, you must specify a different `id` for each one.
+
+## 1.0.0-dev7
+
+### Changes from solidart
+
+- **FEAT** Before, only the `fetcher` reacted to the `source`.
+Now also the `stream` reacts to the `source` changes by subscribing again to the stream.
+In addition, the `stream` parameter of the Resource has been changed from `Stream` into a `Stream Function()` in order to be able to listen to a new stream if it changed
+
+## 1.0.0-dev6
+
+### Changes from solidart
+
+- **BUGFIX** Refactor the core of the library in order to fix issues with `previousValue` and `hasPreviousValue` of `Computed` and simplify the logic.
+
+## 1.0.0-dev5
+
+- Rename `resource` parameter of `ResourceWidgetBuilder` into `resourceState`. (thanks to @manuel-plavsic)
+
+### Changes from solidart
+
+- Move `refreshing` from `ResourceWidgetBuilder` into the `ResourceState`. (thanks to @manuel-plavsic)
+- Add `hasPreviousValue` getter to `ReadSignal`. (thanks to @manuel-plavsic)
+
+## 1.0.0-dev4
+
+- Converting a `ValueNotifier` into a `Signal` now uses the `equals` comparator to keep the consistency.
+
+### Changes from solidart
+
+Deprecate `value` getter in the `Resource`. Use `state` instead.
+
+## 1.0.0-dev3
+
+Add `SolidSignalOptions` and `SolidResourceOptions` for signals and resources provided through the Solid widget.
+With this field you can customize the `autoDispose` of each Solid signal individually. (Defaults to true).
+
+### Changes from solidart
+
+- Rename `until` into `firstWhere`
+- Rename `untilReady` into `firstWhereReady`
+- **FEAT**: add `where` method to `Signal`. It returns a new `ReadSignal` with the values filtered by `condition`.
+  Use it to filter the value of another signal, e.g.:
+
+  ```dart
+  final loggedInUser = user.where((value) => value != null);
+  ```
+
+  The initial value may be null because a `Signal` must always start with an initial value.
+  The following values will always satisfy the condition.
+  The returned `ReadSignal` will automatically dispose when the parent signal disposes.
+
+## 1.0.0-dev2
+
+The `Show` widget now takes a functions that returns a `bool`.
+You can easily convert any type to `bool`, for example:
+
+```dart
+final count = createSignal(0);
+
+@override
+Widget build(BuildContext context) {
+  return Show(
+    when: () => count() > 5,
+    builder: (context) => const Text('Count is greater than 5'),
+    fallback: (context) => const Text('Count is lower than 6'),
+  );
+}
+```
+
+## 1.0.0-dev1
+
+This is a development preview of the 1.0.0 release of solidart.
+The core of the library has been rewritten in order to support automatic dependency tracking like SolidJS.
+
+- **FEAT**: Add automatic dependency tracking
+- **BREAKING CHANGE**: To create derived signals now you should use `createComputed` instead of `signalName.select`
+  This allows you to derive from many signals instead of only 1.
+
+  _Before_:
+
+  ```dart
+  final count = createSignal(0);
+  final doubleCount = count.select((value) => value * 2);
+  ```
+
+  _Now_:
+
+  ```dart
+  final count = createSignal(0);
+  final doubleCount = createComputed(() => count() * 2);
+  ```
+
+- **FEAT**: The `createEffect` no longer needs a `signals` array, it automatically track each signal.
+
+  _Before_:
+
+  ```dart
+  final effect = createEffect(() {
+    print('The counter is now ${counter.value}');
+  }, signals: [counter]);
+  ```
+
+  _Now_:
+
+  ```dart
+  final disposeFn = createEffect((disposeFn) {
+    print('The counter is now ${counter.value}');
+  })
+  ```
+
+- **BREAKING CHANGE**: The `createEffect` method no longer returns an `Effect`, you cannot pause or resume it anymore.
+  Instead it returns a `Dispose` callback which you can call when you want to stop it.
+  You can also dispose an effect from the inside of the callback.
+- **BREAKING CHANGE**: The `fireImmediately` field on effects has been removed. Now an effect runs immediately by default.
+- **FEAT**: Add `observe` method on `Signal`. Use it to easily observe the previous and current value instead of creating an effect.
+  ```dart
+  final count = createSignal(0);
+  final disposeFn = count.observe((previousValue, value) {
+    print('The counter changed from $previousValue to $value');
+  }, fireImmediately: true);
+  ```
+- **FEAT**: Add `until` method on `Signal`. It returns a future that completes when the condition evalutes to true and it
+  returns the current signal value.
+  ```dart
+  final count = createSignal(0);
+  // wait until the count is greater than 5
+  final value = await count.until((value) => value > 5);
+  ```
+- **FEAT**: Add `untilReady` method on `Resource`. Now you can wait until the resource is ready.
+  ```dart
+  final resource = createResource(..);
+  final data = await resource.untilReady();
+  ```
+- **FEAT**: The `Resource` now accepts `ResourceOptions`. You can customize the `lazy` value of the resource (defaults to true),
+  if you want your resource to resolve immediately.
+- **CHORE**: `ResourceValue` has been renamed into `ResourceState`. Now you can get the state of the resource with the `state` getter.
+- **FEAT**: Add `toValueNotifier()` extension to `Signal` to easily convert it to a `ValueNotifier`.
+- **FEAT**: Add `toSignal()` extension to `ValueNotifier` to easily convert it to a `Signal`.
+
 ## 0.4.2
 
 - **BUGFIX**: The `Show` widget now can work again with a `ReadSignal`.

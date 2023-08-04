@@ -12,6 +12,7 @@ The objectives of this project are:
 1. Being simple and easy to learn
 2. Do not go against the framework (e.g. Flutter) with weird workarounds.
 3. Do not have a single global state, but put multiple states only in the most appropriate places
+4. No code generation
 
 ## Learning
 
@@ -31,6 +32,8 @@ To create a signal, you have to use the `createSignal` method:
 
 ```dart
 final counter = createSignal(0);
+// or
+final counter = Signal(0);
 ```
 
 The argument passed to the create call is the initial value, and the return value is the signal.
@@ -38,8 +41,28 @@ The argument passed to the create call is the initial value, and the return valu
 ```dart
 // Retrieve the current counter value
 print(counter.value); // prints 0
-// Increment the counter value
-counter.value++;
+// equal to
+print(counter());
+
+// Change the counter value
+counter.value++; // Increments by 1
+// or
+counter.value = 2; // Sets the value to 2
+// or
+counter.set(3);
+// or
+counter.update((value) => value * 2); // Update the value based on the current value
+```
+
+If you're using `flutter_solidart` you can use the `SignalBuilder` widget to automatically react to the signal value, for example:
+
+```dart
+SignalBuilder(
+  signal: counter,
+  builder: (_, value, __) {
+    return Text('$value');
+  },
+)
 ```
 
 ### Effects
@@ -47,14 +70,17 @@ counter.value++;
 Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
 
 An effect can be created by using `createEffect`.
-The effect subscribes to any signal provided in the `signals` array and reruns when any of them change.
-
+The effect automatically subscribes to any signal and reruns when any of them change.
 So let's create an Effect that reruns whenever `counter` changes:
 
 ```dart
-createEffect(() {
+final disposeFn = createEffect((disposeFn) {
     print("The count is now ${counter.value}");
-}, signals: [counter]);
+});
+// or
+final effect = Effect((disposeFn) {
+    print("The count is now ${counter.value}");
+});
 ```
 
 ### Resources
@@ -81,8 +107,9 @@ Future<String> fetchUser() async {
 
 // The resource
 final user = createResource(fetcher: fetchUser, source: userId);
+// or
+final user = Resource(fetcher: fetchUser, source: userId);
 ```
 
 A Resource can also be driven from a [stream] instead of a Future.
 In this case you just need to pass the `stream` field to the `createResource` method.
-The [source] field is ignored for the [stream] and used only for a [fetcher].

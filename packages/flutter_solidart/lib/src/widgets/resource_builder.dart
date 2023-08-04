@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_solidart/src/widgets/signal_builder.dart';
 import 'package:solidart/solidart.dart';
 
-/// Builder function for a [resource]
-typedef ResourceWidgetBuilder<ResultType> = Widget Function(
+/// Builder function for a [Resource].
+typedef ResourceWidgetBuilder<T> = Widget Function(
   BuildContext context,
-  ResourceValue<ResultType> resource,
+  ResourceState<T> resourceState,
 );
 
 /// {@template resourcebuilder}
@@ -50,7 +50,6 @@ typedef ResourceWidgetBuilder<ResultType> = Widget Function(
 ///
 ///   // fetcher
 ///   Future<String> fetchUser() async {
-///     print('Fetch user: ${userId.value}');
 ///     final response = await http.get(
 ///       Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
 ///     );
@@ -93,7 +92,7 @@ typedef ResourceWidgetBuilder<ResultType> = Widget Function(
 ///                           subtitle: Text('refreshing: $refreshing'),
 ///                         ),
 ///                         ElevatedButton(
-///                           onPressed: user.refetch,
+///                           onPressed: user.refresh,
 ///                           child: const Text('Refresh'),
 ///                         ),
 ///                       ],
@@ -119,7 +118,7 @@ typedef ResourceWidgetBuilder<ResultType> = Widget Function(
 /// You should not call `resolve()` if you're using ResourceBuilder, because
 /// it's already performed by it
 /// {@endtemplate}
-class ResourceBuilder<ResultType> extends StatefulWidget {
+class ResourceBuilder<T> extends StatefulWidget {
   /// {@macro resourcebuilder}
   const ResourceBuilder({
     super.key,
@@ -128,19 +127,17 @@ class ResourceBuilder<ResultType> extends StatefulWidget {
   });
 
   /// The [resource] that needs to be rendered.
-  final Resource<ResultType> resource;
+  final Resource<T> resource;
 
-  /// The builder of the resource, called every time the resource value changes.
-  final ResourceWidgetBuilder<ResultType> builder;
+  /// The builder of the resource, called every time the resource state changes.
+  final ResourceWidgetBuilder<T> builder;
 
   @override
-  State<ResourceBuilder<ResultType>> createState() =>
-      _ResourceBuilderState<ResultType>();
+  State<ResourceBuilder<T>> createState() => _ResourceBuilderState<T>();
 }
 
-class _ResourceBuilderState<ResultType>
-    extends State<ResourceBuilder<ResultType>> {
-  late Resource<ResultType> effectiveResource;
+class _ResourceBuilderState<T> extends State<ResourceBuilder<T>> {
+  late Resource<T> effectiveResource;
 
   @override
   void initState() {
@@ -150,7 +147,7 @@ class _ResourceBuilderState<ResultType>
 
   // coverage:ignore-start
   @override
-  void didUpdateWidget(covariant ResourceBuilder<ResultType> oldWidget) {
+  void didUpdateWidget(covariant ResourceBuilder<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.resource != widget.resource) {
       initialize();
@@ -160,15 +157,11 @@ class _ResourceBuilderState<ResultType>
 
   void initialize() {
     effectiveResource = widget.resource;
-    // Resolve the resource if it's not resolved yet
-    if (widget.resource.value is ResourceUnresolved<ResultType>) {
-      widget.resource.resolve();
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SignalBuilder<ResourceValue<ResultType>>(
+    return SignalBuilder<ResourceState<T>>(
       signal: effectiveResource,
       builder: (context, value, __) {
         return widget.builder(context, value);

@@ -1,15 +1,8 @@
-import 'package:meta/meta.dart';
-import 'package:solidart/src/core/read_signal.dart';
-import 'package:solidart/src/core/signal_options.dart';
+part of 'core.dart';
 
 /// {@macro signal}
-Signal<T> createSignal<T>(
-  T value, {
-  SignalOptions<T>? options,
-}) {
-  final effectiveOptions = options ?? SignalOptions<T>();
-  return Signal<T>(value, options: effectiveOptions);
-}
+Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
+    Signal<T>(value, options: options);
 
 /// {@template signal}
 /// # Signals
@@ -36,6 +29,8 @@ Signal<T> createSignal<T>(
 /// To update the current signal value you can use:
 /// ```dart
 /// counter.value++; // increase by 1
+/// // or
+/// counter.set(2); // sets the value to 2
 /// // or
 /// counter.value = 5; // sets the value to 5
 /// // or
@@ -76,12 +71,12 @@ Signal<T> createSignal<T>(
 /// final user = createSignal(const User(name: "name", age: 20));
 ///
 /// // create a derived signal just for the age
-/// final age = user.select((value) => value.age);
+/// final age = createComputed(() => user().age);
 ///
 /// // adding an effect to print the age
-/// createEffect(() {
+/// createEffect((_) {
 ///   print('age changed from ${age.previousValue} into ${age.value}');
-/// }, signals: [age]);
+/// });
 ///
 /// // just update the name, the effect above doesn't run because the age has not changed
 /// user.update((value) => value.copyWith(name: 'new-name'));
@@ -97,7 +92,7 @@ Signal<T> createSignal<T>(
 /// You can also use derived signals in other ways, like here:
 /// ```dart
 /// final counter = createSignal(0);
-/// final doubleCounter = counter.select((value) => value * 2);
+/// final doubleCounter = createComputed(() => counter() * 2);
 /// ```
 ///
 /// Every time the `counter` signal changes, the doubleCounter updates with the
@@ -106,7 +101,7 @@ Signal<T> createSignal<T>(
 /// You can also transform the value type into a `bool`:
 /// ```dart
 /// final counter = createSignal(0); // type: int
-/// final isGreaterThan5 = counter.select((value) => value > 5); // type: bool
+/// final isGreaterThan5 = createComputed(() => counter() > 5); // type: bool
 /// ```
 ///
 /// `isGreaterThan5` will update only when the `counter` value becomes lower/greater than `5`.
@@ -119,51 +114,24 @@ class Signal<T> extends ReadSignal<T> {
   /// {@macro signal}
   Signal(
     super.initialValue, {
-    super.options,
-  }) : _value = initialValue;
+    SignalOptions<T>? options,
+  }) : super(
+          options: options ??
+              SignalOptions<T>(
+                name: ReactiveContext.main.nameFor('Signal'),
+              ),
+        );
 
-  T _value;
+  /// {@macro set-signal-value}
+  set value(T newValue) => set(newValue);
 
-  @override
-  T get value => _value;
-
-  /// Updates the current signal value with [newValue].
+  /// {@template set-signal-value}
+  /// Sets the current signal value with [newValue].
   ///
   /// This operation may be skipped if the value is equal to the previous one,
   /// check [SignalOptions.equals] and [SignalOptions.comparator].
-  set value(T newValue) {
-    // skip if the value are equals
-    if (options.equals && value == newValue) {
-      return;
-    }
-
-    // skip if the [comparator] returns true
-    if (!options.equals && options.comparator != null) {
-      final areEqual = options.comparator!(value, newValue);
-      if (areEqual) return;
-    }
-
-    // store the previous value
-    _previousValue = value;
-    // notify with the new value
-    _value = newValue;
-    notifyListeners();
-  }
-
-  T? _previousValue;
-
-  /// The previous value, if any.
-  @override
-  T? get previousValue => _previousValue;
-
-  /// Sets the previous value.
-  ///
-  /// Never use this method.
-  @internal
-  @protected
-  set previousValue(T? newPreviousValue) {
-    _previousValue = newPreviousValue;
-  }
+  /// {@endtemplate}
+  void set(T newValue) => _setValue(newValue);
 
   /// Calls a function with the current [value] and assigns the result as the
   /// new value.
@@ -171,16 +139,9 @@ class Signal<T> extends ReadSignal<T> {
 
   /// Converts this [Signal] into a [ReadSignal]
   /// Use this method to remove the visility to the value setter.
-  @Deprecated(
-    '''Use toReadSignal() instead. It will be removed in future releases.''',
-  )
-  ReadSignal<T> get readable => toReadSignal();
-
-  /// Converts this [Signal] into a [ReadSignal]
-  /// Use this method to remove the visility to the value setter.
   ReadSignal<T> toReadSignal() => this;
 
   @override
   String toString() =>
-      '''Signal<$T>(value: $value, previousValue: $previousValue, options; $options)''';
+      '''Signal<$T>(value: $value, previousValue: $previousValue, options: $options)''';
 }

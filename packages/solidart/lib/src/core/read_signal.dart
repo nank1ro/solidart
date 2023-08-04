@@ -1,11 +1,4 @@
-import 'dart:async';
-
-import 'package:meta/meta.dart';
-import 'package:solidart/src/core/signal.dart';
-import 'package:solidart/src/core/signal_base.dart';
-import 'package:solidart/src/core/signal_options.dart';
-import 'package:solidart/src/core/signal_selector.dart';
-import 'package:solidart/src/utils.dart';
+part of 'core.dart';
 
 /// {@macro readsignal}
 @Deprecated(
@@ -18,97 +11,116 @@ typedef ReadableSignal<T> = ReadSignal<T>;
 ///
 /// When you don't need to expose the setter of a [Signal],
 /// you should consider transforming it in a [ReadSignal]
-/// using the `readable` method.
+/// using the `toReadSignal` method.
 ///
 /// All derived-signals are [ReadSignal]s because they depend
 /// on the value of a [Signal].
 /// {@endtemplate}
-class ReadSignal<T> implements SignalBase<T> {
+class ReadSignal<T> extends Atom implements SignalBase<T> {
   /// {@macro readsignal}
   ReadSignal(
-    this._value, {
-    T? previousValue,
+    T initialValue, {
     SignalOptions<T>? options,
-  })  : options = options ?? SignalOptions<T>(),
-        _previousValue = previousValue;
+  })  : _value = initialValue,
+        options = options ?? SignalOptions<T>();
 
-  final T _value;
-  final T? _previousValue;
+  // Tracks the internal value
+  T _value;
+
+  // Tracks the internal previous value
+  T? _previousValue;
+
+  // Whether or not there is a previous value
+  bool _hasPreviousValue = false;
+
+  /// All the observers
+  final List<ObserveCallback<T>> _listeners = [];
 
   @override
-  T get value => _value;
+  T get value {
+    _reportObserved();
+    return _value;
+  }
+
+  /// {@template set-signal-value}
+  /// Sets the current signal value with [newValue].
+  ///
+  /// This operation may be skipped if the value is equal to the previous one,
+  /// check [SignalOptions.equals] and [SignalOptions.comparator].
+  /// {@endtemplate}
+  void _setValue(T newValue) {
+    // skip if the value are equals
+    if (_areEqual(_value, newValue)) {
+      return;
+    }
+
+    // store the previous value
+    _previousValue = _value;
+    _hasPreviousValue = true;
+
+    // notify with the new value
+    _value = newValue;
+    _reportChanged();
+    _notifyListeners();
+  }
+
+  void _notifyListeners() {
+    if (_listeners.isNotEmpty) {
+      _context.untracked(() {
+        for (final listener in _listeners.toList(growable: false)) {
+          listener(_previousValue, _value);
+        }
+      });
+    }
+  }
+
+  /// Indicates if the [oldValue] and the [newValue] are equal
+  bool _areEqual(T? oldValue, T? newValue) {
+    // skip if the value are equals
+    if (options.equals) {
+      return oldValue == newValue;
+    }
+
+    // return the [comparator] result
+    return options.comparator!(oldValue, newValue);
+  }
 
   @override
   T call() => value;
 
   @override
-  T? get previousValue => _previousValue;
+  bool get hasPreviousValue {
+    _reportObserved();
+    return _hasPreviousValue;
+  }
+
+  /// The previous value, if any.
+  @override
+  T? get previousValue {
+    _reportObserved();
+    return _previousValue;
+  }
 
   @override
   final SignalOptions<T> options;
 
   bool _disposed = false;
 
-  final _listeners = <VoidCallback>{};
-  int _version = 0;
-  int _microtaskVersion = 0;
   // Keeps track of all the callbacks passed to [onDispose].
   // Used later to fire each callback when this signal is disposed.
   final _onDisposeCallbacks = <VoidCallback>[];
 
-  /// The [select] function allows filtering unwanted rebuilds by reading only
-  /// the properties that we care about.
-  ReadSignal<Selected> select<Selected>(
-    Selected Function(T value) selector, {
-    SignalOptions<Selected>? options,
-  }) {
-    final signalSelector = SignalSelector<T, Selected>(
-      signal: this as Signal<T>,
-      selector: selector,
-      options: options,
-    );
-    return signalSelector.toReadSignal();
-  }
-
-  @override
-  void addListener(VoidCallback listener) {
-    _listeners.add(listener);
-  }
-
-  @override
-  void removeListener(VoidCallback listener) {
-    _listeners.remove(listener);
-  }
-
   /// Returns the number of listeners listening to this signal.
   @override
-  int get listenerCount => _listeners.length;
-
-  /// Notifies every listener. Never use this method.
-  @protected
-  void notifyListeners() {
-    // We schedule a microtask to debounce multiple changes that can occur
-    // all at once.
-    if (_microtaskVersion == _version) {
-      _microtaskVersion++;
-      scheduleMicrotask(() {
-        _version++;
-        _microtaskVersion = _version;
-
-        // Convert the Set to a List before executing each listener. This
-        // prevents errors that can arise if a listener removes itself during
-        // invocation
-        _listeners.toList().forEach((VoidCallback listener) => listener());
-      });
-    }
-  }
+  int get listenerCount => _observers.length + _listeners.length;
 
   @override
   void dispose() {
     // ignore if already disposed
     if (_disposed) return;
-    _listeners.clear();
     _disposed = true;
+
+    _listeners.clear();
 
     for (final cb in _onDisposeCallbacks) {
       cb();
@@ -119,10 +131,51 @@ class ReadSignal<T> implements SignalBase<T> {
   @override
   bool get disposed => _disposed;
 
+  /// Observe the signal and trigger the [listener] every time the value changes
+  @override
+  DisposeObservation observe(
+    ObserveCallback<T> listener, {
+    bool fireImmediately = false,
+  }) {
+    if (fireImmediately == true) {
+      listener(_previousValue, _value);
+    }
+
+    _listeners.add(listener);
+
+    return () => _listeners.remove(listener);
+  }
+
   @override
   void onDispose(VoidCallback cb) {
     _onDisposeCallbacks.add(cb);
   }
+
+  /// Returns the future that completes when the [condition] evalutes to true.
+  /// If the [condition] is already true, it completes immediately.
+  @experimental
+  FutureOr<T> firstWhere(bool Function(T value) condition) {
+    if (condition(value)) return value;
+
+    final completer = Completer<T>();
+    createEffect((dispose) {
+      if (condition(value)) {
+        dispose();
+        completer.complete(value);
+      }
+    });
+    return completer.future;
+  }
+
+  /// Returns the future that completes when the [condition] evalutes to true.
+  /// If the [condition] is already true, it completes immediately.
+  /// coverage:ignore-start
+  @experimental
+  @Deprecated('Use firstWhere instead')
+  FutureOr<T> until(bool Function(T value) condition) {
+    return firstWhere(condition);
+  }
+  // coverage:ignore-end
 
   @override
   String toString() =>

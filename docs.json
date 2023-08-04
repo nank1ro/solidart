@@ -19,43 +19,103 @@
     [
       "Getting Started",
       [
-        ["Overview", "/"],
-        ["Getting Started", "/getting-started"]
+        [
+          "Overview",
+          "/"
+        ],
+        [
+          "Getting Started",
+          "/getting-started"
+        ]
       ]
     ],
     [
       "Learning",
       [
-        ["Signals", "/learning/signals"],
-        ["Effects", "/learning/effects"],
-        ["Resources", "/learning/resources"],
-        ["Derived Signals", "/learning/derived-signals"]
+        [
+          "Signals",
+          "/learning/signals"
+        ],
+        [
+          "Effects",
+          "/learning/effects"
+        ],
+        [
+          "Resources",
+          "/learning/resources"
+        ],
+        [
+          "Derived Signals",
+          "/learning/derived-signals"
+        ]
       ]
     ],
     [
       "Flutter",
       [
-        ["Show", "/flutter/show"],
-        ["SignalBuilder", "/flutter/signal-builder"],
-        ["ResourceBuilder", "/flutter/resource-builder"],
-        ["Solid", "/flutter/solid"]
+        [
+          "Show",
+          "/flutter/show"
+        ],
+        [
+          "SignalBuilder",
+          "/flutter/signal-builder"
+        ],
+        [
+          "ResourceBuilder",
+          "/flutter/resource-builder"
+        ],
+        [
+          "Solid",
+          "/flutter/solid"
+        ]
       ]
     ],
-    ["Testing", [["Introduction", "/testing/introduction"]]],
+    [
+      "Testing",
+      [
+        [
+          "Introduction",
+          "/testing/introduction"
+        ]
+      ]
+    ],
     [
       "Lints",
       [
-        ["All the assists", "/lints/assists"],
-        ["All the lints", "/lints/lints"]
+        [
+          "All the assists",
+          "/lints/assists"
+        ],
+        [
+          "All the lints",
+          "/lints/lints"
+        ]
       ]
     ],
     [
       "Examples",
       [
-        ["General", "/examples/general"],
-        ["Counter", "/examples/counter"],
-        ["Todos", "/examples/todos"],
-        ["Toggle theme", "/examples/toggle-theme"]
+        [
+          "General",
+          "/examples/general"
+        ],
+        [
+          "Counter",
+          "/examples/counter"
+        ],
+        [
+          "Todos",
+          "/examples/todos"
+        ],
+        [
+          "Toggle theme",
+          "/examples/toggle-theme"
+        ],
+        [
+          "Github search",
+          "/examples/github-search"
+        ]
       ]
     ]
   ],

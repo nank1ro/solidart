@@ -32,12 +32,12 @@ class User {
 final user = createSignal(const User(name: "name", age: 20));
 
 // create a derived signal just for the age
-final age = user.select((value) => value.age);
+final age = createComputed(() => user().age);
 
 // adding an effect to print the age
 createEffect(() {
   print('age changed from ${age.previousValue} into ${age.value}');
-}, signals: [age]);
+});
 
 // just update the name, the effect above doesn't run because the age has not changed
 user.update((value) => value.copyWith(name: 'new-name'));
@@ -52,7 +52,7 @@ The difference with a normal `Signal` is that a `ReadSignal` doesn't have a valu
 You can also use derived signals in other ways, like here:
 ```dart
 final counter = createSignal(0);
-final doubleCounter = counter.select((value) => value * 2);
+final doubleCounter = createComputed(() => counter() * 2);
 ```
 
 Every time the `counter` signal changes, the doubleCounter updates with the new doubled `counter` value.
@@ -60,7 +60,7 @@ Every time the `counter` signal changes, the doubleCounter updates with the new 
 You can also transform the value type into a `bool`:
 ```dart
 final counter = createSignal(0); // type: int
-final isGreaterThan5 = counter.select((value) => value > 5); // type: bool
+final isGreaterThan5 = createComputed(() => counter() > 5); // type: bool
 ```
 
 `isGreaterThan5` will update only when the `counter` value becomes lower/greater than `5`.

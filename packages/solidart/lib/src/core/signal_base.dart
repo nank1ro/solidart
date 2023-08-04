@@ -1,57 +1,45 @@
 // coverage:ignore-file
 
-import 'package:meta/meta.dart';
-import 'package:solidart/src/core/signal_options.dart';
-import 'package:solidart/src/utils.dart';
+part of 'core.dart';
+
+/// A callback that stops an observation when called
+typedef DisposeObservation = void Function();
 
 /// The base of a signal.
-abstract class SignalBase<T> extends Listenable {
+abstract class SignalBase<T> {
   /// The current signal value
-  @useResult
   T get value;
 
   /// The current signal value
-  @useResult
   T call();
+
+  /// Indicates if there is a previous value. It is especially
+  /// helpful if [T] is nullable.
+  bool get hasPreviousValue;
 
   /// The previous signal value
   ///
   /// Defaults to null when no previous value is present.
-  @useResult
   T? get previousValue;
 
   /// Options used to customize the behaviour of a signal
-  @useResult
   SignalOptions<T> get options;
 
   /// Tells if the signal is disposed;
-  @useResult
   bool get disposed;
 
   /// Fired when the signal is disposing
   void onDispose(VoidCallback cb);
 
   /// The total number of listeners subscribed to the signal.
-  @useResult
   int get listenerCount;
+
+  /// Observe the signal and trigger the [listener] every time the value changes
+  DisposeObservation observe(
+    ObserveCallback<T> listener, {
+    bool fireImmediately = false,
+  });
 
   /// Diposes the signal
   void dispose();
-}
-
-/// An object that maintains a list of listeners.
-///
-/// The listeners are typically used to notify clients that the object has been
-/// updated.
-abstract class Listenable {
-  /// Abstract const constructor. This constructor enables subclasses to provide
-  /// const constructors so that they can be used in const expressions.
-  const Listenable();
-
-  /// Register a closure to be called when the object notifies its listeners.
-  void addListener(VoidCallback listener);
-
-  /// Remove a previously registered closure from the list of closures that the
-  /// object notifies.
-  void removeListener(VoidCallback listener);
 }

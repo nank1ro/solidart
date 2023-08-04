@@ -41,6 +41,13 @@
       "request": "launch",
       "program": "lib/main.dart",
       "cwd": "examples/toggle_theme/"
+    },
+    {
+      "name": "Github search",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "examples/github_search/"
     }
   ]
 }

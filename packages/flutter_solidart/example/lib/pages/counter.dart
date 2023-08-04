@@ -9,13 +9,7 @@ class CounterPage extends StatefulWidget {
 }
 
 class _CounterPageState extends State<CounterPage> {
-  late final Signal<int> counter;
-
-  @override
-  void initState() {
-    super.initState();
-    counter = createSignal(0);
-  }
+  final counter = Signal(0);
 
   @override
   void dispose() {

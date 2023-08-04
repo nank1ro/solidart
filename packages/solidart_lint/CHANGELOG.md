@@ -1,3 +1,30 @@
+## 1.0.0
+
+- Rename ResourceValue into ResourceState
+- **BUGFIX** Remove `isRefreshing` from ResourceBuilder assist
+- **CHORE**: Update `flutter_solidart` dependency, update `avoid_dynamic_solid_signal` lint and remove unnecessary lints
+- **BUGFIX**: Fix issues with the `invalid_observe_type` and `invalid_update_type` lints not linting for a dynamic type
+
+## 1.0.0-dev5
+
+- **BUGFIX**: Fix issues with the `invalid_observe_type` and `invalid_update_type` lints not linting for a dynamic type
+
+## 1.0.0-dev4
+
+- **CHORE**: Update `flutter_solidart` dependency, update `avoid_dynamic_solid_signal` lint and remove unnecessary lints
+
+## 1.0.0-dev3
+
+- **BUGFIX** Remove `isRefreshing` from ResourceBuilder assist
+
+## 1.0.0-dev2
+
+Rename ResourceValue into ResourceState
+
+## 1.0.0-dev1
+
+Fix lints for the development preview of solidart 1.0.0
+
 ## 0.2.0
 
 - Update `flutter_solidart` and fix deprecated fields

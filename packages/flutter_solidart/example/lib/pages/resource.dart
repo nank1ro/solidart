@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:http/http.dart' as http;
@@ -11,13 +13,12 @@ class ResourcePage extends StatefulWidget {
 
 class _ResourcePageState extends State<ResourcePage> {
   final userId = createSignal(1);
-  late final Resource<String> user;
 
-  @override
-  void initState() {
-    super.initState();
-    user = createResource(fetcher: fetchUser, source: userId);
-  }
+  late final user = createResource(fetcher: fetchUser, source: userId);
+
+  late final userHairColor = user.select((data) {
+    return jsonDecode(data)['hair_color'] as String;
+  });
 
   @override
   void dispose() {
@@ -27,8 +28,9 @@ class _ResourcePageState extends State<ResourcePage> {
   }
 
   Future<String> fetchUser() async {
-    // ignore: avoid_print
-    print('Fetch user: ${userId.value}');
+    // simulating a delay to mimic a slow HTTP request
+    await Future.delayed(const Duration(seconds: 2));
+
     final response = await http.get(
       Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
     );
@@ -60,24 +62,40 @@ class _ResourcePageState extends State<ResourcePage> {
             const SizedBox(height: 16),
             ResourceBuilder(
               resource: user,
-              builder: (_, userValue) {
-                return userValue.on(
-                  ready: (data, refreshing) {
+              builder: (_, userState) {
+                return userState.on(
+                  ready: (data) {
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ListTile(
                           title: Text(data),
-                          subtitle: Text('refreshing: $refreshing'),
+                          subtitle:
+                              Text('refreshing: ${userState.isRefreshing}'),
                         ),
-                        ElevatedButton(
-                          onPressed: user.refetch,
-                          child: const Text('Refresh'),
-                        ),
+                        userState.isRefreshing
+                            ? const CircularProgressIndicator()
+                            : ElevatedButton(
+                                onPressed: user.refresh,
+                                child: const Text('Refresh'),
+                              ),
                       ],
                     );
                   },
-                  error: (e, _) => Text(e.toString()),
+                  error: (e, _) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(e.toString()),
+                        userState.isRefreshing
+                            ? const CircularProgressIndicator()
+                            : ElevatedButton(
+                                onPressed: user.refresh,
+                                child: const Text('Refresh'),
+                              ),
+                      ],
+                    );
+                  },
                   loading: () {
                     return const RepaintBoundary(
                       child: CircularProgressIndicator(),
@@ -86,6 +104,26 @@ class _ResourcePageState extends State<ResourcePage> {
                 );
               },
             ),
+            const SizedBox(height: 30),
+            const Text(
+              'You can also `select` a value from a resource, but still continuing to handle the loading and error states',
+            ),
+            ResourceBuilder(
+              resource: userHairColor,
+              builder: (context, hairColorState) {
+                return hairColorState.on(
+                  ready: (hairColor) {
+                    return ListTile(
+                      title: Text('Haircolor: $hairColor'),
+                      subtitle:
+                          Text('refreshing: ${hairColorState.isRefreshing}'),
+                    );
+                  },
+                  loading: () => const CircularProgressIndicator(),
+                  error: (error, stackTrace) => Text('$error'),
+                );
+              },
+            )
           ],
         ),
       ),

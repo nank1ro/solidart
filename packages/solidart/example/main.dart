@@ -1,24 +1,19 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
 
 import 'package:solidart/solidart.dart';
 
 Future<void> main() async {
-  final counter = createSignal(0);
-  createEffect(
-    () {
-      // ignore: avoid_print
-      print('The counter is now: ${counter.value}');
-    },
-    signals: [counter],
-    fireImmediately: true,
-  );
+  final count = createSignal(0);
+  final doubleCount = createComputed(() => count() * 2);
 
-  counter.value++;
+  createEffect((dispose) {
+    print('The counter is now: ${count()}');
+    print('The double counter is now: ${doubleCount()}');
+  });
 
-  // The signal sets the value asynchronously, so here we await for the value
-  // to be notified to listeners.
-  await Future<void>.value();
-
-  // dispose the counter;
-  counter.dispose();
+  count
+    ..set(1)
+    ..set(2);
 }

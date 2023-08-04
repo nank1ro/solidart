@@ -1,3 +1,4 @@
+import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/error/error.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
@@ -26,7 +27,7 @@ class MissingSolidGetType extends DartLintRule {
           final isContext =
               buildContextType.isExactlyType(node.target!.staticType!);
           if (!isContext) return;
-          if (node.staticType?.isDynamic ?? false) {
+          if (node.staticType is DynamicType) {
             reporter.reportErrorForNode(_code, node);
           }
         }
