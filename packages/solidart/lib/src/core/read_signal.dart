@@ -115,9 +115,6 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   int get listenerCount => _observers.length + _listeners.length;
 
   @override
-  bool get disposed => _disposed;
-
-  @override
   void dispose() {
     // ignore if already disposed
     if (_disposed) return;
@@ -130,6 +127,9 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     }
     _onDisposeCallbacks.clear();
   }
+
+  @override
+  bool get disposed => _disposed;
 
   /// Observe the signal and trigger the [listener] every time the value changes
   @override
