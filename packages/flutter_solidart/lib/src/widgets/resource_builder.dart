@@ -92,7 +92,7 @@ typedef ResourceWidgetBuilder<T> = Widget Function(
 ///                           subtitle: Text('refreshing: $refreshing'),
 ///                         ),
 ///                         ElevatedButton(
-///                           onPressed: user.refetch,
+///                           onPressed: user.refresh,
 ///                           child: const Text('Refresh'),
 ///                         ),
 ///                       ],

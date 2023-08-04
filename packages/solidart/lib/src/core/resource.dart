@@ -99,7 +99,7 @@ Resource<T> createResource<T>({
 /// - `value` attempts to synchronously get the value of `ResourceReady`
 /// - `error` attempts to synchronously get the error of `ResourceError`
 ///
-/// A `Resource` provides the `resolve` and `refetch` methods.
+/// A `Resource` provides the `resolve` and `refresh` methods.
 ///
 /// The `resolve` method must be called only once for the lifecycle of the
 /// resource.
@@ -108,8 +108,8 @@ Resource<T> createResource<T>({
 /// If you're passing a [stream] it subscribes to it, and every time the source
 /// changes, it resubscribes again.
 ///
-/// The `refetch` method forces an update and calls the `fetcher` function
-/// again.
+/// The `refresh` method forces an update and calls the `fetcher` function
+/// again or subscribes againg to the [stream].
 /// {@endtemplate}
 class Resource<T> extends Signal<ResourceState<T>> {
   /// {@macro resource}
@@ -214,7 +214,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   Future<void> _resolve() async {
     assert(
       _resolved == false,
-      """The resource has been already resolved, you can't resolve it more than once. Use `refetch()` instead if you want to refresh the value.""",
+      """The resource has been already resolved, you can't resolve it more than once. Use `refresh()` instead if you want to refresh the value.""",
     );
     _resolved = true;
 
