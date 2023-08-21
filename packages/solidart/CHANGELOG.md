@@ -1,3 +1,15 @@
+## 1.0.0+3
+
+Fix the pub.dev pub points.
+
+## 1.0.0+2
+
+Fix the pub.dev pub points.
+
+## 1.0.0+1
+
+Fix the pub.dev pub points.
+
 ## 1.0.0
 
 The core of the library has been rewritten in order to support automatic dependency tracking like SolidJS.

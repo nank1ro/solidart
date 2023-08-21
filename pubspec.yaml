@@ -1,4 +1,4 @@
-name: solidart
+name: solidart_melos
 
 environment:
   sdk: ^3.0.0
