@@ -1,3 +1,7 @@
+## 1.0.0+4
+
+Fix the pub.dev pub points.
+
 ## 1.0.0+3
 
 Fix the pub.dev pub points.
