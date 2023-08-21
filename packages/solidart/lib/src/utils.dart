@@ -60,4 +60,5 @@ class SolidartCaughtException extends SolidartException {
 /// Creates a delayer scheduler with the given [duration].
 Timer Function(void Function()) createDelayedScheduler(Duration duration) =>
     (fn) => Timer(duration, fn);
+
 /// coverage:ignore-end
