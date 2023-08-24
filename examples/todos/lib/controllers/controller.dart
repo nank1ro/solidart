@@ -20,7 +20,7 @@ class TodosController {
 
   /// Expose the whole list of todos as a ReadSignal so the
   /// user cannot mutate directly the object.
-  ReadSignal<List<Todo>> get todos => _todos.toReadSignal();
+  late final todos = _todos.toReadSignal();
 
   /// The list of completed todos
   late final completedTodos = createComputed(
@@ -55,7 +55,7 @@ class TodosController {
   }
 
   void dispose() {
-    _todos.dispose();
+    todos.dispose();
     completedTodos.dispose();
     incompleteTodos.dispose();
   }
