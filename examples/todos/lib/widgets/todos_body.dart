@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:todos/common/constants.dart';
 import 'package:todos/controllers/controller.dart';
 import 'package:todos/models/todo.dart';
 import 'package:todos/widgets/todos_list.dart';
@@ -34,30 +33,6 @@ class _TodosBodyState extends State<TodosBody> {
         // created here because this is where it starts to be necessary.
         SolidSignal<Signal<TodosFilter>>(
             create: () => createSignal(TodosFilter.all)),
-        // Registering two new signals, the list of completed and incomplete todos.
-        // These are derived [ReadSignal]s.
-        // Provided through a [Solid] because their value is used by the [TodoList]
-        // and [Toolbar].
-        // This is preferable over passing the signals as parameters down to descendants,
-        // expecially when the usage is very deep in the tree.
-        SolidSignal<ReadSignal<List<Todo>>>(
-          create: () => createComputed(
-            () => todosController
-                .todos()
-                .where((element) => element.completed)
-                .toList(),
-          ),
-          id: SignalId.completedTodos,
-        ),
-        SolidSignal<ReadSignal<List<Todo>>>(
-          create: () => createComputed(
-            () => todosController
-                .todos()
-                .where((element) => !element.completed)
-                .toList(),
-          ),
-          id: SignalId.incompleteTodos,
-        ),
       ],
       child: Column(
         children: [

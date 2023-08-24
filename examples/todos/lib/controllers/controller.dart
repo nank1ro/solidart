@@ -18,20 +18,33 @@ class TodosController {
   // only the TodoController can mutate the value.
   final Signal<List<Todo>> _todos;
 
-  // Expose the list of todos as a ReadSignal so the
-  // user cannot mutate directly the object.
+  /// Expose the whole list of todos as a ReadSignal so the
+  /// user cannot mutate directly the object.
   ReadSignal<List<Todo>> get todos => _todos.toReadSignal();
 
+  /// The list of completed todos
+  late final completedTodos = createComputed(
+    () => _todos().where((todo) => todo.completed).toList(),
+  );
+
+  /// The list of incomplete todos
+  late final incompleteTodos = createComputed(
+    () => _todos().where((todo) => !todo.completed).toList(),
+  );
+
+  /// Add a todo
   void add(Todo todo) {
     _todos.update((value) => [...value, todo]);
   }
 
+  /// Remove a todo with the given [id]
   void remove(String id) {
     _todos.update(
       (value) => value.where((todo) => todo.id != id).toList(),
     );
   }
 
+  /// Toggle a todo with the given [id]
   void toggle(String id) {
     _todos.update(
       (value) => [

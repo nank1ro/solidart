@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:todos/common/constants.dart';
 import 'package:todos/controllers/controller.dart';
 import 'package:todos/models/todo.dart';
 
@@ -12,33 +11,22 @@ class Toolbar extends StatefulWidget {
 }
 
 class _ToolbarState extends State<Toolbar> {
-  /// All the derived signals
-  late final ReadSignal<int> allTodosCount;
-  late final ReadSignal<int> incompleteTodosCount;
-  late final ReadSignal<int> completedTodosCount;
+  // retrieve the [TodosController]
+  late final todosController = context.get<TodosController>();
 
-  @override
-  void initState() {
-    super.initState();
-    // retrieve the todos from TodosController.
-    final todos = context.get<TodosController>().todos;
-
-    // create derived signals based on the list of todos
-    allTodosCount = createComputed(() => todos().length);
-
-    // retrieve the list of completed count and select just the length.
-    final completedTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
-    completedTodosCount = createComputed(() => completedTodos().length);
-    // retrieve the list of incomplete count and select just the length.
-    final incompleteTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
-    incompleteTodosCount = createComputed(() => incompleteTodos().length);
-  }
+  /// All the derived signals, they will react only when the `length` property changes
+  late final allTodosCount =
+      createComputed(() => todosController.todos().length);
+  late final incompleteTodosCount =
+      createComputed(() => todosController.incompleteTodos().length);
+  late final completedTodosCount =
+      createComputed(() => todosController.completedTodos().length);
 
   @override
   void dispose() {
     allTodosCount.dispose();
+    incompleteTodosCount.dispose();
+    completedTodosCount.dispose();
     super.dispose();
   }
 
