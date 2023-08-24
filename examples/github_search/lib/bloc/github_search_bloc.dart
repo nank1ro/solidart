@@ -17,12 +17,21 @@ class GithubSearchBloc {
 
   final GithubRepository _repository;
 
+  // Keeps track of the current search term
   final _searchTerm = createSignal('');
-  late final searchResult =
-      createResource(fetcher: _search, source: _searchTerm);
 
+  /// Handles the fetching of current search results
+  late final searchResult = createResource(
+    fetcher: _search,
+    source: _searchTerm,
+  );
+
+  // Sets the current search term
   void search(String term) => _searchTerm.set(term);
 
+  // Fetches the current search term
+  //
+  // If the term is empty, returns an empty [SearchResult]
   Future<SearchResult> _search() async {
     if (_searchTerm().isEmpty) return SearchResult.empty();
     return _repository.search(_searchTerm());
