@@ -11,6 +11,7 @@ class SearchPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Solid(
       providers: [
+        // Provide the [GithubSearchBloc] to descendants
         SolidProvider<GithubSearchBloc>(
           create: () => GithubSearchBloc(),
           dispose: (bloc) => bloc.dispose(),
@@ -54,6 +55,7 @@ class _SearchBar extends StatefulWidget {
 
 class __SearchBarState extends State<_SearchBar> {
   final textController = TextEditingController();
+  // retrieve the ancestor [GithubSearchBloc]
   late final bloc = context.get<GithubSearchBloc>();
 
   @override
@@ -79,6 +81,7 @@ class __SearchBarState extends State<_SearchBar> {
         ),
       ),
       onSubmitted: (value) {
+        // set the current search term
         bloc.search(value);
       },
     );
@@ -92,7 +95,9 @@ class _SearchBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox.expand(
-      child: ResourceBuilder(
+      child:
+          // Handle the search result state
+          ResourceBuilder(
         resource: context.get<GithubSearchBloc>().searchResult,
         builder: (context, searchResultState) {
           return Stack(
