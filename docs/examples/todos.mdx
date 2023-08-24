@@ -41,6 +41,12 @@ The `TodosController` is where the business logic lives.
 It keep the whole todos list state and allows us to __add__, __remove__ or __toggle__ a _Todo_.
 The `TodosController` can have an initialValue, that is the initial list of todos.
 ```dart
+/// Contains the state of the [todos] list and allows to
+/// - `add`: Add a todo in the list of [todos]
+/// - `remove`: Removes a todo with the given id from the list of [todos]
+/// - `toggle`: Toggles a todo with the given id
+/// The list of todos exposed is a [ReadSignal] so the user cannot mutate
+/// the signal without using this controller.
 @immutable
 class TodosController {
   TodosController({
@@ -51,20 +57,33 @@ class TodosController {
   // only the TodoController can mutate the value.
   final Signal<List<Todo>> _todos;
 
-  // Expose the list of todos as a ReadSignal so the
-  // user cannot mutate directly the object.
+  /// Expose the whole list of todos as a ReadSignal so the
+  /// user cannot mutate directly the object.
   ReadSignal<List<Todo>> get todos => _todos.toReadSignal();
 
+  /// The list of completed todos
+  late final completedTodos = createComputed(
+    () => _todos().where((todo) => todo.completed).toList(),
+  );
+
+  /// The list of incomplete todos
+  late final incompleteTodos = createComputed(
+    () => _todos().where((todo) => !todo.completed).toList(),
+  );
+
+  /// Add a todo
   void add(Todo todo) {
     _todos.update((value) => [...value, todo]);
   }
 
+  /// Remove a todo with the given [id]
   void remove(String id) {
     _todos.update(
       (value) => value.where((todo) => todo.id != id).toList(),
     );
   }
 
+  /// Toggle a todo with the given [id]
   void toggle(String id) {
     _todos.update(
       (value) => [
@@ -78,6 +97,7 @@ class TodosController {
     _todos.dispose();
   }
 }
+
 ```
 
 As you can see the `TodosController` can get an `initialTodos` list. This is going to be its initial state.
@@ -86,6 +106,9 @@ When the constructor is runned, the `_todos` signal is populated with the provid
 The thing to note here is that `_todos` is private by choice. Instead the user has to use the `todos` getter.
 
 The `todos` getter is a `ReadSignal`. This means that the user won't be able to mutate its value directly.
+
+Additionally, the controller exposes `completedTodos` and `incompleteTodos` derived signals.
+They will automatically react to the `_todos` signal and provide a read only signal.
 
 The `add` method uses the `update` function of a `Signal` to append the new `todo` to the current list of todos.
 
@@ -152,30 +175,6 @@ class _TodosBodyState extends State<TodosBody> {
         // created here because this is where it starts to be necessary.
         SolidSignal<Signal<TodosFilter>>(
             create: () => createSignal(TodosFilter.all)),
-        // Registering two new signals, the list of completed and incomplete todos.
-        // These are derived [ReadSignal]s.
-        // Provided through a [Solid] because their value is used by the [TodoList]
-        // and [Toolbar].
-        // This is preferable over passing the signals as parameters down to descendants,
-        // expecially when the usage is very deep in the tree.
-        SolidSignal<ReadSignal<List<Todo>>>(
-          create: () => createComputed(
-            () => todosController
-                .todos()
-                .where((element) => element.completed)
-                .toList(),
-          ),
-          id: SignalId.completedTodos,
-        ),
-        SolidSignal<ReadSignal<List<Todo>>>(
-          create: () => createComputed(
-            () => todosController
-                .todos()
-                .where((element) => !element.completed)
-                .toList(),
-          ),
-          id: SignalId.incompleteTodos,
-        ),
       ],
       child: Column(
         children: [
@@ -221,8 +220,6 @@ The important parts here are two.
 
 Here we're creating a signal with an initial value of `TodosFilter.all`. This signals keeps the state of the current selected tab.
 
-We're also creating two derived signals, the list of `completedTodos` and `incompleteTodos` using the `select` method of the todos list signal.
-
 In the `TextFormField` when the field is submitted we add the new todo simply using:
 ```dart
 // skip if the task is empty
@@ -252,34 +249,22 @@ class Toolbar extends StatefulWidget {
 }
 
 class _ToolbarState extends State<Toolbar> {
-  /// All the derived signals
-  late final ReadSignal<int> allTodosCount;
-  late final ReadSignal<int> incompleteTodosCount;
-  late final ReadSignal<int> completedTodosCount;
+  // retrieve the [TodosController]
+  late final todosController = context.get<TodosController>();
 
-  @override
-  void initState() {
-    super.initState();
-    // retrieve the todos from TodosController.
-    final todos = context.get<TodosController>().todos;
-
-    // create derived signals based on the list of todos
-
-    allTodosCount = createComputed(() => todos().length);
-
-    // retrieve the list of completed count and select just the length.
-    final completedTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
-    completedTodosCount = createComputed(() => completedTodos().length);
-    // retrieve the list of incomplete count and select just the length.
-    final incompleteTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
-    incompleteTodosCount = createComputed(() => incompleteTodos().length);
-  }
+  /// All the derived signals, they will react only when the `length` property changes
+  late final allTodosCount =
+      createComputed(() => todosController.todos().length);
+  late final incompleteTodosCount =
+      createComputed(() => todosController.incompleteTodos().length);
+  late final completedTodosCount =
+      createComputed(() => todosController.completedTodos().length);
 
   @override
   void dispose() {
     allTodosCount.dispose();
+    incompleteTodosCount.dispose();
+    completedTodosCount.dispose();
     super.dispose();
   }
 
@@ -316,9 +301,7 @@ class _ToolbarState extends State<Toolbar> {
         ).toList(),
         onTap: (index) {
           // update the current active filter
-          context.update<TodosFilter>(
-            (_) => TodosFilter.values[index],
-          );
+          context.update<TodosFilter>((_) => TodosFilter.values[index]);
         },
       ),
     );
@@ -326,8 +309,8 @@ class _ToolbarState extends State<Toolbar> {
 }
 ```
 
-To get the total number of todos we've used the `select` method of signals.
-It subscribes to the signal and updates only when the selected value changes.
+To get the total number of todos we've created new `Computed` signals.
+They subscribes to the signals used in the function and update only when the selected value changes.
 
 Then we have used a `SignalBuilder` to rebuild every time the count signal changes.
 
@@ -352,37 +335,18 @@ class TodoList extends StatefulWidget {
 }
 
 class _TodoListState extends State<TodoList> {
-  late final ReadSignal<List<Todo>> todos;
-  late final ReadSignal<List<Todo>> completedTodos;
-  late final ReadSignal<List<Todo>> incompleteTodos;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // retrieve the whole todos list and the filtered ones
-    // this can be done here in the initState, or in the build method.
-    // You're not going to experience any performance issues writing the
-    // lines below in the build method. Used the initState here just
-    // to show you that it's possible.
-    // NOTE: If you need to `select` a value from a signal, do it always in the `initState`.
-    //       The `select` method creates a new signal every time it runs, and you don't want this to happen.
-    todos = context.get<TodosController>().todos;
-    completedTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.completedTodos);
-    incompleteTodos =
-        context.get<ReadSignal<List<Todo>>>(SignalId.incompleteTodos);
-  }
+  // retrieve the [TodosController]
+  late final todosController = context.get<TodosController>();
 
   // Given a [filter] return the correct list of todos
   ReadSignal<List<Todo>> mapFilterToTodosList(TodosFilter filter) {
     switch (filter) {
       case TodosFilter.all:
-        return todos;
+        return todosController.todos;
       case TodosFilter.incomplete:
-        return incompleteTodos;
+        return todosController.incompleteTodos;
       case TodosFilter.completed:
-        return completedTodos;
+        return todosController.completedTodos;
     }
   }
 
