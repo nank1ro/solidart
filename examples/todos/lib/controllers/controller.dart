@@ -56,5 +56,7 @@ class TodosController {
 
   void dispose() {
     _todos.dispose();
+    completedTodos.dispose();
+    incompleteTodos.dispose();
   }
 }
