@@ -1,3 +1,7 @@
+## 1.0.1
+
+Improve `copyWith` methods of `ResourceReady` and `ResourceError`
+
 ## 1.0.0+4
 
 Fix the pub.dev pub points.
