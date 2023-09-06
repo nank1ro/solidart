@@ -458,12 +458,13 @@ class ResourceReady<T> implements ResourceState<T> {
   @override
   int get hashCode => Object.hash(runtimeType, value, isRefreshing);
 
-  /// Convenience method to update the [isRefreshing] value of a [Resource]
+  /// Convenience method to update the values of a [ResourceReady].
   ResourceReady<T> copyWith({
+    T? value,
     bool? isRefreshing,
   }) {
-    return ResourceReady(
-      value,
+    return ResourceReady<T>(
+      value ?? this.value,
       isRefreshing: isRefreshing ?? this.isRefreshing,
     );
   }
@@ -558,11 +559,13 @@ class ResourceError<T> implements ResourceState<T> {
 
   /// Convenience method to update the [isRefreshing] value of a [Resource]
   ResourceError<T> copyWith({
+    Object? error,
+    StackTrace? stackTrace,
     bool? isRefreshing,
   }) {
-    return ResourceError(
-      error,
-      stackTrace: stackTrace,
+    return ResourceError<T>(
+      error ?? this.error,
+      stackTrace: stackTrace ?? this.stackTrace,
       isRefreshing: isRefreshing ?? this.isRefreshing,
     );
   }

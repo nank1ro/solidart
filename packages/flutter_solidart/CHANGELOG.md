@@ -1,3 +1,9 @@
+## 1.0.1
+
+### Changes from solidart
+
+- **CHORE** Improve `copyWith` methods of `ResourceReady` and `ResourceError`
+
 ## 1.0.0
 
 The core of the library has been rewritten in order to support automatic dependency tracking like SolidJS.
