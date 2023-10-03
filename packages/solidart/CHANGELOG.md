@@ -1,3 +1,7 @@
+## 1.1.0
+
+- **BUGFIX**: Fix a bug in the `Resource` where the stream subscription was not disposed correctly
+
 ## 1.0.1
 
 Improve `copyWith` methods of `ResourceReady` and `ResourceError`
