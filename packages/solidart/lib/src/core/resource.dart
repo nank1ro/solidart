@@ -196,7 +196,11 @@ class Resource<T> extends Signal<ResourceState<T>> {
   Stream<T> get _stream {
     final s = stream!()!;
     if (!_broadcastStreams.keys.contains(s)) {
-      _broadcastStreams[s] = s.isBroadcast ? s : s.asBroadcastStream();
+      _broadcastStreams[s] = s.isBroadcast
+          ? s
+          : s.asBroadcastStream(
+              onCancel: (subscription) => subscription.cancel(),
+            );
     }
     return _broadcastStreams[s]!;
   }
@@ -299,6 +303,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
       'You are trying to listen to a stream, but stream is null',
     );
     _streamSubscription?.cancel();
+    _streamSubscription = null;
     state.map(
       ready: (ready) {
         state = ready.copyWith(isRefreshing: true);
@@ -364,6 +369,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   @override
   void dispose() {
     _streamSubscription?.cancel();
+    _streamSubscription = null;
     _sourceDisposeObservation?.call();
     _broadcastStreams.clear();
     super.dispose();
