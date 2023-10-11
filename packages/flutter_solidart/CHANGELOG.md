@@ -1,3 +1,7 @@
+## 1.2.0
+
+- **FEAT**: Add the method `maybeGet()` to the `Solid` widget to get a provider. If the provider can't be found, returns `null` instead of throwing like `get()` does
+
 ## 1.1.0
 
 ### Changes from solidart
