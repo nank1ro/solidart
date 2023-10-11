@@ -705,6 +705,28 @@ void main() {
     });
   });
 
+  testWidgets('Test Solid.maybeGet returns null for a not found provider',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Solid(
+            providers: [
+              SolidProvider<NameProvider>(
+                create: () => MockNameProvider('name'),
+              ),
+            ],
+            builder: (context) {
+              final numberProvider = context.maybeGet<NumberProvider>();
+              return Text(numberProvider.toString());
+            },
+          ),
+        ),
+      ),
+    );
+    expect(find.text('null'), findsOneWidget);
+  });
+
   test('DiagnosicPropertyForGeneric', () {
     final builder = DiagnosticPropertiesBuilder();
     DiagnosticPropertiesForGeneric<String>(
