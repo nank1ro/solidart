@@ -17,3 +17,4 @@ part 'signal_options.dart';
 part 'signal_base.dart';
 part 'collections/list.dart';
 part 'collections/set.dart';
+part 'collections/map.dart';
