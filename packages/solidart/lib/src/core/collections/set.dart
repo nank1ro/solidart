@@ -1,6 +1,6 @@
 part of '../core.dart';
 
-/// {@template list-signal}
+/// {@template set-signal}
 /// `SetSignal` makes easier interacting with sets in a reactive context.
 ///
 /// ```dart
@@ -14,9 +14,9 @@ part of '../core.dart';
 /// ```
 /// {@endtemplate}
 class SetSignal<E> extends ReadSignal<Set<E>> with SetMixin<E> {
-  /// {@macro list-signal}
+  /// {@macro set-signal}
   SetSignal(Iterable<E>? initialValue, {super.options})
-      : name = options?.name ?? ReactiveContext.main.nameFor('ListSignal'),
+      : name = options?.name ?? ReactiveContext.main.nameFor('SetSignal'),
         super(Set.of(initialValue ?? []));
 
   @override
@@ -419,6 +419,10 @@ class SetSignal<E> extends ReadSignal<Set<E>> with SetMixin<E> {
     _reportObserved();
     return _value.last;
   }
+
+  @override
+  String toString() =>
+      '''SetSignal<$E>(value: $value, previousValue: $previousValue, options; $options)''';
 
   void _notifyChanged() {
     _reportChanged();
