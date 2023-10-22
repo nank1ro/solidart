@@ -1,5 +1,14 @@
 part of '../core.dart';
 
+// coverage:ignore-start
+/// {@macro map-signal}
+MapSignal<K, V> createMapSignal<K, V>(
+  Map<K, V> initialValue, {
+  SignalOptions<Map<K, V>>? options,
+}) =>
+    MapSignal<K, V>(initialValue, options: options);
+// coverage:ignore-end
+
 /// {@template map-signal}
 /// `MapSignal` makes easier interacting with maps in a reactive context.
 ///
