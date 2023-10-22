@@ -14,8 +14,7 @@ class TodosController {
     List<Todo> initialTodos = const [],
   }) : todos = ListSignal(initialTodos);
 
-  // Keep the editable todos signal private
-  // only the TodoController can mutate the value.
+  // The list of todos
   final ListSignal<Todo> todos;
 
   /// The list of completed todos
