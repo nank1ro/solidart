@@ -415,6 +415,13 @@ void main() {
           throwsA(const TypeMatcher<SolidartCaughtException>()),
         );
       });
+
+      test('check toString', () {
+        final count = Signal(1);
+        final doubleCount = Computed(() => count() * 2);
+
+        expect(doubleCount.toString(), startsWith('Computed<int>(value: 2'));
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
