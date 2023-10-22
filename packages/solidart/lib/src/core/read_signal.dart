@@ -55,8 +55,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     }
 
     // store the previous value
-    _previousValue = _value;
-    _hasPreviousValue = true;
+    _setPreviousValue(_value);
 
     // notify with the new value
     _value = newValue;
@@ -99,6 +98,12 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   T? get previousValue {
     _reportObserved();
     return _previousValue;
+  }
+
+  /// Sets the previous signal value to [value].
+  void _setPreviousValue(T value) {
+    _previousValue = value;
+    _hasPreviousValue = true;
   }
 
   @override

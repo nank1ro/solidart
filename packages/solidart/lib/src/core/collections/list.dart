@@ -119,7 +119,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
     final oldValue = _value[index];
 
     if (oldValue != value) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
       _value[index] = value;
       _notifyChanged();
     }
@@ -137,7 +137,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   /// ```
   @override
   void add(E element) {
-    _previousValue = List.of(_value);
+    _setPreviousValue(List.of(_value));
     _value.add(element);
     _notifyChanged();
   }
@@ -155,7 +155,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   @override
   void addAll(Iterable<E> iterable) {
     if (iterable.isNotEmpty) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
       _value.addAll(iterable);
       _notifyChanged();
     }
@@ -418,7 +418,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   set first(E value) {
     final oldValue = _value.first;
     if (oldValue != value) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
       _value.first = value;
       _notifyChanged();
     }
@@ -444,7 +444,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   set last(E value) {
     final oldValue = _value.last;
     if (oldValue != value) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
       _value.last = value;
       _notifyChanged();
     }
@@ -463,7 +463,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   @override
   void clear() {
     if (_value.isNotEmpty) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
       _value.clear();
       _notifyChanged();
     }
@@ -491,7 +491,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   @override
   void fillRange(int start, int end, [E? fillValue]) {
     if (end > start) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
       _value.fillRange(start, end, fillValue);
       _notifyChanged();
     }
@@ -513,7 +513,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   /// ```
   @override
   void insert(int index, E element) {
-    _previousValue = List.of(_value);
+    _setPreviousValue(List.of(_value));
     _value.insert(index, element);
     _notifyChanged();
   }
@@ -534,7 +534,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   @override
   void insertAll(int index, Iterable<E> iterable) {
     if (iterable.isNotEmpty) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
       _value.insertAll(index, iterable);
       _notifyChanged();
     }
@@ -562,7 +562,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
     var didRemove = false;
     final index = _value.indexOf(element as E);
     if (index >= 0) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
       _value.removeAt(index);
       _notifyChanged();
       didRemove = true;
@@ -587,7 +587,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   /// ```
   @override
   E removeAt(int index) {
-    _previousValue = List.of(_value);
+    _setPreviousValue(List.of(_value));
 
     final removed = _value.removeAt(index);
     _notifyChanged();
@@ -605,7 +605,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   /// ```
   @override
   E removeLast() {
-    _previousValue = List.of(_value);
+    _setPreviousValue(List.of(_value));
 
     final removed = _value.removeLast();
     _notifyChanged();
@@ -632,7 +632,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   @override
   void removeRange(int start, int end) {
     if (end > start) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
       _value.removeRange(start, end);
       _notifyChanged();
     }
@@ -657,7 +657,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
       }
     }
     if (removedIndexes.isNotEmpty) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
       for (final index in removedIndexes) {
         _value.removeAt(index);
       }
@@ -697,7 +697,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   @override
   void replaceRange(int start, int end, Iterable<E> replacements) {
     if (end > start || replacements.isNotEmpty) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
       _value.replaceRange(start, end, replacements);
       _notifyChanged();
     }
@@ -722,7 +722,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
       }
     }
     if (removedIndexes.isNotEmpty) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
       for (final index in removedIndexes) {
         _value.removeAt(index);
       }
@@ -750,7 +750,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   @override
   void setAll(int index, Iterable<E> iterable) {
     if (iterable.isNotEmpty) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
 
       _value.setAll(index, iterable);
       _notifyChanged();
@@ -786,7 +786,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   @override
   void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) {
     if (end > start) {
-      _previousValue = List.of(_value);
+      _setPreviousValue(List.of(_value));
       _value.setRange(start, end, iterable, skipCount);
       _notifyChanged();
     }
@@ -813,7 +813,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
         }
       }
       if (hasChanges) {
-        _previousValue = List.of(_value);
+        _setPreviousValue(List.of(_value));
         _value = newList;
         _notifyChanged();
       }
@@ -863,7 +863,7 @@ class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
         }
       }
       if (hasChanges) {
-        _previousValue = List.of(_value);
+        _setPreviousValue(List.of(_value));
         _value = newList;
         _notifyChanged();
       }
