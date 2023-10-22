@@ -7,7 +7,6 @@ import 'package:meta/meta.dart';
 /// {@endtemplate}
 extension SignalToValueNotifier<T> on SignalBase<T> {
   /// {@macro signal-to-value-notifier}
-  @experimental
   ValueNotifier<T> toValueNotifier() {
     final notifier = ValueNotifier(value);
     final unobserve = createEffect((_) => notifier.value = value);
@@ -21,7 +20,6 @@ extension SignalToValueNotifier<T> on SignalBase<T> {
 /// {@endtemplate}
 extension ValueNotifierToSignal<T> on ValueNotifier<T> {
   /// {@macro value-notifier-to-signal}
-  @experimental
   Signal<T> toSignal() {
     final signal = createSignal(value, options: SignalOptions<T>(equals: true));
     void setValue() => signal.set(value);

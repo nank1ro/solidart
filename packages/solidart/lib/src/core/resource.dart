@@ -176,6 +176,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   @Deprecated('Use previousState instead')
   @override
   ResourceState<T>? get previousValue => previousState;
+  // coverage:ignore-end
 
   /// The previous resource state
   ResourceState<T>? get previousState {
@@ -354,7 +355,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   /// Returns a future that completes with the value when the Resource is ready
   /// If the resource is already ready, it completes immediately.
-  @experimental
   FutureOr<T> untilReady() async {
     final state = await until((value) => value.isReady);
     return state.asReady!.value;
