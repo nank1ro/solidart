@@ -118,7 +118,7 @@ class MapSignal<K, V> extends ReadSignal<Map<K, V>> with MapMixin<K, V> {
     if (_value.containsKey(key)) {
       _setPreviousValue(Map.of(_value));
       value = _value.remove(key);
-      _reportChanged();
+      _notifyChanged();
     }
     return value;
   }
