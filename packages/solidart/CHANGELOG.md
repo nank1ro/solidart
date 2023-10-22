@@ -1,3 +1,9 @@
+## 1.2.0
+
+- **FEAT**: Add 3 new signals: `ListSignal`, `SetSignal` and `MapSignal`. Now you can easily be notified of every change of a list, set or map.
+- **CHORE**: Rename the `firstWhere` method of a `ReadSignal` into `until`
+- **CHORE**: Rename the `firstWhereReady` method of a `Resource` into `untilReady`
+
 ## 1.1.0
 
 - **BUGFIX**: Fix a bug in the `Resource` where the stream subscription was not disposed correctly

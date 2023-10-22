@@ -1,3 +1,11 @@
+## 1.3.0
+
+### Changes from solidart
+
+- **FEAT**: Add 3 new signals: `ListSignal`, `SetSignal` and `MapSignal`. Now you can easily be notified of every change of a list, set or map.
+- **CHORE**: Rename the `firstWhere` method of a `ReadSignal` into `until`
+- **CHORE**: Rename the `firstWhereReady` method of a `Resource` into `untilReady`
+
 ## 1.2.0
 
 - **FEAT**: Add the method `maybeGet()` to the `Solid` widget to get a provider. If the provider can't be found, returns `null` instead of throwing like `get()` does
