@@ -365,7 +365,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// If the resource is already ready, it completes immediately.
   @experimental
   FutureOr<T> firstWhereReady() async {
-    final state = await firstWhere((value) => value.isReady);
+    final state = await firstWhereValue((value) => value.isReady);
     return state.asReady!.value;
   }
 

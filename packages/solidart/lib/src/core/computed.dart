@@ -208,4 +208,8 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
 
     return changed;
   }
+
+  @override
+  String toString() =>
+      '''Computed<$T>(value: $value, previousValue: $previousValue, options; $options)''';
 }

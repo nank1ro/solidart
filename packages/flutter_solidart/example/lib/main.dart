@@ -5,6 +5,7 @@ import 'package:example/pages/effects.dart';
 import 'package:example/pages/resource.dart';
 import 'package:example/pages/show.dart';
 import 'package:example/pages/solid/solid.dart';
+import 'package:example/pages/list_signal.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -37,6 +38,7 @@ final routes = <String, WidgetBuilder>{
   '/dual-signal-builder': (_) => const DualSignalBuilderPage(),
   '/resource': (_) => const ResourcePage(),
   '/solid': (_) => const SolidPage(),
+  '/list-signal': (_) => const ListSignalPage(),
 };
 final routeToNameRegex = RegExp('(?:^/|-)([a-z])');
 

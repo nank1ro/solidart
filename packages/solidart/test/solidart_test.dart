@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
@@ -181,7 +182,8 @@ void main() {
         final count = createSignal(0);
 
         unawaited(
-          expectLater(count.firstWhere((value) => value > 5), completion(11)),
+          expectLater(
+              count.firstWhereValue((value) => value > 5), completion(11)),
         );
         count
           ..set(2)
@@ -854,4 +856,294 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
+
+  group(
+    'ListSignal tests',
+    () {
+      test('check length', () {
+        final list = ListSignal([1, 2]);
+        expect(list.length, 2);
+        list.add(3);
+        expect(list.length, 3);
+      });
+
+      test('change length', () {
+        final list = ListSignal<int?>([1, 2]);
+        expect(list.length, 2);
+        list.length = 3;
+        expect(list.length, 3);
+        expect(const ListEquality<int?>().equals(list, [1, 2, null]), true);
+      });
+
+      test('check elementAt', () {
+        final list = ListSignal([1, 2]);
+        expect(list.elementAt(0), 1);
+        expect(list.elementAt(1), 2);
+        expect(() => list.elementAt(2), throwsRangeError);
+
+        list.add(3);
+        expect(list.elementAt(2), 3);
+      });
+
+      test('check operator +', () {
+        final list = ListSignal([1, 2]);
+        expect(list + [3, 4], [1, 2, 3, 4]);
+      });
+
+      test('check operator []', () {
+        final list = ListSignal([1, 2]);
+        expect(list[0], 1);
+        expect(list[1], 2);
+        expect(() => list[2], throwsRangeError);
+
+        list.add(3);
+        expect(list[2], 3);
+      });
+
+      test('check operator []=', () {
+        final list = ListSignal([1, 2]);
+        expect(list[0], 1);
+        expect(list[1], 2);
+        list[0] = 3;
+        expect(list[0], 3);
+        list[1] = 4;
+        expect(list[1], 4);
+      });
+
+      test('check add', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.add(3);
+        expect(list, [1, 2, 3]);
+      });
+
+      test('check addAll', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.addAll([3, 4]);
+        expect(list, [1, 2, 3, 4]);
+      });
+
+      test('check single', () {
+        final list = ListSignal([1]);
+        expect(list.single, 1);
+        list.add(3);
+        expect(() => list.single, throwsStateError);
+      });
+
+      test('check first', () {
+        final list = ListSignal([1, 2]);
+        expect(list.first, 1);
+
+        list.add(3);
+        expect(list.first, 1);
+
+        list[0] = 4;
+        expect(list.first, 4);
+      });
+
+      test('check last', () {
+        final list = ListSignal([1, 2]);
+        expect(list.last, 2);
+
+        list.add(3);
+        expect(list.last, 3);
+
+        list[2] = 4;
+        expect(list.last, 4);
+      });
+
+      test('check singleWhere', () {
+        final list = ListSignal([1, 2]);
+        expect(list.singleWhere((e) => e == 1), 1);
+        expect(() => list.singleWhere((e) => e == 4), throwsStateError);
+      });
+
+      test('check firstWhere', () {
+        final list = ListSignal([1, 2]);
+        expect(list.firstWhere((e) => e == 1), 1);
+        expect(() => list.firstWhere((e) => e == 4), throwsStateError);
+      });
+
+      test('check lastWhere', () {
+        final list = ListSignal([1, 2]);
+        expect(list.lastWhere((e) => e == 1), 1);
+        expect(() => list.lastWhere((e) => e == 4), throwsStateError);
+      });
+
+      test('check lastIndexWhere', () {
+        final list = ListSignal([1, 2]);
+        expect(list.lastIndexWhere((e) => e == 1), 0);
+        expect(list.lastIndexWhere((e) => e == 4), -1);
+      });
+
+      test('check isEmpty', () {
+        final list = ListSignal([1, 2]);
+        expect(list.isEmpty, false);
+        list.clear();
+        expect(list.isEmpty, true);
+      });
+
+      test('check isNotEmpty', () {
+        final list = ListSignal([1, 2]);
+        expect(list.isNotEmpty, true);
+        list.clear();
+        expect(list.isNotEmpty, false);
+      });
+
+      test('check clear', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.clear();
+        expect(list, isEmpty);
+      });
+
+      test('check remove', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.remove(1);
+        expect(list, [2]);
+      });
+
+      test('check removeAt', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.removeAt(0);
+        expect(list, [2]);
+      });
+
+      test('check removeWhere', () {
+        final list = ListSignal([1, 2, 1]);
+        expect(list, [1, 2, 1]);
+        list.removeWhere((e) => e == 1);
+        expect(list, [2]);
+      });
+
+      test('check retainWhere', () {
+        final list = ListSignal([1, 2, 1]);
+        expect(list, [1, 2, 1]);
+
+        list.retainWhere((e) => e == 1);
+        expect(list, [1, 1]);
+      });
+
+      test('check setAll', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.setAll(0, [3, 4]);
+        expect(list, [3, 4]);
+      });
+
+      test('check setRange', () {
+        final list1 = ListSignal([1, 2, 3, 4]);
+        final list2 = [5, 6, 7, 8, 9];
+
+        const skipCount = 3;
+        list1.setRange(1, 3, list2, skipCount);
+        expect(list1, [1, 8, 9, 4]);
+      });
+
+      test('check replaceRange', () {
+        final list = ListSignal([1, 2, 3, 4, 5]);
+        final replacements = [6, 7];
+        list.replaceRange(1, 4, replacements);
+        expect(list, [1, 6, 7, 5]);
+      });
+
+      test('check fillRange', () {
+        final list = ListSignal([1, 2, 3, 4, 5]);
+        expect(list, [1, 2, 3, 4, 5]);
+        list.fillRange(1, 4, 6);
+        expect(list, [1, 6, 6, 6, 5]);
+      });
+
+      test('check sort', () {
+        final list = ListSignal([3, 1, 2, 4]);
+        expect(list, [3, 1, 2, 4]);
+        list.sort((a, b) => a.compareTo(b));
+        expect(list, [1, 2, 3, 4]);
+      });
+
+      test('check sublist', () {
+        final list = ListSignal([1, 2, 3, 4]);
+        expect(list.sublist(1, 3), [2, 3]);
+      });
+
+      test('check toList', () {
+        final list = ListSignal([1, 2]);
+        expect(list.toList(growable: false), [1, 2]);
+      });
+
+      test('check cast', () {
+        final list = ListSignal([1, 2]);
+        expect(list.cast<int>(), [1, 2]);
+      });
+
+      test('check toString', () {
+        final list = ListSignal([1, 2]);
+        expect(list.toString(), startsWith('ListSignal<int>(value: [1, 2]'));
+      });
+
+      test('check set first', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.first = 3;
+        expect(list, [3, 2]);
+      });
+
+      test('check set last', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.last = 3;
+        expect(list, [1, 3]);
+      });
+
+      test('check insert', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.insert(0, 3);
+        expect(list, [3, 1, 2]);
+      });
+
+      test('check insertAll', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.insertAll(0, [3, 4]);
+        expect(list, [3, 4, 1, 2]);
+      });
+
+      test('check removeLast', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.removeLast();
+        expect(list, [1]);
+      });
+
+      test('check removeRange', () {
+        final list = ListSignal([1, 2, 3, 4]);
+        expect(list, [1, 2, 3, 4]);
+        list.removeRange(1, 3);
+        expect(list, [1, 4]);
+      });
+
+      test('check shuffle', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.shuffle(_AlwaysZeroRandom());
+        expect(list, [2, 1]);
+      });
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
+}
+
+class _AlwaysZeroRandom implements Random {
+  @override
+  bool nextBool() => false;
+
+  @override
+  double nextDouble() => 0;
+
+  @override
+  int nextInt(int max) => 0;
 }
