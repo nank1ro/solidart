@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:meta/meta.dart';
 
 /// {@template signal-to-value-notifier}
 /// Converts a [SignalBase] into a [ValueNotifier];
