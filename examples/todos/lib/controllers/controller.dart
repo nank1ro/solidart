@@ -12,46 +12,37 @@ import 'package:todos/models/todo.dart';
 class TodosController {
   TodosController({
     List<Todo> initialTodos = const [],
-  }) : _todos = createSignal(initialTodos);
+  }) : todos = ListSignal(initialTodos);
 
   // Keep the editable todos signal private
   // only the TodoController can mutate the value.
-  final Signal<List<Todo>> _todos;
-
-  /// Expose the whole list of todos as a ReadSignal so the
-  /// user cannot mutate directly the object.
-  late final todos = _todos.toReadSignal();
+  final ListSignal<Todo> todos;
 
   /// The list of completed todos
   late final completedTodos = createComputed(
-    () => _todos().where((todo) => todo.completed).toList(),
+    () => todos.where((todo) => todo.completed).toList(),
   );
 
   /// The list of incomplete todos
   late final incompleteTodos = createComputed(
-    () => _todos().where((todo) => !todo.completed).toList(),
+    () => todos.where((todo) => !todo.completed).toList(),
   );
 
   /// Add a todo
   void add(Todo todo) {
-    _todos.update((value) => [...value, todo]);
+    todos.add(todo);
   }
 
   /// Remove a todo with the given [id]
   void remove(String id) {
-    _todos.update(
-      (value) => value.where((todo) => todo.id != id).toList(),
-    );
+    todos.removeWhere((todo) => todo.id == id);
   }
 
   /// Toggle a todo with the given [id]
   void toggle(String id) {
-    _todos.update(
-      (value) => [
-        for (final todo in value)
-          if (todo.id != id) todo else todo.copyWith(completed: !todo.completed)
-      ],
-    );
+    final todoIndex = todos.indexWhere((element) => element.id == id);
+    final todo = todos[todoIndex];
+    todos[todoIndex] = todo.copyWith(completed: !todo.completed);
   }
 
   void dispose() {
