@@ -182,8 +182,7 @@ void main() {
         final count = createSignal(0);
 
         unawaited(
-          expectLater(
-              count.firstWhereValue((value) => value > 5), completion(11)),
+          expectLater(count.until((value) => value > 5), completion(11)),
         );
         count
           ..set(2)
@@ -806,7 +805,7 @@ void main() {
               );
           final count = createResource(fetcher: fetcher);
 
-          await expectLater(count.firstWhereReady(), completion(1));
+          await expectLater(count.untilReady(), completion(1));
         },
       );
 

@@ -11,8 +11,8 @@ environment:
   sdk: ^3.0.0
 
 dependencies:
-  meta: ^1.9.1
   collection: ^1.17.2
+  meta: ^1.9.1
 
 dev_dependencies:
   mockito: ^5.4.0

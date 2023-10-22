@@ -177,15 +177,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
   @override
   ResourceState<T>? get previousValue => previousState;
 
-  /// Returns a future that completes with the value when the Resource is ready
-  /// If the resource is already ready, it completes immediately.
-  @experimental
-  @Deprecated('Use `firstWhereReady` instead')
-  FutureOr<T> untilReady() {
-    return firstWhereReady();
-  }
-  // coverage:ignore-end
-
   /// The previous resource state
   ResourceState<T>? get previousState {
     _resolveIfNeeded();
@@ -364,8 +355,8 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// Returns a future that completes with the value when the Resource is ready
   /// If the resource is already ready, it completes immediately.
   @experimental
-  FutureOr<T> firstWhereReady() async {
-    final state = await firstWhereValue((value) => value.isReady);
+  FutureOr<T> untilReady() async {
+    final state = await until((value) => value.isReady);
     return state.asReady!.value;
   }
 
