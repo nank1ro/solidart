@@ -15,7 +15,7 @@ part of '../core.dart';
 /// {@endtemplate}
 class ListSignal<E> extends ReadSignal<List<E>> with ListMixin<E> {
   /// {@macro list-signal}
-  ListSignal(Iterable<E>? initialValue, {super.options})
+  ListSignal(List<E>? initialValue, {super.options})
       : name = options?.name ?? ReactiveContext.main.nameFor('ListSignal'),
         super(List.of(initialValue ?? []));
 

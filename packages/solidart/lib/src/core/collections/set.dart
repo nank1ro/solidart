@@ -4,7 +4,7 @@ part of '../core.dart';
 /// `SetSignal` makes easier interacting with sets in a reactive context.
 ///
 /// ```dart
-/// final set = SetSignal([1]);
+/// final set = SetSignal({1});
 ///
 /// createEffect((_) {
 ///   print(set.first);
@@ -15,7 +15,7 @@ part of '../core.dart';
 /// {@endtemplate}
 class SetSignal<E> extends ReadSignal<Set<E>> with SetMixin<E> {
   /// {@macro set-signal}
-  SetSignal(Iterable<E>? initialValue, {super.options})
+  SetSignal(Set<E>? initialValue, {super.options})
       : name = options?.name ?? ReactiveContext.main.nameFor('SetSignal'),
         super(Set.of(initialValue ?? []));
 

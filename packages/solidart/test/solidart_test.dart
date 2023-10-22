@@ -1141,6 +1141,314 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
+
+  group(
+    'SetSignal tests',
+    () {
+      test('check length', () {
+        final set = SetSignal({1, 2});
+        expect(set.length, 2);
+        set.add(3);
+        expect(set.length, 3);
+      });
+
+      test('check elementAt', () {
+        final set = SetSignal({1, 2});
+        expect(set.elementAt(0), 1);
+        expect(set.elementAt(1), 2);
+        expect(() => set.elementAt(2), throwsRangeError);
+
+        set.add(3);
+        expect(set.elementAt(2), 3);
+      });
+
+      test('check add', () {
+        final set = SetSignal({1, 2});
+        expect(set, [1, 2]);
+        set.add(3);
+        expect(set, [1, 2, 3]);
+      });
+
+      test('check addAll', () {
+        final set = SetSignal({1, 2});
+        expect(set, [1, 2]);
+        set.addAll([3, 4]);
+        expect(set, [1, 2, 3, 4]);
+      });
+
+      test('check single', () {
+        final set = SetSignal({1});
+        expect(set.single, 1);
+        set.add(3);
+        expect(() => set.single, throwsStateError);
+      });
+
+      test('check first', () {
+        final set = SetSignal({1, 2});
+        expect(set.first, 1);
+
+        set.remove(1);
+        expect(set.first, 2);
+      });
+
+      test('check last', () {
+        final set = SetSignal({1, 2});
+        expect(set.last, 2);
+
+        set.add(3);
+        expect(set.last, 3);
+      });
+
+      test('check singleWhere', () {
+        final set = SetSignal({1, 2});
+        expect(set.singleWhere((e) => e == 1), 1);
+        expect(() => set.singleWhere((e) => e == 4), throwsStateError);
+      });
+
+      test('check firstWhere', () {
+        final set = SetSignal({1, 2});
+        expect(set.firstWhere((e) => e == 1), 1);
+        expect(() => set.firstWhere((e) => e == 4), throwsStateError);
+      });
+
+      test('check lastWhere', () {
+        final set = SetSignal({1, 2});
+        expect(set.lastWhere((e) => e == 1), 1);
+        expect(() => set.lastWhere((e) => e == 4), throwsStateError);
+      });
+
+      test('check isEmpty', () {
+        final set = SetSignal({1, 2});
+        expect(set.isEmpty, false);
+        set.clear();
+        expect(set.isEmpty, true);
+      });
+
+      test('check isNotEmpty', () {
+        final set = SetSignal({1, 2});
+        expect(set.isNotEmpty, true);
+        set.clear();
+        expect(set.isNotEmpty, false);
+      });
+
+      test('check clear', () {
+        final set = SetSignal({1, 2});
+        expect(set, [1, 2]);
+        set.clear();
+        expect(set, isEmpty);
+      });
+
+      test('check remove', () {
+        final set = SetSignal({1, 2});
+        expect(set, [1, 2]);
+        set.remove(1);
+        expect(set, [2]);
+      });
+
+      test('check removeWhere', () {
+        final set = SetSignal({1, 2, 3});
+        expect(set, {1, 2, 3});
+        set.removeWhere((e) => e == 1);
+        expect(set, {2, 3});
+      });
+
+      test('check retainWhere', () {
+        final set = SetSignal({
+          1,
+          2,
+        });
+        expect(set, {1, 2});
+
+        set.retainWhere((e) => e == 1);
+        expect(set, {1});
+      });
+
+      test('check toList', () {
+        final set = SetSignal({1, 2});
+        expect(set.toList(growable: false), [1, 2]);
+      });
+
+      test('check cast', () {
+        final set = SetSignal({1, 2});
+        expect(set.cast<int>(), [1, 2]);
+      });
+
+      test('check toString', () {
+        final set = SetSignal({1, 2});
+        expect(set.toString(), startsWith('SetSignal<int>(value: {1, 2}'));
+      });
+
+      test('check contains', () {
+        final set = SetSignal({1, 2});
+        expect(set.contains(1), true);
+        expect(set.contains(3), false);
+      });
+
+      test('check lookup', () {
+        final set = SetSignal({1, 2});
+        expect(set.lookup(1), 1);
+        expect(set.lookup(3), null);
+      });
+
+      test('check retainAll', () {
+        final set = SetSignal({1, 2, 3, 4});
+        expect(set, {1, 2, 3, 4});
+        set.retainAll({1, 3, 10});
+        expect(set, {1, 3});
+      });
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
+
+  group(
+    'MapSignal tests',
+    () {
+      test('check [] operator', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map['a'], 1);
+        expect(map['c'], null);
+        expect(map['b'], 2);
+      });
+
+      test('check []= operator', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map['a'], 1);
+        map['a'] = 3;
+        expect(map['a'], 3);
+      });
+
+      test('check clear', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.clear();
+        expect(map, isEmpty);
+      });
+
+      test('check keys', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.keys, ['a', 'b']);
+        map.clear();
+        expect(map.keys, isEmpty);
+      });
+
+      test('check values', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.values, [1, 2]);
+        map.clear();
+        expect(map.values, isEmpty);
+      });
+
+      test('check remove', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.remove('a');
+        expect(map, {'b': 2});
+      });
+
+      test('check cast', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.cast<String, int>(), {'a': 1, 'b': 2});
+      });
+
+      test('check length', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.length, 2);
+        map['c'] = 3;
+        expect(map.length, 3);
+      });
+
+      test('check isEmpty', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.isEmpty, false);
+        map.clear();
+        expect(map.isEmpty, true);
+      });
+
+      test('check isNotEmpty', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.isNotEmpty, true);
+        map.clear();
+        expect(map.isNotEmpty, false);
+      });
+
+      test('check containsKey', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.containsKey('a'), true);
+        expect(map.containsKey('c'), false);
+      });
+
+      test('check containsValue', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.containsValue(1), true);
+        expect(map.containsValue(3), false);
+      });
+
+      test('check entries', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(Map.fromEntries(map.entries), map);
+        map.clear();
+        expect(map.entries, isEmpty);
+      });
+
+      test('check addEntries', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.addEntries({'c': 3, 'd': 4}.entries);
+        expect(map, {'a': 1, 'b': 2, 'c': 3, 'd': 4});
+      });
+
+      test('check addAll', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.addAll({'c': 3, 'd': 4});
+        expect(map, {'a': 1, 'b': 2, 'c': 3, 'd': 4});
+      });
+
+      test('check putIfAbset', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.putIfAbsent('c', () => 3);
+        expect(map, {'a': 1, 'b': 2, 'c': 3});
+        map.putIfAbsent('a', () => 4);
+        expect(map, {'a': 1, 'b': 2, 'c': 3});
+      });
+
+      test('check removeWhere', () {
+        final map = MapSignal({'a': 1, 'b': 2, 'c': 1});
+        expect(map, {'a': 1, 'b': 2, 'c': 1});
+        map.removeWhere((k, v) => v == 1);
+        expect(map, {'b': 2});
+      });
+
+      test('check update', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.update('a', (value) => 3);
+        expect(map, {'a': 3, 'b': 2});
+
+        map.update('c', (value) => 4, ifAbsent: () => 4);
+        expect(map, {'a': 3, 'b': 2, 'c': 4});
+
+        expect(() => map.update('d', (value) => 5), throwsArgumentError);
+      });
+
+      test('check updateAll', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.updateAll((k, v) => v * 2);
+        expect(map, {'a': 2, 'b': 4});
+      });
+
+      test('check toString', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(
+          map.toString(),
+          startsWith('MapSignal<String, int>(value: {a: 1, b: 2}'),
+        );
+      });
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
 }
 
 class _AlwaysZeroRandom implements Random {

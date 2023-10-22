@@ -14,7 +14,7 @@ part of '../core.dart';
 /// ```
 /// {@endtemplate}
 class MapSignal<K, V> extends ReadSignal<Map<K, V>> with MapMixin<K, V> {
-  /// {@macro list-signal}
+  /// {@macro map-signal}
   MapSignal(Map<K, V>? initialValue, {super.options})
       : name = options?.name ?? ReactiveContext.main.nameFor('MapSignal'),
         super(Map.of(initialValue ?? {}));
@@ -380,7 +380,7 @@ class MapSignal<K, V> extends ReadSignal<Map<K, V>> with MapMixin<K, V> {
 
   @override
   String toString() =>
-      '''MapSignal<$K,$V>(value: $value, previousValue: $previousValue, options; $options)''';
+      '''MapSignal<$K, $V>(value: $value, previousValue: $previousValue, options; $options)''';
 
   void _notifyChanged() {
     _reportChanged();
