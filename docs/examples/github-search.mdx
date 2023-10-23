@@ -155,9 +155,9 @@ class GithubSearchBloc {
 
   final GithubRepository _repository;
 
-  final _searchTerm = createSignal('');
+  final _searchTerm = Signal('');
   late final searchResult =
-      createResource(fetcher: _search, source: _searchTerm);
+      Resource(fetcher: _search, source: _searchTerm);
 
   void search(String term) => _searchTerm.set(term);
 

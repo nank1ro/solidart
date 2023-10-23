@@ -41,7 +41,7 @@ Solid(
 Solid(
   providers: [
     SolidSignal<Signal<ThemeMode>>(
-      create: () => createSignal(ThemeMode.light),
+      create: () => Signal(ThemeMode.light),
     ),
   ],
   child: MaterialApp(

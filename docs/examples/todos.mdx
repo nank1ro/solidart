@@ -51,46 +51,36 @@ The `TodosController` can have an initialValue, that is the initial list of todo
 class TodosController {
   TodosController({
     List<Todo> initialTodos = const [],
-  }) : _todos = createSignal(initialTodos);
+  }) : todos = ListSignal(initialTodos);
 
-  // Keep the editable todos signal private
-  // only the TodoController can mutate the value.
-  final Signal<List<Todo>> _todos;
-
-  /// Expose the whole list of todos as a ReadSignal so the
-  /// user cannot mutate directly the object.
-  late final todos = _todos.toReadSignal();
+  // The list of todos
+  final ListSignal<Todo> todos;
 
   /// The list of completed todos
-  late final completedTodos = createComputed(
-    () => _todos().where((todo) => todo.completed).toList(),
+  late final completedTodos = Computed(
+    () => todos.where((todo) => todo.completed).toList(),
   );
 
   /// The list of incomplete todos
-  late final incompleteTodos = createComputed(
-    () => _todos().where((todo) => !todo.completed).toList(),
+  late final incompleteTodos = Computed(
+    () => todos.where((todo) => !todo.completed).toList(),
   );
 
   /// Add a todo
   void add(Todo todo) {
-    _todos.update((value) => [...value, todo]);
+    todos.add(todo);
   }
 
   /// Remove a todo with the given [id]
   void remove(String id) {
-    _todos.update(
-      (value) => value.where((todo) => todo.id != id).toList(),
-    );
+    todos.removeWhere((todo) => todo.id == id);
   }
 
   /// Toggle a todo with the given [id]
   void toggle(String id) {
-    _todos.update(
-      (value) => [
-        for (final todo in value)
-          if (todo.id != id) todo else todo.copyWith(completed: !todo.completed)
-      ],
-    );
+    final todoIndex = todos.indexWhere((element) => element.id == id);
+    final todo = todos[todoIndex];
+    todos[todoIndex] = todo.copyWith(completed: !todo.completed);
   }
 
   void dispose() {
@@ -99,17 +89,17 @@ class TodosController {
     incompleteTodos.dispose();
   }
 }
-
 ```
 
 As you can see the `TodosController` can get an `initialTodos` list. This is going to be its initial state.
 
-When the constructor is runned, the `_todos` signal is populated with the provided `initialTodos`.
-The thing to note here is that `_todos` is private by choice. Instead the user has to use the `todos` getter.
+When the constructor is runned, the `todos` signal is populated with the provided `initialTodos`.
+The thing to note here is that `todos` is a `ListSignal`.
+A `ListSignal` automatically notifies its listeners when items change.
 
-The `todos` getter is a `ReadSignal`. This means that the user won't be able to mutate its value directly.
+<Info>See also `SetSignal` and `MapSignal`</Info>
 
-Additionally, the controller exposes `completedTodos` and `incompleteTodos` derived signals.
+The controller exposes `completedTodos` and `incompleteTodos` derived signals.
 They will automatically react to the `_todos` signal and provide a read only signal.
 
 The `add` method uses the `update` function of a `Signal` to append the new `todo` to the current list of todos.
@@ -176,7 +166,7 @@ class _TodosBodyState extends State<TodosBody> {
         // make the active filter signal visible only to descendants.
         // created here because this is where it starts to be necessary.
         SolidSignal<Signal<TodosFilter>>(
-            create: () => createSignal(TodosFilter.all)),
+            create: () => Signal(TodosFilter.all)),
       ],
       child: Column(
         children: [
@@ -256,11 +246,11 @@ class _ToolbarState extends State<Toolbar> {
 
   /// All the derived signals, they will react only when the `length` property changes
   late final allTodosCount =
-      createComputed(() => todosController.todos().length);
+      Computed(() => todosController.todos().length);
   late final incompleteTodosCount =
-      createComputed(() => todosController.incompleteTodos().length);
+      Computed(() => todosController.incompleteTodos().length);
   late final completedTodosCount =
-      createComputed(() => todosController.completedTodos().length);
+      Computed(() => todosController.completedTodos().length);
 
   @override
   void dispose() {
