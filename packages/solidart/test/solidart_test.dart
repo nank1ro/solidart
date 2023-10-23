@@ -1138,6 +1138,20 @@ void main() {
         list.shuffle(_AlwaysZeroRandom());
         expect(list, [2, 1]);
       });
+
+      test('check set', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.set([3, 4]);
+        expect(list, [3, 4]);
+      });
+
+      test('check updateValue', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.updateValue((v) => v..add(3));
+        expect(list, [1, 2, 3]);
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
@@ -1296,6 +1310,20 @@ void main() {
         set.retainAll({1, 3, 10});
         expect(set, {1, 3});
       });
+
+      test('check set', () {
+        final set = SetSignal({1, 2});
+        expect(set, {1, 2});
+        set.set({3, 4});
+        expect(set, {3, 4});
+      });
+
+      test('check updateValue', () {
+        final set = SetSignal({1, 2});
+        expect(set, {1, 2});
+        set.updateValue((v) => v..add(3));
+        expect(set, {1, 2, 3});
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
@@ -1445,6 +1473,23 @@ void main() {
           map.toString(),
           startsWith('MapSignal<String, int>(value: {a: 1, b: 2}'),
         );
+      });
+
+      test('check set', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.set({'c': 3, 'd': 4});
+        expect(map, {'c': 3, 'd': 4});
+      });
+
+      test('check updateValue', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.updateValue((v) {
+          v['c'] = 3;
+          return v;
+        });
+        expect(map, {'a': 1, 'b': 2, 'c': 3});
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),
