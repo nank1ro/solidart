@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-// Using an Enum as a key for SolidSignals, you can use any type of Object
-enum SignalId {
-  firstName,
-  lastName,
-}
-
 // Uses identifiers to retrieve different signals of the same type
 class MultipleSignalsPage extends StatelessWidget {
   const MultipleSignalsPage({super.key});
@@ -21,14 +15,14 @@ class MultipleSignalsPage extends StatelessWidget {
         providers: [
           // provide the firstName signal to descendants
           SolidSignal<Signal<String>>(
-            create: () => createSignal("James"),
-            id: SignalId.firstName,
+            create: () => Signal("James"),
+            id: #firstName,
           ),
 
           // provide the lastName signal to descendants
           SolidSignal<Signal<String>>(
-            create: () => createSignal("Smith"),
-            id: SignalId.lastName,
+            create: () => Signal("Smith"),
+            id: #lastName,
           ),
         ],
         child: const SomeChild(),
@@ -42,8 +36,8 @@ class SomeChild extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = context.get<Signal<String>>(SignalId.firstName);
-    final lastName = context.get<Signal<String>>(SignalId.lastName);
+    final firstName = context.get<Signal<String>>(#firstName);
+    final lastName = context.get<Signal<String>>(#lastName);
 
     return Center(
       child: Column(
@@ -53,14 +47,14 @@ class SomeChild extends StatelessWidget {
           TextFormField(
             initialValue: firstName.value,
             onChanged: (value) {
-              context.update<String>((_) => value, SignalId.firstName);
+              context.update<String>((_) => value, #firstName);
             },
           ),
           const SizedBox(height: 8),
           TextFormField(
             initialValue: lastName.value,
             onChanged: (value) {
-              context.update<String>((_) => value, SignalId.lastName);
+              context.update<String>((_) => value, #lastName);
             },
           ),
           const SizedBox(height: 8),
@@ -76,8 +70,8 @@ class FullName extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = context.observe<String>(SignalId.firstName);
-    final lastName = context.observe<String>(SignalId.lastName);
+    final firstName = context.observe<String>(#firstName);
+    final lastName = context.observe<String>(#lastName);
     return ListTile(
       title: Text('First Name: $firstName'),
       subtitle: Text('LastName: $lastName'),

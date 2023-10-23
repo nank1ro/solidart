@@ -1,11 +1,16 @@
 part of 'core.dart';
 
+// coverage:ignore-start
+
 /// {@macro computed}
+@Deprecated('Use Computed instead')
 Computed<T> createComputed<T>(
   T Function() selector, {
   SignalOptions<T>? options,
 }) =>
     Computed<T>(selector, options: options);
+
+// coverage:ignore-end
 
 /// {@template computed}
 /// A special Signal that notifies only whenever the selected
@@ -154,7 +159,7 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
     bool fireImmediately = false,
   }) {
     // cause observation
-    final disposeEffect = createEffect((_) {
+    final disposeEffect = Effect((_) {
       value;
     });
     final disposeObservation = super.observe(
@@ -208,4 +213,8 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
 
     return changed;
   }
+
+  @override
+  String toString() =>
+      '''Computed<$T>(value: $value, previousValue: $previousValue, options; $options)''';
 }

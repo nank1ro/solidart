@@ -13,7 +13,7 @@ class ObserveSignalPage extends StatelessWidget {
       body: Solid(
         providers: [
           // provide the count signal to descendants
-          SolidSignal<Signal<int>>(create: () => createSignal(0)),
+          SolidSignal<Signal<int>>(create: () => Signal(0)),
         ],
         child: const SomeChild(),
       ),

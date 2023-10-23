@@ -1,3 +1,29 @@
+## 1.2.0
+
+- **FEAT**: Add 3 new signals: `ListSignal`, `SetSignal` and `MapSignal`. Now you can easily be notified of every change of a list, set or map.
+   _Before_:
+
+  ```dart
+  final list = Signal([1, 2]);
+  // this doesn't work
+  list.add(3);
+  // instead you have to provide a new list instance
+  list.value = [...list, 3];
+  ```
+
+  _Now_:
+
+  ```dart
+  final list = ListSignal([1, 2]);
+  // this now works as expected
+  list.add(3);
+  ```
+
+- **CHORE**: Rename the `firstWhere` method of a `ReadSignal` into `until`
+- **CHORE**: Rename the `firstWhereReady` method of a `Resource` into `untilReady`
+- **CHORE**: Rename the `update` method of a `Signal` into `updateValue`
+- **CHORE**: Deprecate `createSignal`, `createComputed`, `createEffect` and `createResource`
+
 ## 1.1.0
 
 - **BUGFIX**: Fix a bug in the `Resource` where the stream subscription was not disposed correctly

@@ -15,12 +15,11 @@ class _ToolbarState extends State<Toolbar> {
   late final todosController = context.get<TodosController>();
 
   /// All the derived signals, they will react only when the `length` property changes
-  late final allTodosCount =
-      createComputed(() => todosController.todos().length);
+  late final allTodosCount = Computed(() => todosController.todos().length);
   late final incompleteTodosCount =
-      createComputed(() => todosController.incompleteTodos().length);
+      Computed(() => todosController.incompleteTodos().length);
   late final completedTodosCount =
-      createComputed(() => todosController.completedTodos().length);
+      Computed(() => todosController.completedTodos().length);
 
   @override
   void dispose() {

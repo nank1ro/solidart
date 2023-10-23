@@ -2,9 +2,12 @@ import 'package:example/pages/counter.dart';
 import 'package:example/pages/derived_signal.dart';
 import 'package:example/pages/dual_signal_builder.dart';
 import 'package:example/pages/effects.dart';
+import 'package:example/pages/map_signal.dart';
 import 'package:example/pages/resource.dart';
+import 'package:example/pages/set_signal.dart';
 import 'package:example/pages/show.dart';
 import 'package:example/pages/solid/solid.dart';
+import 'package:example/pages/list_signal.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -37,6 +40,9 @@ final routes = <String, WidgetBuilder>{
   '/dual-signal-builder': (_) => const DualSignalBuilderPage(),
   '/resource': (_) => const ResourcePage(),
   '/solid': (_) => const SolidPage(),
+  '/list-signal': (_) => const ListSignalPage(),
+  '/set-signal': (_) => const SetSignalPage(),
+  '/map-signal': (_) => const MapSignalPage(),
 };
 final routeToNameRegex = RegExp('(?:^/|-)([a-z])');
 

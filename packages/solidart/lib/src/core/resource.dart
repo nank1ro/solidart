@@ -20,7 +20,10 @@ class ResourceOptions {
   final bool lazy;
 }
 
+// coverage:ignore-start
+
 /// {@macro resource}
+@Deprecated('Use Resource instead')
 Resource<T> createResource<T>({
   Future<T> Function()? fetcher,
   Stream<T> Function()? stream,
@@ -34,6 +37,8 @@ Resource<T> createResource<T>({
     options: options,
   );
 }
+
+// coverage:ignore-end
 
 /// {@template resource}
 /// `Resources` are special `Signal`s designed specifically to handle Async
@@ -177,13 +182,12 @@ class Resource<T> extends Signal<ResourceState<T>> {
   @override
   ResourceState<T>? get previousValue => previousState;
 
-  /// Returns a future that completes with the value when the Resource is ready
-  /// If the resource is already ready, it completes immediately.
-  @experimental
-  @Deprecated('Use `firstWhereReady` instead')
-  FutureOr<T> untilReady() {
-    return firstWhereReady();
-  }
+  @Deprecated('Use update instead')
+  @override
+  ResourceState<T> updateValue(
+    ResourceState<T> Function(ResourceState<T> state) callback,
+  ) =>
+      update(callback);
   // coverage:ignore-end
 
   /// The previous resource state
@@ -363,13 +367,13 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   /// Returns a future that completes with the value when the Resource is ready
   /// If the resource is already ready, it completes immediately.
-  @experimental
-  FutureOr<T> firstWhereReady() async {
-    final state = await firstWhere((value) => value.isReady);
+  FutureOr<T> untilReady() async {
+    final state = await until((value) => value.isReady);
     return state.asReady!.value;
   }
 
-  @override
+  /// Calls a function with the current [state] and assigns the result as the
+  /// new state
   ResourceState<T> update(
     ResourceState<T> Function(ResourceState<T> state) callback,
   ) =>

@@ -18,10 +18,10 @@ class GithubSearchBloc {
   final GithubRepository _repository;
 
   // Keeps track of the current search term
-  final _searchTerm = createSignal('');
+  final _searchTerm = Signal('');
 
   /// Handles the fetching of current search results
-  late final searchResult = createResource(
+  late final searchResult = Resource(
     fetcher: _search,
     source: _searchTerm,
   );
