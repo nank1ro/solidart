@@ -22,15 +22,40 @@ MapSignal<K, V> createMapSignal<K, V>(
 /// map['first'] = 100; // the effect prints 100
 /// ```
 /// {@endtemplate}
-class MapSignal<K, V> extends ReadSignal<Map<K, V>> with MapMixin<K, V> {
+class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// {@macro map-signal}
   MapSignal(Map<K, V>? initialValue, {super.options})
       : name = options?.name ?? ReactiveContext.main.nameFor('MapSignal'),
-        super(Map.of(initialValue ?? {}));
+        super(Map<K, V>.of(initialValue ?? {}));
 
   @override
   // ignore: overridden_fields
   final String name;
+
+  @override
+  void _setValue(Map<K, V> newValue) {
+    if (_areEqual(_value, newValue)) {
+      return;
+    }
+    _setPreviousValue(Map<K, V>.of(_value));
+    _value = newValue;
+    _notifyChanged();
+  }
+
+  @override
+  Map<K, V> updateValue(Map<K, V> Function(Map<K, V> value) callback) =>
+      value = callback(Map<K, V>.of(_value));
+
+  @override
+  bool _areEqual(Map<K, V>? oldValue, Map<K, V>? newValue) {
+    // skip if the value are equals
+    if (options.equals) {
+      return MapEquality<K, V>().equals(oldValue, newValue);
+    }
+
+    // return the [comparator] result
+    return options.comparator!(oldValue, newValue);
+  }
 
   /// The value for the given [key], or `null` if [key] is not in the map.
   ///
@@ -55,7 +80,7 @@ class MapSignal<K, V> extends ReadSignal<Map<K, V>> with MapMixin<K, V> {
   void operator []=(K key, V value) {
     final oldValue = _value[key];
     if (!_value.containsKey(key) || value != oldValue) {
-      _setPreviousValue(Map.of(_value));
+      _setPreviousValue(Map<K, V>.of(_value));
       _value[key] = value;
       _notifyChanged();
     }
@@ -71,7 +96,7 @@ class MapSignal<K, V> extends ReadSignal<Map<K, V>> with MapMixin<K, V> {
   @override
   void clear() {
     if (_value.isNotEmpty) {
-      _setPreviousValue(Map.of(_value));
+      _setPreviousValue(Map<K, V>.of(_value));
       _value.clear();
       _notifyChanged();
     }
@@ -125,7 +150,7 @@ class MapSignal<K, V> extends ReadSignal<Map<K, V>> with MapMixin<K, V> {
   V? remove(Object? key) {
     V? value;
     if (_value.containsKey(key)) {
-      _setPreviousValue(Map.of(_value));
+      _setPreviousValue(Map<K, V>.of(_value));
       value = _value.remove(key);
       _notifyChanged();
     }
@@ -235,7 +260,7 @@ class MapSignal<K, V> extends ReadSignal<Map<K, V>> with MapMixin<K, V> {
   @override
   void addEntries(Iterable<MapEntry<K, V>> newEntries) {
     if (newEntries.isNotEmpty) {
-      _setPreviousValue(Map.of(_value));
+      _setPreviousValue(Map<K, V>.of(_value));
       _value.addEntries(newEntries);
       _notifyChanged();
     }
@@ -256,7 +281,7 @@ class MapSignal<K, V> extends ReadSignal<Map<K, V>> with MapMixin<K, V> {
   @override
   void addAll(Map<K, V> other) {
     if (other.isNotEmpty) {
-      _setPreviousValue(Map.of(_value));
+      _setPreviousValue(Map<K, V>.of(_value));
       _value.addAll(other);
       _notifyChanged();
     }
@@ -288,7 +313,7 @@ class MapSignal<K, V> extends ReadSignal<Map<K, V>> with MapMixin<K, V> {
       _reportObserved();
       return _value[key] as V;
     }
-    _setPreviousValue(Map.of(_value));
+    _setPreviousValue(Map<K, V>.of(_value));
     _value[key] = ifAbsent();
     _notifyChanged();
     return _value[key] as V;
@@ -307,7 +332,7 @@ class MapSignal<K, V> extends ReadSignal<Map<K, V>> with MapMixin<K, V> {
       if (test(key, this[key] as V)) keysToRemove.add(key);
     }
     if (keysToRemove.isNotEmpty) {
-      _setPreviousValue(Map.of(_value));
+      _setPreviousValue(Map<K, V>.of(_value));
     }
     for (final key in keysToRemove) {
       _value.remove(key);
@@ -347,13 +372,13 @@ class MapSignal<K, V> extends ReadSignal<Map<K, V>> with MapMixin<K, V> {
       final oldValue = _value[key];
       final newValue = update(_value[key] as V);
       if (oldValue != newValue) {
-        _setPreviousValue(Map.of(_value));
+        _setPreviousValue(Map<K, V>.of(_value));
         _value[key] = newValue;
       }
       return _value[key] as V;
     }
     if (ifAbsent != null) {
-      _setPreviousValue(Map.of(_value));
+      _setPreviousValue(Map<K, V>.of(_value));
       return _value[key] = ifAbsent();
     }
     throw ArgumentError.value(key, 'key', 'Key not in map.');
@@ -379,7 +404,7 @@ class MapSignal<K, V> extends ReadSignal<Map<K, V>> with MapMixin<K, V> {
       }
     }
     if (changes.isNotEmpty) {
-      _setPreviousValue(Map.of(_value));
+      _setPreviousValue(Map<K, V>.of(_value));
       for (final key in this.keys) {
         _value[key] = changes[key] as V;
       }

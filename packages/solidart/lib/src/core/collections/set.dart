@@ -22,15 +22,40 @@ SetSignal<E> createSetSignal<E>(
 /// set[0] = 100; // the effect prints 100
 /// ```
 /// {@endtemplate}
-class SetSignal<E> extends ReadSignal<Set<E>> with SetMixin<E> {
+class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// {@macro set-signal}
   SetSignal(Set<E>? initialValue, {super.options})
       : name = options?.name ?? ReactiveContext.main.nameFor('SetSignal'),
-        super(Set.of(initialValue ?? []));
+        super(Set<E>.of(initialValue ?? []));
 
   @override
   // ignore: overridden_fields
   final String name;
+
+  @override
+  void _setValue(Set<E> newValue) {
+    if (_areEqual(_value, newValue)) {
+      return;
+    }
+    _setPreviousValue(Set<E>.of(_value));
+    _value = newValue;
+    _notifyChanged();
+  }
+
+  @override
+  Set<E> updateValue(Set<E> Function(Set<E> value) callback) =>
+      value = callback(Set<E>.of(_value));
+
+  @override
+  bool _areEqual(Set<E>? oldValue, Set<E>? newValue) {
+    // skip if the value are equals
+    if (options.equals) {
+      return SetEquality<E>().equals(oldValue, newValue);
+    }
+
+    // return the [comparator] result
+    return options.comparator!(oldValue, newValue);
+  }
 
   /// Adds [value] to the set.
   ///
@@ -59,7 +84,7 @@ class SetSignal<E> extends ReadSignal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   bool add(E value) {
-    _setPreviousValue(Set.of(_value));
+    _setPreviousValue(Set<E>.of(_value));
     final result = _value.add(value);
     if (result) _notifyChanged();
     return result;
@@ -158,7 +183,7 @@ class SetSignal<E> extends ReadSignal<Set<E>> with SetMixin<E> {
     var didRemove = false;
     final index = _value.toList(growable: false).indexOf(value as E);
     if (index >= 0) {
-      _setPreviousValue(Set.of(_value));
+      _setPreviousValue(Set<E>.of(_value));
       _value.remove(value);
       _notifyChanged();
       didRemove = true;
@@ -175,7 +200,7 @@ class SetSignal<E> extends ReadSignal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   void removeAll(Iterable<Object?> elements) {
-    _setPreviousValue(Set.of(_value));
+    _setPreviousValue(Set<E>.of(_value));
     var hasChanges = false;
     for (final element in elements) {
       final removed = _value.remove(element);
@@ -245,7 +270,7 @@ class SetSignal<E> extends ReadSignal<Set<E>> with SetMixin<E> {
   @override
   void clear() {
     if (_value.isNotEmpty) {
-      _setPreviousValue(Set.of(_value));
+      _setPreviousValue(Set<E>.of(_value));
       _value.clear();
       _notifyChanged();
     }
@@ -290,7 +315,7 @@ class SetSignal<E> extends ReadSignal<Set<E>> with SetMixin<E> {
       }
     }
     if (removed.isNotEmpty) {
-      _setPreviousValue(Set.of(_value));
+      _setPreviousValue(Set<E>.of(_value));
       for (final item in removed) {
         _value.remove(item);
       }
