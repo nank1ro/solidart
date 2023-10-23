@@ -70,3 +70,13 @@ flutter clean
 flutter pub get
 dart run custom_lint
 ```
+
+### Update lints (suggested)
+
+You may also update the `analysis_options.yaml` rules to work well with solidart.
+```yaml
+linter:
+  rules:
+    use_late_for_private_fields_and_variables: false
+    implicit_call_tearoffs: false
+```
