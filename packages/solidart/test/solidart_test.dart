@@ -1146,6 +1146,16 @@ void main() {
         expect(list, [3, 4]);
       });
 
+      test('check set with equals', () {
+        final list = ListSignal<int>(
+          [1, 2],
+          options: const SignalOptions(equals: true),
+        );
+        expect(list, [1, 2]);
+        list.set([3, 4]);
+        expect(list, [3, 4]);
+      });
+
       test('check updateValue', () {
         final list = ListSignal([1, 2]);
         expect(list, [1, 2]);
@@ -1318,6 +1328,14 @@ void main() {
         expect(set, {3, 4});
       });
 
+      test('check set with equals', () {
+        final set =
+            SetSignal<int>({1, 2}, options: const SignalOptions(equals: true));
+        expect(set, {1, 2});
+        set.set({3, 4});
+        expect(set, {3, 4});
+      });
+
       test('check updateValue', () {
         final set = SetSignal({1, 2});
         expect(set, {1, 2});
@@ -1477,6 +1495,16 @@ void main() {
 
       test('check set', () {
         final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.set({'c': 3, 'd': 4});
+        expect(map, {'c': 3, 'd': 4});
+      });
+
+      test('check set with equals', () {
+        final map = MapSignal<String, int>(
+          {'a': 1, 'b': 2},
+          options: const SignalOptions(equals: true),
+        );
         expect(map, {'a': 1, 'b': 2});
         map.set({'c': 3, 'd': 4});
         expect(map, {'c': 3, 'd': 4});
