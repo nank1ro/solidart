@@ -21,6 +21,8 @@ class EffectOptions {
   final Duration? delay;
 }
 
+// coverage:ignore-start
+
 /// {@macro effect}
 @Deprecated('Use Effect instead')
 DisposeEffect createEffect(
@@ -30,6 +32,7 @@ DisposeEffect createEffect(
 }) {
   return Effect(callback, onError: onError, options: options).dispose;
 }
+// coverage:ignore-end
 
 /// The reaction interface
 abstract class ReactionInterface implements Derivation {

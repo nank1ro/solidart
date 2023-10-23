@@ -1,14 +1,5 @@
 part of '../core.dart';
 
-// coverage:ignore-start
-/// {@macro set-signal}
-SetSignal<E> createSetSignal<E>(
-  Set<E> initialValue, {
-  SignalOptions<Set<E>>? options,
-}) =>
-    SetSignal<E>(initialValue, options: options);
-// coverage:ignore-end
-
 /// {@template set-signal}
 /// `SetSignal` makes easier interacting with sets in a reactive context.
 ///

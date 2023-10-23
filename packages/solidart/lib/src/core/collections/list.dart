@@ -1,14 +1,5 @@
 part of '../core.dart';
 
-// coverage:ignore-start
-/// {@macro list-signal}
-ListSignal<E> createListSignal<E>(
-  List<E> initialValue, {
-  SignalOptions<List<E>>? options,
-}) =>
-    ListSignal<E>(initialValue, options: options);
-// coverage:ignore-end
-
 /// {@template list-signal}
 /// `ListSignal` makes easier interacting with lists in a reactive context.
 ///

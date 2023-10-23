@@ -1,9 +1,12 @@
 part of 'core.dart';
+// coverage:ignore-start
 
 /// {@macro signal}
 @Deprecated('Use Signal instead')
 Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
     Signal<T>(value, options: options);
+
+// coverage:ignore-end
 
 /// {@template signal}
 /// # Signals

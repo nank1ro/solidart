@@ -20,6 +20,8 @@ class ResourceOptions {
   final bool lazy;
 }
 
+// coverage:ignore-start
+
 /// {@macro resource}
 @Deprecated('Use Resource instead')
 Resource<T> createResource<T>({
@@ -35,6 +37,8 @@ Resource<T> createResource<T>({
     options: options,
   );
 }
+
+// coverage:ignore-end
 
 /// {@template resource}
 /// `Resources` are special `Signal`s designed specifically to handle Async

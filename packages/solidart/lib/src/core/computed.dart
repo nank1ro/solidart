@@ -1,5 +1,7 @@
 part of 'core.dart';
 
+// coverage:ignore-start
+
 /// {@macro computed}
 @Deprecated('Use Computed instead')
 Computed<T> createComputed<T>(
@@ -7,6 +9,8 @@ Computed<T> createComputed<T>(
   SignalOptions<T>? options,
 }) =>
     Computed<T>(selector, options: options);
+
+// coverage:ignore-end
 
 /// {@template computed}
 /// A special Signal that notifies only whenever the selected
