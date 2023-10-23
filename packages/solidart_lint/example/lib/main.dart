@@ -12,7 +12,7 @@ class MyClass {}
 class MyApp extends StatelessWidget {
   MyApp({super.key});
 
-  final counter = createSignal(1);
+  final counter = Signal(1);
 
   @override
   Widget build(BuildContext context) {
@@ -21,10 +21,10 @@ class MyApp extends StatelessWidget {
         // expect_lint: avoid_dynamic_solid_provider
         SolidProvider(create: () => MyClass()),
         // expect_lint: avoid_dynamic_solid_signal
-        SolidSignal(create: () => createSignal(0), id: 'counter'),
+        SolidSignal(create: () => Signal(0), id: 'counter'),
         // expect_lint: avoid_dynamic_solid_signal
         SolidSignal(
-          create: () => createComputed(() => counter() * 2),
+          create: () => Computed(() => counter() * 2),
           id: 'double-counter',
         ),
       ],

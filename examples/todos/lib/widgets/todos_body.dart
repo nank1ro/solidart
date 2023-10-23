@@ -31,8 +31,7 @@ class _TodosBodyState extends State<TodosBody> {
       providers: [
         // make the active filter signal visible only to descendants.
         // created here because this is where it starts to be necessary.
-        SolidSignal<Signal<TodosFilter>>(
-            create: () => createSignal(TodosFilter.all)),
+        SolidSignal<Signal<TodosFilter>>(create: () => Signal(TodosFilter.all)),
       ],
       child: Column(
         children: [

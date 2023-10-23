@@ -8,8 +8,8 @@ extension SignalToValueNotifier<T> on SignalBase<T> {
   /// {@macro signal-to-value-notifier}
   ValueNotifier<T> toValueNotifier() {
     final notifier = ValueNotifier(value);
-    final unobserve = createEffect((_) => notifier.value = value);
-    onDispose(unobserve);
+    final unobserve = Effect((_) => notifier.value = value);
+    onDispose(unobserve.call);
     return notifier;
   }
 }
@@ -20,7 +20,7 @@ extension SignalToValueNotifier<T> on SignalBase<T> {
 extension ValueNotifierToSignal<T> on ValueNotifier<T> {
   /// {@macro value-notifier-to-signal}
   Signal<T> toSignal() {
-    final signal = createSignal(value, options: SignalOptions<T>(equals: true));
+    final signal = Signal(value, options: SignalOptions<T>(equals: true));
     void setValue() => signal.set(value);
     addListener(setValue);
     signal.onDispose(() => removeListener(setValue));

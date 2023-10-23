@@ -70,11 +70,11 @@ class SampleList {
 
 void main() {
   group(
-    'createSignal tests - ',
+    'Signal tests - ',
     () {
       test('with equals true it notifies only when the value changes',
           () async {
-        final counter = createSignal(
+        final counter = Signal(
           0,
           options: const SignalOptions<int>(equals: true, name: ''),
         );
@@ -106,7 +106,7 @@ void main() {
       test(
           'with the identical comparator it notifies only when the comparator '
           'returns false', () async {
-        final signal = createSignal(
+        final signal = Signal(
           null,
           options: const SignalOptions<_A>(),
         );
@@ -132,7 +132,7 @@ void main() {
       });
 
       test('check onDispose callback fired when disposing signal', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         final cb = MockCallbackFunction();
         s
           ..onDispose(cb.call)
@@ -141,7 +141,7 @@ void main() {
       });
 
       test('observe fireImmediately works', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         final cb = MockCallbackFunction();
         final unobserve = s.observe(
           (previousValue, value) => cb.call(),
@@ -155,7 +155,7 @@ void main() {
       });
 
       test('check previousValue stores the previous value', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         expect(
           s.previousValue,
           null,
@@ -179,7 +179,7 @@ void main() {
       });
 
       test('test firstWhere()', () async {
-        final count = createSignal(0);
+        final count = Signal(0);
 
         unawaited(
           expectLater(count.until((value) => value > 5), completion(11)),
@@ -190,27 +190,27 @@ void main() {
       });
 
       test('check toString()', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         expect(s.toString(), startsWith('Signal<int>(value: 0'));
       });
 
       test('check Signal becomes ReadSignal', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         expect(s, const TypeMatcher<Signal<int>>());
         expect(s.toReadSignal(), const TypeMatcher<ReadSignal<int>>());
       });
 
       test('Signal is disposed after dispose', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         expect(s.disposed, false);
         s.dispose();
         expect(s.disposed, true);
       });
 
       test('Signal has observers', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         expect(s.hasObservers, false);
-        createEffect((dispose) {
+        Effect((dispose) {
           s();
         });
         expect(s.hasObservers, true);
@@ -218,7 +218,7 @@ void main() {
       });
 
       test('Signal<bool> toggle', () {
-        final signal = createSignal(false);
+        final signal = Signal(false);
         expect(signal(), false);
         signal.toggle();
         expect(signal(), true);
@@ -228,17 +228,17 @@ void main() {
   );
 
   group(
-    'createEffect tests = ',
+    'Effect tests = ',
     () {
       test('check effect reaction', () async {
-        final signal1 = createSignal(0);
-        final signal2 = createSignal(0);
+        final signal1 = Signal(0);
+        final signal2 = Signal(0);
 
         final cb = MockCallbackFunctionWithValue<int>();
-        createEffect(
+        Effect(
           (_) => cb(signal1()),
         );
-        createEffect(
+        Effect(
           (_) => cb(signal2()),
         );
 
@@ -256,7 +256,7 @@ void main() {
 
       test('check effect reaction with delay', () async {
         final cb = MockCallbackFunction();
-        createEffect(
+        Effect(
           (_) => cb(),
           options: const EffectOptions(delay: Duration(milliseconds: 500)),
         );
@@ -267,7 +267,7 @@ void main() {
 
       test('check effect onError', () async {
         Object? detectedError;
-        createEffect(
+        Effect(
           (_) => throw Exception(),
           onError: (error) {
             detectedError = error;
@@ -285,8 +285,8 @@ void main() {
       test('check that a signal selector updates only for the selected value',
           () async {
         final klass = _B(_C(0));
-        final s = createSignal(klass);
-        final selected = createComputed(() => s().c.count);
+        final s = Signal(klass);
+        final selected = Computed(() => s().c.count);
         final cb = MockCallbackFunctionWithValue<int>();
 
         void listener() {
@@ -319,8 +319,8 @@ void main() {
       });
 
       test('custom signal options for derived signal', () async {
-        final a = createSignal(SampleList([1]));
-        final selected = createComputed(
+        final a = Signal(SampleList([1]));
+        final selected = Computed(
           () => a().numbers,
           options: SignalOptions<List<int>>(
             comparator: (a, b) => const ListEquality<int>().equals(a, b),
@@ -342,8 +342,8 @@ void main() {
       });
 
       test("selector's readable signal contains previous value", () async {
-        final signal = createSignal(0);
-        final derived = createComputed(() => signal() * 2);
+        final signal = Signal(0);
+        final derived = Computed(() => signal() * 2);
         await pumpEventQueue();
         expect(derived.hasPreviousValue, false);
         expect(derived.previousValue, null);
@@ -365,15 +365,15 @@ void main() {
       });
 
       test('signal has previous value', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         expect(s.hasPreviousValue, false);
         s.set(1);
         expect(s.hasPreviousValue, true);
       });
 
       test('nullable derived signal', () async {
-        final count = createSignal<int?>(0);
-        final doubleCount = createComputed(() {
+        final count = Signal<int?>(0);
+        final doubleCount = Computed(() {
           if (count() == null) return null;
           return count()! * 2;
         });
@@ -391,16 +391,16 @@ void main() {
       });
 
       test('derived signal disposes', () async {
-        final count = createSignal(0);
-        final doubleCount = createComputed(() => count() * 2);
+        final count = Signal(0);
+        final doubleCount = Computed(() => count() * 2);
         expect(doubleCount.disposed, false);
         doubleCount.dispose();
         expect(doubleCount.disposed, true);
       });
 
       test('check derived signal that throws', () async {
-        final count = createSignal(1);
-        final doubleCount = createComputed(
+        final count = Signal(1);
+        final doubleCount = Computed(
           () {
             if (count() == 1) {
               return count() * 2;
@@ -435,7 +435,7 @@ void main() {
         expect(s.previousValue, null);
         expect(s.listenerCount, 0);
 
-        createEffect((_) {
+        Effect((_) {
           s();
         });
         expect(s.listenerCount, 1);
@@ -452,11 +452,11 @@ void main() {
   group(
     'Resource tests',
     () {
-      test('check createResource with stream', () async {
+      test('check Resource with stream', () async {
         final streamController = StreamController<int>();
         addTearDown(streamController.close);
 
-        final resource = createResource(stream: () => streamController.stream);
+        final resource = Resource(stream: () => streamController.stream);
         expect(resource.state, isA<ResourceLoading<int>>());
         streamController.add(1);
         await pumpEventQueue();
@@ -474,10 +474,10 @@ void main() {
         expect(resource.state.error, isUnimplementedError);
       });
 
-      test('check createResource with stream and source', () async {
-        final count = createSignal(-1);
+      test('check Resource with stream and source', () async {
+        final count = Signal(-1);
 
-        final resource = createResource(
+        final resource = Resource(
           stream: () {
             if (count() < 1) return Stream.value(0);
             return Stream.value(count());
@@ -505,17 +505,17 @@ void main() {
         );
       });
 
-      test('check createResource with changing stream', () async {
+      test('check Resource with changing stream', () async {
         final streamControllerA = StreamController<int>();
         final streamControllerB = StreamController<int>();
-        final source = createSignal(0);
+        final source = Signal(0);
         addTearDown(() {
           streamControllerA.close();
           streamControllerB.close();
           source.dispose();
         });
 
-        final resource = createResource(
+        final resource = Resource(
           stream: () {
             if (source().isEven) {
               return streamControllerA.stream;
@@ -550,9 +550,9 @@ void main() {
         expect(resource.state.value, 3);
       });
 
-      test('check createResource with future that throws', () async {
+      test('check Resource with future that throws', () async {
         Future<User> getUser() => throw Exception();
-        final resource = createResource<User>(
+        final resource = Resource<User>(
           fetcher: getUser,
           options: const ResourceOptions(lazy: false),
         );
@@ -564,15 +564,15 @@ void main() {
         expect(resource.state.error, isException);
       });
 
-      test('check createResource with future', () async {
-        final userId = createSignal(0);
+      test('check Resource with future', () async {
+        final userId = Signal(0);
 
         Future<User> getUser() {
           if (userId() == 2) throw Exception();
           return Future.value(User(id: userId()));
         }
 
-        final resource = createResource(
+        final resource = Resource(
           fetcher: getUser,
           source: userId,
           options: const ResourceOptions(lazy: false),
@@ -607,7 +607,7 @@ void main() {
 
       test('update ResourceState', () async {
         Future<int> fetcher() => Future.value(1);
-        final resource = createResource(fetcher: fetcher);
+        final resource = Resource(fetcher: fetcher);
         expect(resource.state, isA<ResourceLoading<int>>());
         await pumpEventQueue();
         expect(
@@ -628,7 +628,7 @@ void main() {
               const Duration(milliseconds: 200),
               () => 1,
             );
-        final resource = createResource(fetcher: fetcher);
+        final resource = Resource(fetcher: fetcher);
         expect(resource.state, isA<ResourceLoading<int>>());
         await Future<void>.delayed(const Duration(milliseconds: 100));
         expect(resource.state, isA<ResourceLoading<int>>());
@@ -641,7 +641,7 @@ void main() {
       });
       test('refresh Resource with stream while loading', () async {
         final controller = StreamController<int>();
-        final resource = createResource(stream: () => controller.stream);
+        final resource = Resource(stream: () => controller.stream);
         expect(resource.state, isA<ResourceLoading<int>>());
 
         await resource.refresh();
@@ -652,14 +652,14 @@ void main() {
         expect(resource.state, isA<ResourceReady<int>>());
       });
       test('check ResourceSelector with future', () async {
-        final userId = createSignal(0);
+        final userId = Signal(0);
 
         Future<User> getUser() {
           if (userId() == 2) throw Exception();
           return Future.value(User(id: userId()));
         }
 
-        final resource = createResource(fetcher: getUser, source: userId);
+        final resource = Resource(fetcher: getUser, source: userId);
         final idResource = resource.select((data) => data.id);
 
         await pumpEventQueue();
@@ -691,14 +691,14 @@ void main() {
       });
 
       test('check ResourceSelector with stream', () async {
-        final userId = createSignal(0);
+        final userId = Signal(0);
 
         Stream<User> getUser() {
           if (userId() == 2) return Stream<User>.error(Exception());
           return Stream.value(User(id: userId()));
         }
 
-        final resource = createResource(stream: getUser, source: userId);
+        final resource = Resource(stream: getUser, source: userId);
         final idResource = resource.select((data) => data.id);
 
         await pumpEventQueue();
@@ -743,9 +743,9 @@ void main() {
         var errorCalledTimes = 0;
         var refreshingOnDataTimes = 0;
         var refreshingOnErrorTimes = 0;
-        final resource = createResource(fetcher: fetcher);
+        final resource = Resource(fetcher: fetcher);
 
-        createEffect(
+        Effect(
           (_) {
             resource.state.on(
               ready: (data) {
@@ -810,14 +810,14 @@ void main() {
                 const Duration(milliseconds: 300),
                 () => 1,
               );
-          final count = createResource(fetcher: fetcher);
+          final count = Resource(fetcher: fetcher);
 
           await expectLater(count.untilReady(), completion(1));
         },
       );
 
       test('check toString()', () async {
-        final r = createResource(
+        final r = Resource(
           fetcher: () => Future.value(1),
           options: const ResourceOptions(lazy: false),
         );
@@ -838,8 +838,8 @@ void main() {
     () {
       test('throws Exception for reactions that do not converge', () {
         var firstTime = true;
-        final count = createSignal(0);
-        final d = createEffect((_) {
+        final count = Signal(0);
+        final d = Effect((_) {
           // watch count
           count.value;
           if (firstTime) {

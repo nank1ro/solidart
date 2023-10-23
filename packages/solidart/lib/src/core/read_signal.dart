@@ -162,7 +162,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     if (condition(value)) return value;
 
     final completer = Completer<T>();
-    createEffect((dispose) {
+    Effect((dispose) {
       if (condition(value)) {
         dispose();
         completer.complete(value);

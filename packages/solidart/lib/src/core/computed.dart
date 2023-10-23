@@ -1,6 +1,7 @@
 part of 'core.dart';
 
 /// {@macro computed}
+@Deprecated('Use Computed instead')
 Computed<T> createComputed<T>(
   T Function() selector, {
   SignalOptions<T>? options,
@@ -154,7 +155,7 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
     bool fireImmediately = false,
   }) {
     // cause observation
-    final disposeEffect = createEffect((_) {
+    final disposeEffect = Effect((_) {
       value;
     });
     final disposeObservation = super.observe(

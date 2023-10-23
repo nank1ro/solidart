@@ -15,10 +15,8 @@ class _SolidReactivityPageState extends State<SolidReactivityPage> {
   Widget build(BuildContext context) {
     return Solid(
       providers: [
-        SolidSignal<Signal<int>>(
-            create: () => createSignal(0), id: #firstCounter),
-        SolidSignal<Signal<int>>(
-            create: () => createSignal(0), id: #secondCounter),
+        SolidSignal<Signal<int>>(create: () => Signal(0), id: #firstCounter),
+        SolidSignal<Signal<int>>(create: () => Signal(0), id: #secondCounter),
       ],
       child: Scaffold(
         appBar: AppBar(

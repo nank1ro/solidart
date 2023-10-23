@@ -21,6 +21,7 @@ class ResourceOptions {
 }
 
 /// {@macro resource}
+@Deprecated('Use Resource instead')
 Resource<T> createResource<T>({
   Future<T> Function()? fetcher,
   Stream<T> Function()? stream,

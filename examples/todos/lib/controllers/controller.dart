@@ -18,12 +18,12 @@ class TodosController {
   final ListSignal<Todo> todos;
 
   /// The list of completed todos
-  late final completedTodos = createComputed(
+  late final completedTodos = Computed(
     () => todos.where((todo) => todo.completed).toList(),
   );
 
   /// The list of incomplete todos
-  late final incompleteTodos = createComputed(
+  late final incompleteTodos = Computed(
     () => todos.where((todo) => !todo.completed).toList(),
   );
 

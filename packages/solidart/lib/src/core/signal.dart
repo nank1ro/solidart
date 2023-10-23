@@ -1,6 +1,7 @@
 part of 'core.dart';
 
 /// {@macro signal}
+@Deprecated('Use Signal instead')
 Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
     Signal<T>(value, options: options);
 

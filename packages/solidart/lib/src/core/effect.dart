@@ -22,6 +22,7 @@ class EffectOptions {
 }
 
 /// {@macro effect}
+@Deprecated('Use Effect instead')
 DisposeEffect createEffect(
   void Function(DisposeEffect dispose) callback, {
   ErrorCallback? onError,
@@ -100,6 +101,7 @@ abstract class ReactionInterface implements Derivation {
 class Effect implements ReactionInterface {
   /// {@macro effect}
   factory Effect(
+    @Deprecated('Use Effect instead')
     void Function(DisposeEffect dispose) callback, {
     ErrorCallback? onError,
     EffectOptions options = const EffectOptions(),
@@ -220,11 +222,12 @@ class Effect implements ReactionInterface {
     if (_context.hasCaughtException(this)) {
       if (_onError != null) {
         _onError!.call(_errorValue!);
-      } // coverage:ignore-start
+      }
+      // coverage:ignore-start
       else {
         throw _errorValue!;
       }
-// coverage:ignore-end
+      // coverage:ignore-end
     }
 
     _context.endBatch();
@@ -262,6 +265,11 @@ class Effect implements ReactionInterface {
   // ignore: unused_element
   void _suspend() {}
   // coverage:ignore-end
+
+  /// Invalidates the effect.
+  ///
+  /// After this operation the effect is useless.
+  void call() => dispose();
 
   /// Invalidates the effect.
   ///

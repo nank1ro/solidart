@@ -15,13 +15,13 @@ class MultipleSignalsPage extends StatelessWidget {
         providers: [
           // provide the firstName signal to descendants
           SolidSignal<Signal<String>>(
-            create: () => createSignal("James"),
+            create: () => Signal("James"),
             id: #firstName,
           ),
 
           // provide the lastName signal to descendants
           SolidSignal<Signal<String>>(
-            create: () => createSignal("Smith"),
+            create: () => Signal("Smith"),
             id: #lastName,
           ),
         ],

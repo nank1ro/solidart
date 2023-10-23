@@ -3,79 +3,93 @@
 [![Coverage](https://codecov.io/gh/nank1ro/solidart/branch/main/graph/badge.svg?token=HvJYtaixiW)](https://codecov.io/gh/nank1ro/solidart)
 [![GitHub issues](https://img.shields.io/github/issues/nank1ro/solidart)](https://github.com/nank1ro/solidart/issues/)
 [![GitHub pull-requests](https://img.shields.io/github/issues-pr/nank1ro/solidart.svg)](https://gitHub.com/nank1ro/solidart/pull/)
+[![solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/solidart?include_prereleases)](https://pub.dev/packages/solidart)
 [![flutter_solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/flutter_solidart?include_prereleases)](https://pub.dev/packages/flutter_solidart)
+[![All Contributors](https://img.shields.io/github/all-contributors/nank1ro/solidart?color=ee8449&style=flat-square)](#contributors)
 
 # A simple state-management library inspired by SolidJS.
 
 The objectives of this project are:
 
 1. Being simple and easy to learn
-2. Do not go against the framework (e.g. Flutter) with weird workarounds.
-3. Do not have a single global state, but put multiple states only in the most appropriate places
+2. Fits well with the framework's good practices
+3. Do not have a single global state, but multiple states only in the most appropriate places
 4. No code generation
 
 ## Learning
 
 For a comprehensive and updated documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart)
 
-There are 4 main concepts you should be aware:
+There are 5 main concepts you should be aware:
 
 1. [Signals](#signals)
 2. [Effects](#effects)
-3. [Resources](#resources)
-4. [Solid](#solid)
+3. [Computed](#computed)
+4. [Resources](#resources)
+5. [Solid (only flutter_solidart)](#solid)
 
 ### Signals
 
 Signals are the cornerstone of reactivity in _solidart_. They contain values that change over time; when you change a signal's value, it automatically updates anything that uses it.
 
-To create a signal, you have to use the `createSignal` method:
+To create a signal, you have to use the `Signal` class:
 
 ```dart
-final counter = createSignal(0);
+final counter = Signal(0);
 ```
 
-The argument passed to the create call is the initial value, and the return value is the signal.
+The argument passed to the class is the initial value, and the return value is the signal.
 
+
+To retrieve the current value, you can use:
 ```dart
-// Retrieve the current counter value
 print(counter.value); // prints 0
-// equal to
+// or
 print(counter());
-
-// Change the counter value
-counter.value++; // Increments by 1
-// or
-counter.value = 2; // Sets the value to 2
-// or
-counter.set(3);
-// or
-counter.update((value) => value * 2); // Update the value based on the current value
 ```
 
-If you're using `flutter_solidart` you can use the `SignalBuilder` widget to automatically react to the signal value, for example:
-
+To change the value, you can use:
 ```dart
-SignalBuilder(
-  signal: counter,
-  builder: (_, value, __) {
-    return Text('$value');
-  },
-)
+// Increments by 1
+counter.value++; 
+// Set the value to 2
+counter.value = 2;
+// equivalent to
+counter.set(2);
+// Update the value based on the current value
+counter.updateValue((value) => value * 2);
 ```
 
 ### Effects
 
 Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
 
-An effect can be created by using `createEffect`.
+An effect can be created by using the `Effect` class.
 The effect automatically subscribes to any signal and reruns when any of them change.
 So let's create an Effect that reruns whenever `counter` changes:
 
 ```dart
-final disposeFn = createEffect((_) {
+final disposeFn = Effect((_) {
     print("The count is now ${counter.value}");
 });
+```
+
+### Computed
+
+A computed signal is a signal that depends on other signals.
+To create a computed signal, you have to use the `Computed` class.
+
+A `Computed` automatically subscribes to any signal provided and reruns when any of them change.
+
+```dart
+final name = Signal('John');
+final lastName = Signal('Doe');
+final fullName = Computed(() => '${name.value} ${lastName.value}');
+print(fullName()); // prints "John Doe"
+
+// Update the name
+name.set('Jane');
+print(fullName()); // prints "Jane Doe"
 ```
 
 ### Resources
@@ -90,7 +104,7 @@ Let's create a Resource:
 
 ```dart
 // The source
-final userId = createSignal(1);
+final userId = Signal(1);
 
 // The fetcher
 Future<String> fetchUser() async {
@@ -101,13 +115,13 @@ Future<String> fetchUser() async {
 }
 
 // The resource
-final user = createResource(fetcher: fetchUser, source: userId);
+final user = Resource(fetcher: fetchUser, source: userId);
 ```
 
 A Resource can also be driven from a [stream] instead of a Future.
-In this case you just need to pass the `stream` field to the `createResource` method.
+In this case you just need to pass the `stream` field to the `Resource` class.
 
-Using `ResourceBuilder` you can react to the state of the resource:
+If you're using `ResourceBuilder` you can react to the state of the resource:
 
 ```dart
 ResourceBuilder(
@@ -186,7 +200,7 @@ class MyApp extends StatelessWidget {
     return Solid( // [1]
       providers: [
         SolidSignal<Signal<ThemeMode>>(
-          create: () => createSignal(ThemeMode.light),
+          create: () => Signal(ThemeMode.light),
         ),
       ],
       // using the builder method to immediately access the signal
@@ -264,7 +278,7 @@ And finally at `[5]` we update the signal value.
 > It is mandatory to pass the type of signal value otherwise you're going to encounter an error, for example:
 
 ```dart
-SolidSignal<Signal<ThemeMode>>(create: () => createSignal(ThemeMode.light))
+SolidSignal<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))
 ```
 and `context.observe<ThemeMode>` where ThemeMode is the type of the signal
 value.
@@ -286,10 +300,10 @@ of signal with its type value.
 
 Learn every feature of `flutter_solidart` including:
 
-1. `createSignal`
+1. `Signal`
 2. `Show` widget
-3. Derived signals with `createComputed`
-4. `Effect`s with basic and advanced usages
+3. `Computed`
+4. `Effect`s
 5. `SignalBuilder`, `DualSignalBuilder` and `TripleSignalBuilder`
-6. `createResource` and `ResourceBuilder`
+6. `Resource` and `ResourceBuilder`
 7. `Solid` and its fine-grained reactivity
