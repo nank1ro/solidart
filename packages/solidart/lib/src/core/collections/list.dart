@@ -24,9 +24,9 @@ ListSignal<E> createListSignal<E>(
 /// {@endtemplate}
 class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// {@macro list-signal}
-  ListSignal(List<E>? initialValue, {super.options})
+  ListSignal(Iterable<E> initialValue, {super.options})
       : name = options?.name ?? ReactiveContext.main.nameFor('ListSignal'),
-        super(List<E>.of(initialValue ?? []));
+        super(initialValue.toList());
 
   @override
   // ignore: overridden_fields

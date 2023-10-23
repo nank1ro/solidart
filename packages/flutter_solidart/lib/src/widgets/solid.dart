@@ -5,6 +5,12 @@ import 'package:flutter_solidart/flutter_solidart.dart';
 
 part '../models/solid_element.dart';
 
+enum _SignalType {
+  signal,
+  computed,
+  readSignal,
+}
+
 /// {@template solid}
 /// Provides [providers] to descendants.
 ///
@@ -330,6 +336,7 @@ class Solid extends StatefulWidget {
     return state;
   }
 
+  /// {@template solid.get}
   /// Obtains the Provider of the given type T and [id] corresponding to the
   /// nearest [Solid] widget.
   ///
@@ -351,10 +358,12 @@ class Solid extends StatefulWidget {
   /// Doesn't listen to the provider so it won't cause the widget to rebuild.
   ///
   /// You may call this method inside the `initState` or `build` methods.
+  /// {@endtemplate}
   static T get<T>(BuildContext context, [Identifier? id]) {
     return _getOrCreateProvider<T>(context, id: id);
   }
 
+  /// {@template solid.maybeGet}
   /// Tries to obtain the Provider of the given type T and [id] corresponding to
   /// the nearest [Solid] widget.
   ///
@@ -376,6 +385,7 @@ class Solid extends StatefulWidget {
   /// Doesn't listen to the provider so it won't cause the widget to rebuild.
   ///
   /// You may call this method inside the `initState` or `build` methods.
+  /// {@endtemplate}
   static T? maybeGet<T>(BuildContext context, [Identifier? id]) {
     try {
       return _getOrCreateProvider<T>(context, id: id);
@@ -387,6 +397,7 @@ class Solid extends StatefulWidget {
     }
   }
 
+  /// {@template solid.getElement}
   /// Obtains the SolidElement of a Provider of the given type T and [id]
   /// corresponding to the nearest [Solid] widget.
   ///
@@ -408,6 +419,7 @@ class Solid extends StatefulWidget {
   /// Doesn't listen to the provider so it won't cause the widget to rebuild.
   ///
   /// You may call this method inside the `initState` or `build` methods.
+  /// {@endtemplate}
   static SolidElement<T> getElement<T>(BuildContext context, [Identifier? id]) {
     final state = _findState<T>(context, id: id);
     final element = state.widget.providers.firstWhere((element) {
@@ -416,6 +428,7 @@ class Solid extends StatefulWidget {
     return element as SolidElement<T>;
   }
 
+  /// {@template solid.observe}
   /// Subscribe to the [Signal] of the given value type and [id] corresponding
   /// to the nearest [Solid] widget rebuilding the widget when the value exposed
   /// by the [Signal] changes.
@@ -442,53 +455,67 @@ class Solid extends StatefulWidget {
   /// WARNING: Doesn't support observing a Resource.
   static T observe<T>(BuildContext context, [Identifier? id]) {
     SolidState? state;
-    Type? signalType;
+    var signalType = _SignalType.signal;
     if (id != null) {
       state = _findState<Never>(
         context,
         id: id,
         listen: true,
       );
-      signalType = state.widget.providers
+      final signalValueType = state.widget.providers
           .whereType<SolidSignal<dynamic>>()
           .firstWhere((element) => element.id == id)
           ._valueType;
+      if (signalValueType is Signal<T>) {
+        signalType = _SignalType.signal;
+      } else if (signalValueType is Computed<T>) {
+        signalType = _SignalType.computed;
+      } else if (signalValueType is ReadSignal<T>) {
+        signalType = _SignalType.readSignal;
+      }
     } else {
       try {
         state = _findState<Signal<T>>(context, listen: true);
-        signalType = Signal<T>;
+        signalType = _SignalType.signal;
       } catch (_) {
         try {
           state = _findState<Computed<T>>(context, listen: true);
-          signalType = Computed<T>;
+          signalType = _SignalType.computed;
         } catch (e) {
           state = _findState<ReadSignal<T>>(context, listen: true);
-          signalType = ReadSignal<T>;
+          signalType = _SignalType.readSignal;
         }
       }
     }
 
-    var createdSignal = state._createdProviders.entries
-        .firstWhereOrNull(
-          (element) =>
-              // ignore: avoid_dynamic_calls
-              element.value.runtimeType == signalType && element.key.id == id,
-        )
-        ?.value;
+    var createdSignal = state._createdProviders.entries.firstWhereOrNull(
+      (element) {
+        return switch (signalType) {
+          _SignalType.signal =>
+            element.value is Signal<T> && element.key.id == id,
+          _SignalType.computed =>
+            element.value is Computed<T> && element.key.id == id,
+          _SignalType.readSignal =>
+            element.value is ReadSignal<T> && element.key.id == id,
+        };
+      },
+    )?.value;
 
-    // if the signal is not already present, create it lazily
+    // if the signal is not already present, create it
     if (createdSignal == null) {
-      if (signalType == Signal<T>) {
-        createdSignal = state.createProvider<Signal<T>>(id);
-      } else if (signalType == ReadSignal<T>) {
-        createdSignal = state.createProvider<ReadSignal<T>>(id);
-      } else if (signalType == Computed<T>) {
-        createdSignal = state.createProvider<Computed<T>>(id);
+      switch (signalType) {
+        case _SignalType.signal:
+          createdSignal = state.createProvider<Signal<T>>(id);
+        case _SignalType.computed:
+          createdSignal = state.createProvider<Computed<T>>(id);
+        case _SignalType.readSignal:
+          createdSignal = state.createProvider<ReadSignal<T>>(id);
       }
     }
     return (createdSignal as SignalBase<T>).value;
   }
 
+  /// {@template solid.update}
   /// Convenience method to update a `Signal` value.
   ///
   /// You can use it to update a signal value, e.g:
@@ -505,6 +532,7 @@ class Solid extends StatefulWidget {
   /// but shorter when you don't need the signal for anything else.
   ///
   /// WARNING: Supports only the `Signal<T>` type
+  /// {@endtemplate}
   static void update<T>(
     BuildContext context,
     T Function(T value) callback, [

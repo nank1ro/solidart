@@ -24,9 +24,9 @@ SetSignal<E> createSetSignal<E>(
 /// {@endtemplate}
 class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// {@macro set-signal}
-  SetSignal(Set<E>? initialValue, {super.options})
+  SetSignal(Iterable<E> initialValue, {super.options})
       : name = options?.name ?? ReactiveContext.main.nameFor('SetSignal'),
-        super(Set<E>.of(initialValue ?? []));
+        super(initialValue.toSet());
 
   @override
   // ignore: overridden_fields

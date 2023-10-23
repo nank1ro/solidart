@@ -24,9 +24,9 @@ MapSignal<K, V> createMapSignal<K, V>(
 /// {@endtemplate}
 class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// {@macro map-signal}
-  MapSignal(Map<K, V>? initialValue, {super.options})
+  MapSignal(Map<K, V> initialValue, {super.options})
       : name = options?.name ?? ReactiveContext.main.nameFor('MapSignal'),
-        super(Map<K, V>.of(initialValue ?? {}));
+        super(Map<K, V>.of(initialValue));
 
   @override
   // ignore: overridden_fields
