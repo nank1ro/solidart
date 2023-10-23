@@ -466,11 +466,11 @@ class Solid extends StatefulWidget {
           .whereType<SolidSignal<dynamic>>()
           .firstWhere((element) => element.id == id)
           ._valueType;
-      if (signalValueType is Signal<T>) {
+      if (signalValueType == Signal<T>) {
         signalType = _SignalType.signal;
-      } else if (signalValueType is Computed<T>) {
+      } else if (signalValueType == Computed<T>) {
         signalType = _SignalType.computed;
-      } else if (signalValueType is ReadSignal<T>) {
+      } else if (signalValueType == ReadSignal<T>) {
         signalType = _SignalType.readSignal;
       }
     } else {
