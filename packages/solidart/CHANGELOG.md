@@ -21,6 +21,7 @@
 
 - **CHORE**: Rename the `firstWhere` method of a `ReadSignal` into `until`
 - **CHORE**: Rename the `firstWhereReady` method of a `Resource` into `untilReady`
+- **CHORE**: Rename the `update` method of a `Signal` into `updateValue`
 
 ## 1.1.0
 

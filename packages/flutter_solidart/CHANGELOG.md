@@ -21,6 +21,10 @@
   list.add(3);
   ```
 
+- **CHORE**: Rename the `firstWhere` method of a `ReadSignal` into `until`
+- **CHORE**: Rename the `firstWhereReady` method of a `Resource` into `untilReady`
+- **CHORE**: Rename the `update` method of a `Signal` into `updateValue`
+
 ## 1.2.0
 
 - **FEAT**: Add the method `maybeGet()` to the `Solid` widget to get a provider. If the provider can't be found, returns `null` instead of throwing like `get()` does
