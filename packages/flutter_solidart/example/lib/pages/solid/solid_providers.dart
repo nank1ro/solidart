@@ -17,12 +17,6 @@ class NumberProvider {
   final int number;
 }
 
-// Using an Enum as a key for SolidProviders, you can use any type of Object, like int, string, etc.
-enum ProviderId {
-  firstNumber,
-  secondNumber,
-}
-
 class SolidProvidersPage extends StatelessWidget {
   const SolidProvidersPage({super.key});
 
@@ -43,13 +37,13 @@ class SolidProvidersPage extends StatelessWidget {
             create: () => const NumberProvider(1),
             // Do not create the provider lazily, but immediately
             lazy: false,
-            id: ProviderId.firstNumber,
+            id: #firstNumber,
           ),
           SolidProvider<NumberProvider>(
             create: () => const NumberProvider(100),
             // Do not create the provider lazily, but immediately
             lazy: false,
-            id: ProviderId.secondNumber,
+            id: #secondNumber,
           ),
         ],
         child: const SomeChild(),
@@ -67,16 +61,16 @@ class SomeChild extends StatelessWidget {
       builder: (_) => Solid.value(
         elements: [
           context.getElement<NameProvider>(),
-          context.getElement<NumberProvider>(ProviderId.firstNumber),
-          context.getElement<NumberProvider>(ProviderId.secondNumber),
+          context.getElement<NumberProvider>(#firstNumber),
+          context.getElement<NumberProvider>(#secondNumber),
         ],
         child: Dialog(
           child: Builder(builder: (innerContext) {
             final nameProvider = innerContext.get<NameProvider>();
             final numberProvider1 =
-                innerContext.get<NumberProvider>(ProviderId.firstNumber);
+                innerContext.get<NumberProvider>(#firstNumber);
             final numberProvider2 =
-                innerContext.get<NumberProvider>(ProviderId.secondNumber);
+                innerContext.get<NumberProvider>(#secondNumber);
             return SizedBox.square(
               dimension: 100,
               child: Center(
@@ -96,9 +90,8 @@ number2: ${numberProvider2.number}
   @override
   Widget build(BuildContext context) {
     final nameProvider = context.get<NameProvider>();
-    final numberProvider = context.get<NumberProvider>(ProviderId.firstNumber);
-    final numberProvider2 =
-        context.get<NumberProvider>(ProviderId.secondNumber);
+    final numberProvider = context.get<NumberProvider>(#firstNumber);
+    final numberProvider2 = context.get<NumberProvider>(#secondNumber);
 
     return Center(
       child: Column(

@@ -9,7 +9,7 @@ class SolidSignalsPage extends StatefulWidget {
 }
 
 class _SolidSignalsPageState extends State<SolidSignalsPage> {
-  final count = createSignal(0);
+  final count = Signal(0);
 
   @override
   void dispose() {
@@ -34,7 +34,7 @@ class _SolidSignalsPageState extends State<SolidSignalsPage> {
 
           // provide the doubleCount signal to descendants
           SolidSignal<Computed<int>>(
-            create: () => createComputed(() => count() * 2),
+            create: () => Computed(() => count() * 2),
           ),
         ],
         child: const SomeChild(),

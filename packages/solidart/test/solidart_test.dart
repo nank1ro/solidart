@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
@@ -69,11 +70,11 @@ class SampleList {
 
 void main() {
   group(
-    'createSignal tests - ',
+    'Signal tests - ',
     () {
       test('with equals true it notifies only when the value changes',
           () async {
-        final counter = createSignal(
+        final counter = Signal(
           0,
           options: const SignalOptions<int>(equals: true, name: ''),
         );
@@ -105,7 +106,7 @@ void main() {
       test(
           'with the identical comparator it notifies only when the comparator '
           'returns false', () async {
-        final signal = createSignal(
+        final signal = Signal(
           null,
           options: const SignalOptions<_A>(),
         );
@@ -131,7 +132,7 @@ void main() {
       });
 
       test('check onDispose callback fired when disposing signal', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         final cb = MockCallbackFunction();
         s
           ..onDispose(cb.call)
@@ -140,7 +141,7 @@ void main() {
       });
 
       test('observe fireImmediately works', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         final cb = MockCallbackFunction();
         final unobserve = s.observe(
           (previousValue, value) => cb.call(),
@@ -154,7 +155,7 @@ void main() {
       });
 
       test('check previousValue stores the previous value', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         expect(
           s.previousValue,
           null,
@@ -169,7 +170,7 @@ void main() {
           reason: 'The signal should have 0 has previousValue',
         );
 
-        s.update((value) => value * 5);
+        s.updateValue((value) => value * 5);
         expect(
           s.previousValue,
           1,
@@ -178,10 +179,10 @@ void main() {
       });
 
       test('test firstWhere()', () async {
-        final count = createSignal(0);
+        final count = Signal(0);
 
         unawaited(
-          expectLater(count.firstWhere((value) => value > 5), completion(11)),
+          expectLater(count.until((value) => value > 5), completion(11)),
         );
         count
           ..set(2)
@@ -189,27 +190,27 @@ void main() {
       });
 
       test('check toString()', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         expect(s.toString(), startsWith('Signal<int>(value: 0'));
       });
 
       test('check Signal becomes ReadSignal', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         expect(s, const TypeMatcher<Signal<int>>());
         expect(s.toReadSignal(), const TypeMatcher<ReadSignal<int>>());
       });
 
       test('Signal is disposed after dispose', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         expect(s.disposed, false);
         s.dispose();
         expect(s.disposed, true);
       });
 
       test('Signal has observers', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         expect(s.hasObservers, false);
-        createEffect((dispose) {
+        Effect((dispose) {
           s();
         });
         expect(s.hasObservers, true);
@@ -217,7 +218,7 @@ void main() {
       });
 
       test('Signal<bool> toggle', () {
-        final signal = createSignal(false);
+        final signal = Signal(false);
         expect(signal(), false);
         signal.toggle();
         expect(signal(), true);
@@ -227,17 +228,17 @@ void main() {
   );
 
   group(
-    'createEffect tests = ',
+    'Effect tests = ',
     () {
       test('check effect reaction', () async {
-        final signal1 = createSignal(0);
-        final signal2 = createSignal(0);
+        final signal1 = Signal(0);
+        final signal2 = Signal(0);
 
         final cb = MockCallbackFunctionWithValue<int>();
-        createEffect(
+        Effect(
           (_) => cb(signal1()),
         );
-        createEffect(
+        Effect(
           (_) => cb(signal2()),
         );
 
@@ -255,7 +256,7 @@ void main() {
 
       test('check effect reaction with delay', () async {
         final cb = MockCallbackFunction();
-        createEffect(
+        Effect(
           (_) => cb(),
           options: const EffectOptions(delay: Duration(milliseconds: 500)),
         );
@@ -266,7 +267,7 @@ void main() {
 
       test('check effect onError', () async {
         Object? detectedError;
-        createEffect(
+        Effect(
           (_) => throw Exception(),
           onError: (error) {
             detectedError = error;
@@ -284,8 +285,8 @@ void main() {
       test('check that a signal selector updates only for the selected value',
           () async {
         final klass = _B(_C(0));
-        final s = createSignal(klass);
-        final selected = createComputed(() => s().c.count);
+        final s = Signal(klass);
+        final selected = Computed(() => s().c.count);
         final cb = MockCallbackFunctionWithValue<int>();
 
         void listener() {
@@ -318,8 +319,8 @@ void main() {
       });
 
       test('custom signal options for derived signal', () async {
-        final a = createSignal(SampleList([1]));
-        final selected = createComputed(
+        final a = Signal(SampleList([1]));
+        final selected = Computed(
           () => a().numbers,
           options: SignalOptions<List<int>>(
             comparator: (a, b) => const ListEquality<int>().equals(a, b),
@@ -341,8 +342,8 @@ void main() {
       });
 
       test("selector's readable signal contains previous value", () async {
-        final signal = createSignal(0);
-        final derived = createComputed(() => signal() * 2);
+        final signal = Signal(0);
+        final derived = Computed(() => signal() * 2);
         await pumpEventQueue();
         expect(derived.hasPreviousValue, false);
         expect(derived.previousValue, null);
@@ -364,15 +365,15 @@ void main() {
       });
 
       test('signal has previous value', () {
-        final s = createSignal(0);
+        final s = Signal(0);
         expect(s.hasPreviousValue, false);
         s.set(1);
         expect(s.hasPreviousValue, true);
       });
 
       test('nullable derived signal', () async {
-        final count = createSignal<int?>(0);
-        final doubleCount = createComputed(() {
+        final count = Signal<int?>(0);
+        final doubleCount = Computed(() {
           if (count() == null) return null;
           return count()! * 2;
         });
@@ -390,16 +391,16 @@ void main() {
       });
 
       test('derived signal disposes', () async {
-        final count = createSignal(0);
-        final doubleCount = createComputed(() => count() * 2);
+        final count = Signal(0);
+        final doubleCount = Computed(() => count() * 2);
         expect(doubleCount.disposed, false);
         doubleCount.dispose();
         expect(doubleCount.disposed, true);
       });
 
       test('check derived signal that throws', () async {
-        final count = createSignal(1);
-        final doubleCount = createComputed(
+        final count = Signal(1);
+        final doubleCount = Computed(
           () {
             if (count() == 1) {
               return count() * 2;
@@ -414,6 +415,13 @@ void main() {
           throwsA(const TypeMatcher<SolidartCaughtException>()),
         );
       });
+
+      test('check toString', () {
+        final count = Signal(1);
+        final doubleCount = Computed(() => count() * 2);
+
+        expect(doubleCount.toString(), startsWith('Computed<int>(value: 2'));
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
@@ -427,7 +435,7 @@ void main() {
         expect(s.previousValue, null);
         expect(s.listenerCount, 0);
 
-        createEffect((_) {
+        Effect((_) {
           s();
         });
         expect(s.listenerCount, 1);
@@ -444,11 +452,11 @@ void main() {
   group(
     'Resource tests',
     () {
-      test('check createResource with stream', () async {
+      test('check Resource with stream', () async {
         final streamController = StreamController<int>();
         addTearDown(streamController.close);
 
-        final resource = createResource(stream: () => streamController.stream);
+        final resource = Resource(stream: () => streamController.stream);
         expect(resource.state, isA<ResourceLoading<int>>());
         streamController.add(1);
         await pumpEventQueue();
@@ -466,10 +474,10 @@ void main() {
         expect(resource.state.error, isUnimplementedError);
       });
 
-      test('check createResource with stream and source', () async {
-        final count = createSignal(-1);
+      test('check Resource with stream and source', () async {
+        final count = Signal(-1);
 
-        final resource = createResource(
+        final resource = Resource(
           stream: () {
             if (count() < 1) return Stream.value(0);
             return Stream.value(count());
@@ -497,17 +505,17 @@ void main() {
         );
       });
 
-      test('check createResource with changing stream', () async {
+      test('check Resource with changing stream', () async {
         final streamControllerA = StreamController<int>();
         final streamControllerB = StreamController<int>();
-        final source = createSignal(0);
+        final source = Signal(0);
         addTearDown(() {
           streamControllerA.close();
           streamControllerB.close();
           source.dispose();
         });
 
-        final resource = createResource(
+        final resource = Resource(
           stream: () {
             if (source().isEven) {
               return streamControllerA.stream;
@@ -542,9 +550,9 @@ void main() {
         expect(resource.state.value, 3);
       });
 
-      test('check createResource with future that throws', () async {
+      test('check Resource with future that throws', () async {
         Future<User> getUser() => throw Exception();
-        final resource = createResource<User>(
+        final resource = Resource<User>(
           fetcher: getUser,
           options: const ResourceOptions(lazy: false),
         );
@@ -556,15 +564,15 @@ void main() {
         expect(resource.state.error, isException);
       });
 
-      test('check createResource with future', () async {
-        final userId = createSignal(0);
+      test('check Resource with future', () async {
+        final userId = Signal(0);
 
         Future<User> getUser() {
           if (userId() == 2) throw Exception();
           return Future.value(User(id: userId()));
         }
 
-        final resource = createResource(
+        final resource = Resource(
           fetcher: getUser,
           source: userId,
           options: const ResourceOptions(lazy: false),
@@ -599,7 +607,7 @@ void main() {
 
       test('update ResourceState', () async {
         Future<int> fetcher() => Future.value(1);
-        final resource = createResource(fetcher: fetcher);
+        final resource = Resource(fetcher: fetcher);
         expect(resource.state, isA<ResourceLoading<int>>());
         await pumpEventQueue();
         expect(
@@ -620,7 +628,7 @@ void main() {
               const Duration(milliseconds: 200),
               () => 1,
             );
-        final resource = createResource(fetcher: fetcher);
+        final resource = Resource(fetcher: fetcher);
         expect(resource.state, isA<ResourceLoading<int>>());
         await Future<void>.delayed(const Duration(milliseconds: 100));
         expect(resource.state, isA<ResourceLoading<int>>());
@@ -633,7 +641,7 @@ void main() {
       });
       test('refresh Resource with stream while loading', () async {
         final controller = StreamController<int>();
-        final resource = createResource(stream: () => controller.stream);
+        final resource = Resource(stream: () => controller.stream);
         expect(resource.state, isA<ResourceLoading<int>>());
 
         await resource.refresh();
@@ -644,14 +652,14 @@ void main() {
         expect(resource.state, isA<ResourceReady<int>>());
       });
       test('check ResourceSelector with future', () async {
-        final userId = createSignal(0);
+        final userId = Signal(0);
 
         Future<User> getUser() {
           if (userId() == 2) throw Exception();
           return Future.value(User(id: userId()));
         }
 
-        final resource = createResource(fetcher: getUser, source: userId);
+        final resource = Resource(fetcher: getUser, source: userId);
         final idResource = resource.select((data) => data.id);
 
         await pumpEventQueue();
@@ -683,14 +691,14 @@ void main() {
       });
 
       test('check ResourceSelector with stream', () async {
-        final userId = createSignal(0);
+        final userId = Signal(0);
 
         Stream<User> getUser() {
           if (userId() == 2) return Stream<User>.error(Exception());
           return Stream.value(User(id: userId()));
         }
 
-        final resource = createResource(stream: getUser, source: userId);
+        final resource = Resource(stream: getUser, source: userId);
         final idResource = resource.select((data) => data.id);
 
         await pumpEventQueue();
@@ -735,9 +743,9 @@ void main() {
         var errorCalledTimes = 0;
         var refreshingOnDataTimes = 0;
         var refreshingOnErrorTimes = 0;
-        final resource = createResource(fetcher: fetcher);
+        final resource = Resource(fetcher: fetcher);
 
-        createEffect(
+        Effect(
           (_) {
             resource.state.on(
               ready: (data) {
@@ -802,14 +810,14 @@ void main() {
                 const Duration(milliseconds: 300),
                 () => 1,
               );
-          final count = createResource(fetcher: fetcher);
+          final count = Resource(fetcher: fetcher);
 
-          await expectLater(count.firstWhereReady(), completion(1));
+          await expectLater(count.untilReady(), completion(1));
         },
       );
 
       test('check toString()', () async {
-        final r = createResource(
+        final r = Resource(
           fetcher: () => Future.value(1),
           options: const ResourceOptions(lazy: false),
         );
@@ -830,8 +838,8 @@ void main() {
     () {
       test('throws Exception for reactions that do not converge', () {
         var firstTime = true;
-        final count = createSignal(0);
-        final d = createEffect((_) {
+        final count = Signal(0);
+        final d = Effect((_) {
           // watch count
           count.value;
           if (firstTime) {
@@ -854,4 +862,675 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
+
+  group(
+    'ListSignal tests',
+    () {
+      test('check length', () {
+        final list = ListSignal([1, 2]);
+        expect(list.length, 2);
+        list.add(3);
+        expect(list.length, 3);
+      });
+
+      test('change length', () {
+        final list = ListSignal<int?>([1, 2]);
+        expect(list.length, 2);
+        list.length = 3;
+        expect(list.length, 3);
+        expect(const ListEquality<int?>().equals(list, [1, 2, null]), true);
+      });
+
+      test('check elementAt', () {
+        final list = ListSignal([1, 2]);
+        expect(list.elementAt(0), 1);
+        expect(list.elementAt(1), 2);
+        expect(() => list.elementAt(2), throwsRangeError);
+
+        list.add(3);
+        expect(list.elementAt(2), 3);
+      });
+
+      test('check operator +', () {
+        final list = ListSignal([1, 2]);
+        expect(list + [3, 4], [1, 2, 3, 4]);
+      });
+
+      test('check operator []', () {
+        final list = ListSignal([1, 2]);
+        expect(list[0], 1);
+        expect(list[1], 2);
+        expect(() => list[2], throwsRangeError);
+
+        list.add(3);
+        expect(list[2], 3);
+      });
+
+      test('check operator []=', () {
+        final list = ListSignal([1, 2]);
+        expect(list[0], 1);
+        expect(list[1], 2);
+        list[0] = 3;
+        expect(list[0], 3);
+        list[1] = 4;
+        expect(list[1], 4);
+      });
+
+      test('check add', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.add(3);
+        expect(list, [1, 2, 3]);
+      });
+
+      test('check addAll', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.addAll([3, 4]);
+        expect(list, [1, 2, 3, 4]);
+      });
+
+      test('check single', () {
+        final list = ListSignal([1]);
+        expect(list.single, 1);
+        list.add(3);
+        expect(() => list.single, throwsStateError);
+      });
+
+      test('check first', () {
+        final list = ListSignal([1, 2]);
+        expect(list.first, 1);
+
+        list.add(3);
+        expect(list.first, 1);
+
+        list[0] = 4;
+        expect(list.first, 4);
+      });
+
+      test('check last', () {
+        final list = ListSignal([1, 2]);
+        expect(list.last, 2);
+
+        list.add(3);
+        expect(list.last, 3);
+
+        list[2] = 4;
+        expect(list.last, 4);
+      });
+
+      test('check singleWhere', () {
+        final list = ListSignal([1, 2]);
+        expect(list.singleWhere((e) => e == 1), 1);
+        expect(() => list.singleWhere((e) => e == 4), throwsStateError);
+      });
+
+      test('check firstWhere', () {
+        final list = ListSignal([1, 2]);
+        expect(list.firstWhere((e) => e == 1), 1);
+        expect(() => list.firstWhere((e) => e == 4), throwsStateError);
+      });
+
+      test('check lastWhere', () {
+        final list = ListSignal([1, 2]);
+        expect(list.lastWhere((e) => e == 1), 1);
+        expect(() => list.lastWhere((e) => e == 4), throwsStateError);
+      });
+
+      test('check lastIndexWhere', () {
+        final list = ListSignal([1, 2]);
+        expect(list.lastIndexWhere((e) => e == 1), 0);
+        expect(list.lastIndexWhere((e) => e == 4), -1);
+      });
+
+      test('check isEmpty', () {
+        final list = ListSignal([1, 2]);
+        expect(list.isEmpty, false);
+        list.clear();
+        expect(list.isEmpty, true);
+      });
+
+      test('check isNotEmpty', () {
+        final list = ListSignal([1, 2]);
+        expect(list.isNotEmpty, true);
+        list.clear();
+        expect(list.isNotEmpty, false);
+      });
+
+      test('check clear', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.clear();
+        expect(list, isEmpty);
+      });
+
+      test('check remove', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.remove(1);
+        expect(list, [2]);
+      });
+
+      test('check removeAt', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.removeAt(0);
+        expect(list, [2]);
+      });
+
+      test('check removeWhere', () {
+        final list = ListSignal([1, 2, 1]);
+        expect(list, [1, 2, 1]);
+        list.removeWhere((e) => e == 1);
+        expect(list, [2]);
+      });
+
+      test('check retainWhere', () {
+        final list = ListSignal([1, 2, 1]);
+        expect(list, [1, 2, 1]);
+
+        list.retainWhere((e) => e == 1);
+        expect(list, [1, 1]);
+      });
+
+      test('check setAll', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.setAll(0, [3, 4]);
+        expect(list, [3, 4]);
+      });
+
+      test('check setRange', () {
+        final list1 = ListSignal([1, 2, 3, 4]);
+        final list2 = [5, 6, 7, 8, 9];
+
+        const skipCount = 3;
+        list1.setRange(1, 3, list2, skipCount);
+        expect(list1, [1, 8, 9, 4]);
+      });
+
+      test('check replaceRange', () {
+        final list = ListSignal([1, 2, 3, 4, 5]);
+        final replacements = [6, 7];
+        list.replaceRange(1, 4, replacements);
+        expect(list, [1, 6, 7, 5]);
+      });
+
+      test('check fillRange', () {
+        final list = ListSignal([1, 2, 3, 4, 5]);
+        expect(list, [1, 2, 3, 4, 5]);
+        list.fillRange(1, 4, 6);
+        expect(list, [1, 6, 6, 6, 5]);
+      });
+
+      test('check sort', () {
+        final list = ListSignal([3, 1, 2, 4]);
+        expect(list, [3, 1, 2, 4]);
+        list.sort((a, b) => a.compareTo(b));
+        expect(list, [1, 2, 3, 4]);
+      });
+
+      test('check sublist', () {
+        final list = ListSignal([1, 2, 3, 4]);
+        expect(list.sublist(1, 3), [2, 3]);
+      });
+
+      test('check toList', () {
+        final list = ListSignal([1, 2]);
+        expect(list.toList(growable: false), [1, 2]);
+      });
+
+      test('check cast', () {
+        final list = ListSignal([1, 2]);
+        expect(list.cast<int>(), [1, 2]);
+      });
+
+      test('check toString', () {
+        final list = ListSignal([1, 2]);
+        expect(list.toString(), startsWith('ListSignal<int>(value: [1, 2]'));
+      });
+
+      test('check set first', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.first = 3;
+        expect(list, [3, 2]);
+      });
+
+      test('check set last', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.last = 3;
+        expect(list, [1, 3]);
+      });
+
+      test('check insert', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.insert(0, 3);
+        expect(list, [3, 1, 2]);
+      });
+
+      test('check insertAll', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.insertAll(0, [3, 4]);
+        expect(list, [3, 4, 1, 2]);
+      });
+
+      test('check removeLast', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.removeLast();
+        expect(list, [1]);
+      });
+
+      test('check removeRange', () {
+        final list = ListSignal([1, 2, 3, 4]);
+        expect(list, [1, 2, 3, 4]);
+        list.removeRange(1, 3);
+        expect(list, [1, 4]);
+      });
+
+      test('check shuffle', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.shuffle(_AlwaysZeroRandom());
+        expect(list, [2, 1]);
+      });
+
+      test('check set', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.set([3, 4]);
+        expect(list, [3, 4]);
+      });
+
+      test('check set with equals', () {
+        final list = ListSignal<int>(
+          [1, 2],
+          options: const SignalOptions(equals: true),
+        );
+        expect(list, [1, 2]);
+        list.set([3, 4]);
+        expect(list, [3, 4]);
+      });
+
+      test('check updateValue', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        list.updateValue((v) => v..add(3));
+        expect(list, [1, 2, 3]);
+      });
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
+
+  group(
+    'SetSignal tests',
+    () {
+      test('check length', () {
+        final set = SetSignal({1, 2});
+        expect(set.length, 2);
+        set.add(3);
+        expect(set.length, 3);
+      });
+
+      test('check elementAt', () {
+        final set = SetSignal({1, 2});
+        expect(set.elementAt(0), 1);
+        expect(set.elementAt(1), 2);
+        expect(() => set.elementAt(2), throwsRangeError);
+
+        set.add(3);
+        expect(set.elementAt(2), 3);
+      });
+
+      test('check add', () {
+        final set = SetSignal({1, 2});
+        expect(set, [1, 2]);
+        set.add(3);
+        expect(set, [1, 2, 3]);
+      });
+
+      test('check addAll', () {
+        final set = SetSignal({1, 2});
+        expect(set, [1, 2]);
+        set.addAll([3, 4]);
+        expect(set, [1, 2, 3, 4]);
+      });
+
+      test('check single', () {
+        final set = SetSignal({1});
+        expect(set.single, 1);
+        set.add(3);
+        expect(() => set.single, throwsStateError);
+      });
+
+      test('check first', () {
+        final set = SetSignal({1, 2});
+        expect(set.first, 1);
+
+        set.remove(1);
+        expect(set.first, 2);
+      });
+
+      test('check last', () {
+        final set = SetSignal({1, 2});
+        expect(set.last, 2);
+
+        set.add(3);
+        expect(set.last, 3);
+      });
+
+      test('check singleWhere', () {
+        final set = SetSignal({1, 2});
+        expect(set.singleWhere((e) => e == 1), 1);
+        expect(() => set.singleWhere((e) => e == 4), throwsStateError);
+      });
+
+      test('check firstWhere', () {
+        final set = SetSignal({1, 2});
+        expect(set.firstWhere((e) => e == 1), 1);
+        expect(() => set.firstWhere((e) => e == 4), throwsStateError);
+      });
+
+      test('check lastWhere', () {
+        final set = SetSignal({1, 2});
+        expect(set.lastWhere((e) => e == 1), 1);
+        expect(() => set.lastWhere((e) => e == 4), throwsStateError);
+      });
+
+      test('check isEmpty', () {
+        final set = SetSignal({1, 2});
+        expect(set.isEmpty, false);
+        set.clear();
+        expect(set.isEmpty, true);
+      });
+
+      test('check isNotEmpty', () {
+        final set = SetSignal({1, 2});
+        expect(set.isNotEmpty, true);
+        set.clear();
+        expect(set.isNotEmpty, false);
+      });
+
+      test('check clear', () {
+        final set = SetSignal({1, 2});
+        expect(set, [1, 2]);
+        set.clear();
+        expect(set, isEmpty);
+      });
+
+      test('check remove', () {
+        final set = SetSignal({1, 2});
+        expect(set, [1, 2]);
+        set.remove(1);
+        expect(set, [2]);
+      });
+
+      test('check removeWhere', () {
+        final set = SetSignal({1, 2, 3});
+        expect(set, {1, 2, 3});
+        set.removeWhere((e) => e == 1);
+        expect(set, {2, 3});
+      });
+
+      test('check retainWhere', () {
+        final set = SetSignal({
+          1,
+          2,
+        });
+        expect(set, {1, 2});
+
+        set.retainWhere((e) => e == 1);
+        expect(set, {1});
+      });
+
+      test('check toList', () {
+        final set = SetSignal({1, 2});
+        expect(set.toList(growable: false), [1, 2]);
+      });
+
+      test('check cast', () {
+        final set = SetSignal({1, 2});
+        expect(set.cast<int>(), [1, 2]);
+      });
+
+      test('check toString', () {
+        final set = SetSignal({1, 2});
+        expect(set.toString(), startsWith('SetSignal<int>(value: {1, 2}'));
+      });
+
+      test('check contains', () {
+        final set = SetSignal({1, 2});
+        expect(set.contains(1), true);
+        expect(set.contains(3), false);
+      });
+
+      test('check lookup', () {
+        final set = SetSignal({1, 2});
+        expect(set.lookup(1), 1);
+        expect(set.lookup(3), null);
+      });
+
+      test('check retainAll', () {
+        final set = SetSignal({1, 2, 3, 4});
+        expect(set, {1, 2, 3, 4});
+        set.retainAll({1, 3, 10});
+        expect(set, {1, 3});
+      });
+
+      test('check set', () {
+        final set = SetSignal({1, 2});
+        expect(set, {1, 2});
+        set.set({3, 4});
+        expect(set, {3, 4});
+      });
+
+      test('check set with equals', () {
+        final set =
+            SetSignal<int>({1, 2}, options: const SignalOptions(equals: true));
+        expect(set, {1, 2});
+        set.set({3, 4});
+        expect(set, {3, 4});
+      });
+
+      test('check updateValue', () {
+        final set = SetSignal({1, 2});
+        expect(set, {1, 2});
+        set.updateValue((v) => v..add(3));
+        expect(set, {1, 2, 3});
+      });
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
+
+  group(
+    'MapSignal tests',
+    () {
+      test('check [] operator', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map['a'], 1);
+        expect(map['c'], null);
+        expect(map['b'], 2);
+      });
+
+      test('check []= operator', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map['a'], 1);
+        map['a'] = 3;
+        expect(map['a'], 3);
+      });
+
+      test('check clear', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.clear();
+        expect(map, isEmpty);
+      });
+
+      test('check keys', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.keys, ['a', 'b']);
+        map.clear();
+        expect(map.keys, isEmpty);
+      });
+
+      test('check values', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.values, [1, 2]);
+        map.clear();
+        expect(map.values, isEmpty);
+      });
+
+      test('check remove', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.remove('a');
+        expect(map, {'b': 2});
+      });
+
+      test('check cast', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.cast<String, int>(), {'a': 1, 'b': 2});
+      });
+
+      test('check length', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.length, 2);
+        map['c'] = 3;
+        expect(map.length, 3);
+      });
+
+      test('check isEmpty', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.isEmpty, false);
+        map.clear();
+        expect(map.isEmpty, true);
+      });
+
+      test('check isNotEmpty', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.isNotEmpty, true);
+        map.clear();
+        expect(map.isNotEmpty, false);
+      });
+
+      test('check containsKey', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.containsKey('a'), true);
+        expect(map.containsKey('c'), false);
+      });
+
+      test('check containsValue', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map.containsValue(1), true);
+        expect(map.containsValue(3), false);
+      });
+
+      test('check entries', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(Map.fromEntries(map.entries), map);
+        map.clear();
+        expect(map.entries, isEmpty);
+      });
+
+      test('check addEntries', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.addEntries({'c': 3, 'd': 4}.entries);
+        expect(map, {'a': 1, 'b': 2, 'c': 3, 'd': 4});
+      });
+
+      test('check addAll', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.addAll({'c': 3, 'd': 4});
+        expect(map, {'a': 1, 'b': 2, 'c': 3, 'd': 4});
+      });
+
+      test('check putIfAbset', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.putIfAbsent('c', () => 3);
+        expect(map, {'a': 1, 'b': 2, 'c': 3});
+        map.putIfAbsent('a', () => 4);
+        expect(map, {'a': 1, 'b': 2, 'c': 3});
+      });
+
+      test('check removeWhere', () {
+        final map = MapSignal({'a': 1, 'b': 2, 'c': 1});
+        expect(map, {'a': 1, 'b': 2, 'c': 1});
+        map.removeWhere((k, v) => v == 1);
+        expect(map, {'b': 2});
+      });
+
+      test('check update', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.update('a', (value) => 3);
+        expect(map, {'a': 3, 'b': 2});
+
+        map.update('c', (value) => 4, ifAbsent: () => 4);
+        expect(map, {'a': 3, 'b': 2, 'c': 4});
+
+        expect(() => map.update('d', (value) => 5), throwsArgumentError);
+      });
+
+      test('check updateAll', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.updateAll((k, v) => v * 2);
+        expect(map, {'a': 2, 'b': 4});
+      });
+
+      test('check toString', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(
+          map.toString(),
+          startsWith('MapSignal<String, int>(value: {a: 1, b: 2}'),
+        );
+      });
+
+      test('check set', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.set({'c': 3, 'd': 4});
+        expect(map, {'c': 3, 'd': 4});
+      });
+
+      test('check set with equals', () {
+        final map = MapSignal<String, int>(
+          {'a': 1, 'b': 2},
+          options: const SignalOptions(equals: true),
+        );
+        expect(map, {'a': 1, 'b': 2});
+        map.set({'c': 3, 'd': 4});
+        expect(map, {'c': 3, 'd': 4});
+      });
+
+      test('check updateValue', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.updateValue((v) {
+          v['c'] = 3;
+          return v;
+        });
+        expect(map, {'a': 1, 'b': 2, 'c': 3});
+      });
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
+}
+
+class _AlwaysZeroRandom implements Random {
+  @override
+  bool nextBool() => false;
+
+  @override
+  double nextDouble() => 0;
+
+  @override
+  int nextInt(int max) => 0;
 }

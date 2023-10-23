@@ -1,9 +1,25 @@
 ---
-title: Derived Signals
-description: Learn how to use Derived Signals
+title: Computed
+description: Learn how to use Computed Signals
 ---
 
-# Derived Signals
+# Computed
+
+A computed signal is a signal that depends on other signals.
+To create a computed signal, you have to use the `Computed` class.
+
+A `Computed` automatically subscribes to any signal provided and reruns when any of them change.
+
+```dart
+final name = Signal('John');
+final lastName = Signal('Doe');
+final fullName = Computed(() => '${name.value} ${lastName.value}');
+print(fullName()); // prints "John Doe"
+
+// Update the name
+name.set('Jane');
+print(fullName()); // prints "Jane Doe"
+```
 
 You may want to subscribe only to a sub-field of a `Signal` value.
 ```dart
@@ -29,21 +45,21 @@ class User {
 }
 
 // create a user signal
-final user = createSignal(const User(name: "name", age: 20));
+final user = Signal(const User(name: "name", age: 20));
 
 // create a derived signal just for the age
-final age = createComputed(() => user().age);
+final age = Computed(() => user().age);
 
 // adding an effect to print the age
-createEffect(() {
+Effect(() {
   print('age changed from ${age.previousValue} into ${age.value}');
 });
 
 // just update the name, the effect above doesn't run because the age has not changed
-user.update((value) => value.copyWith(name: 'new-name'));
+user.updateValue((value) => value.copyWith(name: 'new-name'));
 
 // just update the age, the effect above prints
-user.update((value) => value.copyWith(age: 21));
+user.updateValue((value) => value.copyWith(age: 21));
 ```
 
 A derived signal is not of type `Signal` but is a `ReadSignal`.
@@ -51,16 +67,16 @@ The difference with a normal `Signal` is that a `ReadSignal` doesn't have a valu
 
 You can also use derived signals in other ways, like here:
 ```dart
-final counter = createSignal(0);
-final doubleCounter = createComputed(() => counter() * 2);
+final counter = Signal(0);
+final doubleCounter = Computed(() => counter() * 2);
 ```
 
 Every time the `counter` signal changes, the doubleCounter updates with the new doubled `counter` value.
 
 You can also transform the value type into a `bool`:
 ```dart
-final counter = createSignal(0); // type: int
-final isGreaterThan5 = createComputed(() => counter() > 5); // type: bool
+final counter = Signal(0); // type: int
+final isGreaterThan5 = Computed(() => counter() > 5); // type: bool
 ```
 
 `isGreaterThan5` will update only when the `counter` value becomes lower/greater than `5`.

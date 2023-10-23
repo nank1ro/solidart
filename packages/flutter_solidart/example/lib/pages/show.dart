@@ -10,7 +10,7 @@ class ShowPage extends StatefulWidget {
 }
 
 class _ShowPageState extends State<ShowPage> {
-  final loggedIn = createSignal(false);
+  final loggedIn = Signal(false);
 
   @override
   void dispose() {

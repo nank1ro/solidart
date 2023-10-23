@@ -90,13 +90,13 @@ class Show<T extends bool> extends StatefulWidget {
 }
 
 class _ShowState<T extends bool> extends State<Show<T>> {
-  final show = createSignal(false);
+  final show = Signal(false);
   late final DisposeEffect disposeEffect;
 
   @override
   void initState() {
     super.initState();
-    disposeEffect = createEffect((dispose) {
+    disposeEffect = Effect((dispose) {
       show.set(widget.when());
     });
   }

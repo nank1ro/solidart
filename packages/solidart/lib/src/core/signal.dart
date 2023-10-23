@@ -1,8 +1,12 @@
 part of 'core.dart';
+// coverage:ignore-start
 
 /// {@macro signal}
+@Deprecated('Use Signal instead')
 Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
     Signal<T>(value, options: options);
+
+// coverage:ignore-end
 
 /// {@template signal}
 /// # Signals
@@ -135,7 +139,7 @@ class Signal<T> extends ReadSignal<T> {
 
   /// Calls a function with the current [value] and assigns the result as the
   /// new value.
-  T update(T Function(T value) callback) => value = callback(value);
+  T updateValue(T Function(T value) callback) => value = callback(value);
 
   /// Converts this [Signal] into a [ReadSignal]
   /// Use this method to remove the visility to the value setter.

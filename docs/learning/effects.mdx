@@ -7,34 +7,29 @@ description: Introduction to Effects
 
 Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
 
-An effect can be created by using `createEffect`.
+An effect can be created by using the `Effect` class.
 The effect automatically subscribes to any signal and reruns when any of them change.
-
 So let's create an Effect that reruns whenever `counter` changes:
+
 ```dart
-// sample signal
-final counter = createSignal(0);
-
-// effect creation
-final disposeFn = createEffect((_) {
+final disposeFn = Effect((_) {
     print("The count is now ${counter.value}");
 });
-// or
-final effect = Effect((disposeFn) {
-    print("The count is now ${counter.value}");
-});
-
-// The effect run immediately and prints `The count is now 0`;
-
-// increment the counter
-counter.value++;
-
-// The effect prints `The count is now 1`;
 ```
 
-The `createEffect` method returns a `Dispose` callback, invoke it to stop listening and clearing the effect.
+The effect run immediately and prints `The count is now 0`;
+
+
+Try incrementing the counter by 1:
 ```dart
-final disposeFn = createEffect((disposeFn) {
+counter.value++;
+```
+
+The effect prints `The count is now 1`;
+
+The `Effect` class returns a `Dispose` callback, invoke it to stop listening and clearing the effect.
+```dart
+final disposeFn = Effect((disposeFn) {
     print("The count is now ${counter.value}");
 });
 

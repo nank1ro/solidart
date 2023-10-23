@@ -25,7 +25,7 @@ class CounterPage extends StatefulWidget {
 }
 
 class _CounterPageState extends State<CounterPage> {
-  final counter = createSignal(0);
+  final counter = Signal(0);
 
   @override
   void dispose() {

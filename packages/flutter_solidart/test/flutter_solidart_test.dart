@@ -32,7 +32,7 @@ class NumberProvider {
 
 void main() {
   testWidgets('Show widget works properly', (tester) async {
-    final s = createSignal(true);
+    final s = Signal(true);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -59,12 +59,12 @@ void main() {
 
   testWidgets('ResourceBuilder widget works properly in ResourceReady state',
       (tester) async {
-    final s = createSignal(0);
+    final s = Signal(0);
     Future<int> fetcher() {
       return Future.delayed(const Duration(milliseconds: 50), () => s.value);
     }
 
-    final r = createResource(fetcher: fetcher, source: s);
+    final r = Resource(fetcher: fetcher, source: s);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -116,12 +116,12 @@ void main() {
 
   testWidgets('ResourceBuilder widget works properly in ResourceLoading state',
       (tester) async {
-    final s = createSignal(0);
+    final s = Signal(0);
     Future<int> fetcher() {
       return Future.delayed(const Duration(milliseconds: 150), () => s.value);
     }
 
-    final r = createResource(fetcher: fetcher, source: s);
+    final r = Resource(fetcher: fetcher, source: s);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -167,7 +167,7 @@ void main() {
 
   testWidgets('ResourceBuilder widget works properly in ResourceError state',
       (tester) async {
-    final s = createSignal(0);
+    final s = Signal(0);
     Future<int> fetcher() {
       return Future.delayed(
         const Duration(milliseconds: 150),
@@ -175,7 +175,7 @@ void main() {
       );
     }
 
-    final r = createResource(fetcher: fetcher, source: s);
+    final r = Resource(fetcher: fetcher, source: s);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -226,7 +226,7 @@ void main() {
   });
 
   testWidgets('SignalBuilder works properly', (tester) async {
-    final s = createSignal(0);
+    final s = Signal(0);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -248,8 +248,8 @@ void main() {
   });
 
   testWidgets('DualSignalBuilder works properly', (tester) async {
-    final s1 = createSignal(0);
-    final s2 = createSignal(0);
+    final s1 = Signal(0);
+    final s2 = Signal(0);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -275,9 +275,9 @@ void main() {
   });
 
   testWidgets('TripleSignalBuilder works properly', (tester) async {
-    final s1 = createSignal(0);
-    final s2 = createSignal(0);
-    final s3 = createSignal(0);
+    final s1 = Signal(0);
+    final s2 = Signal(0);
+    final s3 = Signal(0);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -309,7 +309,7 @@ void main() {
 
   group('Test Solid context.observe', () {
     testWidgets('Observe signals ids', (tester) async {
-      final s = createSignal(0);
+      final s = Signal(0);
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -317,7 +317,7 @@ void main() {
               providers: [
                 SolidSignal<Signal<int>>(create: () => s, id: 'counter'),
                 SolidSignal<Computed<int>>(
-                  create: () => createComputed(() => s() * 2),
+                  create: () => Computed(() => s() * 2),
                   id: 'double-counter',
                 ),
               ],
@@ -342,14 +342,14 @@ void main() {
     });
 
     testWidgets('Observe Computed', (tester) async {
-      final s = createSignal(0);
+      final s = Signal(0);
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: Solid(
               providers: [
                 SolidSignal<Computed<int>>(
-                  create: () => createComputed(() => s() * 2),
+                  create: () => Computed(() => s() * 2),
                 ),
               ],
               child: Builder(
@@ -371,7 +371,7 @@ void main() {
     });
 
     testWidgets('Observe ReadSignal', (tester) async {
-      final s = createSignal(0);
+      final s = Signal(0);
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -396,11 +396,41 @@ void main() {
       await tester.pumpAndSettle();
       expect(counterFinder(1), findsOneWidget);
     });
+
+    testWidgets('Observe ReadSignal with id', (tester) async {
+      final s = Signal(0);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Solid(
+              providers: [
+                SolidSignal<ReadSignal<int>>(
+                  create: s.toReadSignal,
+                  id: #counter,
+                ),
+              ],
+              child: Builder(
+                builder: (context) {
+                  final counter = context.observe<int>(#counter);
+                  return Text('$counter');
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      Finder counterFinder(int value) => find.text('$value');
+      expect(counterFinder(0), findsOneWidget);
+
+      s.value = 1;
+      await tester.pumpAndSettle();
+      expect(counterFinder(1), findsOneWidget);
+    });
   });
 
   testWidgets('Test Solid context.get with Signal', (tester) async {
-    final s = createSignal(0);
-    final s2 = createComputed(() => s() * 2);
+    final s = Signal(0);
+    final s2 = Computed(() => s() * 2);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -447,7 +477,7 @@ void main() {
           body: Solid(
             providers: [
               SolidSignal<Signal<int>>(
-                create: () => createSignal(0),
+                create: () => Signal(0),
                 id: 'counter',
               ),
             ],
@@ -495,7 +525,7 @@ void main() {
         );
       }
 
-      final s = createSignal(0);
+      final s = Signal(0);
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -562,7 +592,7 @@ void main() {
         );
       }
 
-      final s = createSignal(0);
+      final s = Signal(0);
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -573,7 +603,7 @@ void main() {
                   id: 'counter',
                 ),
                 SolidSignal<Computed<int>>(
-                  create: () => createComputed(() => s() * 2),
+                  create: () => Computed(() => s() * 2),
                   id: 'double-counter',
                 ),
               ],
@@ -934,7 +964,7 @@ void main() {
         home: Scaffold(
           body: Solid(
             providers: [
-              SolidSignal<Signal<int>>(create: () => createSignal(0)),
+              SolidSignal<Signal<int>>(create: () => Signal(0)),
             ],
             child: Builder(
               builder: (context) {
@@ -967,7 +997,7 @@ void main() {
   test(
     'Convert Signal to ValueNotifier',
     () {
-      final signal = createSignal(0);
+      final signal = Signal(0);
       final notifier = signal.toValueNotifier();
       expect(notifier, isA<ValueNotifier<int>>());
 

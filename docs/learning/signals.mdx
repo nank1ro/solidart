@@ -7,7 +7,7 @@ description: Introduction to Signals
 
 Signals are the cornerstone of reactivity in `solidart`. They contain values that change over time; when you change a signal's value, it automatically updates anything that uses it.
 
-To create a signal, let's import createSignal and call it like this:
+Let's see how to create a Signal:
 <Tabs
   groupId="library"
   values={[
@@ -33,29 +33,28 @@ To create a signal, let's import createSignal and call it like this:
 Next create the signal with:
 
 ```dart
-final counter = createSignal(0);
-// or
 final counter = Signal(0);
 ````
 
 The argument passed to the create call is the initial value, and the return value is the signal.
 
-To retrieve the current signal value use:
+To retrieve the current value, you can use:
 ```dart
-counter.value; // 0
+print(counter.value); // prints 0
 // or
-counter(); // 0
+print(counter());
 ```
 
-To update the current signal value you can use:
+To change the value, you can use:
 ```dart
-counter.value++; // increase by 1
-// or 
-counter.value = 5; // sets the value to 5
-// or
-counter.set(2); // sets the value to 2
-// or 
-counter.update((v) => v * 2); // update based on the current value
+// Increments by 1
+counter.value++; 
+// Set the value to 2
+counter.value = 2;
+// equivalent to
+counter.set(2);
+// Update the value based on the current value
+counter.updateValue((value) => value * 2);
 ```
 
 <Warning>Don't forget to call the `dispose()` method when you no longer need the signal.</Warning>

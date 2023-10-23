@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
     return Solid(
       providers: [
         SolidSignal<Signal<ThemeMode>>(
-          create: () => createSignal(ThemeMode.light),
+          create: () => Signal(ThemeMode.light),
         ),
       ],
       // using the builder method to immediately access the signal

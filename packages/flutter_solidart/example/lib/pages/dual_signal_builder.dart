@@ -9,8 +9,8 @@ class DualSignalBuilderPage extends StatefulWidget {
 }
 
 class _DualSignalBuilderPageState extends State<DualSignalBuilderPage> {
-  late final counter1 = createSignal(0);
-  late final counter2 = createSignal(0);
+  final counter1 = Signal(0);
+  final counter2 = Signal(0);
 
   @override
   void dispose() {

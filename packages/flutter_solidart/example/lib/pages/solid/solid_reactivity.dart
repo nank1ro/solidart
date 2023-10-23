@@ -3,12 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-// Used as signal keys for [Solid]
-enum SignalId {
-  firstCounter,
-  secondCounter,
-}
-
 class SolidReactivityPage extends StatefulWidget {
   const SolidReactivityPage({super.key});
 
@@ -21,10 +15,8 @@ class _SolidReactivityPageState extends State<SolidReactivityPage> {
   Widget build(BuildContext context) {
     return Solid(
       providers: [
-        SolidSignal<Signal<int>>(
-            create: () => createSignal(0), id: SignalId.firstCounter),
-        SolidSignal<Signal<int>>(
-            create: () => createSignal(0), id: SignalId.secondCounter),
+        SolidSignal<Signal<int>>(create: () => Signal(0), id: #firstCounter),
+        SolidSignal<Signal<int>>(create: () => Signal(0), id: #secondCounter),
       ],
       child: Scaffold(
         appBar: AppBar(
@@ -60,15 +52,13 @@ class _SolidReactivityPageState extends State<SolidReactivityPage> {
               children: [
                 TextButton(
                   onPressed: () {
-                    context.update<int>(
-                        (value) => value += 1, SignalId.firstCounter);
+                    context.update<int>((value) => value += 1, #firstCounter);
                   },
                   child: const Text('+1 counter1'),
                 ),
                 TextButton(
                   onPressed: () {
-                    context.update<int>(
-                        (value) => value += 1, SignalId.secondCounter);
+                    context.update<int>((value) => value += 1, #secondCounter);
                   },
                   child: const Text('+1 counter2'),
                 ),
@@ -87,7 +77,7 @@ class _Counter1 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter1 = context.observe<int>(SignalId.firstCounter);
+    final counter1 = context.observe<int>(#firstCounter);
     print('build counter1');
     return Text('Counter1: $counter1');
   }
@@ -99,7 +89,7 @@ class _Counter2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter2 = context.observe<int>(SignalId.secondCounter);
+    final counter2 = context.observe<int>(#secondCounter);
     print('build counter2');
     return Text('Counter2: $counter2');
   }
