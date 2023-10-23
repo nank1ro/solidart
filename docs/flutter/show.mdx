@@ -10,7 +10,7 @@ You should typically find yourself in the condition of wanting to render one wid
 Let's look at a simple example where we show the text 'Logged In' if the user is logged in or 'Logged out'.
 ```dart
 // sample signal that tells if the user is logged in or not
-final loggedIn = createSignal(false);
+final loggedIn = Signal(false);
 
 @override
 Widget build(BuildContext context) {
@@ -43,7 +43,7 @@ The `Show` widget takes a functions that returns a `bool`.
 You can easily convert any type to `bool`, for example:
 
 ```dart
-final count = createSignal(0);
+final count = Signal(0);
 
 @override
 Widget build(BuildContext context) {

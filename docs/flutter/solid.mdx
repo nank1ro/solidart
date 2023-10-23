@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
     return Solid(
       providers: [
         SolidSignal<Signal<ThemeMode>>(
-          create: () => createSignal(ThemeMode.light),
+          create: () => Signal(ThemeMode.light),
         ),
       ],
       // using the builder method to immediately access the signal
@@ -97,7 +97,7 @@ The `context.get()` method doesn't listen to the signal value. You may use this 
 
 > It is mandatory to set the type of signal to the `SolidSignal` otherwise you're going to encounter an error, for example:
 
-1. `SolidSignal<Signal<ThemeMode>>(create: () => createSignal(ThemeMode.light))` and `context.observe<ThemeMode>` where ThemeMode is the type of the signal value.
+1. `SolidSignal<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))` and `context.observe<ThemeMode>` where ThemeMode is the type of the signal value.
 2. `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
 
 ## Providers
