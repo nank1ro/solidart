@@ -170,7 +170,7 @@ void main() {
           reason: 'The signal should have 0 has previousValue',
         );
 
-        s.update((value) => value * 5);
+        s.updateValue((value) => value * 5);
         expect(
           s.previousValue,
           1,

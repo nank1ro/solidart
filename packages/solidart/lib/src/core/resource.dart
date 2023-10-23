@@ -176,6 +176,13 @@ class Resource<T> extends Signal<ResourceState<T>> {
   @Deprecated('Use previousState instead')
   @override
   ResourceState<T>? get previousValue => previousState;
+
+  @Deprecated('Use update instead')
+  @override
+  ResourceState<T> updateValue(
+    ResourceState<T> Function(ResourceState<T> state) callback,
+  ) =>
+      update(callback);
   // coverage:ignore-end
 
   /// The previous resource state
@@ -360,7 +367,8 @@ class Resource<T> extends Signal<ResourceState<T>> {
     return state.asReady!.value;
   }
 
-  @override
+  /// Calls a function with the current [state] and assigns the result as the
+  /// new state
   ResourceState<T> update(
     ResourceState<T> Function(ResourceState<T> state) callback,
   ) =>
