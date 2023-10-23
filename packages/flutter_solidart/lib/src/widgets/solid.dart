@@ -511,7 +511,7 @@ class Solid extends StatefulWidget {
     Identifier? id,
   ]) {
     // retrieve the signal and update its value
-    get<Signal<T>>(context, id).update(callback);
+    get<Signal<T>>(context, id).updateValue(callback);
   }
 
   /// Tries to find a provider of type T from the created providers and returns
@@ -537,9 +537,8 @@ class SolidState extends State<Solid> {
   // The key is the provider, while the value is its value.
   final Map<SolidElement<dynamic>, dynamic> _createdProviders = {};
 
-  // Keeps track of the value of each signal, used to detect which signal
-  // updated and to implement fine-grained reactivity.
-  Map<Identifier, dynamic> _signalValues = {};
+  var _changedDependencies = <Identifier>[];
+  var _changesCounter = 0;
 
   // Stores all the disposeFn for each signal
   final _signalDisposeCallbacks = <DisposeEffect>[];
@@ -594,7 +593,7 @@ class SolidState extends State<Solid> {
     }
 
     _signalDisposeCallbacks.clear();
-    _signalValues.clear();
+    _changedDependencies.clear();
     _createdProviders.clear();
     super.dispose();
   }
@@ -602,26 +601,19 @@ class SolidState extends State<Solid> {
   /// -- Signals logic
   void _initializeSignal(SignalBase<dynamic> signal, {required Identifier id}) {
     final unobserve = signal.observe((_, value) {
-      _signalValues = Map<Identifier, dynamic>.fromEntries(
-        _createdProviders.entries
-            .where((element) => element.key is SolidSignal)
-            .map(
-              (entry) => MapEntry(
-                entry.key.id ?? entry.key._valueType,
-                entry.key == id ? value : (entry.value as SignalBase).value,
-              ),
-            ),
-      );
+      _changedDependencies = [..._changedDependencies, id];
+      _changesCounter++;
       Future.microtask(() {
-        if (mounted) setState(() {});
+        if (mounted) {
+          setState(() {});
+          // after build, reset the dependencies
+          WidgetsBinding.instance
+              .addPostFrameCallback((_) => _changedDependencies = []);
+        }
       });
     });
     signal.onDispose(unobserve);
-
     _signalDisposeCallbacks.add(unobserve);
-
-    // store the initial signal value
-    _signalValues[id] = signal.value;
   }
 
   /// -- Providers logic
@@ -676,7 +668,8 @@ class SolidState extends State<Solid> {
   Widget build(BuildContext context) {
     return _InheritedSolid(
       state: this,
-      signalValues: _signalValues,
+      changedDependencies: _changedDependencies,
+      changesCounter: _changesCounter,
       child: widget.builder != null
           ? Builder(builder: (context) => widget.builder!(context))
           : widget.child!,
@@ -703,17 +696,18 @@ class _InheritedSolid extends InheritedModel<Object> {
     // ignore: unused_element
     super.key,
     required this.state,
-    required this.signalValues,
+    required this.changesCounter,
+    required this.changedDependencies,
     required super.child,
   });
 
   final SolidState state;
-  final Map<Identifier, dynamic> signalValues;
+  final int changesCounter;
+  final List<Identifier> changedDependencies;
 
   @override
   bool updateShouldNotify(covariant _InheritedSolid oldWidget) {
-    return !const DeepCollectionEquality()
-        .equals(oldWidget.signalValues, signalValues);
+    return oldWidget.changesCounter != changesCounter;
   }
 
   bool isSupportedAspectWithType<T>(Identifier? id) {
@@ -726,16 +720,7 @@ class _InheritedSolid extends InheritedModel<Object> {
     covariant _InheritedSolid oldWidget,
     Set<Object> dependencies,
   ) {
-    for (final entry in signalValues.entries) {
-      // ignore untracked signals
-      if (!dependencies.contains(entry.key)) continue;
-
-      final oldSignalValue = oldWidget.signalValues[entry.key];
-      if (entry.value != oldSignalValue) {
-        return true;
-      }
-    }
-    return false;
+    return changedDependencies.any((element) => dependencies.contains(element));
   }
 
   // The following two methods are taken from [InheritedModel] and modified
