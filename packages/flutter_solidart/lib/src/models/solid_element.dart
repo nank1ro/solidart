@@ -54,7 +54,7 @@ typedef SolidProvider<T> = Provider<T>;
 /// tree.
 /// This behavior can be disabled by passing [lazy] false.
 ///
-/// You can pass an optional [id] to have multiple providers of the same type
+/// You can pass an optional [id] to have multiple providers of the same type.
 ///
 /// The [autoDispose] parameter specifies if the provider should be disposed
 /// automatically when the widget is disposed. Defaults to true.
@@ -87,7 +87,7 @@ class Provider<T> extends SolidElement<T> {
   /// Whether to auto dispose the provider, defaults to true.
   final bool autoDispose;
 
-  /// Dispose function, do no use.
+  /// Dispose function, do not use.
   @override
   void _disposeFn(BuildContext context, dynamic value) {
     if (!autoDispose) return;
