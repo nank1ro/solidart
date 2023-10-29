@@ -1,0 +1,10 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  plugins:
+    - custom_lint
+
+linter:
+  rules:
+    use_late_for_private_fields_and_variables: false
+    implicit_call_tearoffs: false

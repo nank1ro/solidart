@@ -48,6 +48,13 @@
       "request": "launch",
       "program": "lib/main.dart",
       "cwd": "examples/github_search/"
+    },
+    {
+      "name": "Pub.dev",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "examples/pub/"
     }
   ]
 }
