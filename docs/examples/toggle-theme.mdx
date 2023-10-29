@@ -40,7 +40,7 @@ Solid(
 ```dart
 Solid(
   providers: [
-    SolidSignal<Signal<ThemeMode>>(
+    Provider<Signal<ThemeMode>>(
       create: () => Signal(ThemeMode.light),
     ),
   ],
@@ -51,7 +51,7 @@ Solid(
 )
 ```
 
-<Warning>Don't forget to define the signal value type to `SolidSignal` otherwise you may encounter unexpected errors</Warning>
+<Warning>Don't forget to define type of `Provider` otherwise you may encounter unexpected errors</Warning>
 
 Now we've provided the `themeMode` signal to descendants, but we've to observe the `themeMode` signal in order to rebuilt the `MaterialApp`.
 Since we need a `BuildContext` that is a descendant of `Solid` we wrap the `MaterialApp` inside a `Builder`.

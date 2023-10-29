@@ -41,7 +41,7 @@ enum _SignalType {
 ///     // Provide the theme mode signal to descendats
 ///     return Solid(
 ///       providers: [
-///         SolidSignal<Signal<ThemeMode>>(
+///         Provider<Signal<ThemeMode>>(
 ///           create: () => Signal(ThemeMode.light),
 ///         ),
 ///       ],
@@ -101,12 +101,12 @@ enum _SignalType {
 ///
 ///
 /// The `Solid` widgets takes a List of `providers`:
-/// The `SolidSignal` has a `create` function that returns a `SignalBase`.
+/// The `Provider` has a `create` function that returns the signal.
 /// You may create a signal or a derived signal. The value is a Function
 /// because the signal is created lazily only when used for the first time, if
 /// you never access the signal it never gets created.
-/// In the `SolidSignal` you can also specify an identifier for having multiple
-/// signals of the same type.
+/// In the `Provider` you can also specify an identifier for having multiple
+/// objects of the same type.
 ///
 /// The `context.observe()` method listen to the signal value and rebuilds the
 /// widget when the value changes. It takes an optional `id` that is the signal
@@ -116,11 +116,11 @@ enum _SignalType {
 /// The `context.get()` method doesn't listen to the signal value. You may use
 /// this method inside the `initState` and `build` methods.
 ///
-/// > It is mandatory to set the type of signal to the `SolidSignal` otherwise
+/// > It is mandatory to set the type to the `Provider` otherwise
 /// you're going to encounter an error, for example:
 ///
 /// ```dart
-/// SolidSignal<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))
+/// Provider<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))
 /// ```
 /// and `context.observe<ThemeMode>` where ThemeMode is the type of the signal
 /// value.
@@ -856,7 +856,7 @@ To fix, please:
           Provider<NameProvider>(
             create: () => const NameProvider('Ale'),
           ),
-          SolidSignal<Signal<int>>(
+          Provider<Signal<int>>(
             create: () => Signal(0),
           ),
       ],
