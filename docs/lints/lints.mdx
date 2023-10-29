@@ -5,16 +5,16 @@ description: All the lints provided by solidart_lint
 
 # Lints
 
-### avoid_dynamic_solid_provider
+### avoid_dynamic_provider
 
-`SolidProvider` cannot be dynamic
+`Provider` cannot be dynamic
 
 **Bad**:
 
 ```dart
 Solid(
   providers: [
-    SolidProvider(create: () => MyClass()),
+    Provider(create: () => MyClass()),
   ],
 ),
 ```
@@ -24,67 +24,9 @@ Solid(
 ```dart
 Solid(
   providers: [
-    SolidProvider<MyClass>(create: () => MyClass()),
+    Provider<MyClass>(create: () => MyClass()),
   ],
 ),
-```
-
-### avoid_dynamic_solid_signal
-
-Solid `signals` cannot be dynamic
-
-**Bad**:
-
-```dart
-Solid(
-  signals: {
-    'id': () => createSignal(0),
-  },
-),
-```
-
-**Good**:
-
-```dart
-Solid(
-  signals: {
-    'id': () => createSignal<int>(0),
-  },
-),
-```
-
-### invalid_provider_type
-
-The provider type you want to retrieve is invalid, must not implement `SignalBase`.
-You cannot retrieve a provider that implements `SignalBase`, like `Signal`, `ReadSignal` and `Resource`.
-
-**Bad**:
-
-```dart
-final provider = context.get<Signal<MyClass>>();
-```
-
-**Good**:
-
-```dart
-final provider = context.get<MyClass>();
-```
-
-### invalid_signal_type
-
-The signal type you want to retrieve is invalid, must implement `SignalBase`.
-You can retrieve signals that implement `SignalBase`, like `Signal`, `ReadSignal` and `Resource`.
-
-**Bad**:
-
-```dart
-final signal = context.get<MyClass>('signal-id');
-```
-
-**Good**:
-
-```dart
-final signal = context.get<Signal<int>>('signal-id');
 ```
 
 ### invalid_solid_get_type

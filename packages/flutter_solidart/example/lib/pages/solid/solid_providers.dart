@@ -17,14 +17,14 @@ class NumberProvider {
   final int number;
 }
 
-class SolidProvidersPage extends StatelessWidget {
-  const SolidProvidersPage({super.key});
+class ProvidersPage extends StatelessWidget {
+  const ProvidersPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Solid Providers'),
+        title: const Text('Providers'),
       ),
       body: Solid(
         providers: [

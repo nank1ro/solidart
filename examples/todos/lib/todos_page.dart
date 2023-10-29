@@ -9,7 +9,7 @@ class TodosPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Using SolidProvider here to provide the [TodosController] to descendants.
+    // Using Provider here to provide the [TodosController] to descendants.
     return Solid(
       providers: [
         Provider<TodosController>(

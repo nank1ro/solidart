@@ -129,7 +129,7 @@ enum _SignalType {
 ///
 /// ## Providers
 ///
-/// You can also pass `SolidProvider`s to descendants:
+/// You can also pass `Provider`s to descendants:
 ///
 /// ```dart
 /// class NameProvider {
@@ -148,29 +148,29 @@ enum _SignalType {
 ///   final int number;
 /// }
 ///
-/// class SolidProvidersPage extends StatelessWidget {
-///   const SolidProvidersPage({super.key});
+/// class ProvidersPage extends StatelessWidget {
+///   const ProvidersPage({super.key});
 ///
 ///   @override
 ///   Widget build(BuildContext context) {
 ///     return Scaffold(
 ///       appBar: AppBar(
-///         title: const Text('SolidProviders'),
+///         title: const Text('Providers'),
 ///       ),
 ///       body: Solid(
 ///         providers: [
-///           SolidProvider<NameProvider>(
+///           Provider<NameProvider>(
 ///             create: () => const NameProvider('Ale'),
 ///             // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
 ///             dispose: (provider) => provider.dispose(),
 ///           ),
-///           SolidProvider<NumberProvider>(
+///           Provider<NumberProvider>(
 ///             create: () => const NumberProvider(1),
 ///             // Do not create the provider lazily, but immediately
 ///             lazy: false,
 ///             id: 1,
 ///           ),
-///           SolidProvider<NumberProvider>(
+///           Provider<NumberProvider>(
 ///             create: () => const NumberProvider(10),
 ///             id: 2,
 ///           ),
@@ -332,7 +332,7 @@ class Solid extends StatefulWidget {
       id: id,
       listen: listen,
     )?.state;
-    if (state == null) throw SolidProviderError<T>(id);
+    if (state == null) throw ProviderError<T>(id);
     return state;
   }
 
@@ -390,7 +390,7 @@ class Solid extends StatefulWidget {
     try {
       return _getOrCreateProvider<T>(context, id: id);
     } catch (e) {
-      if (e is SolidProviderError<T>) {
+      if (e is ProviderError<T>) {
         return null;
       }
       rethrow;
@@ -579,10 +579,10 @@ class SolidState extends State<Solid> {
     final types = <Type>[];
     for (final provider in widget.providers) {
       final type = provider._valueType;
-      if (type == dynamic) throw SolidProviderDynamicError();
+      if (type == dynamic) throw ProviderDynamicError();
 
       if (types.contains(type) && provider.id == null) {
-        throw SolidProviderMultipleProviderOfSameTypeError(
+        throw ProviderMultipleProviderOfSameTypeError(
           providerType: type,
         );
       } else {
@@ -831,12 +831,12 @@ class _InheritedSolid extends InheritedModel<Object> {
   }
 }
 
-/// {@template solidprovidererror}
+/// {@template providererror}
 /// Error thrown when the [Provider] of type [id] cannot be found
 /// {$endtemplate}
-class SolidProviderError<T> extends Error {
-  /// {@macro solidprovidererror}
-  SolidProviderError(this.id);
+class ProviderError<T> extends Error {
+  /// {@macro providererror}
+  ProviderError(this.id);
 
   /// The id of the provider
   final Identifier? id;
@@ -844,7 +844,7 @@ class SolidProviderError<T> extends Error {
   @override
   String toString() {
     return '''
-Error could not fint a Solid containing the given SolidProvider type $T and id $id
+Error could not fint a Solid containing the given Provider type $T and id $id
 To fix, please:
           
   * Be sure to have a Solid ancestor, the context used must be a descendant.
@@ -853,7 +853,7 @@ To fix, please:
     ```
     Solid(
       providers: [
-          SolidProvider<NameProvider>(
+          Provider<NameProvider>(
             create: () => const NameProvider('Ale'),
           ),
           SolidSignal<Signal<int>>(
@@ -871,23 +871,23 @@ https://github.com/nank1ro/solidart/issues/new
 }
 
 /// Error thrown when the [Provider] has a `dynamic` Type.
-class SolidProviderDynamicError extends Error {
+class ProviderDynamicError extends Error {
   @override
   String toString() {
     return '''
     Seems like that you forgot to declare the provider type.
-    You have `SolidProvider()` but it should be `SolidProvider<ProviderType>()`.
+    You have `Provider()` but it should be `Provider<ProviderType>()`.
       ''';
   }
 }
 
-/// {@template solidprovidermultipleproviderofsametypeerror}
+/// {@template Providermultipleproviderofsametypeerror}
 /// Error thrown when there are multiple providers of the same [providerType]
 /// Type in the same [Solid] widget
 /// {$endtemplate}
-class SolidProviderMultipleProviderOfSameTypeError extends Error {
-  /// {@macro solidprovidermultipleproviderofsametypeerror}
-  SolidProviderMultipleProviderOfSameTypeError({required this.providerType});
+class ProviderMultipleProviderOfSameTypeError extends Error {
+  /// {@macro Providermultipleproviderofsametypeerror}
+  ProviderMultipleProviderOfSameTypeError({required this.providerType});
 
   /// The type of the provider
   final Type providerType;

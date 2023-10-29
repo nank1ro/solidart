@@ -26,8 +26,7 @@ class AvoidDynamicProvider extends DartLintRule {
       final type = node.staticType;
       if (type == null) return;
       final name = type.getDisplayString(withNullability: false);
-      if (solidProviderType.isExactlyType(type) &&
-          name == 'Provider<dynamic>') {
+      if (providerType.isExactlyType(type) && name == 'Provider<dynamic>') {
         reporter.reportErrorForToken(_code, node.beginToken);
         return;
       }
@@ -35,10 +34,10 @@ class AvoidDynamicProvider extends DartLintRule {
   }
 
   @override
-  List<Fix> getFixes() => [_SolidProviderTypeFix()];
+  List<Fix> getFixes() => [_ProviderTypeFix()];
 }
 
-class _SolidProviderTypeFix extends DartFix {
+class _ProviderTypeFix extends DartFix {
   @override
   void run(
     CustomLintResolver resolver,

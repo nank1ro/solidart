@@ -35,12 +35,12 @@ abstract class SolidElement<T> {
 }
 
 // coverage:ignore-start
-/// {@macro solidprovider}
+/// {@macro provider}
 @Deprecated('Use Provider instead')
 typedef SolidProvider<T> = Provider<T>;
 // coverage:ignore-end
 
-/// {@template solidprovider}
+/// {@template provider}
 /// A Provider that manages the lifecycle of the value it provides by
 // delegating to a pair of [create] and [dispose].
 ///
@@ -65,7 +65,7 @@ typedef SolidProvider<T> = Provider<T>;
 /// {@endtemplate}
 @immutable
 class Provider<T> extends SolidElement<T> {
-  /// {@macro solidprovider}
+  /// {@macro provider}
   const Provider({
     required super.create,
     this.dispose,

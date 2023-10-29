@@ -498,7 +498,7 @@ void main() {
     );
     expect(
       tester.takeException(),
-      const TypeMatcher<SolidProviderError<Signal<int>>>().having(
+      const TypeMatcher<ProviderError<Signal<int>>>().having(
         (p0) => p0.id,
         'Check error id',
         equals('invalid-counter'),
@@ -730,7 +730,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester.takeException(),
-        const TypeMatcher<SolidProviderError<NumberProvider>>(),
+        const TypeMatcher<ProviderError<NumberProvider>>(),
       );
     });
   });
@@ -831,7 +831,7 @@ void main() {
     );
   });
 
-  testWidgets('Test Solid context.get with SolidProvider', (tester) async {
+  testWidgets('Test Solid context.get with Provider', (tester) async {
     final nameProvider = MockNameProvider('Ale');
     await tester.pumpWidget(
       MaterialApp(
@@ -904,7 +904,7 @@ void main() {
     );
     expect(
       tester.takeException(),
-      const TypeMatcher<SolidProviderError<NameProvider>>().having(
+      const TypeMatcher<ProviderError<NameProvider>>().having(
         (p0) => p0.id,
         'Check error id null',
         isNull,
@@ -912,7 +912,7 @@ void main() {
     );
   });
 
-  testWidgets('Test Solid throws an error for a SolidProvider<dynamic>',
+  testWidgets('Test Solid throws an error for a Provider<dynamic>',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -928,7 +928,7 @@ void main() {
     );
     expect(
       tester.takeException(),
-      const TypeMatcher<SolidProviderDynamicError>(),
+      const TypeMatcher<ProviderDynamicError>(),
     );
   });
 
@@ -954,7 +954,7 @@ void main() {
     );
     expect(
       tester.takeException(),
-      const TypeMatcher<SolidProviderMultipleProviderOfSameTypeError>(),
+      const TypeMatcher<ProviderMultipleProviderOfSameTypeError>(),
     );
   });
 
