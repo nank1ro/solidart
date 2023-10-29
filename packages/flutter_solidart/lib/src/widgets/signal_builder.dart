@@ -12,7 +12,7 @@ import 'package:solidart/solidart.dart';
 /// Example:
 ///
 /// ```dart
-/// final counter = createSignal(0);
+/// final counter = Signal(0);
 ///
 /// @override
 /// void dispose() {

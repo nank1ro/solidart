@@ -29,7 +29,7 @@ typedef ResourceWidgetBuilder<T> = Widget Function(
 ///
 /// class _ResourcePageState extends State<ResourcePage> {
 ///   // source
-///   final userId = createSignal(1);
+///   final userId = Signal(1);
 ///   // resource
 ///   late final Resource<String> user;
 ///
@@ -37,7 +37,7 @@ typedef ResourceWidgetBuilder<T> = Widget Function(
 ///   void initState() {
 ///     super.initState();
 ///     // creating the resource
-///     user = createResource(fetcher: fetchUser, source: userId);
+///     user = Resource(fetcher: fetchUser, source: userId);
 ///   }
 ///
 ///   @override

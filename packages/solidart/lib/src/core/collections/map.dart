@@ -6,7 +6,7 @@ part of '../core.dart';
 /// ```dart
 /// final map = MapSignal({'first': 1});
 ///
-/// createEffect((_) {
+/// Effect((_) {
 ///   print(map['first']);
 /// }); // prints 1
 ///

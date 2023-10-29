@@ -81,7 +81,7 @@ Solid `signals` cannot be dynamic
 ```dart
 Solid(
   signals: {
-    'id': () => createSignal(0),
+    'id': () => Signal(0),
   },
 ),
 ```
@@ -91,7 +91,7 @@ Solid(
 ```dart
 Solid(
   signals: {
-    'id': () => createSignal<int>(0),
+    'id': () => Signal<int>(0),
   },
 ),
 ```

@@ -6,7 +6,7 @@ part of '../core.dart';
 /// ```dart
 /// final set = SetSignal({1});
 ///
-/// createEffect((_) {
+/// Effect((_) {
 ///   print(set.first);
 /// }); // prints 1
 ///

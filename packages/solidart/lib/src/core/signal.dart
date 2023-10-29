@@ -17,7 +17,7 @@ Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
 /// Create the signal with:
 ///
 /// ```dart
-/// final counter = createSignal(0);
+/// final counter = Signal(0);
 /// ````
 ///
 /// The argument passed to the create call is the initial value, and the return
@@ -72,13 +72,13 @@ Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
 /// }
 ///
 /// // create a user signal
-/// final user = createSignal(const User(name: "name", age: 20));
+/// final user = Signal(const User(name: "name", age: 20));
 ///
 /// // create a derived signal just for the age
-/// final age = createComputed(() => user().age);
+/// final age = Computed(() => user().age);
 ///
 /// // adding an effect to print the age
-/// createEffect((_) {
+/// Effect((_) {
 ///   print('age changed from ${age.previousValue} into ${age.value}');
 /// });
 ///
@@ -95,8 +95,8 @@ Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
 ///
 /// You can also use derived signals in other ways, like here:
 /// ```dart
-/// final counter = createSignal(0);
-/// final doubleCounter = createComputed(() => counter() * 2);
+/// final counter = Signal(0);
+/// final doubleCounter = Computed(() => counter() * 2);
 /// ```
 ///
 /// Every time the `counter` signal changes, the doubleCounter updates with the
@@ -104,8 +104,8 @@ Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
 ///
 /// You can also transform the value type into a `bool`:
 /// ```dart
-/// final counter = createSignal(0); // type: int
-/// final isGreaterThan5 = createComputed(() => counter() > 5); // type: bool
+/// final counter = Signal(0); // type: int
+/// final isGreaterThan5 = Computed(() => counter() > 5); // type: bool
 /// ```
 ///
 /// `isGreaterThan5` will update only when the `counter` value becomes lower/greater than `5`.

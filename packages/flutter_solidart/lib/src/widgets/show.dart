@@ -14,7 +14,7 @@ import 'package:solidart/solidart.dart';
 ///
 /// ```dart
 /// // sample signal that tells if the user is logged in or not
-/// final loggedIn = createSignal(false);
+/// final loggedIn = Signal(false);
 ///
 /// @override
 /// Widget build(BuildContext context) {
@@ -50,7 +50,7 @@ import 'package:solidart/solidart.dart';
 /// You can easily convert any type to `bool`, for example:
 ///
 /// ```dart
-/// final count = createSignal(0);
+/// final count = Signal(0);
 ///
 /// @override
 /// Widget build(BuildContext context) {

@@ -42,7 +42,7 @@ enum _SignalType {
 ///     return Solid(
 ///       providers: [
 ///         SolidSignal<Signal<ThemeMode>>(
-///           create: () => createSignal(ThemeMode.light),
+///           create: () => Signal(ThemeMode.light),
 ///         ),
 ///       ],
 ///       // using the builder method to immediately access the signal
@@ -120,7 +120,7 @@ enum _SignalType {
 /// you're going to encounter an error, for example:
 ///
 /// ```dart
-/// SolidSignal<Signal<ThemeMode>>(create: () => createSignal(ThemeMode.light))
+/// SolidSignal<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))
 /// ```
 /// and `context.observe<ThemeMode>` where ThemeMode is the type of the signal
 /// value.
@@ -857,7 +857,7 @@ To fix, please:
             create: () => const NameProvider('Ale'),
           ),
           SolidSignal<Signal<int>>(
-            create: () => createSignal(0),
+            create: () => Signal(0),
           ),
       ],
     )
