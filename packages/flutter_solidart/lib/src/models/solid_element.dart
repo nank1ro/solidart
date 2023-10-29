@@ -28,30 +28,50 @@ abstract class SolidElement<T> {
 
   /// Returns the type of the value
   Type get _valueType => T;
+
+  bool get _isSignal => this is SolidElement<SignalBase>;
+
+  void _disposeFn(BuildContext context, dynamic value);
 }
+
+// coverage:ignore-start
+/// {@macro solidprovider}
+@Deprecated('Use Provider instead')
+typedef SolidProvider<T> = Provider<T>;
+// coverage:ignore-end
 
 /// {@template solidprovider}
 /// A Provider that manages the lifecycle of the value it provides by
-// delegating to a pair of `create` and `dispose`.
+// delegating to a pair of [create] and [dispose].
 ///
 /// It is usually used to avoid making a StatefulWidget for something trivial,
 /// such as instantiating a BLoC.
 ///
 /// Provider is the equivalent of a State.initState combined with State.dispose.
-/// `create` is called only once in State.initState.
+/// [create] is called only once in State.initState.
 /// The `create` callback is lazily called. It is called the first time the
 /// value is read, instead of the first time Provider is inserted in the widget
 /// tree.
-/// This behavior can be disabled by passing lazy: false to Provider.
+/// This behavior can be disabled by passing [lazy] false.
+///
+/// You can pass an optional [id] to have multiple providers of the same type
+///
+/// The [autoDispose] parameter specifies if the provider should be disposed
+/// automatically when the widget is disposed. Defaults to true.
+///
+/// The [dispose] method will not be called if the provider is a Signal, instead
+/// the Signal will be auto-disposed if [autoDispose] is true.
+///
 /// {@endtemplate}
 @immutable
-class SolidProvider<T> extends SolidElement<T> {
+class Provider<T> extends SolidElement<T> {
   /// {@macro solidprovider}
-  const SolidProvider({
+  const Provider({
     required super.create,
     this.dispose,
     this.lazy = true,
     super.id,
+    this.autoDispose = true,
   });
 
   /// An optional dispose function called when the Solid that created this
@@ -64,27 +84,17 @@ class SolidProvider<T> extends SolidElement<T> {
   /// when retrieved from descendants.
   final bool lazy;
 
-  /// Dispose function, do no use.
-  void _disposeFn(BuildContext context, dynamic value) {
-    dispose?.call(value as T);
-  }
-}
-
-/// {@template solidsignal}
-/// A Provider that manages the lifecycle of the signal it provides.
-///
-/// It is usually used to avoid making a StatefulWidget for something trivial,
-/// such as instantiating a Signal.
-/// {@endtemplate}
-@immutable
-class SolidSignal<T> extends SolidElement<T> {
-  /// {@macro solidsignal}
-  const SolidSignal({
-    required super.create,
-    super.id,
-    this.autoDispose = true,
-  });
-
-  /// Whether to auto dispose the signal, defaults to true.
+  /// Whether to auto dispose the provider, defaults to true.
   final bool autoDispose;
+
+  /// Dispose function, do no use.
+  @override
+  void _disposeFn(BuildContext context, dynamic value) {
+    if (!autoDispose) return;
+    if (_isSignal) {
+      (value as SignalBase).dispose();
+    } else {
+      dispose?.call(value as T);
+    }
+  }
 }

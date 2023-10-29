@@ -26,14 +26,14 @@ class _SolidSignalsPageState extends State<SolidSignalsPage> {
       body: Solid(
         providers: [
           // provide the count signal to descendants
-          SolidSignal<Signal<int>>(
+          Provider<Signal<int>>(
             create: () => count,
             // do not autoDispose the signal, because we already dispose it ourself
             autoDispose: false,
           ),
 
           // provide the doubleCount signal to descendants
-          SolidSignal<Computed<int>>(
+          Provider<Computed<int>>(
             create: () => Computed(() => count() * 2),
           ),
         ],

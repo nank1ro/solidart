@@ -28,18 +28,18 @@ class SolidProvidersPage extends StatelessWidget {
       ),
       body: Solid(
         providers: [
-          SolidProvider<NameProvider>(
+          Provider<NameProvider>(
             create: () => const NameProvider('Ale'),
             // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
             dispose: (provider) => provider.dispose(),
           ),
-          SolidProvider<NumberProvider>(
+          Provider<NumberProvider>(
             create: () => const NumberProvider(1),
             // Do not create the provider lazily, but immediately
             lazy: false,
             id: #firstNumber,
           ),
-          SolidProvider<NumberProvider>(
+          Provider<NumberProvider>(
             create: () => const NumberProvider(100),
             // Do not create the provider lazily, but immediately
             lazy: false,

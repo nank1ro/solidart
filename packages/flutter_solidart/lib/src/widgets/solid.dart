@@ -463,7 +463,7 @@ class Solid extends StatefulWidget {
         listen: true,
       );
       final signalValueType = state.widget.providers
-          .whereType<SolidSignal<dynamic>>()
+          .where((element) => element._isSignal)
           .firstWhere((element) => element.id == id)
           ._valueType;
       if (signalValueType == Signal<T>) {
@@ -591,7 +591,7 @@ class SolidState extends State<Solid> {
     }
     // create non lazy providers.
     widget.providers
-        .whereType<SolidProvider<dynamic>>()
+        .whereType<Provider<dynamic>>()
         .where((element) => !element.lazy)
         .forEach((provider) {
       // create and store the provider
@@ -609,14 +609,7 @@ class SolidState extends State<Solid> {
     // dispose all the created providers
     if (widget._canAutoDisposeProviders) {
       _createdProviders.forEach((provider, value) {
-        switch (provider) {
-          case SolidProvider():
-            provider._disposeFn(context, value);
-          case SolidSignal():
-            if (provider.autoDispose) {
-              (value as SignalBase).dispose();
-            }
-        }
+        provider._disposeFn(context, value);
       });
     }
 
@@ -646,7 +639,7 @@ class SolidState extends State<Solid> {
 
   /// -- Providers logic
 
-  /// Try to find a [SolidProvider] of type <T> or [id] and returns it
+  /// Try to find a [Provider] of type <T> or [id] and returns it
   SolidElement<dynamic>? _getProvider<T>(
     Identifier? id,
   ) {
@@ -674,8 +667,7 @@ class SolidState extends State<Solid> {
     final provider = _getProvider<T>(id)!;
     // create and return it
     final value = provider.create() as T;
-
-    if (provider is SolidSignal && value is SignalBase) {
+    if (provider._isSignal && value is SignalBase) {
       _initializeSignal(value, id: id ?? T);
     }
 
@@ -840,7 +832,7 @@ class _InheritedSolid extends InheritedModel<Object> {
 }
 
 /// {@template solidprovidererror}
-/// Error thrown when the [SolidProvider] of type [id] cannot be found
+/// Error thrown when the [Provider] of type [id] cannot be found
 /// {$endtemplate}
 class SolidProviderError<T> extends Error {
   /// {@macro solidprovidererror}
@@ -878,7 +870,7 @@ https://github.com/nank1ro/solidart/issues/new
   }
 }
 
-/// Error thrown when the [SolidProvider] has a `dynamic` Type.
+/// Error thrown when the [Provider] has a `dynamic` Type.
 class SolidProviderDynamicError extends Error {
   @override
   String toString() {
