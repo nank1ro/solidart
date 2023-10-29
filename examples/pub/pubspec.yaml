@@ -1,0 +1,29 @@
+name: pub
+description: A pub.dev client for Flutter
+publish_to: "none"
+version: 1.0.0
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_solidart: ^1.4.0
+  http: ^1.1.0
+  json_annotation: ^4.8.1
+  equatable: ^2.0.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  solidart_lint: ^1.1.0
+  json_serializable: ^6.7.1
+  custom_lint: ^0.5.5
+  build_runner: ^2.4.6
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
