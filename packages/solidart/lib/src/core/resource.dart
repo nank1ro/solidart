@@ -62,7 +62,7 @@ Resource<T> createResource<T>({
 /// import 'package:http/http.dart' as http;
 ///
 /// // The source
-/// final userId = createSignal(1);
+/// final userId = Signal(1);
 ///
 /// // The fetcher
 /// Future<String> fetchUser() async {
@@ -73,12 +73,12 @@ Resource<T> createResource<T>({
 /// }
 ///
 /// // The resource (source is optional)
-/// final user = createResource(fetcher: fetchUser, source: userId);
+/// final user = Resource(fetcher: fetchUser, source: userId);
 /// ```
 ///
 /// A Resource can also be driven from a [stream] instead of a Future.
 /// In this case you just need to pass the `stream` field to the
-/// `createResource` method.
+/// `Resource` method.
 ///
 /// If you are using the `flutter_solidart` library, check
 /// `ResourceBuilder` to learn how to react to the state of the resource in the

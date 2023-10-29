@@ -48,14 +48,14 @@ dart run custom_lint
 
 ### avoid_dynamic_solid_provider
 
-`SolidProvider` cannot be dynamic
+`Provider` cannot be dynamic
 
 **Bad**:
 
 ```dart
 Solid(
   providers: [
-    SolidProvider(create: () => MyClass()),
+    Provider(create: () => MyClass()),
   ],
 ),
 ```
@@ -65,7 +65,7 @@ Solid(
 ```dart
 Solid(
   providers: [
-    SolidProvider<MyClass>(create: () => MyClass()),
+    Provider<MyClass>(create: () => MyClass()),
   ],
 ),
 ```
@@ -81,7 +81,7 @@ Solid `signals` cannot be dynamic
 ```dart
 Solid(
   signals: {
-    'id': () => createSignal(0),
+    'id': () => Signal(0),
   },
 ),
 ```
@@ -91,7 +91,7 @@ Solid(
 ```dart
 Solid(
   signals: {
-    'id': () => createSignal<int>(0),
+    'id': () => Signal<int>(0),
   },
 ),
 ```

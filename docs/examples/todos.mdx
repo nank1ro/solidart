@@ -19,10 +19,10 @@ class TodosPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Using SolidProvider here to provide the [TodosController] to descendants.
+    // Using Provider here to provide the [TodosController] to descendants.
     return Solid(
       providers: [
-        SolidProvider<TodosController>(
+        Provider<TodosController>(
           create: () => TodosController(initialTodos: Todo.sample),
           dispose: (controller) => controller.dispose(),
         ),
@@ -484,10 +484,10 @@ class TodosPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Using SolidProvider here to provide the [TodosController] to descendants.
+    // Using Provider here to provide the [TodosController] to descendants.
     return Solid(
       providers: [
-        SolidProvider<TodosController>(
+        Provider<TodosController>(
           create: () => TodosController(initialTodos: Todo.sample),
           dispose: (controller) => controller.dispose(),
         ),
@@ -529,7 +529,7 @@ Widget wrapWithMockedTodosController({
   return MaterialApp(
     home: Solid(
       providers: [
-        SolidProvider<TodosController>(
+        Provider<TodosController>(
           create: () => todosController,
           dispose: (controller) => controller.dispose(),
         ),

@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
     // Provide the theme mode signal to descendats
     return Solid(
       providers: [
-        SolidSignal<Signal<ThemeMode>>(
+        Provider<Signal<ThemeMode>>(
           create: () => Signal(ThemeMode.light),
         ),
       ],

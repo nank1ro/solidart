@@ -188,7 +188,7 @@ class SearchPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Solid(
       providers: [
-        SolidProvider<GithubSearchBloc>(
+        Provider<GithubSearchBloc>(
           create: () => GithubSearchBloc(),
           dispose: (bloc) => bloc.dispose(),
         ),

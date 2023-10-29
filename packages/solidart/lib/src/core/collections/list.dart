@@ -6,7 +6,7 @@ part of '../core.dart';
 /// ```dart
 /// final list = ListSignal([1]);
 ///
-/// createEffect((_) {
+/// Effect((_) {
 ///   print(list.first);
 /// }); // prints 1
 ///

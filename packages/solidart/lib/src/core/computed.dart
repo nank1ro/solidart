@@ -20,13 +20,13 @@ Computed<T> createComputed<T>(
 /// combine multiple signal values.
 /// ```dart
 /// // first name signal
-/// final firstName = createSignal('Josh');
+/// final firstName = Signal('Josh');
 ///
 /// // last name signal
-/// final lastName = createSignal('Brown');
+/// final lastName = Signal('Brown');
 ///
 /// // derived signal, updates automatically when firstName or lastName change
-/// final fullName = createComputed(() => '${firstName()} ${lastName()}');
+/// final fullName = Computed(() => '${firstName()} ${lastName()}');
 ///
 /// print(fullName()); // prints Josh Brown
 ///
@@ -43,8 +43,8 @@ Computed<T> createComputed<T>(
 ///
 /// You can also use derived signals in other ways, like here:
 /// ```dart
-/// final counter = createSignal(0);
-/// final doubleCounter = createComputed(() => counter() * 2);
+/// final counter = Signal(0);
+/// final doubleCounter = Computed(() => counter() * 2);
 /// ```
 ///
 /// Every time the `counter` signal changes, the doubleCounter updates with the
@@ -52,8 +52,8 @@ Computed<T> createComputed<T>(
 ///
 /// You can also transform the value type like:
 /// ```dart
-/// final counter = createSignal(0); // counter contains the value type `int`
-/// final isGreaterThan5 = createComputed(() => counter() > 5); // isGreaterThan5 contains the value type `bool`
+/// final counter = Signal(0); // counter contains the value type `int`
+/// final isGreaterThan5 = Computed(() => counter() > 5); // isGreaterThan5 contains the value type `bool`
 /// ```
 ///
 /// `isGreaterThan5` will update only when the `counter` value becomes lower/greater than `5`.

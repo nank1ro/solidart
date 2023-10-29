@@ -1,3 +1,8 @@
+## 1.4.0
+
+- **CHORE**: Rename `SolidProvider` into `Provider`.
+- **REFACTOR**: Remove `SolidSignal` in favor of `Provider`.
+
 ## 1.3.0
 
 ### Changes from solidart

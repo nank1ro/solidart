@@ -22,7 +22,7 @@ Widget wrapWithMockedTodosController({
   return MaterialApp(
     home: Solid(
       providers: [
-        SolidProvider<TodosController>(
+        Provider<TodosController>(
           create: () => todosController,
           dispose: (controller) => controller.dispose(),
         ),

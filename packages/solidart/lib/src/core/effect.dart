@@ -52,17 +52,17 @@ abstract class ReactionInterface implements Derivation {
 /// values. An effect is one such observer; it runs a side effect that depends
 /// on signals.
 ///
-/// An effect can be created by using `createEffect`.
+/// An effect can be created by using `Effect`.
 /// The effect subscribes automatically to any signal used in the callback and
 /// reruns when any of them change.
 ///
 /// So let's create an `Effect` that reruns whenever `counter` changes:
 /// ```dart
 /// // sample signal
-/// final counter = createSignal(0);
+/// final counter = Signal(0);
 ///
 /// // effect creation
-/// createEffect((_) {
+/// Effect((_) {
 ///     print("The count is now ${counter.value}");
 /// });
 /// // The effect prints `The count is now 0`;
@@ -73,10 +73,10 @@ abstract class ReactionInterface implements Derivation {
 /// // The effect prints `The count is now 1`;
 /// ```
 ///
-/// The `createEffect` method returns a `Dispose` class giving you a more
+/// The `Effect` method returns a `Dispose` class giving you a more
 /// advanced usage:
 /// ```dart
-/// final dispose = createEffect((_) {
+/// final dispose = Effect((_) {
 ///     print("The count is now ${counter.value}");
 /// });
 /// ```
@@ -86,7 +86,7 @@ abstract class ReactionInterface implements Derivation {
 ///
 /// You can also dispose an effect inside the callback
 /// ```dart
-/// createEffect((dispose) {
+/// Effect((dispose) {
 ///     print("The count is now ${counter.value}");
 ///     if (counter.value == 1) dispose();
 /// });
