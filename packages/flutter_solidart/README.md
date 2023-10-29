@@ -199,7 +199,7 @@ class MyApp extends StatelessWidget {
     // Provide the theme mode signal to descendats
     return Solid( // [1]
       providers: [
-        SolidSignal<Signal<ThemeMode>>(
+        Provider<Signal<ThemeMode>>(
           create: () => Signal(ThemeMode.light),
         ),
       ],
@@ -260,11 +260,11 @@ class MyHomePage extends StatelessWidget {
 First at `[1]` we've used the `Solid` widget to provide the `themeMode` signal to descendants.
 
 The `Solid` widgets takes a list of providers:
- The `SolidSignal` has a `create` function that returns a `SignalBase`.
+ The `Provider` has a `create` function that returns the signal.
 You may create a signal or a derived signal. The value is a Function
 because the signal is created lazily only when used for the first time, if
 you never access the signal it never gets created.
-In the `SolidSignal` you can also specify an `id`entifier for having multiple
+In the `Provider` you can also specify an `id`entifier for having multiple
 signals of the same type.
 
 At `[2]` we `observe` the value of a signal. The `observe` method listen to the signal value and rebuilds the widget when the value changes. It takes an optional `id` that is the signal identifier that you want to use. This method must be called only inside the `build` method.
@@ -278,7 +278,7 @@ And finally at `[5]` we update the signal value.
 > It is mandatory to pass the type of signal value otherwise you're going to encounter an error, for example:
 
 ```dart
-SolidSignal<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))
+Provider<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))
 ```
 and `context.observe<ThemeMode>` where ThemeMode is the type of the signal
 value.

@@ -29,7 +29,7 @@ class MyApp extends StatelessWidget {
     // Provide the theme mode signal to descendats
     return Solid(
       providers: [
-        SolidSignal<Signal<ThemeMode>>(
+        Provider<Signal<ThemeMode>>(
           create: () => Signal(ThemeMode.light),
         ),
       ],
@@ -88,16 +88,16 @@ class MyHomePage extends StatelessWidget {
 ```
 
 The `Solid` widgets takes a List of `providers`:
-The `SolidSignal` has a `create` function that returns a `SignalBase`. You may create a signal or a derived signal. The value is a Function because the signal is created lazily only when used for the first time, if you never access the signal it never gets created.
-In the `SolidSignal` you can also specify an identifier for having multiple signals of the same type.
+The `Provider` has a `create` function that returns the signal. You may create a signal or a derived signal. The value is a function because the signal is created lazily only when used for the first time, if you never access the signal it never gets created.
+In the `Provider` you can also specify an `id`entifier for having multiple signals of the same type.
 
 The `context.observe()` method listen to the signal value and rebuilds the widget when the value changes. It takes an optional `id` that is the signal identifier that you want to use. This method must be called only inside the `build` method.
 
 The `context.get()` method doesn't listen to the signal value. You may use this method inside the `initState` and `build` methods.
 
-> It is mandatory to set the type of signal to the `SolidSignal` otherwise you're going to encounter an error, for example:
+> It is mandatory to set the type of signal to the `Provider` otherwise you're going to encounter an error, for example:
 
-1. `SolidSignal<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))` and `context.observe<ThemeMode>` where ThemeMode is the type of the signal value.
+1. `Provider<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))` and `context.observe<ThemeMode>` where ThemeMode is the type of the signal value.
 2. `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
 
 ## Providers
