@@ -18,11 +18,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Solid(
       providers: [
-        // expect_lint: avoid_dynamic_solid_provider
+        // expect_lint: avoid_dynamic_provider
         Provider(create: () => MyClass()),
-        // expect_lint: avoid_dynamic_solid_signal
+        // expect_lint: avoid_dynamic_provider
         Provider(create: () => Signal(0), id: 'counter'),
-        // expect_lint: avoid_dynamic_solid_signal
+        // expect_lint: avoid_dynamic_provider
         Provider(
           create: () => Computed(() => counter() * 2),
           id: 'double-counter',

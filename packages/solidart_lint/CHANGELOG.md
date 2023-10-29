@@ -2,6 +2,7 @@
 
 - **CHORE**: Update `flutter_solidart` dependency
 - **CHORE**: Remove `avoid_dynamic_solid_signal`
+- **REFACTOR**: Rename `avoid_dynamic_solid_provider` into `avoid_dynamic_provider`
 
 ## 1.0.1
 

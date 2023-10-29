@@ -5,13 +5,13 @@ import 'package:collection/collection.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:solidart_lint/src/types.dart';
 
-class AvoidDynamicSolidProvider extends DartLintRule {
-  const AvoidDynamicSolidProvider() : super(code: _code);
+class AvoidDynamicProvider extends DartLintRule {
+  const AvoidDynamicProvider() : super(code: _code);
 
   static const _code = LintCode(
-    name: 'avoid_dynamic_solid_provider',
+    name: 'avoid_dynamic_provider',
     errorSeverity: ErrorSeverity.ERROR,
-    problemMessage: 'The SolidProvider cannot be dynamic',
+    problemMessage: 'The Provider cannot be dynamic',
   );
 
   @override
@@ -27,7 +27,7 @@ class AvoidDynamicSolidProvider extends DartLintRule {
       if (type == null) return;
       final name = type.getDisplayString(withNullability: false);
       if (solidProviderType.isExactlyType(type) &&
-          name == 'SolidProvider<dynamic>') {
+          name == 'Provider<dynamic>') {
         reporter.reportErrorForToken(_code, node.beginToken);
         return;
       }
@@ -78,13 +78,13 @@ class _SolidProviderTypeFix extends DartFix {
         if (dartType == null) return;
 
         final changeBuilder = reporter.createChangeBuilder(
-          message: 'Convert SolidProvider to SolidProvider<$dartType>',
+          message: 'Convert Provider to Provider<$dartType>',
           priority: 1,
         );
         final constructorName =
             node.childEntities.whereType<ConstructorName>().firstOrNull;
         final name = constructorName?.toString();
-        if (name != 'SolidProvider') return;
+        if (name != 'Provider') return;
 
         changeBuilder.addDartFileEdit(
           (builder) {
