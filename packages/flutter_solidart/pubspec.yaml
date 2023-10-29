@@ -21,7 +21,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  mockito: ^5.4.0
-  very_good_analysis: ^5.0.0+1
+  mockito: ^5.4.2
+  very_good_analysis: ^5.1.0
 
 flutter:
