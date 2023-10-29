@@ -17,29 +17,29 @@ class NumberProvider {
   final int number;
 }
 
-class SolidProvidersPage extends StatelessWidget {
-  const SolidProvidersPage({super.key});
+class ProvidersPage extends StatelessWidget {
+  const ProvidersPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Solid Providers'),
+        title: const Text('Providers'),
       ),
       body: Solid(
         providers: [
-          SolidProvider<NameProvider>(
+          Provider<NameProvider>(
             create: () => const NameProvider('Ale'),
             // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
             dispose: (provider) => provider.dispose(),
           ),
-          SolidProvider<NumberProvider>(
+          Provider<NumberProvider>(
             create: () => const NumberProvider(1),
             // Do not create the provider lazily, but immediately
             lazy: false,
             id: #firstNumber,
           ),
-          SolidProvider<NumberProvider>(
+          Provider<NumberProvider>(
             create: () => const NumberProvider(100),
             // Do not create the provider lazily, but immediately
             lazy: false,

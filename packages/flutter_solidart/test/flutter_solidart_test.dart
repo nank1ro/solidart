@@ -315,8 +315,8 @@ void main() {
           home: Scaffold(
             body: Solid(
               providers: [
-                SolidSignal<Signal<int>>(create: () => s, id: 'counter'),
-                SolidSignal<Computed<int>>(
+                Provider<Signal<int>>(create: () => s, id: 'counter'),
+                Provider<Computed<int>>(
                   create: () => Computed(() => s() * 2),
                   id: 'double-counter',
                 ),
@@ -348,7 +348,7 @@ void main() {
           home: Scaffold(
             body: Solid(
               providers: [
-                SolidSignal<Computed<int>>(
+                Provider<Computed<int>>(
                   create: () => Computed(() => s() * 2),
                 ),
               ],
@@ -377,7 +377,7 @@ void main() {
           home: Scaffold(
             body: Solid(
               providers: [
-                SolidSignal<ReadSignal<int>>(create: s.toReadSignal),
+                Provider<ReadSignal<int>>(create: s.toReadSignal),
               ],
               child: Builder(
                 builder: (context) {
@@ -404,7 +404,7 @@ void main() {
           home: Scaffold(
             body: Solid(
               providers: [
-                SolidSignal<ReadSignal<int>>(
+                Provider<ReadSignal<int>>(
                   create: s.toReadSignal,
                   id: #counter,
                 ),
@@ -436,8 +436,8 @@ void main() {
         home: Scaffold(
           body: Solid(
             providers: [
-              SolidSignal<Signal<int>>(create: () => s, id: 'counter'),
-              SolidSignal<ReadSignal<int>>(
+              Provider<Signal<int>>(create: () => s, id: 'counter'),
+              Provider<ReadSignal<int>>(
                 create: () => s2,
                 id: 'double-counter',
               ),
@@ -476,7 +476,7 @@ void main() {
         home: Scaffold(
           body: Solid(
             providers: [
-              SolidSignal<Signal<int>>(
+              Provider<Signal<int>>(
                 create: () => Signal(0),
                 id: 'counter',
               ),
@@ -498,7 +498,7 @@ void main() {
     );
     expect(
       tester.takeException(),
-      const TypeMatcher<SolidProviderError<Signal<int>>>().having(
+      const TypeMatcher<ProviderError<Signal<int>>>().having(
         (p0) => p0.id,
         'Check error id',
         equals('invalid-counter'),
@@ -531,7 +531,7 @@ void main() {
           home: Scaffold(
             body: Solid(
               providers: [
-                SolidSignal<Signal<int>>(create: () => s, id: 'counter'),
+                Provider<Signal<int>>(create: () => s, id: 'counter'),
               ],
               child: Builder(
                 builder: (context) {
@@ -598,11 +598,11 @@ void main() {
           home: Scaffold(
             body: Solid(
               providers: [
-                SolidSignal<Signal<int>>(
+                Provider<Signal<int>>(
                   create: () => s,
                   id: 'counter',
                 ),
-                SolidSignal<Computed<int>>(
+                Provider<Computed<int>>(
                   create: () => Computed(() => s() * 2),
                   id: 'double-counter',
                 ),
@@ -659,7 +659,7 @@ void main() {
           home: Scaffold(
             body: Solid(
               providers: [
-                SolidProvider<NumberProvider>(
+                Provider<NumberProvider>(
                   create: () => const NumberProvider(1),
                 ),
               ],
@@ -709,7 +709,7 @@ void main() {
           home: Scaffold(
             body: Solid(
               providers: [
-                SolidProvider<NameProvider>(
+                Provider<NameProvider>(
                   create: () => MockNameProvider('name'),
                 ),
               ],
@@ -730,7 +730,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester.takeException(),
-        const TypeMatcher<SolidProviderError<NumberProvider>>(),
+        const TypeMatcher<ProviderError<NumberProvider>>(),
       );
     });
   });
@@ -742,7 +742,7 @@ void main() {
         home: Scaffold(
           body: Solid(
             providers: [
-              SolidProvider<NameProvider>(
+              Provider<NameProvider>(
                 create: () => MockNameProvider('name'),
               ),
             ],
@@ -831,23 +831,23 @@ void main() {
     );
   });
 
-  testWidgets('Test Solid context.get with SolidProvider', (tester) async {
+  testWidgets('Test Solid context.get with Provider', (tester) async {
     final nameProvider = MockNameProvider('Ale');
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: Solid(
             providers: [
-              SolidProvider<NameProvider>(
+              Provider<NameProvider>(
                 create: () => nameProvider,
                 dispose: (provider) => provider.dispose(),
               ),
-              SolidProvider<NumberProvider>(
+              Provider<NumberProvider>(
                 create: () => const NumberProvider(1),
                 lazy: false,
                 id: 1,
               ),
-              SolidProvider<NumberProvider>(
+              Provider<NumberProvider>(
                 create: () => const NumberProvider(100),
                 lazy: false,
                 id: 2,
@@ -887,7 +887,7 @@ void main() {
         home: Scaffold(
           body: Solid(
             providers: [
-              SolidProvider<NumberProvider>(
+              Provider<NumberProvider>(
                 create: () => const NumberProvider(1),
               ),
             ],
@@ -904,7 +904,7 @@ void main() {
     );
     expect(
       tester.takeException(),
-      const TypeMatcher<SolidProviderError<NameProvider>>().having(
+      const TypeMatcher<ProviderError<NameProvider>>().having(
         (p0) => p0.id,
         'Check error id null',
         isNull,
@@ -912,14 +912,14 @@ void main() {
     );
   });
 
-  testWidgets('Test Solid throws an error for a SolidProvider<dynamic>',
+  testWidgets('Test Solid throws an error for a Provider<dynamic>',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: Solid(
             providers: [
-              SolidProvider(create: () => const NumberProvider(1)),
+              Provider(create: () => const NumberProvider(1)),
             ],
             child: const SizedBox(),
           ),
@@ -928,7 +928,7 @@ void main() {
     );
     expect(
       tester.takeException(),
-      const TypeMatcher<SolidProviderDynamicError>(),
+      const TypeMatcher<ProviderDynamicError>(),
     );
   });
 
@@ -940,10 +940,10 @@ void main() {
         home: Scaffold(
           body: Solid(
             providers: [
-              SolidProvider<NumberProvider>(
+              Provider<NumberProvider>(
                 create: () => const NumberProvider(1),
               ),
-              SolidProvider<NumberProvider>(
+              Provider<NumberProvider>(
                 create: () => const NumberProvider(2),
               ),
             ],
@@ -954,7 +954,7 @@ void main() {
     );
     expect(
       tester.takeException(),
-      const TypeMatcher<SolidProviderMultipleProviderOfSameTypeError>(),
+      const TypeMatcher<ProviderMultipleProviderOfSameTypeError>(),
     );
   });
 
@@ -964,7 +964,7 @@ void main() {
         home: Scaffold(
           body: Solid(
             providers: [
-              SolidSignal<Signal<int>>(create: () => Signal(0)),
+              Provider<Signal<int>>(create: () => Signal(0)),
             ],
             child: Builder(
               builder: (context) {
@@ -1026,7 +1026,7 @@ void main() {
         home: Scaffold(
           body: Solid(
             providers: [
-              SolidProvider<NumberProvider>(
+              Provider<NumberProvider>(
                 create: () => const NumberProvider(1),
                 lazy: false,
                 id: 1,
@@ -1034,7 +1034,7 @@ void main() {
             ],
             child: Solid(
               providers: [
-                SolidProvider<NumberProvider>(
+                Provider<NumberProvider>(
                   create: () => const NumberProvider(100),
                   lazy: false,
                   id: 2,

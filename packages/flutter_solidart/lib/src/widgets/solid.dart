@@ -42,7 +42,7 @@ enum _SignalType {
 ///     return Solid(
 ///       providers: [
 ///         SolidSignal<Signal<ThemeMode>>(
-///           create: () => createSignal(ThemeMode.light),
+///           create: () => Signal(ThemeMode.light),
 ///         ),
 ///       ],
 ///       // using the builder method to immediately access the signal
@@ -120,7 +120,7 @@ enum _SignalType {
 /// you're going to encounter an error, for example:
 ///
 /// ```dart
-/// SolidSignal<Signal<ThemeMode>>(create: () => createSignal(ThemeMode.light))
+/// SolidSignal<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))
 /// ```
 /// and `context.observe<ThemeMode>` where ThemeMode is the type of the signal
 /// value.
@@ -129,7 +129,7 @@ enum _SignalType {
 ///
 /// ## Providers
 ///
-/// You can also pass `SolidProvider`s to descendants:
+/// You can also pass `Provider`s to descendants:
 ///
 /// ```dart
 /// class NameProvider {
@@ -148,29 +148,29 @@ enum _SignalType {
 ///   final int number;
 /// }
 ///
-/// class SolidProvidersPage extends StatelessWidget {
-///   const SolidProvidersPage({super.key});
+/// class ProvidersPage extends StatelessWidget {
+///   const ProvidersPage({super.key});
 ///
 ///   @override
 ///   Widget build(BuildContext context) {
 ///     return Scaffold(
 ///       appBar: AppBar(
-///         title: const Text('SolidProviders'),
+///         title: const Text('Providers'),
 ///       ),
 ///       body: Solid(
 ///         providers: [
-///           SolidProvider<NameProvider>(
+///           Provider<NameProvider>(
 ///             create: () => const NameProvider('Ale'),
 ///             // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
 ///             dispose: (provider) => provider.dispose(),
 ///           ),
-///           SolidProvider<NumberProvider>(
+///           Provider<NumberProvider>(
 ///             create: () => const NumberProvider(1),
 ///             // Do not create the provider lazily, but immediately
 ///             lazy: false,
 ///             id: 1,
 ///           ),
-///           SolidProvider<NumberProvider>(
+///           Provider<NumberProvider>(
 ///             create: () => const NumberProvider(10),
 ///             id: 2,
 ///           ),
@@ -332,7 +332,7 @@ class Solid extends StatefulWidget {
       id: id,
       listen: listen,
     )?.state;
-    if (state == null) throw SolidProviderError<T>(id);
+    if (state == null) throw ProviderError<T>(id);
     return state;
   }
 
@@ -390,7 +390,7 @@ class Solid extends StatefulWidget {
     try {
       return _getOrCreateProvider<T>(context, id: id);
     } catch (e) {
-      if (e is SolidProviderError<T>) {
+      if (e is ProviderError<T>) {
         return null;
       }
       rethrow;
@@ -463,7 +463,7 @@ class Solid extends StatefulWidget {
         listen: true,
       );
       final signalValueType = state.widget.providers
-          .whereType<SolidSignal<dynamic>>()
+          .where((element) => element._isSignal)
           .firstWhere((element) => element.id == id)
           ._valueType;
       if (signalValueType == Signal<T>) {
@@ -579,10 +579,10 @@ class SolidState extends State<Solid> {
     final types = <Type>[];
     for (final provider in widget.providers) {
       final type = provider._valueType;
-      if (type == dynamic) throw SolidProviderDynamicError();
+      if (type == dynamic) throw ProviderDynamicError();
 
       if (types.contains(type) && provider.id == null) {
-        throw SolidProviderMultipleProviderOfSameTypeError(
+        throw ProviderMultipleProviderOfSameTypeError(
           providerType: type,
         );
       } else {
@@ -591,7 +591,7 @@ class SolidState extends State<Solid> {
     }
     // create non lazy providers.
     widget.providers
-        .whereType<SolidProvider<dynamic>>()
+        .whereType<Provider<dynamic>>()
         .where((element) => !element.lazy)
         .forEach((provider) {
       // create and store the provider
@@ -609,14 +609,7 @@ class SolidState extends State<Solid> {
     // dispose all the created providers
     if (widget._canAutoDisposeProviders) {
       _createdProviders.forEach((provider, value) {
-        switch (provider) {
-          case SolidProvider():
-            provider._disposeFn(context, value);
-          case SolidSignal():
-            if (provider.autoDispose) {
-              (value as SignalBase).dispose();
-            }
-        }
+        provider._disposeFn(context, value);
       });
     }
 
@@ -646,7 +639,7 @@ class SolidState extends State<Solid> {
 
   /// -- Providers logic
 
-  /// Try to find a [SolidProvider] of type <T> or [id] and returns it
+  /// Try to find a [Provider] of type <T> or [id] and returns it
   SolidElement<dynamic>? _getProvider<T>(
     Identifier? id,
   ) {
@@ -674,8 +667,7 @@ class SolidState extends State<Solid> {
     final provider = _getProvider<T>(id)!;
     // create and return it
     final value = provider.create() as T;
-
-    if (provider is SolidSignal && value is SignalBase) {
+    if (provider._isSignal && value is SignalBase) {
       _initializeSignal(value, id: id ?? T);
     }
 
@@ -839,12 +831,12 @@ class _InheritedSolid extends InheritedModel<Object> {
   }
 }
 
-/// {@template solidprovidererror}
-/// Error thrown when the [SolidProvider] of type [id] cannot be found
+/// {@template providererror}
+/// Error thrown when the [Provider] of type [id] cannot be found
 /// {$endtemplate}
-class SolidProviderError<T> extends Error {
-  /// {@macro solidprovidererror}
-  SolidProviderError(this.id);
+class ProviderError<T> extends Error {
+  /// {@macro providererror}
+  ProviderError(this.id);
 
   /// The id of the provider
   final Identifier? id;
@@ -852,7 +844,7 @@ class SolidProviderError<T> extends Error {
   @override
   String toString() {
     return '''
-Error could not fint a Solid containing the given SolidProvider type $T and id $id
+Error could not fint a Solid containing the given Provider type $T and id $id
 To fix, please:
           
   * Be sure to have a Solid ancestor, the context used must be a descendant.
@@ -861,11 +853,11 @@ To fix, please:
     ```
     Solid(
       providers: [
-          SolidProvider<NameProvider>(
+          Provider<NameProvider>(
             create: () => const NameProvider('Ale'),
           ),
           SolidSignal<Signal<int>>(
-            create: () => createSignal(0),
+            create: () => Signal(0),
           ),
       ],
     )
@@ -878,24 +870,24 @@ https://github.com/nank1ro/solidart/issues/new
   }
 }
 
-/// Error thrown when the [SolidProvider] has a `dynamic` Type.
-class SolidProviderDynamicError extends Error {
+/// Error thrown when the [Provider] has a `dynamic` Type.
+class ProviderDynamicError extends Error {
   @override
   String toString() {
     return '''
     Seems like that you forgot to declare the provider type.
-    You have `SolidProvider()` but it should be `SolidProvider<ProviderType>()`.
+    You have `Provider()` but it should be `Provider<ProviderType>()`.
       ''';
   }
 }
 
-/// {@template solidprovidermultipleproviderofsametypeerror}
+/// {@template Providermultipleproviderofsametypeerror}
 /// Error thrown when there are multiple providers of the same [providerType]
 /// Type in the same [Solid] widget
 /// {$endtemplate}
-class SolidProviderMultipleProviderOfSameTypeError extends Error {
-  /// {@macro solidprovidermultipleproviderofsametypeerror}
-  SolidProviderMultipleProviderOfSameTypeError({required this.providerType});
+class ProviderMultipleProviderOfSameTypeError extends Error {
+  /// {@macro Providermultipleproviderofsametypeerror}
+  ProviderMultipleProviderOfSameTypeError({required this.providerType});
 
   /// The type of the provider
   final Type providerType;

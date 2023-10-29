@@ -5,13 +5,13 @@ import 'package:collection/collection.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:solidart_lint/src/types.dart';
 
-class AvoidDynamicSolidSignal extends DartLintRule {
-  const AvoidDynamicSolidSignal() : super(code: _code);
+class AvoidDynamicProvider extends DartLintRule {
+  const AvoidDynamicProvider() : super(code: _code);
 
   static const _code = LintCode(
-    name: 'avoid_dynamic_solid_signal',
+    name: 'avoid_dynamic_provider',
     errorSeverity: ErrorSeverity.ERROR,
-    problemMessage: 'The SolidSignal cannot be dynamic',
+    problemMessage: 'The Provider cannot be dynamic',
   );
 
   @override
@@ -26,8 +26,7 @@ class AvoidDynamicSolidSignal extends DartLintRule {
       final type = node.staticType;
       if (type == null) return;
       final name = type.getDisplayString(withNullability: false);
-      if (solidSignalType.isExactlyType(type) &&
-          name == 'SolidSignal<dynamic>') {
+      if (providerType.isExactlyType(type) && name == 'Provider<dynamic>') {
         reporter.reportErrorForToken(_code, node.beginToken);
         return;
       }
@@ -35,10 +34,10 @@ class AvoidDynamicSolidSignal extends DartLintRule {
   }
 
   @override
-  List<Fix> getFixes() => [_SolidSignalTypeFix()];
+  List<Fix> getFixes() => [_ProviderTypeFix()];
 }
 
-class _SolidSignalTypeFix extends DartFix {
+class _ProviderTypeFix extends DartFix {
   @override
   void run(
     CustomLintResolver resolver,
@@ -78,13 +77,13 @@ class _SolidSignalTypeFix extends DartFix {
         if (dartType == null) return;
 
         final changeBuilder = reporter.createChangeBuilder(
-          message: 'Convert SolidSignal to SolidSignal<$dartType>',
+          message: 'Convert Provider to Provider<$dartType>',
           priority: 1,
         );
         final constructorName =
             node.childEntities.whereType<ConstructorName>().firstOrNull;
         final name = constructorName?.toString();
-        if (name != 'SolidSignal') return;
+        if (name != 'Provider') return;
 
         changeBuilder.addDartFileEdit(
           (builder) {

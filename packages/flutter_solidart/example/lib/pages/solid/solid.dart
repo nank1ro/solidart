@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'observe_signal_page.dart';
 
 final _pages = {
-  'Solid Providers': () => const SolidProvidersPage(),
+  'Solid Providers': () => const ProvidersPage(),
   'Solid Signals': () => const SolidSignalsPage(),
   'Observe Signal': () => const ObserveSignalPage(),
   'Multiple Signals': () => const MultipleSignalsPage(),

@@ -5,7 +5,5 @@ final signalBaseType =
     TypeChecker.fromName('SignalBase', packageName: 'solidart');
 final solidType =
     TypeChecker.fromName('Solid', packageName: 'flutter_solidart');
-final solidProviderType =
-    TypeChecker.fromName('SolidProvider', packageName: 'flutter_solidart');
-final solidSignalType =
-    TypeChecker.fromName('SolidSignal', packageName: 'flutter_solidart');
+final providerType =
+    TypeChecker.fromName('Provider', packageName: 'flutter_solidart');
