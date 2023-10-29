@@ -1,3 +1,8 @@
+## 1.1.0
+
+- **CHORE**: Update `flutter_solidart` dependency
+- **CHORE**: Remove `avoid_dynamic_solid_signal`
+
 ## 1.0.1
 
 - Update dependencies
