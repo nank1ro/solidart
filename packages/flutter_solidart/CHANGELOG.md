@@ -71,11 +71,11 @@ The core of the library has been rewritten in order to support automatic depende
 
   ### Provider declaration:
   ```dart
-  Provider<NumberProvider>(
+  SolidProvider<NumberProvider>(
     create: () => const NumberProvider(1),
     id: 1,
   ),
-  Provider<NumberProvider>(
+  SolidProvider<NumberProvider>(
     create: () => const NumberProvider(10),
     id: 2,
   ),
@@ -226,11 +226,11 @@ The advantage is that you keep handling the loading and error states.
 
   ### Provider declaration:
   ```dart
-  Provider<NumberProvider>(
+  SolidProvider<NumberProvider>(
     create: () => const NumberProvider(1),
     id: 1,
   ),
-  Provider<NumberProvider>(
+  SolidProvider<NumberProvider>(
     create: () => const NumberProvider(10),
     id: 2,
   ),
@@ -462,7 +462,7 @@ The core of the library has been rewritten in order to support automatic depende
 
 ## 0.3.0
 
-- Now Solid can deal also with `Providers`. You no longer need an external dependency injector library.
+- Now Solid can deal also with `SolidProviders`. You no longer need an external dependency injector library.
   I decided to put some boundaries and stop suggesting any external dependency injector library.
   This choice is due to the fact that external libraries in turn provide state management and the user is more likely to mistakenly use solidart.
   I simplified the usage of InheritedWidgets with a very nice API:
@@ -472,12 +472,12 @@ The core of the library has been rewritten in order to support automatic depende
   ```dart
   Solid(
         providers: [
-          Provider<NameProvider>(
+          SolidProvider<NameProvider>(
             create: () => const NameProvider('Ale'),
             // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
             dispose: (provider) => provider.dispose(),
           ),
-          Provider<NumberProvider>(
+          SolidProvider<NumberProvider>(
             create: () => const NumberProvider(1),
             // Do not create the provider lazily, but immediately
             lazy: false,
