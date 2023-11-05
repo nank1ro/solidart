@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:pub/bloc/search.dart';
+import 'package:pub/common/ui/app_bar.dart';
 import 'package:pub/pages/search/ui/packages_list.dart';
 import 'package:pub/pages/search/ui/search_field.dart';
 
@@ -17,15 +18,11 @@ class SearchPage extends StatelessWidget {
           dispose: (bloc) => bloc.dispose(),
         ),
       ],
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Pub.dev Search'),
-          bottom: const PreferredSize(
-            preferredSize: Size.fromHeight(70),
-            child: SearchField(),
-          ),
+      child: const Scaffold(
+        appBar: PubAppBar(
+          bottom: SearchField(),
         ),
-        body: const SearchPackagesList(),
+        body: SearchPackagesList(),
       ),
     );
   }

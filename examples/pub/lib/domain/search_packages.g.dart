@@ -16,4 +16,6 @@ SearchPackages _$SearchPackagesFromJson(Map<String, dynamic> json) =>
       packages: (json['packages'] as List<dynamic>)
           .map((e) => SearchPackage.fromJson(e as Map<String, dynamic>))
           .toList(),
+      page: json['page'] as int,
+      next: json['next'] as String?,
     );
