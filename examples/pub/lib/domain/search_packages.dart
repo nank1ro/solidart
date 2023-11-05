@@ -21,13 +21,19 @@ class SearchPackage extends Equatable {
 @immutable
 @JsonSerializable(createToJson: false)
 class SearchPackages extends Equatable {
-  const SearchPackages({required this.packages});
+  const SearchPackages({
+    required this.packages,
+    required this.page,
+    this.next,
+  });
 
   factory SearchPackages.fromJson(Map<String, dynamic> json) =>
       _$SearchPackagesFromJson(json);
 
   final List<SearchPackage> packages;
+  final String? next;
+  final int page;
 
   @override
-  List<Object> get props => [packages];
+  List<Object?> get props => [packages, page, next];
 }

@@ -62,8 +62,9 @@ class _SearchFieldState extends State<SearchField> {
                 style: const TextStyle(color: Colors.white),
                 onSubmitted: (search) {
                   // update the search input when the user submits the search
-                  bloc.searchInput
-                      .updateValue((value) => value.copyWith(search: search));
+                  // and reset the page to the first one
+                  bloc.searchInput.updateValue(
+                      (value) => value.copyWith(search: search, page: 1));
                 },
               ),
             ),
@@ -79,8 +80,8 @@ class _SearchFieldState extends State<SearchField> {
                     controller.clear();
 
                     // clear the search input when the user presses the clear button
-                    bloc.searchInput
-                        .updateValue((value) => value.copyWith(search: ''));
+                    bloc.searchInput.updateValue(
+                        (value) => value.copyWith(search: '', page: 1));
                   },
                 );
               },

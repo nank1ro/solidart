@@ -43,3 +43,6 @@ lcov.info
 .vscode/settings.json
 .flutter-plugins-dependencies
 .flutter-plugins
+.firebase
+.firebaserc
+firebase.json
