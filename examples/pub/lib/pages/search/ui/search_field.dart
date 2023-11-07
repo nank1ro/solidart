@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:pub/bloc/search.dart';
+import 'package:pub/bloc/pub_search/bloc.dart';
 import 'package:pub/common/assets.dart';
 
 class SearchField extends StatefulWidget {

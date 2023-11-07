@@ -2,7 +2,7 @@ import 'package:awesome_flutter_extensions/awesome_flutter_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:intl/intl.dart';
-import 'package:pub/bloc/search.dart';
+import 'package:pub/bloc/pub_search/bloc.dart';
 import 'package:pub/common/assets.dart';
 import 'package:pub/common/ui/basic_badge.dart';
 import 'package:pub/common/ui/score_view.dart';
