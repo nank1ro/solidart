@@ -157,13 +157,13 @@ class DualSignalBuilder<T, U> extends StatefulWidget {
     this.child,
   });
 
-  /// {@template signalbuilder.signal}
+  /// {@macro signalbuilder.signal}
   final SignalBase<T> firstSignal;
 
-  /// {@template signalbuilder.signal}
+  /// {@macro signalbuilder.signal}
   final SignalBase<U> secondSignal;
 
-  /// {@template signalbuilder.builder}
+  /// {@macro signalbuilder.builder}
   ///
   /// Called when any of the signals values changes
   final DualValueWidgetBuilder<T, U> builder;
@@ -276,16 +276,16 @@ class TripleSignalBuilder<T, U, R> extends StatefulWidget {
     this.child,
   });
 
-  /// {@template signalbuilder.signal}
+  /// {@macro signalbuilder.signal}
   final SignalBase<T> firstSignal;
 
-  /// {@template signalbuilder.signal}
+  /// {@macro signalbuilder.signal}
   final SignalBase<U> secondSignal;
 
-  /// {@template signalbuilder.signal}
+  /// {@macro signalbuilder.signal}
   final SignalBase<R> thirdSignal;
 
-  /// {@template signalbuilder.builder}
+  /// {@macro signalbuilder.builder}
   ///
   /// Called when any of the signals values changes
   final TripleValueWidgetBuilder<T, U, R> builder;
