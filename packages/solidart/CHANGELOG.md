@@ -1,3 +1,7 @@
+## 1.2.1
+
+- **BUGFIX**: Fix the `updateValue` method of a `Signal` that triggered `reportObserved`. (thanks to @9dan)
+
 ## 1.2.0
 
 - **FEAT**: Add 3 new signals: `ListSignal`, `SetSignal` and `MapSignal`. Now you can easily be notified of every change of a list, set or map.
