@@ -453,6 +453,7 @@ class Solid extends StatefulWidget {
   /// You must call this method only from the `build` method.
   ///
   /// WARNING: Doesn't support observing a Resource.
+  /// {@endtemplate}
   static T observe<T>(BuildContext context, [Identifier? id]) {
     SolidState? state;
     var signalType = _SignalType.signal;
@@ -833,7 +834,7 @@ class _InheritedSolid extends InheritedModel<Object> {
 
 /// {@template providererror}
 /// Error thrown when the [Provider] of type [id] cannot be found
-/// {$endtemplate}
+/// {@endtemplate}
 class ProviderError<T> extends Error {
   /// {@macro providererror}
   ProviderError(this.id);
@@ -884,7 +885,7 @@ class ProviderDynamicError extends Error {
 /// {@template Providermultipleproviderofsametypeerror}
 /// Error thrown when there are multiple providers of the same [providerType]
 /// Type in the same [Solid] widget
-/// {$endtemplate}
+/// {@endtemplate}
 class ProviderMultipleProviderOfSameTypeError extends Error {
   /// {@macro Providermultipleproviderofsametypeerror}
   ProviderMultipleProviderOfSameTypeError({required this.providerType});

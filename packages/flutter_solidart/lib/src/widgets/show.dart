@@ -61,7 +61,7 @@ import 'package:solidart/solidart.dart';
 ///   );
 /// }
 /// ```
-/// {$endtemplate}
+/// {@endtemplate}
 class Show<T extends bool> extends StatefulWidget {
   /// {@macro show}
   const Show({
