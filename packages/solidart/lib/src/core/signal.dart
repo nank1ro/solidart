@@ -139,7 +139,7 @@ class Signal<T> extends ReadSignal<T> {
 
   /// Calls a function with the current [value] and assigns the result as the
   /// new value.
-  T updateValue(T Function(T value) callback) => value = callback(value);
+  T updateValue(T Function(T value) callback) => value = callback(_value);
 
   /// Converts this [Signal] into a [ReadSignal]
   /// Use this method to remove the visility to the value setter.
