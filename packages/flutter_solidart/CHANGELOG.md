@@ -1,3 +1,7 @@
+## 1.4.2
+
+Update solidart version
+
 ## 1.4.1
 
 ### Changes from solidart
