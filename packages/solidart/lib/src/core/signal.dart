@@ -137,7 +137,7 @@ class Signal<T> extends ReadSignal<T> {
   /// {@endtemplate}
   void set(T newValue) => _setValue(newValue);
 
-  /// Calls a function with the current [value] and assigns the result as the
+  /// Calls a function with the current value and assigns the result as the
   /// new value.
   T updateValue(T Function(T value) callback) => value = callback(_value);
 
