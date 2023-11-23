@@ -1,3 +1,9 @@
+## 1.4.1
+
+### Changes from solidart
+
+- **BUGFIX**: Fix the `updateValue` method of a `Signal` that triggered `reportObserved`. (thanks to @9dan)
+
 ## 1.4.0
 
 - **CHORE**: Rename `SolidProvider` into `Provider`.
