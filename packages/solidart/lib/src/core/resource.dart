@@ -377,7 +377,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   ResourceState<T> update(
     ResourceState<T> Function(ResourceState<T> state) callback,
   ) =>
-      state = callback(state);
+      state = callback(_value);
 
   @override
   void dispose() {

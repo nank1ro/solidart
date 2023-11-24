@@ -1,3 +1,7 @@
+## 1.2.2
+
+- **BUGFIX**: Fix the `update` method of a `Resource` that triggered `reportObserved`.
+
 ## 1.2.1
 
 - **BUGFIX**: Fix the `updateValue` method of a `Signal` that triggered `reportObserved`. (thanks to @9dan)
