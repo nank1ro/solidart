@@ -1,3 +1,9 @@
+## 1.4.3
+
+### Changes from solidart
+
+- **BUGFIX**: Fix the `update` method of a `Resource` that triggered `reportObserved`.
+
 ## 1.4.2
 
 Update solidart version
