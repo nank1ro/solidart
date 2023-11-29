@@ -14,21 +14,13 @@ class SetSignalPage extends StatefulWidget {
 
 class _SetSignalPageState extends State<SetSignalPage> {
   final items = SetSignal({1, 2});
-  late final DisposeObservation observation;
 
   @override
   void initState() {
     super.initState();
-    observation = items.observe((previousValue, value) {
+    items.observe((previousValue, value) {
       print("Items changed: $previousValue -> $value");
     });
-  }
-
-  @override
-  void dispose() {
-    observation();
-    items.dispose();
-    super.dispose();
   }
 
   @override

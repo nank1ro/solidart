@@ -13,12 +13,6 @@ class _ShowPageState extends State<ShowPage> {
   final loggedIn = Signal(false);
 
   @override
-  void dispose() {
-    loggedIn.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
