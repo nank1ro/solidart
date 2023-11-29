@@ -37,7 +37,7 @@ DisposeEffect createEffect(
 /// The reaction interface
 abstract class ReactionInterface implements Derivation {
   /// Indicate if the reaction is dispose
-  bool get isDisposed;
+  bool get disposed;
 
   /// Disposes the reaction
   void dispose();
@@ -134,7 +134,7 @@ class Effect implements ReactionInterface {
 
             timer = scheduler(() {
               isScheduled = false;
-              if (!effect.isDisposed) {
+              if (!effect.disposed) {
                 effect.track(() => callback(effect.dispose));
               } else {
                 // coverage:ignore-start
@@ -173,7 +173,7 @@ class Effect implements ReactionInterface {
 
   final _context = ReactiveContext.main;
   bool _isScheduled = false;
-  bool _isDisposed = false;
+  bool _disposed = false;
   bool _isRunning = false;
 
   @override
@@ -187,7 +187,7 @@ class Effect implements ReactionInterface {
   Set<Atom>? _newObservables;
 
   @override
-  bool get isDisposed => _isDisposed;
+  bool get disposed => _disposed;
 
   final Set<Atom> __observables = {};
 
@@ -232,7 +232,7 @@ class Effect implements ReactionInterface {
     _context.trackDerivation(this, fn);
     _isRunning = false;
 
-    if (_isDisposed) {
+    if (_disposed) {
       _context.clearObservables(this);
     }
 
@@ -252,7 +252,7 @@ class Effect implements ReactionInterface {
 
   @override
   void run() {
-    if (_isDisposed) return;
+    if (_disposed) return;
 
     _context.startBatch();
 
@@ -287,9 +287,9 @@ class Effect implements ReactionInterface {
   /// After this operation the effect is useless.
   @override
   void dispose() {
-    if (_isDisposed) return;
+    if (_disposed) return;
 
-    _isDisposed = true;
+    _disposed = true;
 
     if (_isRunning) return;
 
