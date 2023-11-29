@@ -187,11 +187,25 @@ class Effect implements ReactionInterface {
   Set<Atom>? _newObservables;
 
   @override
-  // ignore: prefer_final_fields
-  Set<Atom> _observables = {};
+  bool get isDisposed => _isDisposed;
+
+  final Set<Atom> __observables = {};
 
   @override
-  bool get isDisposed => _isDisposed;
+  // ignore: prefer_final_fields
+  Set<Atom> get _observables => __observables;
+
+  @override
+  set _observables(Set<Atom> newObservables) {
+    // dispose when all observables are no longer being observed
+    if (newObservables.every((ob) => ob.disposed)) {
+      dispose();
+    } else {
+      __observables
+        ..clear()
+        ..addAll(newObservables);
+    }
+  }
 
   @override
   void _onBecomeStale() {
@@ -262,12 +276,6 @@ class Effect implements ReactionInterface {
 
     _context.endBatch();
   }
-
-  // coverage:ignore-start
-  @override
-  // ignore: unused_element
-  void _suspend() {}
-  // coverage:ignore-end
 
   /// Invalidates the effect.
   ///

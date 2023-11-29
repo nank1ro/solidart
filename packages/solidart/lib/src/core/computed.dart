@@ -78,9 +78,17 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   @override
   SolidartCaughtException? _errorValue;
 
+  final Set<Atom> __observables = {};
+
   @override
-  // ignore: prefer_final_fields
-  Set<Atom> _observables = {};
+  Set<Atom> get _observables => __observables;
+
+  @override
+  set _observables(Set<Atom> value) {
+    __observables
+      ..clear()
+      ..addAll(value);
+  }
 
   @override
   Set<Atom>? _newObservables;
@@ -100,11 +108,6 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   @override
   void _onBecomeStale() {
     _context.propagatePossiblyChanged(this);
-  }
-
-  @override
-  void _suspend() {
-    _context.clearObservables(this);
   }
 
   @override

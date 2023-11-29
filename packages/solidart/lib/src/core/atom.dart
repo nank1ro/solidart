@@ -26,6 +26,8 @@ class Atom {
   // ignore: prefer_final_fields
   bool _isBeingObserved = false;
 
+  bool disposed = false;
+
   final Set<Derivation> _observers = {};
 
   bool get hasObservers => _observers.isNotEmpty;
@@ -55,4 +57,6 @@ class Atom {
       _context.enqueueForUnobservation(this);
     }
   }
+
+  void dispose() {}
 }

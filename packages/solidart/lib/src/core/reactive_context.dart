@@ -2,26 +2,24 @@
 part of 'core.dart';
 
 class _ReactiveState {
-  /// Current batch depth. This is used to track the depth of `transaction` / `action`.
-  /// When the batch ends, we execute all the [pendingReactions]
+  /// Current batch depth. When the batch ends, we execute all the
+  /// [pendingReactions]
   int batch = 0;
 
   /// Monotonically increasing counter for assigning a name to an action/reaction/atom
   int nextIdCounter = 0;
 
   /// Tracks the currently executing derivation (reactions or computeds).
-  /// The Observables used here are linked to this derivation.
+  /// The Observables used here are linked to this derivation
   Derivation? trackingDerivation;
 
-  /// The reactions that must be triggered at the end of a `transaction` or an
-  /// `action`
+  /// The reactions that must be triggered at the end
   List<ReactionInterface> pendingReactions = [];
 
-  /// Are we in middle of executing the [pendingReactions].
+  /// Are we in middle of executing the [pendingReactions]
   bool isRunningReactions = false;
 
-  /// The atoms that must be disconnected from their observed reactions. This
-  /// happens if a reaction has been disposed during a batch
+  /// The atoms that must be disconnected from their observed reactions
   List<Atom> pendingUnobservations = [];
 
   /// Tracks if within a computed property evaluation
@@ -30,7 +28,7 @@ class _ReactiveState {
   /// Tracks if observables can be mutated
   bool allowStateChanges = true;
 
-  /// Are we inside an action or transaction?
+  /// Indicates if we're inside a batch
   bool get isWithinBatch => batch > 0;
 }
 
@@ -89,9 +87,7 @@ class ReactiveContext {
             ob._isBeingObserved = false;
           }
 
-          if (ob is Computed) {
-            ob._suspend();
-          }
+          ob.dispose();
         }
       }
 
@@ -275,7 +271,7 @@ Probably there is a cycle in the reactive function: $failingReaction ''');
   }
 
   void clearObservables(Derivation derivation) {
-    final observables = derivation._observables;
+    final observables = derivation._observables.toSet();
     derivation._observables = {};
 
     for (final x in observables) {
