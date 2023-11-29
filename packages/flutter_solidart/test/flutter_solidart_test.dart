@@ -1182,4 +1182,37 @@ void main() {
       timeout: const Timeout(Duration(seconds: 1)),
     );
   });
+
+  testWidgets(
+    'Effect with multiple dependencies autoDispose',
+    (tester) async {
+      final counter = Signal(0);
+      final doubleCounter = Computed(() => counter() * 2);
+      final effect = Effect((_) {
+        counter();
+        doubleCounter();
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SignalBuilder(
+              signal: counter,
+              builder: (_, count, __) {
+                return Text(count.toString());
+              },
+            ),
+          ),
+        ),
+      );
+      expect(counter.disposed, isFalse);
+      expect(doubleCounter.disposed, isFalse);
+      expect(effect.disposed, isFalse);
+      await tester.pumpWidget(const SizedBox());
+      effect();
+      expect(effect.disposed, isTrue);
+      expect(counter.disposed, isTrue);
+      expect(doubleCounter.disposed, isTrue);
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
 }
