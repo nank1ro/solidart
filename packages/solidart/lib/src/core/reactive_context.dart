@@ -86,8 +86,7 @@ class ReactiveContext {
             // if this observable had reactive observers, trigger the hooks
             ob._isBeingObserved = false;
           }
-
-          ob.dispose();
+          if (ob._canAutoDispose) ob.dispose();
         }
       }
 

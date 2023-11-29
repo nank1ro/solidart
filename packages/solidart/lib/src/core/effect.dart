@@ -12,13 +12,22 @@ typedef DisposeEffect = void Function();
 @immutable
 class EffectOptions {
   /// {@macro effect-options}
-  const EffectOptions({this.name, this.delay});
+  const EffectOptions({
+    this.name,
+    this.delay,
+    this.autoDispose = true,
+  });
 
   /// The name of the effect, useful for logging
   final String? name;
 
   /// Delay each effect reaction
   final Duration? delay;
+
+  /// Whether to automatically dispose the effect (defaults to true).
+  ///
+  /// This happens automatically when all the tracked dependencies are disposed.
+  final bool autoDispose;
 }
 
 // coverage:ignore-start
@@ -156,10 +165,10 @@ class Effect implements ReactionInterface {
   /// {@macro effect}
   Effect._internal({
     required VoidCallback callback,
-    EffectOptions? options,
+    required this.options,
     ErrorCallback? onError,
   })  : _onError = onError,
-        name = options?.name ?? ReactiveContext.main.nameFor('Effect'),
+        name = options.name ?? ReactiveContext.main.nameFor('Effect'),
         _callback = callback;
 
   /// The name of the effect, useful for logging purposes.
@@ -170,6 +179,9 @@ class Effect implements ReactionInterface {
 
   /// Optionally handle the error case
   final ErrorCallback? _onError;
+
+  /// {@macro effect-options}
+  final EffectOptions options;
 
   final _context = ReactiveContext.main;
   bool _isScheduled = false;
@@ -198,7 +210,7 @@ class Effect implements ReactionInterface {
   @override
   set _observables(Set<Atom> newObservables) {
     // dispose when all observables are no longer being observed
-    if (newObservables.every((ob) => ob.disposed)) {
+    if (options.autoDispose && newObservables.every((ob) => ob.disposed)) {
       dispose();
     } else {
       __observables

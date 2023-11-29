@@ -24,6 +24,7 @@ class SignalOptions<T> {
     this.name,
     this.equals = false,
     this.comparator = identical,
+    this.autoDispose = true,
   });
 
   /// Whether to check the equality of the value with the == equality.
@@ -42,6 +43,12 @@ class SignalOptions<T> {
 
   /// The name of the signal, useful for logging purposes.
   final String? name;
+
+  /// Whether to automatically dispose the signal (defaults to true).
+  ///
+  /// This happens automatically when there are no longer subscribers.
+  /// If you set it to false, you should remember to dispose the signal manually
+  final bool autoDispose;
 
   @override
   String toString() =>

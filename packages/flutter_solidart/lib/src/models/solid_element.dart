@@ -56,11 +56,8 @@ typedef SolidProvider<T> = Provider<T>;
 ///
 /// You can pass an optional [id] to have multiple providers of the same type.
 ///
-/// The [autoDispose] parameter specifies if the provider should be disposed
-/// automatically when the widget is disposed. Defaults to true.
-///
-/// The [dispose] method will not be called if the provider is a Signal, instead
-/// the Signal will be auto-disposed if [autoDispose] is true.
+/// The [dispose] method will not be called if the provider is a `SignalBase`,
+/// because they are disposed automatically when there aren't any subscribers.
 ///
 /// {@endtemplate}
 @immutable
@@ -71,7 +68,6 @@ class Provider<T> extends SolidElement<T> {
     this.dispose,
     this.lazy = true,
     super.id,
-    this.autoDispose = true,
   });
 
   /// An optional dispose function called when the Solid that created this
@@ -84,17 +80,9 @@ class Provider<T> extends SolidElement<T> {
   /// when retrieved from descendants.
   final bool lazy;
 
-  /// Whether to auto dispose the provider, defaults to true.
-  final bool autoDispose;
-
   /// Dispose function, do not use.
   @override
   void _disposeFn(BuildContext context, dynamic value) {
-    if (!autoDispose) return;
-    if (_isSignal) {
-      (value as SignalBase).dispose();
-    } else {
-      dispose?.call(value as T);
-    }
+    dispose?.call(value as T);
   }
 }

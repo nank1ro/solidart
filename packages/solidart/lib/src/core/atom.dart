@@ -10,8 +10,10 @@ part of 'core.dart';
 class Atom {
   /// {@macro atom}
   Atom({
+    required bool canAutoDispose,
     String? name,
-  }) : name = name ?? ReactiveContext.main.nameFor('Atom');
+  })  : name = name ?? ReactiveContext.main.nameFor('Atom'),
+        _canAutoDispose = canAutoDispose;
 
   final ReactiveContext _context = ReactiveContext.main;
 
@@ -27,6 +29,8 @@ class Atom {
   bool _isBeingObserved = false;
 
   bool disposed = false;
+
+  final bool _canAutoDispose;
 
   final Set<Derivation> _observers = {};
 

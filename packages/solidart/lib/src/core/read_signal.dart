@@ -22,7 +22,8 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     T initialValue, {
     SignalOptions<T>? options,
   })  : _value = initialValue,
-        options = options ?? SignalOptions<T>();
+        options = options ?? SignalOptions<T>(),
+        super(canAutoDispose: options?.autoDispose ?? true);
 
   // Tracks the internal value
   T _value;
@@ -155,6 +156,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   }
 
   void _mayDispose() {
+    if (!options.autoDispose) return;
     if (_listeners.isEmpty && _observers.isEmpty) dispose();
   }
 
