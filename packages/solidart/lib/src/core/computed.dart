@@ -216,5 +216,5 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
 
   @override
   String toString() =>
-      '''Computed<$T>(value: $value, previousValue: $previousValue, options; $options)''';
+      '''Computed<$T>(value: $_value, previousValue: $_previousValue, options; $options)''';
 }

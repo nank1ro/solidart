@@ -897,7 +897,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
 
   @override
   String toString() =>
-      '''ListSignal<$E>(value: $value, previousValue: $previousValue, options; $options)''';
+      '''ListSignal<$E>(value: $_value, previousValue: $_previousValue, options; $options)''';
 
   void _notifyChanged() {
     _reportChanged();

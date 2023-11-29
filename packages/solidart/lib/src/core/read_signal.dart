@@ -174,5 +174,5 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   @override
   String toString() =>
-      '''ReadSignal<$T>(value: $value, previousValue: $previousValue, options; $options)''';
+      '''ReadSignal<$T>(value: $_value, previousValue: $_previousValue, options; $options)''';
 }

@@ -405,7 +405,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
 
   @override
   String toString() =>
-      '''MapSignal<$K, $V>(value: $value, previousValue: $previousValue, options; $options)''';
+      '''MapSignal<$K, $V>(value: $_value, previousValue: $_previousValue, options; $options)''';
 
   void _notifyChanged() {
     _reportChanged();

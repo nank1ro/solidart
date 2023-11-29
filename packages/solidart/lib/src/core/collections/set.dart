@@ -447,7 +447,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
 
   @override
   String toString() =>
-      '''SetSignal<$E>(value: $value, previousValue: $previousValue, options; $options)''';
+      '''SetSignal<$E>(value: $_value, previousValue: $_previousValue, options; $options)''';
 
   void _notifyChanged() {
     _reportChanged();

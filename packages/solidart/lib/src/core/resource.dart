@@ -396,7 +396,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   @override
   String toString() =>
-      '''Resource<$T>(state: $state, previousState: $previousState, options; $options)''';
+      '''Resource<$T>(state: $_value, previousState: $_previousValue, options; $options)''';
 }
 
 /// Manages all the different states of a [Resource]:

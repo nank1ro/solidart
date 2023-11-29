@@ -147,5 +147,5 @@ class Signal<T> extends ReadSignal<T> {
 
   @override
   String toString() =>
-      '''Signal<$T>(value: $value, previousValue: $previousValue, options: $options)''';
+      '''Signal<$T>(value: $_value, previousValue: $_previousValue, options: $options)''';
 }
