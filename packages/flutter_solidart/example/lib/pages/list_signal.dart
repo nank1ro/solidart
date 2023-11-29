@@ -24,6 +24,12 @@ class _ListSignalPageState extends State<ListSignalPage> {
   }
 
   @override
+  void dispose() {
+    items.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('ListSignal')),

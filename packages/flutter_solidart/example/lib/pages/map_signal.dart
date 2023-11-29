@@ -25,6 +25,12 @@ class _MapSignalPageState extends State<MapSignalPage> {
     });
   }
 
+  @override
+  void dispose() {
+    items.dispose();
+    super.dispose();
+  }
+
   String getRandomString(int length) => String.fromCharCodes(Iterable.generate(
       length, (_) => _chars.codeUnitAt(Random().nextInt(_chars.length))));
 

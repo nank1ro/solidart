@@ -209,14 +209,9 @@ class Effect implements ReactionInterface {
 
   @override
   set _observables(Set<Atom> newObservables) {
-    // dispose when all observables are no longer being observed
-    if (options.autoDispose && newObservables.every((ob) => ob.disposed)) {
-      dispose();
-    } else {
-      __observables
-        ..clear()
-        ..addAll(newObservables);
-    }
+    __observables
+      ..clear()
+      ..addAll(newObservables);
   }
 
   @override
@@ -300,7 +295,6 @@ class Effect implements ReactionInterface {
   @override
   void dispose() {
     if (_disposed) return;
-
     _disposed = true;
 
     if (_isRunning) return;
@@ -310,5 +304,13 @@ class Effect implements ReactionInterface {
       ..startBatch()
       ..clearObservables(this)
       ..endBatch();
+  }
+
+  @override
+  void _mayDispose() {
+    if (options.autoDispose &&
+        (_observables.isEmpty || _observables.every((ob) => ob.disposed))) {
+      dispose();
+    }
   }
 }

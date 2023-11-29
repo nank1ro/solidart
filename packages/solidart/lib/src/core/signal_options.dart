@@ -52,5 +52,45 @@ class SignalOptions<T> {
 
   @override
   String toString() =>
-      '''SignalOptions<$T>(name: $name, equals: $equals, comparator: ${comparator != null ? "PRESENT" : "MISSING"})''';
+      '''SignalOptions<$T>(name: $name, equals: $equals, comparator: ${comparator != null ? "PRESENT" : "MISSING"}, autoDispose: $autoDispose)''';
+}
+
+/// {@template resource-options}
+/// {@macro signaloptions}
+///
+/// The [lazy] parameter indicates if the resource should be computed
+/// lazily, defaults to true.
+/// {@endtemplate}
+class ResourceOptions {
+  /// {@macro resource-options}
+  const ResourceOptions({
+    this.name,
+    this.lazy = true,
+    this.autoDispose = true,
+  });
+
+  /// Indicates whether the resource should be computed lazily, defaults to true
+  final bool lazy;
+
+  /// The name of the signal, useful for logging purposes.
+  final String? name;
+
+  /// Whether to automatically dispose the resource (defaults to true).
+  ///
+  /// This happens automatically when there are no longer subscribers.
+  /// If you set it to false, you should remember to dispose the resource
+  /// manually
+  final bool autoDispose;
+
+  /// coverage:ignore-start
+  /// Converts the [ResourceOptions] to a [SignalOptions].
+  @internal
+  SignalOptions<ResourceState<T>> toSignalOptions<T>() {
+    return SignalOptions<ResourceState<T>>(
+      name: name,
+      autoDispose: autoDispose,
+    );
+  }
+
+  /// coverage:ignore-end
 }

@@ -11,9 +11,8 @@ class Atom {
   /// {@macro atom}
   Atom({
     required bool canAutoDispose,
-    String? name,
-  })  : name = name ?? ReactiveContext.main.nameFor('Atom'),
-        _canAutoDispose = canAutoDispose;
+    required this.name,
+  }) : _canAutoDispose = canAutoDispose;
 
   final ReactiveContext _context = ReactiveContext.main;
 

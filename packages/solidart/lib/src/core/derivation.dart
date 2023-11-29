@@ -38,4 +38,6 @@ abstract class Derivation {
   late DerivationState _dependenciesState;
 
   void _onBecomeStale();
+
+  void _mayDispose();
 }

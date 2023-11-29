@@ -1,25 +1,5 @@
 part of 'core.dart';
 
-/// {@template resource-options}
-/// {@macro signaloptions}
-///
-/// The [lazy] parameter indicates if the resource should be computed
-/// lazily, defaults to true.
-/// {@endtemplate}
-class ResourceOptions {
-  /// {@macro resource-options}
-  const ResourceOptions({
-    this.name,
-    this.lazy = true,
-  });
-
-  /// The name of the resource, useful for logging purposes.
-  final String? name;
-
-  /// Indicates whether the resource should be computed lazily, defaults to true
-  final bool lazy;
-}
-
 // coverage:ignore-start
 
 /// {@macro resource}
@@ -118,19 +98,33 @@ Resource<T> createResource<T>({
 /// {@endtemplate}
 class Resource<T> extends Signal<ResourceState<T>> {
   /// {@macro resource}
-  Resource({
+  factory Resource({
+    Future<T> Function()? fetcher,
+    Stream<T>? Function()? stream,
+    ResourceOptions? options,
+    SignalBase<dynamic>? source,
+  }) {
+    final name = options?.name ?? ReactiveContext.main.nameFor('Resource');
+    final resourceOptions = options ?? ResourceOptions(name: name);
+    final signalOptions = resourceOptions.toSignalOptions<T>();
+    return Resource._internal(
+      fetcher: fetcher,
+      stream: stream,
+      source: source,
+      name: name,
+      options: signalOptions,
+      resourceOptions: resourceOptions,
+    );
+  }
+
+  Resource._internal({
+    required super.name,
+    required super.options,
+    required this.resourceOptions,
     this.fetcher,
     this.stream,
     this.source,
-    ResourceOptions? options,
-  })  : resourceOptions = options ??
-            ResourceOptions(name: ReactiveContext.main.nameFor('Resource')),
-        super(
-          ResourceState<T>.unresolved(),
-          options: SignalOptions<ResourceState<T>>(
-            name: options?.name ?? ReactiveContext.main.nameFor('Resource'),
-          ),
-        ) {
+  }) : super._internal(initialValue: ResourceState<T>.unresolved()) {
     if (this is! ResourceSelector) {
       assert(
         (fetcher != null) ^ (stream != null),
@@ -357,11 +351,15 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// only the properties that you care about.
   ///
   /// The advantage is that you keep handling the loading and error states.
-  Resource<Selected> select<Selected>(Selected Function(T data) selector) {
+  Resource<Selected> select<Selected>(
+    Selected Function(T data) selector, {
+    String? name,
+  }) {
     _resolveIfNeeded();
     return ResourceSelector<T, Selected>(
       resource: this,
       selector: selector,
+      name: name ?? ReactiveContext.main.nameFor('ResourceSelector'),
     );
   }
 
@@ -641,7 +639,14 @@ class ResourceSelector<Input, Output> extends Resource<Output> {
   ResourceSelector({
     required this.resource,
     required this.selector,
-  }) {
+    required super.name,
+  }) : super._internal(
+          options: SignalOptions<ResourceState<Output>>(
+            name: resource.name,
+            autoDispose: resource.options.autoDispose,
+          ),
+          resourceOptions: resource.resourceOptions,
+        ) {
     // set current state
     state = _mapInputState(resource.state);
     // listen next states

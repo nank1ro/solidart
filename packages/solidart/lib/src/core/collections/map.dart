@@ -15,13 +15,24 @@ part of '../core.dart';
 /// {@endtemplate}
 class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// {@macro map-signal}
-  MapSignal(Map<K, V> initialValue, {super.options})
-      : name = options?.name ?? ReactiveContext.main.nameFor('MapSignal'),
-        super(Map<K, V>.of(initialValue));
+  factory MapSignal(
+    Map<K, V> initialValue, {
+    SignalOptions<Map<K, V>>? options,
+  }) {
+    final name = options?.name ?? ReactiveContext.main.nameFor('MapSignal');
+    final effectiveOptions = options ?? SignalOptions<Map<K, V>>(name: name);
+    return MapSignal._internal(
+      initialValue: Map<K, V>.of(initialValue),
+      options: effectiveOptions,
+      name: name,
+    );
+  }
 
-  @override
-  // ignore: overridden_fields
-  final String name;
+  MapSignal._internal({
+    required super.initialValue,
+    required super.name,
+    required super.options,
+  }) : super._internal();
 
   @override
   void _setValue(Map<K, V> newValue) {

@@ -116,15 +116,24 @@ Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
 /// {@endtemplate}
 class Signal<T> extends ReadSignal<T> {
   /// {@macro signal}
-  Signal(
-    super.initialValue, {
+  factory Signal(
+    T initialValue, {
     SignalOptions<T>? options,
-  }) : super(
-          options: options ??
-              SignalOptions<T>(
-                name: ReactiveContext.main.nameFor('Signal'),
-              ),
-        );
+  }) {
+    final name = options?.name ?? ReactiveContext.main.nameFor('Signal');
+    final effectiveOptions = options ?? SignalOptions<T>(name: name);
+    return Signal._internal(
+      initialValue: initialValue,
+      options: effectiveOptions,
+      name: name,
+    );
+  }
+
+  Signal._internal({
+    required super.initialValue,
+    required super.name,
+    required super.options,
+  }) : super._internal();
 
   /// {@macro set-signal-value}
   set value(T newValue) => set(newValue);

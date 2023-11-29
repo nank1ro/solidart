@@ -15,13 +15,24 @@ part of '../core.dart';
 /// {@endtemplate}
 class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// {@macro set-signal}
-  SetSignal(Iterable<E> initialValue, {super.options})
-      : name = options?.name ?? ReactiveContext.main.nameFor('SetSignal'),
-        super(initialValue.toSet());
+  factory SetSignal(
+    Iterable<E> initialValue, {
+    SignalOptions<Set<E>>? options,
+  }) {
+    final name = options?.name ?? ReactiveContext.main.nameFor('SetSignal');
+    final effectiveOptions = options ?? SignalOptions<Set<E>>(name: name);
+    return SetSignal._internal(
+      initialValue: initialValue.toSet(),
+      options: effectiveOptions,
+      name: name,
+    );
+  }
 
-  @override
-  // ignore: overridden_fields
-  final String name;
+  SetSignal._internal({
+    required super.initialValue,
+    required super.name,
+    required super.options,
+  }) : super._internal();
 
   @override
   void _setValue(Set<E> newValue) {

@@ -15,13 +15,24 @@ part of '../core.dart';
 /// {@endtemplate}
 class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// {@macro list-signal}
-  ListSignal(Iterable<E> initialValue, {super.options})
-      : name = options?.name ?? ReactiveContext.main.nameFor('ListSignal'),
-        super(initialValue.toList());
+  factory ListSignal(
+    Iterable<E> initialValue, {
+    SignalOptions<List<E>>? options,
+  }) {
+    final name = options?.name ?? ReactiveContext.main.nameFor('ListSignal');
+    final effectiveOptions = options ?? SignalOptions<List<E>>(name: name);
+    return ListSignal._internal(
+      initialValue: initialValue.toList(),
+      options: effectiveOptions,
+      name: name,
+    );
+  }
 
-  @override
-  // ignore: overridden_fields
-  final String name;
+  ListSignal._internal({
+    required super.initialValue,
+    required super.name,
+    required super.options,
+  }) : super._internal();
 
   @override
   void _setValue(List<E> newValue) {

@@ -24,6 +24,12 @@ class _SetSignalPageState extends State<SetSignalPage> {
   }
 
   @override
+  void dispose() {
+    items.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('SetSignal')),
