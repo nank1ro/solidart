@@ -61,5 +61,7 @@ class Atom {
     }
   }
 
+  // coverage:ignore-start
   void dispose() {}
+  // coverage:ignore-end
 }

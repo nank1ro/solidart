@@ -187,6 +187,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// The previous resource state
   ResourceState<T>? get previousState {
     _resolveIfNeeded();
+    if (_previousValue is ResourceUnresolved<T>) return null;
     return super.previousValue;
   }
 

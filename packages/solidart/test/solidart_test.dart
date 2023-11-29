@@ -458,14 +458,24 @@ void main() {
 
         final resource = Resource(stream: () => streamController.stream);
         expect(resource.state, isA<ResourceLoading<int>>());
+        expect(resource.previousState, isNull);
         streamController.add(1);
         await pumpEventQueue();
         expect(resource.state, isA<ResourceReady<int>>());
+        expect(resource.previousState, isA<ResourceLoading<int>>());
         expect(resource.state.value, 1);
 
         streamController.add(10);
         await pumpEventQueue();
         expect(resource.state, isA<ResourceReady<int>>());
+        expect(
+          resource.previousState,
+          isA<ResourceReady<int>>().having(
+            (p0) => p0.value,
+            'previousState value',
+            1,
+          ),
+        );
         expect(resource.state(), 10);
 
         streamController.addError(UnimplementedError());
