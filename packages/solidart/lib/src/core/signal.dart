@@ -40,11 +40,6 @@ Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
 /// // or
 /// counter.update((v) => v * 2); // update based on the current value
 /// ```
-///
-/// > Don't forget to call the dispose method when you no longer need the signal
-/// ```dart
-/// counter.dispose();
-/// ```
 
 /// ## Derived Signals
 ///
