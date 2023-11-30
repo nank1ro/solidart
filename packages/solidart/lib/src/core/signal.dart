@@ -40,11 +40,6 @@ Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
 /// // or
 /// counter.update((v) => v * 2); // update based on the current value
 /// ```
-///
-/// > Don't forget to call the dispose method when you no longer need the signal
-/// ```dart
-/// counter.dispose();
-/// ```
 
 /// ## Derived Signals
 ///
@@ -116,15 +111,24 @@ Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
 /// {@endtemplate}
 class Signal<T> extends ReadSignal<T> {
   /// {@macro signal}
-  Signal(
-    super.initialValue, {
+  factory Signal(
+    T initialValue, {
     SignalOptions<T>? options,
-  }) : super(
-          options: options ??
-              SignalOptions<T>(
-                name: ReactiveContext.main.nameFor('Signal'),
-              ),
-        );
+  }) {
+    final name = options?.name ?? ReactiveContext.main.nameFor('Signal');
+    final effectiveOptions = options ?? SignalOptions<T>(name: name);
+    return Signal._internal(
+      initialValue: initialValue,
+      options: effectiveOptions,
+      name: name,
+    );
+  }
+
+  Signal._internal({
+    required super.initialValue,
+    required super.name,
+    required super.options,
+  }) : super._internal();
 
   /// {@macro set-signal-value}
   set value(T newValue) => set(newValue);
@@ -147,5 +151,5 @@ class Signal<T> extends ReadSignal<T> {
 
   @override
   String toString() =>
-      '''Signal<$T>(value: $value, previousValue: $previousValue, options: $options)''';
+      '''Signal<$T>(value: $_value, previousValue: $_previousValue, options: $options)''';
 }

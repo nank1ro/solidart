@@ -12,12 +12,6 @@ class _CounterPageState extends State<CounterPage> {
   final counter = Signal(0);
 
   @override
-  void dispose() {
-    counter.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Counter')),

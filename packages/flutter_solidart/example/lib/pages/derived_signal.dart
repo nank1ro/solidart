@@ -13,13 +13,6 @@ class _DerivedSignalsPageState extends State<DerivedSignalsPage> {
   late final doubleCount = Computed(() => count() * 2);
 
   @override
-  void dispose() {
-    count.dispose();
-    doubleCount.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(

@@ -13,13 +13,6 @@ class _DualSignalBuilderPageState extends State<DualSignalBuilderPage> {
   final counter2 = Signal(0);
 
   @override
-  void dispose() {
-    counter1.dispose();
-    counter2.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(

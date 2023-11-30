@@ -18,11 +18,27 @@ typedef ReadableSignal<T> = ReadSignal<T>;
 /// {@endtemplate}
 class ReadSignal<T> extends Atom implements SignalBase<T> {
   /// {@macro readsignal}
-  ReadSignal(
+  factory ReadSignal(
     T initialValue, {
     SignalOptions<T>? options,
+  }) {
+    final name = options?.name ?? ReactiveContext.main.nameFor('ReadSignal');
+    final effectiveOptions = options ?? SignalOptions<T>(name: name);
+    return ReadSignal._internal(
+      initialValue: initialValue,
+      options: effectiveOptions,
+      name: name,
+    );
+  }
+
+  ReadSignal._internal({
+    required T initialValue,
+    required super.name,
+    required this.options,
   })  : _value = initialValue,
-        options = options ?? SignalOptions<T>();
+        super(
+          canAutoDispose: options.autoDispose,
+        );
 
   // Tracks the internal value
   T _value;
@@ -131,6 +147,10 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
       cb();
     }
     _onDisposeCallbacks.clear();
+
+    for (final o in _observers.toList()) {
+      o._mayDispose();
+    }
   }
 
   @override
@@ -148,7 +168,15 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
     _listeners.add(listener);
 
-    return () => _listeners.remove(listener);
+    return () {
+      _listeners.remove(listener);
+      _mayDispose();
+    };
+  }
+
+  void _mayDispose() {
+    if (!options.autoDispose) return;
+    if (_listeners.isEmpty && _observers.isEmpty) dispose();
   }
 
   @override
@@ -174,5 +202,5 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   @override
   String toString() =>
-      '''ReadSignal<$T>(value: $value, previousValue: $previousValue, options; $options)''';
+      '''ReadSignal<$T>(value: $_value, previousValue: $_previousValue, options; $options)''';
 }

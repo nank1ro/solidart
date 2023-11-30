@@ -28,8 +28,6 @@ class _SolidSignalsPageState extends State<SolidSignalsPage> {
           // provide the count signal to descendants
           Provider<Signal<int>>(
             create: () => count,
-            // do not autoDispose the signal, because we already dispose it ourself
-            autoDispose: false,
           ),
 
           // provide the doubleCount signal to descendants

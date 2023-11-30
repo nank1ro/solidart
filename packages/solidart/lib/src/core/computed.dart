@@ -64,13 +64,24 @@ Computed<T> createComputed<T>(
 /// {@endtemplate}
 class Computed<T> extends ReadSignal<T> implements Derivation {
   /// {@macro computed}
-  Computed(this.selector, {super.options})
-      : name = options?.name ?? ReactiveContext.main.nameFor('Computed'),
-        super(selector());
+  factory Computed(
+    T Function() selector, {
+    SignalOptions<T>? options,
+  }) {
+    final name = options?.name ?? ReactiveContext.main.nameFor('Computed');
+    final effectiveOptions = options ?? SignalOptions<T>(name: name);
+    return Computed._internal(
+      selector: selector,
+      name: name,
+      options: effectiveOptions,
+    );
+  }
 
-  @override
-  // ignore: overridden_fields
-  final String name;
+  Computed._internal({
+    required this.selector,
+    required super.name,
+    required super.options,
+  }) : super._internal(initialValue: selector());
 
   /// The selector applied
   final T Function() selector;
@@ -78,9 +89,17 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   @override
   SolidartCaughtException? _errorValue;
 
+  final Set<Atom> __observables = {};
+
   @override
-  // ignore: prefer_final_fields
-  Set<Atom> _observables = {};
+  Set<Atom> get _observables => __observables;
+
+  @override
+  set _observables(Set<Atom> value) {
+    __observables
+      ..clear()
+      ..addAll(value);
+  }
 
   @override
   Set<Atom>? _newObservables;
@@ -100,11 +119,6 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   @override
   void _onBecomeStale() {
     _context.propagatePossiblyChanged(this);
-  }
-
-  @override
-  void _suspend() {
-    _context.clearObservables(this);
   }
 
   @override
@@ -216,5 +230,5 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
 
   @override
   String toString() =>
-      '''Computed<$T>(value: $value, previousValue: $previousValue, options; $options)''';
+      '''Computed<$T>(value: $_value, previousValue: $_previousValue, options; $options)''';
 }

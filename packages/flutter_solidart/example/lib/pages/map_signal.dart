@@ -16,19 +16,17 @@ class MapSignalPage extends StatefulWidget {
 
 class _MapSignalPageState extends State<MapSignalPage> {
   final items = MapSignal({'a': 1, 'b': 2});
-  late final DisposeObservation observation;
 
   @override
   void initState() {
     super.initState();
-    observation = items.observe((previousValue, value) {
+    items.observe((previousValue, value) {
       print("Items changed: $previousValue -> $value");
     });
   }
 
   @override
   void dispose() {
-    observation();
     items.dispose();
     super.dispose();
   }
