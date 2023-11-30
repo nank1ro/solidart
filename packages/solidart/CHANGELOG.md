@@ -1,3 +1,7 @@
+## 1.3.0
+
+- **FEAT**: Automatic disposal, [see the docs here](https://docs.page/nank1ro/solidart/advanced/automatic-disposal)
+
 ## 1.2.2
 
 - **BUGFIX**: Fix the `update` method of a `Resource` that triggered `reportObserved`.

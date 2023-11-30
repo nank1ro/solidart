@@ -1059,4 +1059,160 @@ void main() {
 
     expect(providerFinder(1, 100), findsOneWidget);
   });
+
+  group('Automatic disposal', () {
+    testWidgets(
+      'Signal autoDispose',
+      (tester) async {
+        final counter = Signal(0);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SignalBuilder(
+                signal: counter,
+                builder: (_, count, __) {
+                  return Text(count.toString());
+                },
+              ),
+            ),
+          ),
+        );
+        expect(counter.disposed, isFalse);
+        await tester.pumpWidget(const SizedBox());
+        expect(counter.disposed, isTrue);
+      },
+      timeout: const Timeout(Duration(seconds: 1)),
+    );
+
+    testWidgets(
+      'ReadSignal autoDispose',
+      (tester) async {
+        final counter = Signal(0).toReadSignal();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SignalBuilder(
+                signal: counter,
+                builder: (_, count, __) {
+                  return Text(count.toString());
+                },
+              ),
+            ),
+          ),
+        );
+        expect(counter.disposed, isFalse);
+        await tester.pumpWidget(const SizedBox());
+        expect(counter.disposed, isTrue);
+      },
+      timeout: const Timeout(Duration(seconds: 1)),
+    );
+
+    testWidgets(
+      'Computed autoDispose',
+      (tester) async {
+        final counter = Signal(0);
+        final doubleCounter = Computed(() => counter() * 2);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SignalBuilder(
+                signal: doubleCounter,
+                builder: (_, count, __) {
+                  return Text(count.toString());
+                },
+              ),
+            ),
+          ),
+        );
+        expect(counter.disposed, isFalse);
+        expect(doubleCounter.disposed, isFalse);
+        await tester.pumpWidget(const SizedBox());
+        expect(counter.disposed, isTrue);
+        expect(doubleCounter.disposed, isTrue);
+      },
+      timeout: const Timeout(Duration(seconds: 1)),
+    );
+
+    testWidgets(
+      'Effect autoDispose',
+      (tester) async {
+        final counter = Signal(0);
+        final effect = Effect((_) => counter());
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SignalBuilder(
+                signal: counter,
+                builder: (_, count, __) {
+                  return Text(count.toString());
+                },
+              ),
+            ),
+          ),
+        );
+        expect(counter.disposed, isFalse);
+        expect(effect.disposed, isFalse);
+        await tester.pumpWidget(const SizedBox());
+        counter.dispose();
+        expect(effect.disposed, isTrue);
+      },
+      timeout: const Timeout(Duration(seconds: 1)),
+    );
+
+    testWidgets(
+      'Resource autoDispose',
+      (tester) async {
+        final r = Resource(fetcher: () => Future.value(0));
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: ResourceBuilder(
+                resource: r,
+                builder: (_, resourceState) {
+                  return Text(resourceState.toString());
+                },
+              ),
+            ),
+          ),
+        );
+        expect(r.disposed, isFalse);
+        await tester.pumpWidget(const SizedBox());
+        expect(r.disposed, isTrue);
+      },
+      timeout: const Timeout(Duration(seconds: 1)),
+    );
+  });
+
+  testWidgets(
+    'Effect with multiple dependencies autoDispose',
+    (tester) async {
+      final counter = Signal(0);
+      final doubleCounter = Computed(() => counter() * 2);
+      final effect = Effect((_) {
+        counter();
+        doubleCounter();
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SignalBuilder(
+              signal: counter,
+              builder: (_, count, __) {
+                return Text(count.toString());
+              },
+            ),
+          ),
+        ),
+      );
+      expect(counter.disposed, isFalse);
+      expect(doubleCounter.disposed, isFalse);
+      expect(effect.disposed, isFalse);
+      await tester.pumpWidget(const SizedBox());
+      effect();
+      expect(effect.disposed, isTrue);
+      expect(counter.disposed, isTrue);
+      expect(doubleCounter.disposed, isTrue);
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
 }

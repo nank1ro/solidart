@@ -27,7 +27,10 @@ enum DerivationState {
 }
 
 abstract class Derivation {
-  late Set<Atom> _observables;
+  Set<Atom> get _observables;
+
+  set _observables(Set<Atom> newObservables);
+
   Set<Atom>? _newObservables;
 
   SolidartCaughtException? _errorValue;
@@ -36,6 +39,5 @@ abstract class Derivation {
 
   void _onBecomeStale();
 
-  // ignore: unused_element
-  void _suspend();
+  void _mayDispose();
 }

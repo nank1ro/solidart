@@ -1,3 +1,9 @@
+## 1.5.0
+
+### Changes from solidart
+
+- **FEAT**: Automatic disposal, [see the docs here](https://docs.page/nank1ro/solidart/advanced/automatic-disposal)
+
 ## 1.4.3
 
 ### Changes from solidart

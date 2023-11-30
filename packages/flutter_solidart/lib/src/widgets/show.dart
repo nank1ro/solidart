@@ -96,7 +96,7 @@ class _ShowState<T extends bool> extends State<Show<T>> {
   @override
   void initState() {
     super.initState();
-    disposeEffect = Effect((dispose) {
+    disposeEffect = Effect((_) {
       show.set(widget.when());
     });
   }

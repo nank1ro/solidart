@@ -12,13 +12,22 @@ typedef DisposeEffect = void Function();
 @immutable
 class EffectOptions {
   /// {@macro effect-options}
-  const EffectOptions({this.name, this.delay});
+  const EffectOptions({
+    this.name,
+    this.delay,
+    this.autoDispose = true,
+  });
 
   /// The name of the effect, useful for logging
   final String? name;
 
   /// Delay each effect reaction
   final Duration? delay;
+
+  /// Whether to automatically dispose the effect (defaults to true).
+  ///
+  /// This happens automatically when all the tracked dependencies are disposed.
+  final bool autoDispose;
 }
 
 // coverage:ignore-start
@@ -37,7 +46,7 @@ DisposeEffect createEffect(
 /// The reaction interface
 abstract class ReactionInterface implements Derivation {
   /// Indicate if the reaction is dispose
-  bool get isDisposed;
+  bool get disposed;
 
   /// Disposes the reaction
   void dispose();
@@ -134,7 +143,7 @@ class Effect implements ReactionInterface {
 
             timer = scheduler(() {
               isScheduled = false;
-              if (!effect.isDisposed) {
+              if (!effect.disposed) {
                 effect.track(() => callback(effect.dispose));
               } else {
                 // coverage:ignore-start
@@ -156,10 +165,10 @@ class Effect implements ReactionInterface {
   /// {@macro effect}
   Effect._internal({
     required VoidCallback callback,
-    EffectOptions? options,
+    required this.options,
     ErrorCallback? onError,
   })  : _onError = onError,
-        name = options?.name ?? ReactiveContext.main.nameFor('Effect'),
+        name = options.name ?? ReactiveContext.main.nameFor('Effect'),
         _callback = callback;
 
   /// The name of the effect, useful for logging purposes.
@@ -171,9 +180,12 @@ class Effect implements ReactionInterface {
   /// Optionally handle the error case
   final ErrorCallback? _onError;
 
+  /// {@macro effect-options}
+  final EffectOptions options;
+
   final _context = ReactiveContext.main;
   bool _isScheduled = false;
-  bool _isDisposed = false;
+  bool _disposed = false;
   bool _isRunning = false;
 
   @override
@@ -187,11 +199,20 @@ class Effect implements ReactionInterface {
   Set<Atom>? _newObservables;
 
   @override
-  // ignore: prefer_final_fields
-  Set<Atom> _observables = {};
+  bool get disposed => _disposed;
+
+  final Set<Atom> __observables = {};
 
   @override
-  bool get isDisposed => _isDisposed;
+  // ignore: prefer_final_fields
+  Set<Atom> get _observables => __observables;
+
+  @override
+  set _observables(Set<Atom> newObservables) {
+    __observables
+      ..clear()
+      ..addAll(newObservables);
+  }
 
   @override
   void _onBecomeStale() {
@@ -218,7 +239,7 @@ class Effect implements ReactionInterface {
     _context.trackDerivation(this, fn);
     _isRunning = false;
 
-    if (_isDisposed) {
+    if (_disposed) {
       _context.clearObservables(this);
     }
 
@@ -238,7 +259,7 @@ class Effect implements ReactionInterface {
 
   @override
   void run() {
-    if (_isDisposed) return;
+    if (_disposed) return;
 
     _context.startBatch();
 
@@ -263,12 +284,6 @@ class Effect implements ReactionInterface {
     _context.endBatch();
   }
 
-  // coverage:ignore-start
-  @override
-  // ignore: unused_element
-  void _suspend() {}
-  // coverage:ignore-end
-
   /// Invalidates the effect.
   ///
   /// After this operation the effect is useless.
@@ -279,9 +294,8 @@ class Effect implements ReactionInterface {
   /// After this operation the effect is useless.
   @override
   void dispose() {
-    if (_isDisposed) return;
-
-    _isDisposed = true;
+    if (_disposed) return;
+    _disposed = true;
 
     if (_isRunning) return;
 
@@ -290,5 +304,13 @@ class Effect implements ReactionInterface {
       ..startBatch()
       ..clearObservables(this)
       ..endBatch();
+  }
+
+  @override
+  void _mayDispose() {
+    if (options.autoDispose &&
+        (_observables.isEmpty || _observables.every((ob) => ob.disposed))) {
+      dispose();
+    }
   }
 }

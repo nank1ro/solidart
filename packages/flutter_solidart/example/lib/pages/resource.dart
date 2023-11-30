@@ -20,13 +20,6 @@ class _ResourcePageState extends State<ResourcePage> {
     return jsonDecode(data)['hair_color'] as String;
   });
 
-  @override
-  void dispose() {
-    user.dispose();
-    userId.dispose();
-    super.dispose();
-  }
-
   Future<String> fetchUser() async {
     // simulating a delay to mimic a slow HTTP request
     await Future.delayed(const Duration(seconds: 2));
