@@ -390,6 +390,12 @@ class Resource<T> extends Signal<ResourceState<T>> {
     _sourceDisposeObservation?.call();
     _broadcastStreams.clear();
     _streamSubscriptions.clear();
+    // Dispose the source, if needed
+    if (source != null) {
+      if (source!.options.autoDispose && source!.listenerCount == 0) {
+        source!.dispose();
+      }
+    }
     super.dispose();
   }
 
