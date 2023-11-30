@@ -92,5 +92,9 @@ class ResourceOptions {
     );
   }
 
+  @override
+  String toString() =>
+      'ResourceOptions(lazy: $lazy, name: $name, autoDispose: $autoDispose)';
+
   /// coverage:ignore-end
 }
