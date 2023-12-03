@@ -6,6 +6,7 @@
 [![solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/solidart?include_prereleases)](https://pub.dev/packages/solidart)
 [![flutter_solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/flutter_solidart?include_prereleases)](https://pub.dev/packages/flutter_solidart)
 [![All Contributors](https://img.shields.io/github/all-contributors/nank1ro/solidart?color=ee8449&style=flat-square)](#contributors)
+[![](https://dcbadge.vercel.app/api/server/PvaDkncs)](https://discord.gg/PvaDkncs)
 
 # A simple state-management library inspired by SolidJS.
 
