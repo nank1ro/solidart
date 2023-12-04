@@ -211,7 +211,7 @@ Probably there is a cycle in the reactive function: $failingReaction ''');
       final remainingReactions = allReactions.toList(growable: false);
       allReactions.clear();
       for (final reaction in remainingReactions) {
-        reaction.run();
+        reaction._run();
       }
     }
 

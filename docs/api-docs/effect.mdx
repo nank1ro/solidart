@@ -1,0 +1,91 @@
+---
+title: Effect API docs
+description: All the API docs of Effect
+---
+
+# Effect API docs
+
+Signals are trackable values, but they are only one half of the equation.
+To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
+
+An effect can be created by using `Effect`.
+The effect subscribes automatically to any signal used in the callback and reruns when any of them change.
+
+## Constructor
+
+```dart
+Effect(
+  void Function(DisposeEffect dispose) callback, {
+    ErrorCallback? onError,
+    EffectOptions options = const EffectOptions(),
+  }
+);
+```
+
+`callback` is the function used to run the effect and tracks all the signals used.
+
+`options` are the [options](/api-docs/effect-options) of the effect.
+
+```dart
+final count = Signal(1);
+final doubleCount = Computed(() => count() * 2);
+print(doubleCount()); // prints 2
+count.set(2);
+print(doubleCount()); // prints 4
+```
+
+## disposed 
+
+Returns `true` if the effect has been disposed.
+
+## dispose()
+
+Disposes the effect.
+If the effect has already been disposed, this method does nothing.
+
+Removes the subscriber from all the tracked signals.
+
+```dart
+final count = Signal(0);
+final effect = Effect((_) {
+  print("The count is ${count.value}");
+});
+effect.dispose(); // disposes the effect
+```
+
+## call()
+
+Disposes the effect, like above.
+
+```dart
+final count = Signal(0);
+final disposeEffect = Effect((_) {
+  print("The count is ${count.value}");
+});
+disposeEffect(); // disposes the effect
+```
+
+---
+
+> An`Effect` only tracks the __current__ dependencies.
+
+```dart
+final name = Signal("John");
+final lastName = Signal("Doe");
+final showFullName = Signal(false);
+
+Effect((_) {
+  if (showFullName()) {
+    print("${name.value} ${lastName.value}");
+  } else {
+    print(name.value);
+  }
+});
+```
+
+In the case above the Effect prints `John` because `showFullName` is `false`.
+If you try to change the `lastName` to `Smith`, the effect won't react because is not tracking `lastName`.
+
+If you set `showFullName` to `true`, the effect will print `John Doe` and will track both the `name` and the `lastName`.
+
+<Info>Use conditional logic carefully when using `Effect`.</Info>

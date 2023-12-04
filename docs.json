@@ -83,6 +83,14 @@
           "/api-docs/signal"
         ],
         [
+          "Computed",
+          "/api-docs/computed"
+        ],
+        [
+          "Effect",
+          "/api-docs/effect"
+        ],
+        [
           "SignalOptions",
           "/api-docs/signal-options"
         ]
