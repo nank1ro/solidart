@@ -5,16 +5,16 @@ description: All the API docs of SignalOptions
 
 # SignalOptions API docs
 
-Signal options which increase its customization.
+Signal options which increase the behaviour of the signal.
 
 ## Constructor
 
 ```dart
 const SignalOptions({
-  this.name,
-  this.equals = false,
-  this.comparator = identical,
-  this.autoDispose = true,
+  String? name,
+  bool equals = false,
+  ValueComparator<T?>? comparator = identical,
+  bool autoDispose = true,
 });
 ```
 
