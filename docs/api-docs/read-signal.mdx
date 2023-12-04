@@ -7,7 +7,8 @@ description: All the API docs of ReadSignal, a read-only signal
 
 A read-only __Signal__.
 
-All [Computed](/api-docs/computed) signals are ReadSignals.
+All [Computed](/api-docs/computed) signals are __ReadSignal__s.
+
 If you want to convert a __Signal__ into a __ReadSignal__ use the [toReadSignal](/api-docs/signal#toreadsignal) method
 
 ## Constructor
@@ -20,11 +21,10 @@ ReadSignal(
 ```
 
 `initialValue` is the initial value of the signal.
-`options` are the options of the signal.
 
-See [SignalOptions](/api-docs/signal-options) for more details.
+`options` are the [options](/api-docs/signal-options) of the signal.
 
-## value (getter)
+## value
 
 Returns the current signal value.
 
@@ -44,7 +44,7 @@ final count = Signal(0);
 print(count()); // prints 0
 ```
 
-## hasPreviousValue (getter)
+## hasPreviousValue
 
 Returns `true` if the signal has a previous value.
 
@@ -56,7 +56,7 @@ count.value++;
 print(count.hasPreviousValue); // prints true
 ```
 
-## previousValue (getter)
+## previousValue 
 
 Returns the previous value, or `null` if the signal has no previous value.
 
@@ -68,18 +68,19 @@ count.value++;
 print(count.previousValue); // prints 0
 ```
 
-## observe
+## observe(ObserveCallback<T> listener, {bool fireImmediately = false,})
 
-Observe the signal and trigger the [listener] every time the value changes.
+Observe the signal and trigger the __listener__ every time the value changes with the previous and current values.
 
 For example:
 
 ```dart
 final count = Signal(0);
 count.observe((previousValue, value) {
-  print("The count is $value");
+  print("The count changed from $previousValue to $value");
 });
-count.value++; // prints "The count is 1"
+count.value++;
+// prints "The count changed from null to 1"
 ```
 
 The observation will not be fired when created with the current value, if you want to run it at creation, set `fireImmediately` to `true`, for example:
@@ -87,11 +88,12 @@ The observation will not be fired when created with the current value, if you wa
 ```dart
 final count = Signal(0);
 count.observe((previousValue, value) {
-  print("The count is $value");
-}, fireImmediately: true); // prints "The count is 0"
+  print("The count changed from $previousValue to $value");
+}, fireImmediately: true);
+// prints "The count changed from null to 0"
 ```
 
-## until
+## until(bool Function(T value) condition)
 
 Returns the future that completes when the __condition__ evalutes to true.
 If the __condition__ is already true, it completes immediately.
@@ -102,7 +104,7 @@ final count = Signal(0);
 await count.until((value) => value >= 10); // await until value >= 10
 ```
 
-## disposed (getter)
+## disposed 
 
 Returns `true` if the signal has been disposed.
 
@@ -112,7 +114,7 @@ Disposes the signal.
 If the signal has already been disposed, this method does nothing.
 All observers will be unsubscribed.
 
-## toString
+## toString()
 
 Returns a string representation of the signal.
 For example:
