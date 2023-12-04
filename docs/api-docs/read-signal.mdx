@@ -5,7 +5,10 @@ description: All the API docs of ReadSignal, a read-only signal
 
 # ReadSignal API docs
 
-A read-only [Signal].
+A read-only __Signal__.
+
+All [Computed](/api-docs/computed) signals are ReadSignals.
+If you want to convert a __Signal__ into a __ReadSignal__ use the [toReadSignal](/api-docs/signal#toreadsignal) method
 
 ## Constructor
 
@@ -16,9 +19,106 @@ ReadSignal(
 });
 ```
 
-A read-only [Signal].
 `initialValue` is the initial value of the signal.
 `options` are the options of the signal.
 
 See [SignalOptions](/api-docs/signal-options) for more details.
 
+## value (getter)
+
+Returns the current signal value.
+
+For example:
+```dart
+final count = Signal(0);
+print(count.value); // prints 0
+```
+
+## call()
+
+Returns the current signal value.
+
+For example:
+```dart
+final count = Signal(0);
+print(count()); // prints 0
+```
+
+## hasPreviousValue (getter)
+
+Returns `true` if the signal has a previous value.
+
+For example:
+```dart
+final count = Signal(0);
+print(count.hasPreviousValue); // prints false
+count.value++;
+print(count.hasPreviousValue); // prints true
+```
+
+## previousValue (getter)
+
+Returns the previous value, or `null` if the signal has no previous value.
+
+For example:
+```dart
+final count = Signal(0);
+print(count.previousValue); // prints null
+count.value++;
+print(count.previousValue); // prints 0
+```
+
+## observe
+
+Observe the signal and trigger the [listener] every time the value changes.
+
+For example:
+
+```dart
+final count = Signal(0);
+count.observe((previousValue, value) {
+  print("The count is $value");
+});
+count.value++; // prints "The count is 1"
+```
+
+The observation will not be fired when created with the current value, if you want to run it at creation, set `fireImmediately` to `true`, for example:
+
+```dart
+final count = Signal(0);
+count.observe((previousValue, value) {
+  print("The count is $value");
+}, fireImmediately: true); // prints "The count is 0"
+```
+
+## until
+
+Returns the future that completes when the __condition__ evalutes to true.
+If the __condition__ is already true, it completes immediately.
+
+For example:
+```dart
+final count = Signal(0);
+await count.until((value) => value >= 10); // await until value >= 10
+```
+
+## disposed (getter)
+
+Returns `true` if the signal has been disposed.
+
+## dispose()
+
+Disposes the signal.
+If the signal has already been disposed, this method does nothing.
+All observers will be unsubscribed.
+
+## toString
+
+Returns a string representation of the signal.
+For example:
+```dart
+final count = Signal(0);
+count.value++;
+print(count.toString());
+// prints "ReadSignal<int>(value: 1, previousValue: 0, options: ...)"
+```
