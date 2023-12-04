@@ -24,15 +24,22 @@ Effect(
 
 `callback` is the function used to run the effect and tracks all the signals used.
 
+`onError` is an optional callback that is called when the effect throws an error.
+By default the effect error is thrown but with `onError` you can gracefully handle it.
+
 `options` are the [options](/api-docs/effect-options) of the effect.
 
 ```dart
 final count = Signal(1);
-final doubleCount = Computed(() => count() * 2);
-print(doubleCount()); // prints 2
-count.set(2);
-print(doubleCount()); // prints 4
+Effect((_) {
+  print('The count is ${count.value}');
+});
+// prints "The count is 1"
+count.value++;
+// prints "The count is 2"
 ```
+
+<Info>An effect runs immediately when created.</Info>
 
 ## disposed 
 
@@ -86,6 +93,6 @@ Effect((_) {
 In the case above the Effect prints `John` because `showFullName` is `false`.
 If you try to change the `lastName` to `Smith`, the effect won't react because is not tracking `lastName`.
 
-If you set `showFullName` to `true`, the effect will print `John Doe` and will track both the `name` and the `lastName`.
+If you set `showFullName` to `true`, the effect will print `John Doe` and will track all the signals: `showFullName`, `name` and `lastName`.
 
-<Info>Use conditional logic carefully when using `Effect`.</Info>
+<Warning>Use conditional logic carefully when using `Effect`.</Warning>
