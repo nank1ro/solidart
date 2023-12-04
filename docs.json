@@ -79,6 +79,10 @@
           "/api-docs/read-signal"
         ],
         [
+          "Signal",
+          "/api-docs/signal"
+        ],
+        [
           "SignalOptions",
           "/api-docs/signal-options"
         ]
