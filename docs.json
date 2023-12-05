@@ -72,6 +72,24 @@
       ]
     ],
     [
+      "Advanced",
+      [
+        [
+          "Automatic disposal",
+          "/advanced/automatic-disposal"
+        ]
+      ]
+    ],
+    [
+      "Testing",
+      [
+        [
+          "Introduction",
+          "/testing/introduction"
+        ]
+      ]
+    ],
+    [
       "API",
       [
         [
@@ -93,24 +111,10 @@
         [
           "SignalOptions",
           "/api-docs/signal-options"
-        ]
-      ]
-    ],
-    [
-      "Advanced",
-      [
+        ],
         [
-          "Automatic disposal",
-          "/advanced/automatic-disposal"
-        ]
-      ]
-    ],
-    [
-      "Testing",
-      [
-        [
-          "Introduction",
-          "/testing/introduction"
+          "EffectOptions",
+          "/api-docs/effect-options"
         ]
       ]
     ],
