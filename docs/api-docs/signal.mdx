@@ -24,7 +24,7 @@ Signal(
 
 `options` are the [options](/api-docs/signal-options) of the signal.
 
-## value(T newValue)
+## set value(T newValue)
 
 Sets the current signal value with `newValue`.
 
@@ -37,7 +37,7 @@ final count = Signal(0);
 count.value = 1; // set the value to 1
 ```
 
-## set(T newValue)
+## void set(T newValue)
 
 Equal to the value setter above.
 This is convenient in Flutter apps where you can write:
@@ -55,7 +55,7 @@ Widget build(BuildContext context) {
 }
 ```
 
-## updateValue(T Function(T value) callback)
+## T updateValue(T Function(T value) callback)
 
 Calls a function with the __current__ value and assigns the result as the new value.
 
@@ -66,7 +66,7 @@ count.updateValue((value) => value * 2);
 print(count()); // prints 4
 ```
 
-## toReadSignal()
+## ReadSignal<T> toReadSignal()
 
 Converts this __Signal__ into a __ReadSignal__.
 Use this method to make the signal __read-only__.

@@ -24,7 +24,7 @@ ReadSignal(
 
 `options` are the [options](/api-docs/signal-options) of the signal.
 
-## value
+## T get value
 
 Returns the current signal value.
 
@@ -34,7 +34,7 @@ final count = Signal(0);
 print(count.value); // prints 0
 ```
 
-## call()
+## T call()
 
 Returns the current signal value.
 
@@ -44,7 +44,7 @@ final count = Signal(0);
 print(count()); // prints 0
 ```
 
-## hasPreviousValue
+## bool get hasPreviousValue
 
 Returns `true` if the signal has a previous value.
 
@@ -56,7 +56,7 @@ count.value++;
 print(count.hasPreviousValue); // prints true
 ```
 
-## previousValue 
+## T? get previousValue 
 
 Returns the previous value, or `null` if the signal has no previous value.
 
@@ -68,7 +68,7 @@ count.value++;
 print(count.previousValue); // prints 0
 ```
 
-## observe(ObserveCallback<T> listener, {bool fireImmediately = false,})
+## DisposeObservation observe(ObserveCallback<T> listener, {bool fireImmediately = false})
 
 Observe the signal and trigger the __listener__ every time the value changes with the previous and current values.
 
@@ -93,7 +93,7 @@ count.observe((previousValue, value) {
 // prints "The count changed from null to 0"
 ```
 
-## until(bool Function(T value) condition)
+## FutureOr<T> until(bool Function(T value) condition)
 
 Returns the future that completes when the __condition__ evalutes to true.
 If the __condition__ is already true, it completes immediately.
@@ -104,17 +104,17 @@ final count = Signal(0);
 await count.until((value) => value >= 10); // await until value >= 10
 ```
 
-## disposed 
+## bool get disposed 
 
 Returns `true` if the signal has been disposed.
 
-## dispose()
+## void dispose()
 
 Disposes the signal.
 If the signal has already been disposed, this method does nothing.
 All observers will be unsubscribed.
 
-## toString()
+## String toString()
 
 Returns a string representation of the signal.
 For example:
