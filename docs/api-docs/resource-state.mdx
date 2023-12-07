@@ -11,51 +11,51 @@ Manages all the different states of a [Resource]:
  - [ResourceLoading](#resource-loading)
  - [ResourceError](#resource-error)
 
-## bool get isLoading
+## `bool get isLoading`
 
 Returns `true` if the `Resource` is in the loading state.
 
-## bool get isReady
+## `bool get isReady`
 
 Returns `true` if the `Resource` is in the ready state.
 
-## bool get hasError
+## `bool get hasError`
 
 Returns `true` if the `Resource` is in the error state.
 
-## bool get isRefreshing
+## `bool get isRefreshing`
 
 Returns `true` if the `Resource` is being refreshed.
 
-## ResourceReady<T>? get asReady
+## `ResourceReady<T>? get asReady`
 
 Upcast __ResourceState__ into a __ResourceReady__, or return null if the __ResourceState__ is in loading/error state.
 
-## ResourceReady<T>? get asError
+## `ResourceReady<T>? get asError`
 
 Upcast __ResourceState__ into a __ResourceError__, or return null if the __ResourceState__ is in read/loading state.
 
-## T? get value
+## `T? get value`
 
 Attempts to synchronously get the value of __ResourceReady__.
 
 On error, this will rethrow the error.
 If loading, will return `null`.
 
-## T? call()
+## `T? call()`
 
 Attempts to synchronously get the value of __ResourceReady__.
 
 On error, this will rethrow the error.
 If loading, will return `null`.
 
-## Object get error
+## `Object get error`
 
 Attempts to synchronously get the error of __ResourceError__.
 
 On other states will return `null`.
 
-## R maybeMap<R>({required R Function() orElse, R Function(ResourceReady<T> ready)? ready, R Function(ResourceError<T> error)? error, R Function(ResourceLoading<T> loading)? loading})
+## `R maybeMap<R>({required R Function() orElse, R Function(ResourceReady<T> ready)? ready, R Function(ResourceError<T> error)? error, R Function(ResourceLoading<T> loading)? loading})`
 
 Perform some actions based on the state of the __ResourceState__, or call orElse if the current state is not considered.
 
@@ -70,7 +70,7 @@ The function above renders the `Text` widget only in the `ready` state, for all 
 
 Prefer using the `maybeOn` method if you are not interested in the `ResourceState` object.
 
-## R on<R>({required R Function(T data) ready, required R Function(Object error, StackTrace? stackTrace) error, required R Function() loading})
+## `R on<R>({required R Function(T data) ready, required R Function(Object error, StackTrace? stackTrace) error, required R Function() loading})`
 
 Performs an action based on the state of the __ResourceState__.
 
@@ -84,7 +84,7 @@ resourceState.on(
 );
 ```
 
-## R maybeOn<R>({required R Function() orElse, R Function(T data)? ready, R Function(Object error, StackTrace? stackTrace)? error, R Function()? loading})
+## `R maybeOn<R>({required R Function() orElse, R Function(T data)? ready, R Function(Object error, StackTrace? stackTrace)? error, R Function()? loading})`
 
 Performs an action based on the state of the __ResourceState__, or call __orElse__ if the current state is not considered.
 
@@ -114,11 +114,11 @@ ResourceReady(T value, {bool isRefreshing = false});
 `value` is the resolved value of the `Resource`.
 `isRefreshing` is `true` if the `Resource` is being refreshed.
 
-### String toString()
+### `String toString()`
 
 Returns the string representation of the `ResourceReady` state.
 
-### ResourceReady<T> copyWith({T? value, bool? isRefreshing})
+### `ResourceReady<T> copyWith({T? value, bool? isRefreshing})`
 
 Convenience method to copy the current state and create a new `ResourceReady` state with the overridden values.
 
@@ -126,7 +126,7 @@ Convenience method to copy the current state and create a new `ResourceReady` st
 
 The `ResourceLoading` state indicates that the `Resource` is loading.
 
-### String toString()
+### `String toString()`
 
 Returns the string representation of the `ResourceLoading` state.
 
@@ -148,11 +148,11 @@ ResourceError(
 `stackTrace` is the stack trace of the error, if present.
 `isRefreshing` is `true` if the `Resource` is being refreshed.
 
-### String toString()
+### `String toString()`
 
 Returns the string representation of the `ResourceError` state.
 
-### ResourceError<T> copyWith({Object? error, StackTrace? stackTrace, bool? isRefreshing})
+### `ResourceError<T> copyWith({Object? error, StackTrace? stackTrace, bool? isRefreshing})`
 
 Convenience method to copy the current state and create a new `ResourceError` state with the overridden values.
 

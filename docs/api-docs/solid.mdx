@@ -147,7 +147,7 @@ number2: ${numberProvider2.number}
 }
 ```
 
-## T context.get<T>([Identifier? id])
+## `T context.get<T>([Identifier? id])`
 
 Gets a provider of type `T` from the list of __providers__.
 If the provider is not found in the first `Solid` ancestor, it will go up in the tree until it finds it in another `Solid` ancestor.
@@ -156,17 +156,17 @@ If the provider is not found in the first `Solid` ancestor, it will go up in the
 
 This methods throws if the provided cannot be found.
 
-## T? context.maybeGet<T>([Identifier? id])
+## `T? context.maybeGet<T>([Identifier? id])`
 
 Like `context.get`, but returns `null` instead of throwing if the provider cannot be found.
 
-## SolidElement<T> getElement<T>([Identifier? id])
+## `SolidElement<T> getElement<T>([Identifier? id])`
 
 Gets a provider of type `T` from the list of __providers__.
 It returns the `SolidElement` of the provider instead of the provider itself.
 Can be used in modals to provide access to the provider.
 
-## T context.observe<T>([Identifier? id])
+## `T context.observe<T>([Identifier? id])`
 
 Subscribes to the __Signal__ with the value type of `T` and the `id` provided (if any).
 
@@ -203,7 +203,7 @@ class SomeChild extends StatelessWidget {
 }
 ```
 
-## void context.update<T>(T Function(T value) callback, [Identifier? id])
+## `void context.update<T>(T Function(T value) callback, [Identifier? id])`
 
 Updates the value of the __Signal__ with the value type of `T` and the `id` provided (if any).
 
