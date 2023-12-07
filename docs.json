@@ -132,6 +132,10 @@
         [
           "SignalBuilder",
           "/api-docs/signal-builder"
+        ],
+        [
+          "ResourceBuilder",
+          "/api-docs/resource-builder"
         ]
       ]
     ],
