@@ -163,9 +163,8 @@ __ResourceState__ is a sealed class, so you can perform a switch on the differen
 ```dart
 return switch (userState) {
   ResourceReady(:final value) => Text(value),
-  ResourceLoading() => const CircularProgressIndicator(),
   ResourceError(:final error, :final stackTrace) =>
     Text('$error, $stackTrace'),
-  ResourceUnresolved() => const SizedBox(),
+  ResourceLoading() => const CircularProgressIndicator(),
 }
 ```
