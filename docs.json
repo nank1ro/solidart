@@ -110,6 +110,14 @@
           "/api-docs/effect"
         ],
         [
+          "Resource",
+          "/api-docs/resource"
+        ],
+        [
+          "ResourceState",
+          "/api-docs/resource-state"
+        ],
+        [
           "SignalOptions",
           "/api-docs/signal-options"
         ],
