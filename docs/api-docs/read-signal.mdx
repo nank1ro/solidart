@@ -68,7 +68,7 @@ count.value++;
 print(count.previousValue); // prints 0
 ```
 
-## DisposeObservation observe(ObserveCallback<T> listener, {bool fireImmediately = false})
+## DisposeObservation observe(ObserveCallback listener, {bool fireImmediately = false})
 
 Observe the signal and trigger the __listener__ every time the value changes with the previous and current values.
 
@@ -93,7 +93,7 @@ count.observe((previousValue, value) {
 // prints "The count changed from null to 0"
 ```
 
-## until(bool Function(T value) condition)
+## FutureOr<T> until(bool Function(T value) condition)
 
 Returns the future that completes when the __condition__ evalutes to true.
 If the __condition__ is already true, it completes immediately.
