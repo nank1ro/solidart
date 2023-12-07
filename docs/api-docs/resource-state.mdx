@@ -4,3 +4,168 @@ description: All the API docs of ResourceState
 ---
 
 # ResourceState API docs
+
+Manages all the different states of a [Resource]:
+ - [ResourceUnresolved](#resource-unresolved)
+ - [ResourceReady](#resource-ready)
+ - [ResourceLoading](#resource-loading)
+ - [ResourceError](#resource-error)
+
+## bool get isLoading
+
+Returns `true` if the `Resource` is in the loading state.
+
+## bool get isReady
+
+Returns `true` if the `Resource` is in the ready state.
+
+## bool get hasError
+
+Returns `true` if the `Resource` is in the error state.
+
+## bool get isRefreshing
+
+Returns `true` if the `Resource` is being refreshed.
+
+## ResourceReady<T>? get asReady
+
+Upcast __ResourceState__ into a __ResourceReady__, or return null if the __ResourceState__ is in loading/error state.
+
+## ResourceReady<T>? get asError
+
+Upcast __ResourceState__ into a __ResourceError__, or return null if the __ResourceState__ is in read/loading state.
+
+## T? get value
+
+Attempts to synchronously get the value of __ResourceReady__.
+
+On error, this will rethrow the error.
+If loading, will return `null`.
+
+## T? call()
+
+Attempts to synchronously get the value of __ResourceReady__.
+
+On error, this will rethrow the error.
+If loading, will return `null`.
+
+## Object get error
+
+Attempts to synchronously get the error of __ResourceError__.
+
+On other states will return `null`.
+
+## R maybeMap<R>({required R Function() orElse, R Function(ResourceReady<T> ready)? ready, R Function(ResourceError<T> error)? error, R Function(ResourceLoading<T> loading)? loading})
+
+Perform some actions based on the state of the __ResourceState__, or call orElse if the current state is not considered.
+
+```dart
+resourceState.maybeMap(
+  ready: (resourceReady) => Text(resourceReady.value),
+  orElse: () => const SizedBox(),
+);
+```
+
+The function above renders the `Text` widget only in the `ready` state, for all other state the `orElse` function is called.
+
+Prefer using the `maybeOn` method if you are not interested in the `ResourceState` object.
+
+## R on<R>({required R Function(T data) ready, required R Function(Object error, StackTrace? stackTrace) error, required R Function() loading})
+
+Performs an action based on the state of the __ResourceState__.
+
+All cases are required.
+
+```dart
+resourceState.on(
+  ready: (data) => Text('ready: $data'),
+  error: (error, stackTrace) => Text('error: $error $stackTrace'),
+  loading: () => Text('loading'),
+);
+```
+
+## R maybeOn<R>({required R Function() orElse, R Function(T data)? ready, R Function(Object error, StackTrace? stackTrace)? error, R Function()? loading})
+
+Performs an action based on the state of the __ResourceState__, or call __orElse__ if the current state is not considered.
+
+```dart
+resourceState.maybeOn(
+  ready: (data) => Text(data),
+  orElse: () => const SizedBox(),
+);
+```
+
+The function above renders the `Text` widget only in the `ready` state, for all other state the `orElse` function is called.
+
+## Resource Unresolved
+
+The `ResourceUnresolved` state indicates that the `Resource` is not resolved yet, this state is internal and should never be visible outside.
+
+## Resource Ready
+
+The `ResourceReady` state indicates that the `Resource` is resolved and ready to use.
+
+### Constructor
+
+```dart
+ResourceReady(T value, {bool isRefreshing = false});
+```
+
+`value` is the resolved value of the `Resource`.
+`isRefreshing` is `true` if the `Resource` is being refreshed.
+
+### String toString()
+
+Returns the string representation of the `ResourceReady` state.
+
+### ResourceReady<T> copyWith({T? value, bool? isRefreshing})
+
+Convenience method to copy the current state and create a new `ResourceReady` state with the overridden values.
+
+## Resource Loading
+
+The `ResourceLoading` state indicates that the `Resource` is loading.
+
+### String toString()
+
+Returns the string representation of the `ResourceLoading` state.
+
+## Resource Error
+
+The `ResourceError` state indicates that the `Resource` failed to load and is in an error state.
+
+### Constructor
+
+```dart
+ResourceError(
+  Object error, {
+  StackTrace? stackTrace,
+  bool isRefreshing = false,
+});
+```
+
+`error` is the error that occurred.
+`stackTrace` is the stack trace of the error, if present.
+`isRefreshing` is `true` if the `Resource` is being refreshed.
+
+### String toString()
+
+Returns the string representation of the `ResourceError` state.
+
+### ResourceError<T> copyWith({Object? error, StackTrace? stackTrace, bool? isRefreshing})
+
+Convenience method to copy the current state and create a new `ResourceError` state with the overridden values.
+
+## Sealed class
+
+__ResourceState__ is a sealed class, so you can perform a switch on the different states instead of using `on`, `maybeOn`, etc.
+
+```dart
+return switch (userState) {
+  ResourceReady(:final value) => Text(value),
+  ResourceLoading() => const CircularProgressIndicator(),
+  ResourceError(:final error, :final stackTrace) =>
+    Text('$error, $stackTrace'),
+  ResourceUnresolved() => const SizedBox(),
+}
+```
