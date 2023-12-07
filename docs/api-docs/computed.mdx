@@ -1,0 +1,31 @@
+---
+title: Computed API docs
+description: All the API docs of Computed
+---
+
+# Computed API docs
+
+A special Signal that notifies only whenever the selected values change.
+
+A __Computed__ extends a [ReadSignal](/api-docs/read-signal), so all the API of __ReadSignal__ are available.
+
+## Constructor
+
+```dart
+Computed(
+  T Function() selector, {
+  SignalOptions<T>? options,
+});
+```
+
+`selector` is the function used to compute the value of the signal.
+
+`options` are the [options](/api-docs/signal-options) of the signal.
+
+```dart
+final count = Signal(1);
+final doubleCount = Computed(() => count() * 2);
+print(doubleCount()); // prints 2
+count.set(2);
+print(doubleCount()); // prints 4
+```

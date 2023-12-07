@@ -1,0 +1,34 @@
+---
+title: EffectOptions API docs
+description: All the API docs of EffectOptions
+---
+
+# EffectOptions API docs
+
+The options of an effect.
+
+## Constructor
+
+```dart
+const EffectOptions({
+  String? name,
+  Duration? delay,
+  bool autoDispose = true,
+});
+```
+
+## name
+
+The name of the effect, useful for logging purposes.
+
+## delay
+
+Delay each effect reaction.
+Instead of running the effect immediately, run after the specified duration.
+
+## autoDispose
+
+Whether to automatically dispose the effect (defaults to true).
+
+This happens automatically when all the tracked dependencies are disposed.
+If you set it to false, you should remember to dispose the effect manually

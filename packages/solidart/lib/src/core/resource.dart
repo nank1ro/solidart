@@ -124,7 +124,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     this.fetcher,
     this.stream,
     this.source,
-  }) : super._internal(initialValue: ResourceState<T>.unresolved()) {
+  }) : super._internal(initialValue: ResourceState<T>.loading()) {
     if (this is! ResourceSelector) {
       assert(
         (fetcher != null) ^ (stream != null),
@@ -187,7 +187,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// The previous resource state
   ResourceState<T>? get previousState {
     _resolveIfNeeded();
-    if (_previousValue is ResourceUnresolved<T>) return null;
+    if (!_resolved) return null;
     return super.previousValue;
   }
 
@@ -261,7 +261,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
   Future<void> _fetch() async {
     assert(fetcher != null, 'You are trying to fetch, but fetcher is null');
     try {
-      state = ResourceState<T>.loading();
       final result = await fetcher!();
       state = ResourceState<T>.ready(result);
     } catch (e, s) {
@@ -269,13 +268,12 @@ class Resource<T> extends Signal<ResourceState<T>> {
     }
   }
 
-  /// Subscribes to the provided [stream].
+  /// Subscribes to the provided [stream] for the first time.
   void _subscribe() {
     assert(
       stream != null,
       'You are trying to listen to a stream, but stream is null',
     );
-    state = ResourceState<T>.loading();
     _listenStream();
   }
 
@@ -405,16 +403,12 @@ class Resource<T> extends Signal<ResourceState<T>> {
 }
 
 /// Manages all the different states of a [Resource]:
-/// - ResourceUnresolved
 /// - ResourceReady
 /// - ResourceLoading
 /// - ResourceError
 @sealed
 @immutable
 sealed class ResourceState<T> {
-  /// The initial state of a [ResourceState].
-  const factory ResourceState.unresolved() = ResourceUnresolved<T>;
-
   /// Creates an [ResourceState] with a data.
   ///
   /// The data can be `null`.
@@ -602,39 +596,6 @@ class ResourceError<T> implements ResourceState<T> {
   // coverage:ignore-end
 }
 
-/// {@template resourceunresolved}
-/// Creates an [ResourceState] in unresolved state.
-/// {@endtemplate}
-@immutable
-class ResourceUnresolved<T> implements ResourceState<T> {
-  /// {@macro resourceunresolved}
-  const ResourceUnresolved();
-
-  // coverage:ignore-start
-  @override
-  R map<R>({
-    required R Function(ResourceReady<T> ready) ready,
-    required R Function(ResourceError<T> error) error,
-    required R Function(ResourceLoading<T> loading) loading,
-  }) {
-    throw Exception('Cannot map an unresolved resource');
-  }
-
-  @override
-  String toString() {
-    return 'ResourceUnresolved<$T>()';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return runtimeType == other.runtimeType;
-  }
-
-  @override
-  int get hashCode => runtimeType.hashCode;
-  // coverage:ignore-end
-}
-
 /// {@template resource-selector}
 /// The [selector] function allows filtering the Resource's data by reading
 /// only the properties that you care about.
@@ -729,7 +690,7 @@ extension ResourceExtensions<T> on ResourceState<T> {
   bool get isRefreshing => switch (this) {
         ResourceReady<T>(:final isRefreshing) => isRefreshing,
         ResourceError<T>(:final isRefreshing) => isRefreshing,
-        ResourceLoading<T>() || ResourceUnresolved<T>() => false,
+        ResourceLoading<T>() => false,
       };
 
   /// Upcast [ResourceState] into a [ResourceReady], or return null if the

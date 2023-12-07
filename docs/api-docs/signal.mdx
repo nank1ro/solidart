@@ -1,0 +1,72 @@
+---
+title: Signal API docs
+description: All the API docs of Signal
+---
+
+# Signal API docs
+
+Signals are the cornerstone of reactivity in `solidart`.
+
+They contain values that change over time; when you change a signal's value, it automatically updates anything that uses it.
+
+A __Signal__ extends a [ReadSignal](/api-docs/read-signal), so all the API of __ReadSignal__ are available.
+
+## Constructor
+
+```dart
+Signal(
+  T initialValue, {
+  SignalOptions<T>? options,
+});
+```
+
+`initialValue` is the initial value of the signal.
+
+`options` are the [options](/api-docs/signal-options) of the signal.
+
+## set value(T newValue)
+
+Sets the current signal value with `newValue`.
+
+This operation may be skipped if the value is equal to the previous one,
+check [SignalOptions.equals](/api-docs/signal-options#equals) and [SignalOptions.comparator](/api-docs/signal-options#comparator).
+
+For example:
+```dart
+final count = Signal(0);
+count.value = 1; // set the value to 1
+```
+
+## void set(T newValue)
+
+Equal to the value setter above.
+This is convenient in Flutter apps where you can write:
+
+```dart
+final text = Signal('');
+
+@override
+Widget build(BuildContext context) {
+  return TextField(
+    onChanged: text.set,
+    // instead of
+    // onChanged: (value) => text.value = value,
+  );
+}
+```
+
+## T updateValue(T Function(T value) callback)
+
+Calls a function with the __current__ value and assigns the result as the new value.
+
+For example:
+```dart
+final count = Signal(2);
+count.updateValue((value) => value * 2);
+print(count()); // prints 4
+```
+
+## ReadSignal<T> toReadSignal()
+
+Converts this __Signal__ into a __ReadSignal__.
+Use this method to make the signal __read-only__.

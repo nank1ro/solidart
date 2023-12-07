@@ -52,7 +52,7 @@ abstract class ReactionInterface implements Derivation {
   void dispose();
 
   /// Runs the reaction
-  void run();
+  void _run();
 }
 
 /// {@template effect}
@@ -113,7 +113,6 @@ abstract class ReactionInterface implements Derivation {
 class Effect implements ReactionInterface {
   /// {@macro effect}
   factory Effect(
-    @Deprecated('Use Effect instead')
     void Function(DisposeEffect dispose) callback, {
     ErrorCallback? onError,
     EffectOptions options = const EffectOptions(),
@@ -122,7 +121,7 @@ class Effect implements ReactionInterface {
 
     if (options.delay == null) {
       effect = Effect._internal(
-        callback: () => effect.track(() => callback(effect.dispose)),
+        callback: () => effect._track(() => callback(effect.dispose)),
         onError: onError,
         options: options,
       );
@@ -144,7 +143,7 @@ class Effect implements ReactionInterface {
             timer = scheduler(() {
               isScheduled = false;
               if (!effect.disposed) {
-                effect.track(() => callback(effect.dispose));
+                effect._track(() => callback(effect.dispose));
               } else {
                 // coverage:ignore-start
                 timer?.cancel();
@@ -158,7 +157,7 @@ class Effect implements ReactionInterface {
       );
     }
     // ignore: cascade_invocations
-    effect.schedule();
+    effect._schedule();
     return effect;
   }
 
@@ -216,11 +215,10 @@ class Effect implements ReactionInterface {
 
   @override
   void _onBecomeStale() {
-    schedule();
+    _schedule();
   }
 
-  // ignore: public_member_api_docs
-  void schedule() {
+  void _schedule() {
     if (_isScheduled) {
       return;
     }
@@ -231,8 +229,7 @@ class Effect implements ReactionInterface {
       ..runReactions();
   }
 
-  // ignore: public_member_api_docs
-  void track(void Function() fn) {
+  void _track(void Function() fn) {
     _context.startBatch();
 
     _isRunning = true;
@@ -258,7 +255,7 @@ class Effect implements ReactionInterface {
   }
 
   @override
-  void run() {
+  void _run() {
     if (_disposed) return;
 
     _context.startBatch();
