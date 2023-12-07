@@ -27,6 +27,27 @@ Resource({
 `options` are the [options](/api-docs/resource-options) of the resource.
 `source` is the query to the async data `fetcher` or `stream` function that triggers the resource everytime it changes.
 
+```dart
+// Using http as a client, you can use any other client
+import 'package:http/http.dart' as http;
+
+// The source
+final userId = Signal(1);
+
+// The fetcher
+Future<String> fetchUser() async {
+  final response = await http.get(
+    Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
+  );
+  return response.body;
+}
+
+// The resource (source is optional)
+final user = Resource(fetcher: fetchUser, source: userId);
+```
+
+In the example above, just changing the `userId` value will trigger the `Resource` again.
+
 ## ResourceState<T> get state
 
 Returns the current state of the resource.
