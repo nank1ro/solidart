@@ -1,0 +1,53 @@
+---
+title: Show API docs
+description: All the API docs of Show
+---
+
+# Show API docs
+
+Conditionally render its __builder__ or an optional __fallback__ component based on the __when__ evaluation.
+
+```dart
+final loggedIn = Signal(false);
+
+@override
+Widget build(BuildContext context) {
+  return Show(
+    when: loggedIn,
+    builder: (context) => const Text('Logged In'),
+    fallback: (context) => const Text('Logged out'),
+  );
+}
+```
+
+## Constructor
+
+```dart
+Show({
+  bool Function()? when,
+  WidgetBuilder builder,
+  WidgetBuilder? fallback,
+});
+```
+
+A boolean Signal used to determine which builder needs to be used.
+
+When the Signal's value is true, renders the __builder__, otherwise the __fallback__ (if provided, or an empty view).
+
+---
+
+The `Show` widget takes a functions that returns a `bool`.
+You can easily convert any type to `bool`, for example:
+
+```dart
+final count = Signal(0);
+
+@override
+Widget build(BuildContext context) {
+  return Show(
+    when: () => count() > 5,
+    builder: (context) => const Text('Count is greater than 5'),
+    fallback: (context) => const Text('Count is lower than 6'),
+  );
+}
+```

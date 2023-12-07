@@ -1,0 +1,42 @@
+---
+title: ResourceBuilder API docs
+description: All the API docs of ResourceBuilder
+---
+
+# ResourceBuilder API docs
+
+Reacts to the __resource__ calling the __builder__ each time.
+
+```dart
+final counter = Resource(
+  fetcher: () => Future.value(1),
+);
+
+@override
+Widget build(BuildContext context) {
+  return ResourceBuilder(
+    resource: counter,
+    builder: (context, counterState) {
+      return switch (userState) {
+        ResourceReady(:final value) => Text(value),
+        ResourceError(:final error, :final stackTrace) =>
+          Text('$error, $stackTrace'),
+        ResourceLoading() => const CircularProgressIndicator(),
+      }
+    },
+  );
+}
+```
+
+## Constructor
+
+```dart
+ResourceBuilder({
+  required Resource<T> resource,
+  required ResourceWidgetBuilder<T> builder,
+});
+```
+
+`resource` is the resource that will be rendered based on its state.
+
+`builder` is the function that builds the widget with the current state of the resource.

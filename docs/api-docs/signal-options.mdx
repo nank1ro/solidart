@@ -1,0 +1,47 @@
+---
+title: SignalOptions API docs
+description: All the API docs of SignalOptions
+---
+
+# SignalOptions API docs
+
+Signal options which increase the behaviour of the signal.
+
+## Constructor
+
+```dart
+const SignalOptions({
+  String? name,
+  bool equals = false,
+  ValueComparator<T?>? comparator = identical,
+  bool autoDispose = true,
+});
+```
+
+
+## name
+
+The name of the signal, useful for logging purposes.
+
+## equals
+
+Whether to check the equality of the value with the == equality.
+
+Preventing signal updates if the new value is equal to the previous.
+
+When this value is true, the __comparator__ is not used.
+
+## comparator
+
+An optional comparator function, defaults to __identical__.
+
+Preventing signal updates if the __comparator__ returns true.
+
+Taken into account only if __equals__ is false.
+
+## autoDispose
+
+Whether to automatically dispose the signal (defaults to true).
+
+This happens automatically when there are no longer subscribers.
+If you set it to false, you should remember to dispose the signal manually
