@@ -124,3 +124,9 @@ count.value++;
 print(count.toString());
 // prints "ReadSignal<int>(value: 1, previousValue: 0, options: ...)"
 ```
+
+## toValueNotifier()
+
+Converts this __ReadSignal__ into a __ValueNotifier__.
+
+If you need to convert a __ValueNotifier__ into a __ReadSignal__ use `toSignal()` instead.
