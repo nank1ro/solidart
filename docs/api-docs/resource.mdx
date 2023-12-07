@@ -48,31 +48,31 @@ final user = Resource(fetcher: fetchUser, source: userId);
 
 In the example above, just changing the `userId` value will trigger the `Resource` again.
 
-## ResourceState<T> get state
+## `ResourceState<T> get state`
 
 Returns the current state of the resource.
 See [ResourceState](/api-docs/resource-state) for more details.
 
-## ResourceState<T> get previousState
+## `ResourceState<T> get previousState`
 
 Returns the previous state of the resource.
 See [ResourceState](/api-docs/resource-state) for more details.
 
-## Future<void> refresh()
+## `Future<void> refresh()`
 
 Forces a refresh of the resource.
 
-## Resource<Selected> select<Selected>(Selected Function(T data) selector, { String? name })
+## `Resource<Selected> select<Selected>(Selected Function(T data) selector, { String? name })`
 
 Filters the `Resource`'s data by reading only the properties that you care about.
 
 The advantage is that you keep handling the loading and error states.
 
-## FutureOr<T> untilReady()
+## `FutureOr<T> untilReady()`
 
 Returns a future that completes with the value when the Resource is ready
 If the resource is already ready, it completes immediately.
 
-## ResourceState<T> update(ResourceState<T> Function(ResourceState<T> state) callback)
+## `ResourceState<T> update(ResourceState<T> Function(ResourceState<T> state) callback)`
 
 Calls a function with the current [state] and assigns the result as the new state.
