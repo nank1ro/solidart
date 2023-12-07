@@ -36,7 +36,6 @@ class SomeChild extends StatelessWidget {
           // render the count value
           Text('count: $count'),
           const SizedBox(height: 8),
-          const SizedBox(height: 8),
           ElevatedButton(
             onPressed: () {
               // update the count signal value

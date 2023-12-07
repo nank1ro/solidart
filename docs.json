@@ -136,6 +136,10 @@
         [
           "ResourceBuilder",
           "/api-docs/resource-builder"
+        ],
+        [
+          "Solid",
+          "/api-docs/solid"
         ]
       ]
     ],
