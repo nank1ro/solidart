@@ -93,7 +93,7 @@ count.observe((previousValue, value) {
 // prints "The count changed from null to 0"
 ```
 
-## until
+## until(bool Function(T value) condition)
 
 Returns the future that completes when the __condition__ evalutes to true.
 If the __condition__ is already true, it completes immediately.
