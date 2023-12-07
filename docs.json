@@ -124,6 +124,10 @@
         [
           "EffectOptions",
           "/api-docs/effect-options"
+        ],
+        [
+          "Show",
+          "/api-docs/show"
         ]
       ]
     ],
