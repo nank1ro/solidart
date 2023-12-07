@@ -4,3 +4,129 @@ description: All the API docs of ReadSignal, a read-only signal
 ---
 
 # ReadSignal API docs
+
+A read-only __Signal__.
+
+All [Computed](/api-docs/computed) signals are __ReadSignal__s.
+
+If you want to convert a __Signal__ into a __ReadSignal__ use the [toReadSignal](/api-docs/signal#toreadsignal) method
+
+## Constructor
+
+```dart
+ReadSignal(
+  T initialValue, {
+  SignalOptions<T>? options,
+});
+```
+
+`initialValue` is the initial value of the signal.
+
+`options` are the [options](/api-docs/signal-options) of the signal.
+
+## T get value
+
+Returns the current signal value.
+
+For example:
+```dart
+final count = Signal(0);
+print(count.value); // prints 0
+```
+
+## T call()
+
+Returns the current signal value.
+
+For example:
+```dart
+final count = Signal(0);
+print(count()); // prints 0
+```
+
+## bool get hasPreviousValue
+
+Returns `true` if the signal has a previous value.
+
+For example:
+```dart
+final count = Signal(0);
+print(count.hasPreviousValue); // prints false
+count.value++;
+print(count.hasPreviousValue); // prints true
+```
+
+## T? get previousValue 
+
+Returns the previous value, or `null` if the signal has no previous value.
+
+For example:
+```dart
+final count = Signal(0);
+print(count.previousValue); // prints null
+count.value++;
+print(count.previousValue); // prints 0
+```
+
+## DisposeObservation observe(ObserveCallback<T> listener, {bool fireImmediately = false})
+
+Observe the signal and trigger the __listener__ every time the value changes with the previous and current values.
+
+For example:
+
+```dart
+final count = Signal(0);
+count.observe((previousValue, value) {
+  print("The count changed from $previousValue to $value");
+});
+count.value++;
+// prints "The count changed from null to 1"
+```
+
+The observation will not be fired when created with the current value, if you want to run it at creation, set `fireImmediately` to `true`, for example:
+
+```dart
+final count = Signal(0);
+count.observe((previousValue, value) {
+  print("The count changed from $previousValue to $value");
+}, fireImmediately: true);
+// prints "The count changed from null to 0"
+```
+
+## FutureOr<T> until(bool Function(T value) condition)
+
+Returns the future that completes when the __condition__ evalutes to true.
+If the __condition__ is already true, it completes immediately.
+
+For example:
+```dart
+final count = Signal(0);
+await count.until((value) => value >= 10); // await until value >= 10
+```
+
+## bool get disposed 
+
+Returns `true` if the signal has been disposed.
+
+## void dispose()
+
+Disposes the signal.
+If the signal has already been disposed, this method does nothing.
+All observers will be unsubscribed.
+
+## String toString()
+
+Returns a string representation of the signal.
+For example:
+```dart
+final count = Signal(0);
+count.value++;
+print(count.toString());
+// prints "ReadSignal<int>(value: 1, previousValue: 0, options: ...)"
+```
+
+## toValueNotifier()
+
+Converts this __ReadSignal__ into a __ValueNotifier__.
+
+If you need to convert a __ValueNotifier__ into a __ReadSignal__ use `toSignal()` instead.
