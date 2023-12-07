@@ -1,0 +1,40 @@
+---
+title: SignalBuilder API docs
+description: All the API docs of SignalBuilder
+---
+
+# SignalBuilder API docs
+
+Reacts to the [signal] calling the [builder] each time.
+
+```dart
+final counter = Signal(0);
+
+@override
+Widget build(BuildContext context) {
+  return SignalBuilder(
+    signal: counter,
+    builder: (context, value, child) {
+      return Text('$value');
+    },
+  );
+}
+```
+
+## Constructor
+
+```dart
+SignalBuilder({
+  required SignalBase<T> signal,
+  required ValueWidgetBuilder<T> builder,
+  Widget? child,
+});
+```
+
+`signal` The signal whose value you depend on in order to build. This widget does not ensure that the signal's value is not null, therefore your __builder__ may need to handle null values.
+
+`builder` is the function that builds the widget with the current value of the signal.
+
+`child` is optional and can be null if the entire widget subtree the __builder__ builds depends on the value of the __signal__. This widget will be passed to the `builder` and __DOESN'T__ rebuilds if the value of the __signal__ changes.
+
+<Info>See also __DualSignalBuilder__and __TripleSignalBuilder__ to react to multiple signals</Info>
