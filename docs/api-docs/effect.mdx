@@ -41,11 +41,11 @@ count.value++;
 
 <Info>An effect runs immediately when created.</Info>
 
-## bool get disposed 
+## `bool get disposed`
 
 Returns `true` if the effect has been disposed.
 
-## void dispose()
+## `void dispose()`
 
 Disposes the effect.
 If the effect has already been disposed, this method does nothing.
@@ -60,7 +60,7 @@ final effect = Effect((_) {
 effect.dispose(); // disposes the effect
 ```
 
-## void call()
+## `void call()`
 
 Disposes the effect, like above.
 

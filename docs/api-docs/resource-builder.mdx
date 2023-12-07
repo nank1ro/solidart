@@ -17,7 +17,7 @@ Widget build(BuildContext context) {
   return ResourceBuilder(
     resource: counter,
     builder: (context, counterState) {
-      return switch (userState) {
+      return switch (counterState) {
         ResourceReady(:final value) => Text(value),
         ResourceError(:final error, :final stackTrace) =>
           Text('$error, $stackTrace'),
