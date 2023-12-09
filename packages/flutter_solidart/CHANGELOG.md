@@ -1,3 +1,10 @@
+## 1.6.0
+
+### Changes from solidart
+
+- **FEAT**: Create `SolidartConfig` which you can use to customize the `autoDispose` of all the tracking system and and `observers`.
+- **BUGFIX**: Removed the internal `ResourceUnresolved` state so you can easily use the `ResourceState` sealed class.
+
 ## 1.5.0
 
 ### Changes from solidart

@@ -1,3 +1,8 @@
+## 1.4.0
+
+- **FEAT**: Create `SolidartConfig` which you can use to customize the `autoDispose` of all the tracking system and and `observers`.
+- **BUGFIX**: Removed the internal `ResourceUnresolved` state so you can easily use the `ResourceState` sealed class.
+
 ## 1.3.0
 
 - **FEAT**: Automatic disposal, [see the docs here](https://docs.page/nank1ro/solidart/advanced/automatic-disposal)

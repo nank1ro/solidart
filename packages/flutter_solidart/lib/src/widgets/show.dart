@@ -90,14 +90,14 @@ class Show<T extends bool> extends StatefulWidget {
 }
 
 class _ShowState<T extends bool> extends State<Show<T>> {
-  final show = Signal(false);
+  final show = ValueNotifier(false);
   late final DisposeEffect disposeEffect;
 
   @override
   void initState() {
     super.initState();
     disposeEffect = Effect((_) {
-      show.set(widget.when());
+      show.value = widget.when();
     });
   }
 
@@ -110,8 +110,8 @@ class _ShowState<T extends bool> extends State<Show<T>> {
 
   @override
   Widget build(BuildContext context) {
-    return SignalBuilder<bool>(
-      signal: show,
+    return ValueListenableBuilder<bool>(
+      valueListenable: show,
       builder: (context, condition, _) {
         if (!condition) {
           return widget.fallback?.call(context) ?? const SizedBox();

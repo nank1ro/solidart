@@ -1,0 +1,47 @@
+---
+title: SolidartObserver API docs
+description: All the API docs of SolidartObserver
+---
+
+# SolidartObserver API docs
+
+An object that listens to the changes of the reactive system.
+
+This can be used for logging purposes.
+
+## `void didCreateSignal(SignalBase<Object?> signal)`
+
+Called when a new signal is created.
+
+## `void didUpdateSignal(SignalBase<Object?> signal)`
+
+Called when a signal is updated.
+
+## `void didDisposeSignal(SignalBase<Object?> signal)`
+
+Called when a signal is disposed.
+
+---
+
+```dart
+import 'dart:developer' as dev;
+
+class Logger implements SolidartObserver {
+  @override
+  void didCreateSignal(SignalBase<Object?> signal) {
+    dev.log(
+        'didCreateSignal(name: ${signal.options.name}, value: ${signal.value})');
+  }
+
+  @override
+  void didDisposeSignal(SignalBase<Object?> signal) {
+    dev.log('didDisposeSignal(name: ${signal.options.name})');
+  }
+
+  @override
+  void didUpdateSignal(SignalBase<Object?> signal) {
+    dev.log(
+        'didUpdateSignal(name: ${signal.options.name}, previousValue: ${signal.previousValue}, value: ${signal.value})');
+  }
+}
+```

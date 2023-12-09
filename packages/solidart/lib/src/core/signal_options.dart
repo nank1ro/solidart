@@ -20,12 +20,12 @@ typedef ValueComparator<T> = bool Function(T a, T b);
 @immutable
 class SignalOptions<T> {
   /// {@macro signaloptions}
-  const SignalOptions({
+  SignalOptions({
     this.name,
     this.equals = false,
     this.comparator = identical,
-    this.autoDispose = true,
-  });
+    bool? autoDispose,
+  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose;
 
   /// Whether to check the equality of the value with the == equality.
   ///
@@ -63,11 +63,11 @@ class SignalOptions<T> {
 /// {@endtemplate}
 class ResourceOptions {
   /// {@macro resource-options}
-  const ResourceOptions({
+  ResourceOptions({
     this.name,
     this.lazy = true,
-    this.autoDispose = true,
-  });
+    bool? autoDispose,
+  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose;
 
   /// Indicates whether the resource should be computed lazily, defaults to true
   final bool lazy;

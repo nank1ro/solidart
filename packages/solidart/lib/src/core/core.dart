@@ -19,3 +19,4 @@ part 'signal_base.dart';
 part 'collections/list.dart';
 part 'collections/set.dart';
 part 'collections/map.dart';
+part 'config.dart';

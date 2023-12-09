@@ -1,3 +1,5 @@
+import 'dart:developer' as dev;
+
 import 'package:example/pages/counter.dart';
 import 'package:example/pages/derived_signal.dart';
 import 'package:example/pages/dual_signal_builder.dart';
@@ -9,8 +11,31 @@ import 'package:example/pages/show.dart';
 import 'package:example/pages/solid/solid.dart';
 import 'package:example/pages/list_signal.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
+
+/// Creating a logger that notifies when signals are created, disposed and updated.
+///
+class Logger implements SolidartObserver {
+  @override
+  void didCreateSignal(SignalBase<Object?> signal) {
+    dev.log(
+        'didCreateSignal(name: ${signal.options.name}, value: ${signal.value})');
+  }
+
+  @override
+  void didDisposeSignal(SignalBase<Object?> signal) {
+    dev.log('didDisposeSignal(name: ${signal.options.name})');
+  }
+
+  @override
+  void didUpdateSignal(SignalBase<Object?> signal) {
+    dev.log(
+        'didUpdateSignal(name: ${signal.options.name}, previousValue: ${signal.previousValue}, value: ${signal.value})');
+  }
+}
 
 void main() {
+  SolidartConfig.observers.add(Logger());
   runApp(const MyApp());
 }
 
