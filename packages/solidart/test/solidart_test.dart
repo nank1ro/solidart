@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
-import 'package:solidart/src/core/config.dart';
 import 'package:solidart/src/core/core.dart';
 import 'package:solidart/src/extensions.dart';
 import 'package:solidart/src/utils.dart';
