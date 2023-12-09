@@ -1,0 +1,34 @@
+---
+title: Provider API docs
+description: All the API docs of Provider
+---
+
+# Provider API docs
+
+A Provider that manages the lifecycle of the value it provides by delegating to a pair of [create] and [dispose].
+
+It is usually used to avoid making a StatefulWidget for something trivial,
+such as instantiating a BLoC.
+
+## Constructor
+
+```dart
+Provider({
+  required T Function() create,
+  DisposeValue<T>? dispose,
+  bool lazy = true,
+  Object? id,
+})
+```
+
+Provider is the equivalent of a State.initState combined with State.dispose.
+`create` is called only once in State.initState.
+The `create` callback is lazily called. It is called the first time the
+value is read, instead of the first time Provider is inserted in the widget
+tree.
+This behavior can be disabled by passing `lazy` false.
+
+You can pass an optional `id` to have multiple providers of the same type.
+
+The `dispose` method will not be called if the provider is a `SignalBase`,
+because they are disposed automatically when there aren't any subscribers.

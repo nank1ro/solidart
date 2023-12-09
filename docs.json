@@ -140,6 +140,18 @@
         [
           "Solid",
           "/api-docs/solid"
+        ],
+        [
+          "Provider",
+          "/api-docs/provider"
+        ],
+        [
+          "SolidartConfig",
+          "/api-docs/solidart-config"
+        ],
+        [
+          "SolidartObserver",
+          "/api-docs/solidart-observer"
         ]
       ]
     ],

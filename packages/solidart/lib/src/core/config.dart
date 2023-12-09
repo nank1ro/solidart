@@ -1,7 +1,7 @@
 import 'package:solidart/src/core/core.dart';
 
 /// {@template solidart-config}
-/// The global configuration
+/// The global configuration of the reactive system.
 /// {@endtemplate}
 abstract class SolidartConfig {
   /// Whether to enable the auto disposal of the reactive system, defaults to
