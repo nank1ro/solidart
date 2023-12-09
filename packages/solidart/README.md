@@ -4,6 +4,7 @@
 [![GitHub issues](https://img.shields.io/github/issues/nank1ro/solidart)](https://github.com/nank1ro/solidart/issues/)
 [![GitHub pull-requests](https://img.shields.io/github/issues-pr/nank1ro/solidart.svg)](https://gitHub.com/nank1ro/solidart/pull/)
 [![solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/solidart?include_prereleases)](https://pub.dev/packages/solidart)
+[![](https://dcbadge.vercel.app/api/server/PvaDkncs)](https://discord.gg/PvaDkncs)
 
 # A simple state-management library inspired by SolidJS.
 
