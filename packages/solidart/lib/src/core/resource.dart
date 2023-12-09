@@ -610,7 +610,7 @@ class ResourceSelector<Input, Output> extends Resource<Output> {
     required super.name,
   }) : super._internal(
           options: SignalOptions<ResourceState<Output>>(
-            name: resource.name,
+            name: name,
             autoDispose: resource.options.autoDispose,
           ),
           resourceOptions: resource.resourceOptions,
