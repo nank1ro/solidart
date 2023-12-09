@@ -1,4 +1,4 @@
-import 'package:solidart/src/core/core.dart';
+part of 'core.dart';
 
 /// {@template solidart-config}
 /// The global configuration of the reactive system.

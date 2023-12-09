@@ -4,7 +4,6 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
-import 'package:solidart/src/core/config.dart';
 import 'package:solidart/src/utils.dart';
 
 part 'atom.dart';
@@ -20,3 +19,4 @@ part 'signal_base.dart';
 part 'collections/list.dart';
 part 'collections/set.dart';
 part 'collections/map.dart';
+part 'config.dart';
