@@ -14,6 +14,11 @@
       "title": "pub.dev flutter_solidart",
       "icon": "cube",
       "link": "https://pub.dev/packages/flutter_solidart"
+    },
+    {
+      "title": "Discord",
+      "icon": "discord",
+      "link": "https://discord.gg/2JBzeeQShh"
     }
   ],
   "sidebar": [
