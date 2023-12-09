@@ -1,3 +1,9 @@
+## 1.6.1
+
+### Changes from solidart
+
+- **BUGFIX**: The method `didUpdateSignal` of `SolidartObserver` was not triggered for collections.
+
 ## 1.6.0
 
 ### Changes from solidart

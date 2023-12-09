@@ -463,5 +463,6 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   void _notifyChanged() {
     _reportChanged();
     _notifyListeners();
+    _notifySignalUpdate();
   }
 }

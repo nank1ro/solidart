@@ -421,5 +421,6 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   void _notifyChanged() {
     _reportChanged();
     _notifyListeners();
+    _notifySignalUpdate();
   }
 }
