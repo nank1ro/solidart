@@ -1,3 +1,7 @@
+## 1.4.1
+
+- **BUGFIX**: The method `didUpdateSignal` of `SolidartObserver` was not triggered for collections.
+
 ## 1.4.0
 
 - **FEAT**: Create `SolidartConfig` which you can use to customize the `autoDispose` of all the tracking system and and `observers`.
