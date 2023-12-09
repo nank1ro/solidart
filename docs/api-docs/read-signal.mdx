@@ -80,7 +80,7 @@ count.observe((previousValue, value) {
   print("The count changed from $previousValue to $value");
 });
 count.value++;
-// prints "The count changed from null to 1"
+// prints "The count changed from 0 to 1"
 ```
 
 The observation will not be fired when created with the current value, if you want to run it at creation, set `fireImmediately` to `true`, for example:
