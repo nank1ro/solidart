@@ -38,7 +38,9 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   })  : _value = initialValue,
         super(
           canAutoDispose: options.autoDispose,
-        );
+        ) {
+    _notifySignalCreation();
+  }
 
   // Tracks the internal value
   T _value;
@@ -77,6 +79,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     _value = newValue;
     _reportChanged();
     _notifyListeners();
+    _notifySignalUpdate();
   }
 
   void _notifyListeners() {
@@ -147,7 +150,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
       cb();
     }
     _onDisposeCallbacks.clear();
-
+    _notifySignalDisposal();
     for (final o in _observers.toList()) {
       o._mayDispose();
     }
@@ -199,6 +202,24 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     return completer.future;
   }
   // coverage:ignore-end
+
+  void _notifySignalCreation() {
+    for (final obs in SolidartConfig.observers) {
+      obs.didCreateSignal(this);
+    }
+  }
+
+  void _notifySignalUpdate() {
+    for (final obs in SolidartConfig.observers) {
+      obs.didUpdateSignal(this);
+    }
+  }
+
+  void _notifySignalDisposal() {
+    for (final obs in SolidartConfig.observers) {
+      obs.didDisposeSignal(this);
+    }
+  }
 
   @override
   String toString() =>

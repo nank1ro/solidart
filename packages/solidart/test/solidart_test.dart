@@ -68,6 +68,8 @@ class SampleList {
   final List<int> numbers;
 }
 
+class MockSolidartObserver extends Mock implements SolidartObserver {}
+
 void main() {
   group(
     'Signal tests - ',
@@ -76,7 +78,7 @@ void main() {
           () async {
         final counter = Signal(
           0,
-          options: const SignalOptions<int>(equals: true, name: ''),
+          options: SignalOptions<int>(equals: true, name: ''),
         );
 
         final cb = MockCallbackFunction();
@@ -108,7 +110,7 @@ void main() {
           'returns false', () async {
         final signal = Signal(
           null,
-          options: const SignalOptions<_A>(),
+          options: SignalOptions<_A>(),
         );
         final cb = MockCallbackFunction();
         final unobserve = signal.observe((_, __) => cb());
@@ -258,7 +260,7 @@ void main() {
         final cb = MockCallbackFunction();
         Effect(
           (_) => cb(),
-          options: const EffectOptions(delay: Duration(milliseconds: 500)),
+          options: EffectOptions(delay: const Duration(milliseconds: 500)),
         );
         verifyNever(cb());
         await Future<void>.delayed(const Duration(milliseconds: 501));
@@ -493,7 +495,7 @@ void main() {
             return Stream.value(count());
           },
           source: count,
-          options: const ResourceOptions(lazy: false),
+          options: ResourceOptions(lazy: false),
         );
 
         addTearDown(() {
@@ -564,7 +566,7 @@ void main() {
         Future<User> getUser() => throw Exception();
         final resource = Resource<User>(
           fetcher: getUser,
-          options: const ResourceOptions(lazy: false),
+          options: ResourceOptions(lazy: false),
         );
 
         addTearDown(resource.dispose);
@@ -585,7 +587,7 @@ void main() {
         final resource = Resource(
           fetcher: getUser,
           source: userId,
-          options: const ResourceOptions(lazy: false),
+          options: ResourceOptions(lazy: false),
         );
 
         await pumpEventQueue();
@@ -829,7 +831,7 @@ void main() {
       test('check toString()', () async {
         final r = Resource(
           fetcher: () => Future.value(1),
-          options: const ResourceOptions(lazy: false),
+          options: ResourceOptions(lazy: false),
         );
         await pumpEventQueue();
         expect(
@@ -1159,7 +1161,7 @@ void main() {
       test('check set with equals', () {
         final list = ListSignal<int>(
           [1, 2],
-          options: const SignalOptions(equals: true),
+          options: SignalOptions(equals: true),
         );
         expect(list, [1, 2]);
         list.set([3, 4]);
@@ -1340,7 +1342,7 @@ void main() {
 
       test('check set with equals', () {
         final set =
-            SetSignal<int>({1, 2}, options: const SignalOptions(equals: true));
+            SetSignal<int>({1, 2}, options: SignalOptions(equals: true));
         expect(set, {1, 2});
         set.set({3, 4});
         expect(set, {3, 4});
@@ -1513,7 +1515,7 @@ void main() {
       test('check set with equals', () {
         final map = MapSignal<String, int>(
           {'a': 1, 'b': 2},
-          options: const SignalOptions(equals: true),
+          options: SignalOptions(equals: true),
         );
         expect(map, {'a': 1, 'b': 2});
         map.set({'c': 3, 'd': 4});
@@ -1528,6 +1530,37 @@ void main() {
           return v;
         });
         expect(map, {'a': 1, 'b': 2, 'c': 3});
+      });
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
+
+  group(
+    'SolidartObserver',
+    () {
+      test('didCreateSignal is fired on signal creation', () {
+        final observer = MockSolidartObserver();
+        SolidartConfig.observers.add(observer);
+        final count = Signal(0);
+        verify(observer.didCreateSignal(count)).called(1);
+      });
+
+      test('didUpdateSignal is fired on signal update', () {
+        final observer = MockSolidartObserver();
+        SolidartConfig.observers.add(observer);
+        final count = Signal(0);
+        verifyNever(observer.didUpdateSignal(count));
+        count.value++;
+        verify(observer.didUpdateSignal(count)).called(1);
+      });
+
+      test('didDisposeSignal is fired on signal update', () {
+        final observer = MockSolidartObserver();
+        SolidartConfig.observers.add(observer);
+        final count = Signal(0);
+        verifyNever(observer.didDisposeSignal(count));
+        count.dispose();
+        verify(observer.didDisposeSignal(count)).called(1);
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),

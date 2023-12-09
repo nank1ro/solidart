@@ -6,10 +6,17 @@ description: Learn how the automatic disposal works
 # Automatic Disposal
 
 By default when you create a `Signal`, `Computed`, `Resource` or `Effect` the library will dispose them automatically.
-You can customize this behaviour using the options, for example for a `Signal` you have to create it with `autoDispose` set to `false`.
+
+You can customize this behaviour for a specific trackable Object using the options, for example for a `Signal` you have to create it with `autoDispose` set to `false`.
 
 ```dart
 final counter = Signal(0, options: const SignalOptions<int>(autoDispose: false));
+```
+
+If you want to disable it globally instead, use
+
+```dart
+SolidartConfig.autoDispose = false;
 ```
 
 The automatic disposal happens automatically when there are no longer subscribers (for `Signal`, `Computed`, `Resource`) and when the __currently__ tracked dependencies are all disposed (for `Effect`).
