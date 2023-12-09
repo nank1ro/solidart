@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
+import 'package:solidart/src/core/config.dart';
 import 'package:solidart/src/utils.dart';
 
 part 'atom.dart';

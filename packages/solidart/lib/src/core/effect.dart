@@ -12,11 +12,11 @@ typedef DisposeEffect = void Function();
 @immutable
 class EffectOptions {
   /// {@macro effect-options}
-  const EffectOptions({
+  EffectOptions({
     this.name,
     this.delay,
-    this.autoDispose = true,
-  });
+    bool? autoDispose,
+  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose;
 
   /// The name of the effect, useful for logging
   final String? name;
@@ -37,9 +37,10 @@ class EffectOptions {
 DisposeEffect createEffect(
   void Function(DisposeEffect dispose) callback, {
   ErrorCallback? onError,
-  EffectOptions options = const EffectOptions(),
+  EffectOptions? options,
 }) {
-  return Effect(callback, onError: onError, options: options).dispose;
+  return Effect(callback, onError: onError, options: options ?? EffectOptions())
+      .dispose;
 }
 // coverage:ignore-end
 
@@ -115,18 +116,18 @@ class Effect implements ReactionInterface {
   factory Effect(
     void Function(DisposeEffect dispose) callback, {
     ErrorCallback? onError,
-    EffectOptions options = const EffectOptions(),
+    EffectOptions? options,
   }) {
     late Effect effect;
-
-    if (options.delay == null) {
+    final effectiveOptions = options ?? EffectOptions();
+    if (effectiveOptions.delay == null) {
       effect = Effect._internal(
         callback: () => effect._track(() => callback(effect.dispose)),
         onError: onError,
-        options: options,
+        options: effectiveOptions,
       );
     } else {
-      final scheduler = createDelayedScheduler(options.delay!);
+      final scheduler = createDelayedScheduler(effectiveOptions.delay!);
       var isScheduled = false;
       Timer? timer;
 
@@ -152,7 +153,7 @@ class Effect implements ReactionInterface {
             });
           }
         },
-        options: options,
+        options: effectiveOptions,
         onError: onError,
       );
     }
