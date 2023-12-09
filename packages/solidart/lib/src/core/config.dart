@@ -18,8 +18,11 @@ abstract class SolidartConfig {
 /// This can be used for logging purposes.
 /// {@endtemplate}
 abstract class SolidartObserver {
+  // coverage:ignore-start
+
   /// {@macro solidart-observer}
   const SolidartObserver();
+  // coverage:ignore-end
 
   /// A signal has been created.
   void didCreateSignal(SignalBase<Object?> signal);
