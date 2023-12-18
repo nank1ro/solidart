@@ -13,7 +13,7 @@ class ListSignalPage extends StatefulWidget {
 }
 
 class _ListSignalPageState extends State<ListSignalPage> {
-  final items = ListSignal([1, 2]);
+  final items = ListSignal([1, 2], options: SignalOptions(name: 'items'));
 
   @override
   void initState() {

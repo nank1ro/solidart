@@ -1,3 +1,9 @@
+## 1.7.0
+
+### Changes from solidart
+
+- **FEAT**: Add DevTools extension to solidart.
+
 ## 1.6.1
 
 ### Changes from solidart

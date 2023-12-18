@@ -170,3 +170,9 @@ ResourceBuilder(
 
 The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
 The are also other convenience methods to handle only specific states.
+
+## DevTools
+
+<img src="https://raw.githubusercontent.com/nank1ro/solidart/main/assets/devtools.png" height="800">
+
+You can debug your application using the Solidart DevTools extension and filter your signals.

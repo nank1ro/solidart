@@ -1,3 +1,7 @@
+## 1.5.0
+
+- **FEAT**: Add DevTools extension to solidart.
+
 ## 1.4.1
 
 - **BUGFIX**: The method `didUpdateSignal` of `SolidartObserver` was not triggered for collections.

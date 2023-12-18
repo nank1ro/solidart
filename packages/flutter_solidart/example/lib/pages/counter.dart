@@ -9,7 +9,7 @@ class CounterPage extends StatefulWidget {
 }
 
 class _CounterPageState extends State<CounterPage> {
-  final counter = Signal(0);
+  final counter = Signal(0, options: SignalOptions(name: 'counter'));
 
   @override
   Widget build(BuildContext context) {
