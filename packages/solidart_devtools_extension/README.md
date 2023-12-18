@@ -1,6 +1,6 @@
 ## DevTools
 
-<img src="https://raw.githubusercontent.com/nank1ro/solidart/main/assets/devtools.png" height="800">
+<img src="https://raw.githubusercontent.com/nank1ro/solidart/main/assets/devtools.png" width="100%">
 
 The DevTools Extension for [solidart](https://pub.dev/packages/solidart)
 
