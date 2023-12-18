@@ -1,3 +1,7 @@
+## 1.5.1
+
+- **CHORE**: Upload DevTools extension to pub.dev
+
 ## 1.5.0
 
 - **FEAT**: Add DevTools extension to solidart.
