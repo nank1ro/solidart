@@ -10,7 +10,8 @@ class ShowPage extends StatefulWidget {
 }
 
 class _ShowPageState extends State<ShowPage> {
-  final loggedIn = Signal(false);
+  final loggedIn =
+      Signal<bool>(false, options: SignalOptions(name: 'loggedIn'));
 
   @override
   Widget build(BuildContext context) {

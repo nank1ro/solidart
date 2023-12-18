@@ -9,8 +9,9 @@ class DerivedSignalsPage extends StatefulWidget {
 }
 
 class _DerivedSignalsPageState extends State<DerivedSignalsPage> {
-  late final count = Signal(0);
-  late final doubleCount = Computed(() => count() * 2);
+  late final count = Signal(0, options: SignalOptions(name: 'count'));
+  late final doubleCount =
+      Computed(() => count() * 2, options: SignalOptions(name: 'doubleCount'));
 
   @override
   Widget build(BuildContext context) {
