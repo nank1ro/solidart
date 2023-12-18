@@ -1,5 +1,6 @@
 part of 'core.dart';
 
+// coverage:ignore-start
 bool get _devtoolsEnabled {
   var debugMode = false;
   assert(
@@ -80,3 +81,4 @@ void _notifyDevToolsAboutSignal(
     'listenerCount': signal.listenerCount,
   });
 }
+// coverage:ignore-end
