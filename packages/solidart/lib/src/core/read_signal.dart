@@ -207,18 +207,21 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     for (final obs in SolidartConfig.observers) {
       obs.didCreateSignal(this);
     }
+    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.created);
   }
 
   void _notifySignalUpdate() {
     for (final obs in SolidartConfig.observers) {
       obs.didUpdateSignal(this);
     }
+    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
   }
 
   void _notifySignalDisposal() {
     for (final obs in SolidartConfig.observers) {
       obs.didDisposeSignal(this);
     }
+    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.disposed);
   }
 
   @override

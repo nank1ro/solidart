@@ -9,8 +9,8 @@ class DualSignalBuilderPage extends StatefulWidget {
 }
 
 class _DualSignalBuilderPageState extends State<DualSignalBuilderPage> {
-  final counter1 = Signal(0);
-  final counter2 = Signal(0);
+  final counter1 = Signal(0, options: SignalOptions(name: 'counter1'));
+  final counter2 = Signal(0, options: SignalOptions(name: 'counter2'));
 
   @override
   Widget build(BuildContext context) {

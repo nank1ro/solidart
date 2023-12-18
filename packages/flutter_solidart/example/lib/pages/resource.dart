@@ -12,13 +12,16 @@ class ResourcePage extends StatefulWidget {
 }
 
 class _ResourcePageState extends State<ResourcePage> {
-  final userId = Signal(1);
+  final userId = Signal(1, options: SignalOptions(name: 'userId'));
 
-  late final user = Resource(fetcher: fetchUser, source: userId);
+  late final user = Resource(
+      fetcher: fetchUser,
+      source: userId,
+      options: ResourceOptions(name: 'user'));
 
   late final userHairColor = user.select((data) {
     return jsonDecode(data)['hair_color'] as String;
-  });
+  }, name: 'userHairColor');
 
   Future<String> fetchUser() async {
     // simulating a delay to mimic a slow HTTP request
