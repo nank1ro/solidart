@@ -36,10 +36,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     required T initialValue,
     required super.name,
     required this.options,
-  })  : _value = initialValue,
-        super(
-          canAutoDispose: options.autoDispose,
-        ) {
+  }) : _value = initialValue {
     _notifySignalCreation();
   }
 
@@ -178,9 +175,12 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     };
   }
 
+  @override
   void _mayDispose() {
     if (!options.autoDispose) return;
-    if (_listeners.isEmpty && _observers.isEmpty) dispose();
+    if (_listeners.isEmpty && _observers.isEmpty) {
+      dispose();
+    }
   }
 
   @override

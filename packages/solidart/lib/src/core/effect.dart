@@ -54,8 +54,7 @@ DisposeEffect createEffect(
   ErrorCallback? onError,
   EffectOptions? options,
 }) {
-  return Effect(callback, onError: onError, options: options ?? EffectOptions())
-      .dispose;
+  return Effect(callback, onError: onError, options: options).dispose;
 }
 // coverage:ignore-end
 

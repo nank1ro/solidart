@@ -1,3 +1,7 @@
+## 1.5.3
+
+- **BUGFIX**: Fix an auto dispose issue of Signals that have some active observations.
+
 ## 1.5.2
 
 - **BUGFIX**: Fix DevTools extension with null signal name.
