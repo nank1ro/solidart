@@ -63,5 +63,7 @@ class Atom {
 
   // coverage:ignore-start
   void dispose() {}
+
+  void _mayDispose() {}
   // coverage:ignore-end
 }

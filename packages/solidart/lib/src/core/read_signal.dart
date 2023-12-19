@@ -178,6 +178,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     };
   }
 
+  @override
   void _mayDispose() {
     if (!options.autoDispose) return;
     if (_listeners.isEmpty && _observers.isEmpty) dispose();
