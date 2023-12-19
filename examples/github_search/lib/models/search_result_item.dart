@@ -4,7 +4,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'search_result_item.g.dart';
 
-@JsonSerializable(createToJson: false)
+@JsonSerializable()
 class SearchResultItem extends Equatable {
   const SearchResultItem({
     required this.fullName,
@@ -14,6 +14,8 @@ class SearchResultItem extends Equatable {
 
   factory SearchResultItem.fromJson(Map<String, dynamic> json) =>
       _$SearchResultItemFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SearchResultItemToJson(this);
 
   @JsonKey(name: 'full_name')
   final String fullName;

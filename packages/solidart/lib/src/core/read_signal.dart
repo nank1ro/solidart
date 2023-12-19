@@ -23,7 +23,8 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     SignalOptions<T>? options,
   }) {
     final name = options?.name ?? ReactiveContext.main.nameFor('ReadSignal');
-    final effectiveOptions = options ?? SignalOptions<T>(name: name);
+    final effectiveOptions =
+        (options ?? SignalOptions<T>(name: name)).copyWith(name: name);
     return ReadSignal._internal(
       initialValue: initialValue,
       options: effectiveOptions,

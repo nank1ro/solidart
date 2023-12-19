@@ -11,3 +11,8 @@ SearchResult _$SearchResultFromJson(Map<String, dynamic> json) => SearchResult(
           .map((e) => SearchResultItem.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
+
+Map<String, dynamic> _$SearchResultToJson(SearchResult instance) =>
+    <String, dynamic>{
+      'items': instance.items,
+    };

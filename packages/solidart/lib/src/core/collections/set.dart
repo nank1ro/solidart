@@ -20,7 +20,8 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
     SignalOptions<Set<E>>? options,
   }) {
     final name = options?.name ?? ReactiveContext.main.nameFor('SetSignal');
-    final effectiveOptions = options ?? SignalOptions<Set<E>>(name: name);
+    final effectiveOptions =
+        (options ?? SignalOptions<Set<E>>(name: name)).copyWith(name: name);
     return SetSignal._internal(
       initialValue: initialValue.toSet(),
       options: effectiveOptions,

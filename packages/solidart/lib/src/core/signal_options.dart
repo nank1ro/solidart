@@ -53,6 +53,22 @@ class SignalOptions<T> {
   @override
   String toString() =>
       '''SignalOptions<$T>(name: $name, equals: $equals, comparator: ${comparator != null ? "PRESENT" : "MISSING"}, autoDispose: $autoDispose)''';
+
+  // coverage:ignore-start
+
+  /// Creates a copy of this [SignalOptions] with the given [name].
+  SignalOptions<T> copyWith({
+    String? name,
+  }) {
+    return SignalOptions<T>(
+      name: name ?? this.name,
+      equals: equals,
+      comparator: comparator,
+      autoDispose: autoDispose,
+    );
+  }
+
+  // coverage:ignore-end
 }
 
 /// {@template resource-options}
@@ -95,6 +111,17 @@ class ResourceOptions {
   @override
   String toString() =>
       'ResourceOptions(lazy: $lazy, name: $name, autoDispose: $autoDispose)';
+
+  /// Creates a copy of this [ResourceOptions] with the given [name].
+  ResourceOptions copyWith({
+    String? name,
+  }) {
+    return ResourceOptions(
+      lazy: lazy,
+      name: name ?? this.name,
+      autoDispose: autoDispose,
+    );
+  }
 
   /// coverage:ignore-end
 }

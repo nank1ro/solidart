@@ -20,7 +20,8 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
     SignalOptions<Map<K, V>>? options,
   }) {
     final name = options?.name ?? ReactiveContext.main.nameFor('MapSignal');
-    final effectiveOptions = options ?? SignalOptions<Map<K, V>>(name: name);
+    final effectiveOptions =
+        (options ?? SignalOptions<Map<K, V>>(name: name)).copyWith(name: name);
     return MapSignal._internal(
       initialValue: Map<K, V>.of(initialValue),
       options: effectiveOptions,

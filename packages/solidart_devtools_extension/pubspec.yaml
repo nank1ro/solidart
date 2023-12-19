@@ -1,7 +1,7 @@
 name: solidart_devtools_extension
 description: "solidart DevTools extension"
 publish_to: "none"
-version: 1.0.0+1
+version: 0.2.0
 
 environment:
   sdk: ^3.0.0

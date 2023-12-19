@@ -28,6 +28,21 @@ class EffectOptions {
   ///
   /// This happens automatically when all the tracked dependencies are disposed.
   final bool autoDispose;
+
+  // coverage:ignore-start
+
+  /// Creates a copy of this [EffectOptions] with the given [name].
+  EffectOptions copyWith({
+    String? name,
+  }) {
+    return EffectOptions(
+      name: name ?? this.name,
+      delay: delay,
+      autoDispose: autoDispose,
+    );
+  }
+
+  // coverage:ignore-end
 }
 
 // coverage:ignore-start
@@ -119,7 +134,8 @@ class Effect implements ReactionInterface {
     EffectOptions? options,
   }) {
     late Effect effect;
-    final effectiveOptions = options ?? EffectOptions();
+    final name = options?.name ?? ReactiveContext.main.nameFor('Effect');
+    final effectiveOptions = (options ?? EffectOptions()).copyWith(name: name);
     if (effectiveOptions.delay == null) {
       effect = Effect._internal(
         callback: () => effect._track(() => callback(effect.dispose)),
@@ -168,7 +184,7 @@ class Effect implements ReactionInterface {
     required this.options,
     ErrorCallback? onError,
   })  : _onError = onError,
-        name = options.name ?? ReactiveContext.main.nameFor('Effect'),
+        name = options.name!,
         _callback = callback;
 
   /// The name of the effect, useful for logging purposes.
