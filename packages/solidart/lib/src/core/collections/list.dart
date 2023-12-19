@@ -20,7 +20,8 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
     SignalOptions<List<E>>? options,
   }) {
     final name = options?.name ?? ReactiveContext.main.nameFor('ListSignal');
-    final effectiveOptions = options ?? SignalOptions<List<E>>(name: name);
+    final effectiveOptions =
+        (options ?? SignalOptions<List<E>>(name: name)).copyWith(name: name);
     return ListSignal._internal(
       initialValue: initialValue.toList(),
       options: effectiveOptions,

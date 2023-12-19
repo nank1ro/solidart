@@ -79,6 +79,7 @@ void _notifyDevToolsAboutSignal(
     'disposed': signal._disposed,
     'autoDispose': signal.options.autoDispose,
     'listenerCount': signal.listenerCount,
+    'lastUpdate': DateTime.now().toIso8601String(),
   });
 }
 // coverage:ignore-end

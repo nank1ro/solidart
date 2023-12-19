@@ -105,7 +105,8 @@ class Resource<T> extends Signal<ResourceState<T>> {
     SignalBase<dynamic>? source,
   }) {
     final name = options?.name ?? ReactiveContext.main.nameFor('Resource');
-    final resourceOptions = options ?? ResourceOptions(name: name);
+    final resourceOptions =
+        (options ?? ResourceOptions(name: name)).copyWith(name: name);
     final signalOptions = resourceOptions.toSignalOptions<T>();
     return Resource._internal(
       fetcher: fetcher,

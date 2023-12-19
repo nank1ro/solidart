@@ -1,3 +1,7 @@
+## 1.5.2
+
+- **BUGFIX**: Fix DevTools extension with null signal name.
+
 ## 1.5.1
 
 - **CHORE**: Upload DevTools extension to pub.dev
