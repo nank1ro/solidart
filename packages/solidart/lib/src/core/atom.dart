@@ -9,10 +9,7 @@ part of 'core.dart';
 @internal
 class Atom {
   /// {@macro atom}
-  Atom({
-    required bool canAutoDispose,
-    required this.name,
-  }) : _canAutoDispose = canAutoDispose;
+  Atom({required this.name});
 
   final ReactiveContext _context = ReactiveContext.main;
 
@@ -28,8 +25,6 @@ class Atom {
   bool _isBeingObserved = false;
 
   bool disposed = false;
-
-  final bool _canAutoDispose;
 
   final Set<Derivation> _observers = {};
 
@@ -58,10 +53,13 @@ class Atom {
     _observers.remove(d);
     if (_observers.isEmpty) {
       _context.enqueueForUnobservation(this);
+      _mayDispose();
     }
   }
 
   // coverage:ignore-start
   void dispose() {}
+
+  void _mayDispose() {}
   // coverage:ignore-end
 }

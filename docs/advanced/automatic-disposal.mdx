@@ -5,6 +5,8 @@ description: Learn how the automatic disposal works
 
 # Automatic Disposal
 
+> TL;DR: Always dispose Effects and Observations, the rest will be disposed automatically. 
+
 By default when you create a `Signal`, `Computed`, `Resource` or `Effect` the library will dispose them automatically.
 
 You can customize this behaviour for a specific trackable Object using the options, for example for a `Signal` you have to create it with `autoDispose` set to `false`.
@@ -19,25 +21,7 @@ If you want to disable it globally instead, use
 SolidartConfig.autoDispose = false;
 ```
 
-The automatic disposal happens automatically when there are no longer subscribers (for `Signal`, `Computed`, `Resource`) and when the __currently__ tracked dependencies are all disposed (for `Effect`).
-
-You don't need to dispose manually an `Observation` unless you want to stop it before the `Signal` is disposed.
-```dart
-final counter = Signal(0);
-final disposeObservation = counter.observe((previousValue, value) {
-   // do something 
-});
-```
-
-No need to call `disposeObservation()` if you need the observation to be called until the `counter` is alive.
-In fact you don't need to store the `disposeObservation` variable:
-
-```dart
-final counter = Signal(0);
-counter.observe((previousValue, value) {
-   // do something 
-});
-```
+The automatic disposal happens automatically when there are no longer subscribers and listeners (for `Signal`, `Computed`, `Resource`) and when the __currently__ tracked dependencies are all disposed (for `Effect`).
 
 There is a single case that the automatic disposal won't cover:
 
@@ -111,6 +95,8 @@ void dispose() {
 
 As you can see both the `count` and `name` signals needs to be disposed in order for the `Effect` to dispose.
 This is the reason why I suggest to always dispose the `Effect`.
+
+<Info>The same behavior applies to `Observation`</Info>
 
 In any case, don't worry to call `dispose()` yourself. It won't produce any error if it's already disposed. It just skips the operation.
 In fact in the source code the operation is skipped if the object is already disposed:
