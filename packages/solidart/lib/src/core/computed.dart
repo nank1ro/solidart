@@ -69,7 +69,8 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
     SignalOptions<T>? options,
   }) {
     final name = options?.name ?? ReactiveContext.main.nameFor('Computed');
-    final effectiveOptions = options ?? SignalOptions<T>(name: name);
+    final effectiveOptions =
+        (options ?? SignalOptions<T>(name: name)).copyWith(name: name);
     return Computed._internal(
       selector: selector,
       name: name,

@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'github_user.g.dart';
 
-@JsonSerializable(createToJson: false)
+@JsonSerializable()
 class GithubUser {
   const GithubUser({
     required this.login,
@@ -11,6 +11,8 @@ class GithubUser {
 
   factory GithubUser.fromJson(Map<String, dynamic> json) =>
       _$GithubUserFromJson(json);
+
+  Map<String, dynamic> toJson() => _$GithubUserToJson(this);
 
   final String login;
   @JsonKey(name: 'avatar_url')

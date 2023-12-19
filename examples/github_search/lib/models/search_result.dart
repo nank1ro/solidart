@@ -4,7 +4,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'search_result.g.dart';
 
-@JsonSerializable(createToJson: false)
+@JsonSerializable()
 class SearchResult extends Equatable {
   const SearchResult({required this.items});
 
@@ -12,6 +12,8 @@ class SearchResult extends Equatable {
 
   factory SearchResult.fromJson(Map<String, dynamic> json) =>
       _$SearchResultFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SearchResultToJson(this);
 
   final List<SearchResultItem> items;
 

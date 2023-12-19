@@ -133,16 +133,16 @@ class _SignalsState extends State<Signals> {
         case 'solidart.signal.updated':
         case 'solidart.signal.disposed':
           signals[data['name']] = SignalData(
-            value: jsonDecode(data['value']),
+            value: jsonDecode(data['value'] ?? 'null'),
             hasPreviousValue: data['hasPreviousValue'],
-            previousValue: jsonDecode(data['previousValue']),
+            previousValue: jsonDecode(data['previousValue'] ?? 'null'),
             type: SignalType.byName(data['type']),
             disposed: data['disposed'],
             autoDispose: data['autoDispose'],
             listenerCount: data['listenerCount'],
             valueType: data['valueType'],
             previousValueType: data['previousValueType'],
-            lastUpdate: DateTime.now(),
+            lastUpdate: DateTime.parse(data['lastUpdate']!),
           );
       }
     });
@@ -332,6 +332,7 @@ class _SignalsState extends State<Signals> {
                   ?.value;
               if (signal == null) return const SizedBox();
               return Card(
+                key: ValueKey(selectedName),
                 child: LayoutBuilder(builder: (context, constraints) {
                   return SingleChildScrollView(
                     padding:
