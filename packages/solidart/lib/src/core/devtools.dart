@@ -2,6 +2,7 @@ part of 'core.dart';
 
 // coverage:ignore-start
 bool get _devtoolsEnabled {
+  if (!SolidartConfig.devToolsEnabled) return false;
   var debugMode = false;
   assert(
     () {
