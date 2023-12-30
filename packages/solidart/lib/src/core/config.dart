@@ -8,6 +8,9 @@ abstract class SolidartConfig {
   /// true.
   static bool autoDispose = true;
 
+  /// Whether to enable the DevTools extension, defaults to kDebugMode.
+  static bool devToolsEnabled = true;
+
   /// The list of observers.
   static final observers = <SolidartObserver>[];
 }

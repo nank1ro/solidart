@@ -1,3 +1,7 @@
+## 1.5.4
+
+- **CHORE**: Add `devToolsEnabled` option to manually disable the DevTools extension that defaults to `kDebugMode`
+
 ## 1.5.3
 
 - **BUGFIX**: Fix an auto dispose issue of Signals that have some active observations.
