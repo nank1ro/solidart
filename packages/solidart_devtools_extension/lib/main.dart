@@ -187,37 +187,33 @@ class _SignalsState extends State<Signals> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      SignalBuilder(
-                          signal: filterType,
-                          builder: (context, type, _) {
-                            return DropdownButton(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 4),
-                              value: type,
-                              borderRadius:
-                                  const BorderRadius.all(Radius.circular(10)),
-                              hint: const Text('Type'),
-                              icon: type == null
-                                  ? null
-                                  : IconButton(
-                                      onPressed: () => filterType.set(null),
-                                      icon: const Icon(Icons.clear),
-                                    ),
-                              items: SignalType.values
-                                  .map((e) => DropdownMenuItem(
-                                        value: e,
-                                        child: Text(e.name.capitalizeFirst()),
-                                      ))
-                                  .toList(),
-                              onChanged: filterType.set,
-                            );
-                          }),
+                      SignalBuilder(builder: (context, _) {
+                        return DropdownButton(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          value: filterType(),
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(10)),
+                          hint: const Text('Type'),
+                          icon: filterType() == null
+                              ? null
+                              : IconButton(
+                                  onPressed: () => filterType.set(null),
+                                  icon: const Icon(Icons.clear),
+                                ),
+                          items: SignalType.values
+                              .map((e) => DropdownMenuItem(
+                                    value: e,
+                                    child: Text(e.name.capitalizeFirst()),
+                                  ))
+                              .toList(),
+                          onChanged: filterType.set,
+                        );
+                      }),
                       const SizedBox(width: 4),
                       SignalBuilder(
-                        signal: showDisposed,
-                        builder: (context, disposed, _) {
+                        builder: (context, _) {
                           return FilterChip(
-                            selected: disposed,
+                            selected: showDisposed(),
                             label: const Text('Disposed'),
                             onSelected: showDisposed.set,
                           );
@@ -226,95 +222,86 @@ class _SignalsState extends State<Signals> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  DualSignalBuilder(
-                    firstSignal: signals,
-                    secondSignal: filteredSignals,
-                    builder: (context, signals, filteredSignals, _) {
+                  SignalBuilder(
+                    builder: (context, _) {
                       return Text(
-                          '${filteredSignals.length} visible of ${signals.length}');
+                          '${filteredSignals().length} visible of ${signals().length}');
                     },
                   ),
                   const SizedBox(height: 8),
                   Expanded(
-                    child: SignalBuilder(
-                        signal: filteredSignals,
-                        builder: (context, filteredSignals, _) {
-                          return ListView.separated(
-                            itemCount: filteredSignals.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              final entry = filteredSignals.elementAt(index);
-                              final name = entry.key;
-                              final signal = entry.value;
-                              return SignalBuilder(
-                                signal: selectedSignalName,
-                                builder: (context, selectedName, _) {
-                                  final selected = selectedName == name;
-                                  return Stack(
-                                    children: [
-                                      ListTile(
-                                        selectedTileColor:
-                                            theme.colorScheme.onSecondary,
-                                        selectedColor:
-                                            theme.colorScheme.onSurfaceVariant,
-                                        tileColor:
-                                            theme.colorScheme.surfaceVariant,
-                                        title: Text(name),
-                                        titleAlignment:
-                                            ListTileTitleAlignment.center,
-                                        trailing: selected
-                                            ? const Icon(Icons.east_rounded)
-                                            : null,
-                                        selected: selected,
-                                        subtitle: Row(
-                                          children: [
-                                            Chip(
-                                              label: Text(
-                                                signal.type.name
-                                                    .capitalizeFirst(),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Chip(
-                                              label: Text(signal.valueType),
-                                            ),
-                                          ],
-                                        ),
-                                        onTap: () {
-                                          selectedSignalName.value = name;
-                                        },
-                                        shape: const RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.all(
-                                            Radius.circular(10),
+                    child: SignalBuilder(builder: (context, _) {
+                      return ListView.separated(
+                        itemCount: filteredSignals().length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final entry = filteredSignals().elementAt(index);
+                          final name = entry.key;
+                          final signal = entry.value;
+                          return SignalBuilder(
+                            builder: (context, _) {
+                              final selected = selectedSignalName() == name;
+                              return Stack(
+                                children: [
+                                  ListTile(
+                                    selectedTileColor:
+                                        theme.colorScheme.onSecondary,
+                                    selectedColor:
+                                        theme.colorScheme.onSurfaceVariant,
+                                    tileColor: theme.colorScheme.surfaceVariant,
+                                    title: Text(name),
+                                    titleAlignment:
+                                        ListTileTitleAlignment.center,
+                                    trailing: selected
+                                        ? const Icon(Icons.east_rounded)
+                                        : null,
+                                    selected: selected,
+                                    subtitle: Row(
+                                      children: [
+                                        Chip(
+                                          label: Text(
+                                            signal.type.name.capitalizeFirst(),
                                           ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Chip(
+                                          label: Text(signal.valueType),
+                                        ),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      selectedSignalName.value = name;
+                                    },
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.all(
+                                        Radius.circular(10),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 0,
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      width: 10,
+                                      decoration: BoxDecoration(
+                                        color: signal.disposed
+                                            ? Colors.red
+                                            : Colors.green,
+                                        borderRadius: const BorderRadius.only(
+                                          topRight: Radius.circular(8),
+                                          bottomRight: Radius.circular(8),
                                         ),
                                       ),
-                                      Positioned(
-                                        top: 0,
-                                        bottom: 0,
-                                        right: 0,
-                                        child: Container(
-                                          width: 10,
-                                          decoration: BoxDecoration(
-                                            color: signal.disposed
-                                                ? Colors.red
-                                                : Colors.green,
-                                            borderRadius:
-                                                const BorderRadius.only(
-                                              topRight: Radius.circular(8),
-                                              bottomRight: Radius.circular(8),
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                    ],
-                                  );
-                                },
+                                    ),
+                                  )
+                                ],
                               );
                             },
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
                           );
-                        }),
+                        },
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      );
+                    }),
                   ),
                 ],
               ),
@@ -322,17 +309,16 @@ class _SignalsState extends State<Signals> {
           ),
         ),
         Expanded(
-          child: DualSignalBuilder(
-            firstSignal: filteredSignals,
-            secondSignal: selectedSignalName,
-            builder: (context, filteredSignals, selectedName, _) {
-              if (selectedName == null) return const SizedBox();
-              final signal = filteredSignals
-                  .firstWhereOrNull((element) => element.key == selectedName)
+          child: SignalBuilder(
+            builder: (context, _) {
+              if (selectedSignalName() == null) return const SizedBox();
+              final signal = filteredSignals()
+                  .firstWhereOrNull(
+                      (element) => element.key == selectedSignalName())
                   ?.value;
               if (signal == null) return const SizedBox();
               return Card(
-                key: ValueKey(selectedName),
+                key: ValueKey(selectedSignalName()),
                 child: LayoutBuilder(builder: (context, constraints) {
                   return SingleChildScrollView(
                     padding:
@@ -343,7 +329,8 @@ class _SignalsState extends State<Signals> {
                       ),
                       child: Column(
                         children: [
-                          ParameterView(name: 'name', value: selectedName),
+                          ParameterView(
+                              name: 'name', value: selectedSignalName()),
                           ParameterView(
                               name: 'type',
                               value: signal.type.name.capitalizeFirst()),

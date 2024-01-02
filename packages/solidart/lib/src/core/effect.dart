@@ -137,7 +137,7 @@ class Effect implements ReactionInterface {
     final effectiveOptions = (options ?? EffectOptions()).copyWith(name: name);
     if (effectiveOptions.delay == null) {
       effect = Effect._internal(
-        callback: () => effect._track(() => callback(effect.dispose)),
+        callback: () => effect.track(() => callback(effect.dispose)),
         onError: onError,
         options: effectiveOptions,
       );
@@ -159,7 +159,7 @@ class Effect implements ReactionInterface {
             timer = scheduler(() {
               isScheduled = false;
               if (!effect.disposed) {
-                effect._track(() => callback(effect.dispose));
+                effect.track(() => callback(effect.dispose));
               } else {
                 // coverage:ignore-start
                 timer?.cancel();
@@ -245,7 +245,11 @@ class Effect implements ReactionInterface {
       ..runReactions();
   }
 
-  void _track(void Function() fn) {
+  /// Tracks the observables present in the given [fn] function
+  ///
+  /// This method must not be used directly.
+  @protected
+  void track(void Function() fn) {
     _context.startBatch();
 
     _isRunning = true;

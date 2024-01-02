@@ -39,8 +39,7 @@ class _ListSignalPageState extends State<ListSignalPage> {
           children: [
             Expanded(
               child: SignalBuilder(
-                signal: items,
-                builder: (context, items, __) {
+                builder: (context, child) {
                   return ListView.separated(
                     itemCount: items.length,
                     itemBuilder: (BuildContext context, int index) {

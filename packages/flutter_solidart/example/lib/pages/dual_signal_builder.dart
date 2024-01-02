@@ -24,28 +24,23 @@ class _DualSignalBuilderPageState extends State<DualSignalBuilderPage> {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            DualSignalBuilder(
-                firstSignal: counter1,
-                secondSignal: counter2,
-                builder: (_, value1, value2, __) {
-                  return ListTile(
-                    title: Text(
-                      'First counter: $value1',
-                      textAlign: TextAlign.center,
-                      style:
-                          textTheme.titleMedium!.copyWith(color: Colors.black),
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        'Second counter: $value2',
-                        textAlign: TextAlign.center,
-                        style: textTheme.titleMedium!
-                            .copyWith(color: Colors.black),
-                      ),
-                    ),
-                  );
-                }),
+            SignalBuilder(builder: (_, __) {
+              return ListTile(
+                title: Text(
+                  'First counter: ${counter1.value}',
+                  textAlign: TextAlign.center,
+                  style: textTheme.titleMedium!.copyWith(color: Colors.black),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Second counter: ${counter2.value}',
+                    textAlign: TextAlign.center,
+                    style: textTheme.titleMedium!.copyWith(color: Colors.black),
+                  ),
+                ),
+              );
+            }),
             const SizedBox(height: 16),
             Row(
               mainAxisSize: MainAxisSize.min,

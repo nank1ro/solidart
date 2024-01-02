@@ -27,7 +27,7 @@ class SomeChild extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // retrieve the count signal, this works only if you don't have another signal of type int
-    final count = context.observe<int>();
+    final count = context.observeSignal<int>();
 
     return Center(
       child: Column(

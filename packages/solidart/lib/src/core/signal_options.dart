@@ -24,6 +24,7 @@ class SignalOptions<T> {
     this.name,
     this.equals = false,
     this.comparator = identical,
+    this.trackInDevTools = true,
     bool? autoDispose,
   }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose;
 
@@ -49,6 +50,9 @@ class SignalOptions<T> {
   /// This happens automatically when there are no longer subscribers.
   /// If you set it to false, you should remember to dispose the signal manually
   final bool autoDispose;
+
+  /// Whether to track the signal in the DevTools extension, defaults to true.
+  final bool trackInDevTools;
 
   @override
   String toString() =>

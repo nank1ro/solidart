@@ -51,10 +51,7 @@ class Atom {
 
   void _removeObserver(Derivation d) {
     _observers.remove(d);
-    if (_observers.isEmpty) {
-      _context.enqueueForUnobservation(this);
-      _mayDispose();
-    }
+    _mayDispose();
   }
 
   // coverage:ignore-start

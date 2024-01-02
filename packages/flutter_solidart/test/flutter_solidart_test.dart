@@ -231,9 +231,8 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: SignalBuilder(
-            signal: s,
-            builder: (context, value, child) {
-              return Text('$value');
+            builder: (context, child) {
+              return Text(s().toString());
             },
           ),
         ),
@@ -253,11 +252,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: DualSignalBuilder(
-            firstSignal: s1,
-            secondSignal: s2,
-            builder: (context, value1, value2, child) {
-              return Text('$value1 $value2');
+          body: SignalBuilder(
+            builder: (context, child) {
+              return Text('${s1()} ${s2()}');
             },
           ),
         ),
@@ -281,12 +278,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: TripleSignalBuilder(
-            firstSignal: s1,
-            secondSignal: s2,
-            thirdSignal: s3,
-            builder: (context, value1, value2, value3, child) {
-              return Text('$value1 $value2 $value3');
+          body: SignalBuilder(
+            builder: (context, child) {
+              return Text('${s1()} ${s2()} ${s3()}');
             },
           ),
         ),
@@ -323,8 +317,9 @@ void main() {
               ],
               child: Builder(
                 builder: (context) {
-                  final counter = context.observe<int>('counter');
-                  final doubleCounter = context.observe<int>('double-counter');
+                  final counter = context.observeSignal<int>('counter');
+                  final doubleCounter =
+                      context.observeComputed<int>('double-counter');
                   return Text('$counter $doubleCounter');
                 },
               ),
@@ -354,7 +349,7 @@ void main() {
               ],
               child: Builder(
                 builder: (context) {
-                  final doubleCounter = context.observe<int>();
+                  final doubleCounter = context.observeComputed<int>();
                   return Text('$doubleCounter');
                 },
               ),
@@ -381,7 +376,7 @@ void main() {
               ],
               child: Builder(
                 builder: (context) {
-                  final counter = context.observe<int>();
+                  final counter = context.observeReadSignal<int>();
                   return Text('$counter');
                 },
               ),
@@ -411,7 +406,7 @@ void main() {
               ],
               child: Builder(
                 builder: (context) {
-                  final counter = context.observe<int>(#counter);
+                  final counter = context.observeReadSignal<int>(#counter);
                   return Text('$counter');
                 },
               ),
@@ -447,11 +442,9 @@ void main() {
                 final counter = context.get<Signal<int>>('counter');
                 final doubleCounter =
                     context.get<ReadSignal<int>>('double-counter');
-                return DualSignalBuilder(
-                  firstSignal: counter,
-                  secondSignal: doubleCounter,
-                  builder: (context, value1, value2, _) {
-                    return Text('$value1 $value2');
+                return SignalBuilder(
+                  builder: (context, _) {
+                    return Text('${counter()} ${doubleCounter()}');
                   },
                 );
               },
@@ -485,9 +478,8 @@ void main() {
               builder: (context) {
                 final counter = context.get<Signal<int>>('invalid-counter');
                 return SignalBuilder(
-                  signal: counter,
-                  builder: (context, value, _) {
-                    return Text('$value');
+                  builder: (context, _) {
+                    return Text(counter().toString());
                   },
                 );
               },
@@ -516,7 +508,7 @@ void main() {
               element: context.getElement<Signal<int>>('counter'),
               child: Builder(
                 builder: (innerContext) {
-                  final counter = innerContext.observe<int>('counter');
+                  final counter = innerContext.observeSignal<int>('counter');
                   return Text('Dialog counter: $counter');
                 },
               ),
@@ -569,19 +561,17 @@ void main() {
             return Solid.value(
               elements: [
                 context.getElement<Signal<int>>('counter'),
-                context.getElement<ReadSignal<int>>('double-counter'),
+                context.getElement<Computed<int>>('double-counter'),
               ],
               child: Builder(
                 builder: (innerContext) {
                   final counter = innerContext.get<Signal<int>>('counter');
                   final doubleCounter =
-                      innerContext.get<ReadSignal<int>>('double-counter');
-                  return DualSignalBuilder(
-                    firstSignal: counter,
-                    secondSignal: doubleCounter,
-                    builder: (_, value1, value2, __) {
+                      innerContext.get<Computed<int>>('double-counter');
+                  return SignalBuilder(
+                    builder: (_, __) {
                       return Text(
-                        'Dialog counter: $value1 doubleCounter: $value2',
+                        '''Dialog counter: ${counter()} doubleCounter: ${doubleCounter()}''',
                       );
                     },
                   );
@@ -968,7 +958,7 @@ void main() {
             ],
             child: Builder(
               builder: (context) {
-                final counter = context.observe<int>();
+                final counter = context.observeSignal<int>();
                 return Column(
                   children: [
                     Text('$counter'),
@@ -1069,9 +1059,8 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                signal: counter,
-                builder: (_, count, __) {
-                  return Text(count.toString());
+                builder: (_, __) {
+                  return Text(counter().toString());
                 },
               ),
             ),
@@ -1092,9 +1081,8 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                signal: counter,
-                builder: (_, count, __) {
-                  return Text(count.toString());
+                builder: (_, __) {
+                  return Text(counter().toString());
                 },
               ),
             ),
@@ -1116,9 +1104,8 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                signal: doubleCounter,
-                builder: (_, count, __) {
-                  return Text(count.toString());
+                builder: (_, __) {
+                  return Text(doubleCounter.toString());
                 },
               ),
             ),
@@ -1142,9 +1129,8 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                signal: counter,
-                builder: (_, count, __) {
-                  return Text(count.toString());
+                builder: (_, __) {
+                  return Text(counter().toString());
                 },
               ),
             ),
@@ -1196,9 +1182,8 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: SignalBuilder(
-              signal: counter,
-              builder: (_, count, __) {
-                return Text(count.toString());
+              builder: (_, __) {
+                return Text(counter().toString());
               },
             ),
           ),
