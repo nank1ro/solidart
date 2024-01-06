@@ -179,14 +179,17 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   Future<void> _mayDispose() async {
     if (!options.autoDispose) return;
 
-    // This is a workaround because `SignalBuilder` tracks dependencies in its
-    // `build` method and for a moment (while rendering) the dependencies list
-    // is empty.
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    // await Future<void>.delayed(const Duration(milliseconds: 300));
     // }
     if (_listeners.isEmpty && _observers.isEmpty) {
-      _context.enqueueForUnobservation(this);
-      dispose();
+      // This is a workaround because `SignalBuilder` tracks dependencies in
+      // its `build` method and for a moment (while rendering) the
+      // dependencies list is empty. So we check if the observable is
+      // still being unobserved after a delay.
+      Future.delayed(const Duration(seconds: 1), () {
+        _context.enqueueForUnobservation(this);
+        if (_listeners.isEmpty && _observers.isEmpty) dispose();
+      });
     }
   }
 

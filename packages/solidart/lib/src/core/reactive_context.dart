@@ -78,8 +78,10 @@ class ReactiveContext {
       runReactions();
 
       for (var i = 0; i < _state.pendingUnobservations.length; i++) {
-        final ob = _state.pendingUnobservations[i]
-          .._isPendingUnobservation = false;
+        final ob = _state.pendingUnobservations[i];
+
+        // ignore: cascade_invocations
+        ob._isPendingUnobservation = false;
 
         if (ob._observers.isEmpty) {
           if (ob._isBeingObserved) {
