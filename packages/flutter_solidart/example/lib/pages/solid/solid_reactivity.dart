@@ -77,7 +77,7 @@ class _Counter1 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter1 = context.observe<int>(#firstCounter);
+    final counter1 = context.observeSignal<int>(#firstCounter);
     print('build counter1');
     return Text('Counter1: $counter1');
   }
@@ -89,7 +89,7 @@ class _Counter2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter2 = context.observe<int>(#secondCounter);
+    final counter2 = context.observeSignal<int>(#secondCounter);
     print('build counter2');
     return Text('Counter2: $counter2');
   }

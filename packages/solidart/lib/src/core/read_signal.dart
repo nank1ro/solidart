@@ -176,10 +176,20 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   }
 
   @override
-  void _mayDispose() {
+  Future<void> _mayDispose() async {
     if (!options.autoDispose) return;
+
+    // await Future<void>.delayed(const Duration(milliseconds: 300));
+    // }
     if (_listeners.isEmpty && _observers.isEmpty) {
-      dispose();
+      // This is a workaround because `SignalBuilder` tracks dependencies in
+      // its `build` method and for a moment (while rendering) the
+      // dependencies list is empty. So we check if the observable is
+      // still being unobserved after a delay.
+      Future.delayed(const Duration(seconds: 1), () {
+        _context.enqueueForUnobservation(this);
+        if (_listeners.isEmpty && _observers.isEmpty) dispose();
+      });
     }
   }
 
@@ -205,6 +215,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   // coverage:ignore-end
 
   void _notifySignalCreation() {
+    if (!options.trackInDevTools) return;
     for (final obs in SolidartConfig.observers) {
       obs.didCreateSignal(this);
     }
@@ -212,6 +223,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   }
 
   void _notifySignalUpdate() {
+    if (!options.trackInDevTools) return;
     for (final obs in SolidartConfig.observers) {
       obs.didUpdateSignal(this);
     }
@@ -219,6 +231,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   }
 
   void _notifySignalDisposal() {
+    if (!options.trackInDevTools) return;
     for (final obs in SolidartConfig.observers) {
       obs.didDisposeSignal(this);
     }

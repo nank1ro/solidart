@@ -41,9 +41,8 @@ class _CounterPageState extends State<CounterPage> {
       ),
       body: Center(
         child: SignalBuilder(
-          signal: counter,
-          builder: (_, value, __) {
-            return Text('$value');
+          builder: (_, __) {
+            return Text(counter().toString());
           },
         ),
       ),

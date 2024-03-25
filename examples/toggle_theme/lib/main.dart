@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
       // using the builder method to immediately access the signal
       builder: (context) {
         // observe the theme mode value this will rebuild every time the themeMode signal changes.
-        final themeMode = context.observe<ThemeMode>();
+        final themeMode = context.observeSignal<ThemeMode>();
         return MaterialApp(
           title: 'Toggle theme',
           themeMode: themeMode,
@@ -48,8 +48,8 @@ class MyHomePage extends StatelessWidget {
         child:
             // Listen to the theme mode signal rebuilding only the IconButton
             SignalBuilder(
-          signal: themeMode,
-          builder: (_, mode, __) {
+          builder: (_, __) {
+            final mode = themeMode();
             return IconButton(
               onPressed: () {
                 // toggle the theme mode

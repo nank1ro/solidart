@@ -1,14 +1,26 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/src/utils/diagnostic_properties_for_generic.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:solidart/solidart.dart';
 
+/// The [SignalBuilder] function used to build the widget tracking the signals.
+typedef SignalBuilderFn = Widget Function(
+  BuildContext context,
+  Widget? child,
+);
+
+/// A callback that is called when an error occurs.
+typedef SignalBuilderOnError = void Function(Object error);
+
 /// {@template signalbuilder}
-/// Reacts to the [signal] calling the [builder] each time.
+/// Reacts to the signals automatically found in the [builder] function.
 ///
-/// The [signal] and [builder] arguments must not be null.
+/// The [builder] argument must not be null.
 /// The [child] is optional but is good practice to use if part of the widget
-/// subtree does not depend on the value of the [signal].
+/// subtree does not depend on the values of the signals.
+/// The [onError] callback is optional and is called when an error occurs in the
+/// [builder] function.
 /// Example:
 ///
 /// ```dart
@@ -22,376 +34,128 @@ import 'package:solidart/solidart.dart';
 /// @override
 /// Widget build(BuildContext context) {
 ///   return SignalBuilder(
-///         signal: counter,
-///         builder: (context, value, child) {
-///           return Text('$value');
-///         },
-///     );
+///     builder: (context, child) {
+///       return Text('${counter.value}');
+///     },
+///   );
 /// }
 /// ```
-///
-/// If you need to nest multiple `SignalBuilder`s you may also check:
-/// - [DualSignalBuilder] to react to __2__ signals at once
-/// - [TripleSignalBuilder] to react to __3__ signals at once.
 /// {@endtemplate}
-class SignalBuilder<T> extends StatefulWidget {
+class SignalBuilder extends Widget {
   /// {@macro signalbuilder}
   const SignalBuilder({
     super.key,
-    required this.signal,
     required this.builder,
+    this.onError,
     this.child,
   });
-
-  /// {@template signalbuilder.signal}
-  /// The signal whose value you depend on in order to build.
-  ///
-  /// This widget does not ensure that the signal's value is not
-  /// null, therefore your [builder] may need to handle null values.
-  ///
-  /// This signal itself must not be null.
-  /// {@endtemplate}
-  final SignalBase<T> signal;
 
   /// {@template signalbuilder.builder}
   /// A [SignalBuilder] which builds a widget depending on the
-  /// signal's value.
-  ///
-  /// Can incorporate a [signal] value-independent widget subtree
-  /// from the [child] parameter into the returned widget tree.
+  /// values of the signals found in the [builder].
   ///
   /// Must not be null.
   /// {@endtemplate}
-  final ValueWidgetBuilder<T> builder;
+  final SignalBuilderFn builder;
 
   /// {@template signalbuilder.child}
-  /// A [signal]-independent widget which is passed back to the [builder].
+  /// A signal-independent widget which is passed back to the [builder].
   ///
   /// This argument is optional and can be null if the entire widget subtree
-  /// the [builder] builds depends on the value of the [signal]. For
-  /// example, if the [signal] is a [String] and the [builder] simply
-  /// returns a [Text] widget with the [String] value.
+  /// the [builder] builds depends on the value of the signals.
+  /// If you have a widget in the subtree that do not depend on the values of
+  /// the signals, use this argument, because it won't be rebuilded.
   /// {@endtemplate}
   final Widget? child;
 
+  /// {@template signalbuilder.onerror}
+  /// An optional callback that is called when an error occurs in the underlying
+  /// effect when running [builder].
+  /// {@endtemplate}
+  final SignalBuilderOnError? onError;
+
+  /// The widget that the [builder] builds.
+  @protected
+  Widget build(BuildContext context) => builder(context, child);
+
+  /// Creates the [SignalBuilderElement] element.
   @override
-  State<StatefulWidget> createState() => _SignalBuilderState<T>();
+  SignalBuilderElement createElement() =>
+      SignalBuilderElement(this, onError: onError);
 }
 
-class _SignalBuilderState<T> extends State<SignalBuilder<T>> {
-  late T value;
-  DisposeObservation? disposeObservation;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeSignal();
-  }
-
-  @override
-  void dispose() {
-    disposeObservation?.call();
-    super.dispose();
-  }
-
-  // coverage:ignore-start
-  @override
-  void didUpdateWidget(SignalBuilder<T> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.signal != widget.signal) {
-      disposeObservation?.call();
-      _initializeSignal();
-    }
-  }
-  // coverage:ignore-end
-
-  void _initializeSignal() {
-    value = widget.signal.value;
-    disposeObservation = widget.signal.observe((_, newValue) {
-      setState(() => value = newValue);
-    });
-  }
-
-  // coverage:ignore-start
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-    DiagnosticPropertiesForGeneric(
-      value: value,
-      name: 'signal',
-      properties: properties,
-    );
-  }
-  // coverage:ignore-end
-
-  @override
-  Widget build(BuildContext context) {
-    return widget.builder(context, value, widget.child);
-  }
-}
-
-/// The builder function for a [DualSignalBuilder]
-typedef DualValueWidgetBuilder<T, U> = Widget Function(
-  BuildContext context,
-  T firstValue,
-  U secondValue,
-  Widget? child,
-);
-
-/// {@template dualsignalbuilder}
-/// The same as [SignalBuilder] but reacts to two signals.
+/// {@template signal-builder-element}
+/// The [SignalBuilder] widget's [Element] subclass.
 ///
-/// The usage of [DualSignalBuilder] is preferred over nesting multiple
-/// [SignalBuilder]s.
+/// Automatically tracks and reacts to the signals found in the
+/// [SignalBuilder.builder] function
 ///
-/// Docs for [SignalBuilder]:
-/// {@macro signalbuilder}
+/// This class is not meant to be used directly.
+/// Use [SignalBuilder] instead.
 /// {@endtemplate}
-class DualSignalBuilder<T, U> extends StatefulWidget {
-  /// {@macro dualsignalbuilder}
-  const DualSignalBuilder({
-    super.key,
-    required this.firstSignal,
-    required this.secondSignal,
-    required this.builder,
-    this.child,
+class SignalBuilderElement extends ComponentElement {
+  /// {@macro signal-builder-element}
+  SignalBuilderElement(
+    SignalBuilder super.widget, {
+    this.onError,
   });
 
-  /// {@macro signalbuilder.signal}
-  final SignalBase<T> firstSignal;
+  /// {@macro signalbuilder.onerror}
+  final void Function(Object error)? onError;
 
-  /// {@macro signalbuilder.signal}
-  final SignalBase<U> secondSignal;
+  Element? _parent;
+  Widget? _built;
+  Effect? _effect;
 
-  /// {@macro signalbuilder.builder}
-  ///
-  /// Called when any of the signals values changes
-  final DualValueWidgetBuilder<T, U> builder;
-
-  /// {@macro signalbuilder.child}
-  final Widget? child;
+  SignalBuilder get _widget => widget as SignalBuilder;
 
   @override
-  State<StatefulWidget> createState() => _DualSignalBuilderState<T, U>();
-}
-
-class _DualSignalBuilderState<T, U> extends State<DualSignalBuilder<T, U>> {
-  late T firstValue;
-  late U secondValue;
-  DisposeObservation? disposeObservation1;
-  DisposeObservation? disposeObservation2;
-
-  @override
-  void initState() {
-    super.initState();
-    listenFirst();
-    listenSecond();
+  void mount(Element? parent, Object? newSlot) {
+    _parent = parent;
+    _effect = Effect((_) => _invalidate(), onError: onError);
+    // mounting intentionally after effect is initialized and widget is built
+    super.mount(parent, newSlot);
   }
 
   @override
-  void dispose() {
-    disposeObservation1?.call();
-    disposeObservation2?.call();
-    super.dispose();
+  void update(SignalBuilder newWidget) {
+    super.update(newWidget);
+    assert(widget == newWidget, 'The widget and newWidget must be the same');
+    rebuild(force: true);
   }
 
-  // coverage:ignore-start
   @override
-  void didUpdateWidget(DualSignalBuilder<T, U> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.firstSignal != widget.firstSignal) {
-      disposeObservation1?.call();
-      listenFirst();
+  void unmount() {
+    _effect?.dispose();
+    _effect = null;
+    super.unmount();
+  }
+
+  Future<void> _invalidate() async {
+    // if the element is already dirty, we don't need to ask another rebuild
+    if (dirty) return;
+
+    if (_shouldWaitScheduler) {
+      await SchedulerBinding.instance.endOfFrame;
+      // If the effect is disposed after this frame, avoid rebuilding
+      if (_effect!.disposed) return;
     }
-    if (oldWidget.secondSignal != widget.secondSignal) {
-      disposeObservation2?.call();
-      listenSecond();
-    }
+    markNeedsBuild();
   }
-  // coverage:ignore-end
 
-  void listenFirst() {
-    firstValue = widget.firstSignal.value;
-    disposeObservation1 = widget.firstSignal.observe((_, newValue) {
-      setState(() => firstValue = newValue);
+  bool get _shouldWaitScheduler {
+    final schedulerPhase = SchedulerBinding.instance.schedulerPhase;
+    return schedulerPhase != SchedulerPhase.idle &&
+        schedulerPhase != SchedulerPhase.postFrameCallbacks;
+  }
+
+  @override
+  Widget build() {
+    // ignore: invalid_use_of_protected_member
+    _effect!.track(() {
+      _built = _widget.build(_parent!);
     });
-  }
 
-  void listenSecond() {
-    secondValue = widget.secondSignal.value;
-    disposeObservation2 = widget.secondSignal.observe((_, newValue) {
-      setState(() => secondValue = newValue);
-    });
-  }
-
-  // coverage:ignore-start
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-    DiagnosticPropertiesForGeneric(
-      value: firstValue,
-      name: 'firstSignal',
-      properties: properties,
-    );
-    DiagnosticPropertiesForGeneric(
-      value: secondValue,
-      name: 'secondSignal',
-      properties: properties,
-    );
-  }
-  // coverage:ignore-end
-
-  @override
-  Widget build(BuildContext context) {
-    return widget.builder(context, firstValue, secondValue, widget.child);
-  }
-}
-
-/// The builder function for a [TripleSignalBuilder]
-typedef TripleValueWidgetBuilder<T, U, R> = Widget Function(
-  BuildContext context,
-  T firstValue,
-  U secondValue,
-  R thirdValue,
-  Widget? child,
-);
-
-/// {@template tripesignalbuilder}
-/// The same as [SignalBuilder] but reacts to three signals.
-///
-/// The usage of [TripleSignalBuilder] is preferred over nesting multiple
-/// [SignalBuilder]s.
-///
-/// Docs for [SignalBuilder]:
-/// {@macro signalbuilder}
-/// {@endtemplate}
-class TripleSignalBuilder<T, U, R> extends StatefulWidget {
-  /// {@macro tripesignalbuilder}
-  const TripleSignalBuilder({
-    super.key,
-    required this.firstSignal,
-    required this.secondSignal,
-    required this.thirdSignal,
-    required this.builder,
-    this.child,
-  });
-
-  /// {@macro signalbuilder.signal}
-  final SignalBase<T> firstSignal;
-
-  /// {@macro signalbuilder.signal}
-  final SignalBase<U> secondSignal;
-
-  /// {@macro signalbuilder.signal}
-  final SignalBase<R> thirdSignal;
-
-  /// {@macro signalbuilder.builder}
-  ///
-  /// Called when any of the signals values changes
-  final TripleValueWidgetBuilder<T, U, R> builder;
-
-  /// {@macro signalbuilder.child}
-  final Widget? child;
-
-  @override
-  State<StatefulWidget> createState() => _TripleSignalBuilderState<T, U, R>();
-}
-
-class _TripleSignalBuilderState<T, U, R>
-    extends State<TripleSignalBuilder<T, U, R>> {
-  late T firstValue;
-  late U secondValue;
-  late R thirdValue;
-  DisposeObservation? disposeObservation1;
-  DisposeObservation? disposeObservation2;
-  DisposeObservation? disposeObservation3;
-
-  @override
-  void initState() {
-    super.initState();
-    listenFirst();
-    listenSecond();
-    listenThird();
-  }
-
-  @override
-  void dispose() {
-    disposeObservation1?.call();
-    disposeObservation2?.call();
-    disposeObservation3?.call();
-    super.dispose();
-  }
-
-  // coverage:ignore-start
-  @override
-  void didUpdateWidget(TripleSignalBuilder<T, U, R> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.firstSignal != widget.firstSignal) {
-      disposeObservation1?.call();
-      listenFirst();
-    }
-    if (oldWidget.secondSignal != widget.secondSignal) {
-      disposeObservation2?.call();
-      listenSecond();
-    }
-    if (oldWidget.thirdSignal != widget.thirdSignal) {
-      disposeObservation3?.call();
-      listenThird();
-    }
-  }
-  // coverage:ignore-end
-
-  void listenFirst() {
-    firstValue = widget.firstSignal.value;
-    disposeObservation1 = widget.firstSignal.observe((_, newValue) {
-      setState(() => firstValue = newValue);
-    });
-  }
-
-  void listenSecond() {
-    secondValue = widget.secondSignal.value;
-    disposeObservation2 = widget.secondSignal.observe((_, newValue) {
-      setState(() => secondValue = newValue);
-    });
-  }
-
-  void listenThird() {
-    thirdValue = widget.thirdSignal.value;
-    disposeObservation3 = widget.thirdSignal.observe((_, newValue) {
-      setState(() => thirdValue = newValue);
-    });
-  }
-
-  // coverage:ignore-start
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-    DiagnosticPropertiesForGeneric(
-      value: firstValue,
-      name: 'firstSignal',
-      properties: properties,
-    );
-    DiagnosticPropertiesForGeneric(
-      value: secondValue,
-      name: 'secondSignal',
-      properties: properties,
-    );
-    DiagnosticPropertiesForGeneric(
-      value: thirdValue,
-      name: 'thirdSignal',
-      properties: properties,
-    );
-  }
-  // coverage:ignore-end
-
-  @override
-  Widget build(BuildContext context) {
-    return widget.builder(
-      context,
-      firstValue,
-      secondValue,
-      thirdValue,
-      widget.child,
-    );
+    return _built!;
   }
 }

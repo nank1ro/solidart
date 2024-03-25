@@ -1,3 +1,32 @@
+## 2.0.0
+
+- **CHORE**: Improved `Solid` widget performance by more than 3000% in finding ancestor providers.
+- **FEAT**: The `SignalBuilder` widget now automatically tracks the `Signal`s used in the `builder` function allowing you to react to N signals at the same time.
+  _Before_:
+  ```dart
+  SignalBuilder(
+    signal: counter,
+    builder: (context, value, child) {
+      return Text('$value');
+    },
+  ),
+  ```
+
+  _Now_:
+  ```dart
+  SignalBuilder(
+    builder: (context, child) {
+      return Text('${counter.value}');
+    },
+  ),
+  ```
+- **BREAKING CHANGE**: Removed `DualSignalBuilder` and `TripleSignalBuilder` in favor of `SignalBuilder`.
+
+
+### Changes from solidart
+
+- **CHORE**: Add `devToolsEnabled` option to manually disable the DevTools extension that defaults to `kDebugMode`
+
 ## 1.7.0
 
 ### Changes from solidart
