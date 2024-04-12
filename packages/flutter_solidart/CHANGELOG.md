@@ -1,3 +1,7 @@
+## 1.7.1
+
+- Update dependencies
+
 ## 1.7.0
 
 ### Changes from solidart

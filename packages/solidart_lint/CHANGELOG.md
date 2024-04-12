@@ -1,3 +1,7 @@
+## 1.1.1
+
+- Update dependencies
+
 ## 1.1.0
 
 - **CHORE**: Update `flutter_solidart` dependency
