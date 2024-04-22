@@ -44,7 +44,7 @@ The are also other convenience methods to handle only specific states:
 - `on` forces you to handle all the states of a Resource
 - `maybeOn` lets you decide which states to handle and provide an `orElse` action for unhandled states
 - `map` equal to `on` but gives access to the `ResourceState` data class
-- `maybeMap` equal to `maybeMap` but gives access to the `ResourceState` data class
+- `maybeMap` equal to `maybeOn` but gives access to the `ResourceState` data class
 - `isReady` indicates if the `Resource` is in the ready state
 - `isLoading` indicates if the `Resource` is in the loading state
 - `hasError` indicates if the `Resource` is in the error state

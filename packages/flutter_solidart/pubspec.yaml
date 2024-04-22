@@ -12,16 +12,16 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
-  collection: ^1.17.2
+  collection: ^1.18.0
   flutter:
     sdk: flutter
-  meta: ^1.9.1
+  meta: ^1.11.0
   solidart: ^1.5.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  mockito: ^5.4.2
+  mockito: ^5.4.4
   very_good_analysis: ^5.1.0
 
 flutter:

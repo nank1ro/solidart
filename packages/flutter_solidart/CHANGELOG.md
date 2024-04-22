@@ -26,6 +26,9 @@
 ### Changes from solidart
 
 - **CHORE**: Add `devToolsEnabled` option to manually disable the DevTools extension that defaults to `kDebugMode`
+## 1.7.1
+
+- Update dependencies
 
 ## 1.7.0
 

@@ -1,7 +1,7 @@
 name: solidart_devtools_extension
 description: "solidart DevTools extension"
 publish_to: "none"
-version: 0.2.0
+version: 0.2.1
 
 environment:
   sdk: ^3.0.0
@@ -9,8 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  devtools_extensions: 0.0.9
-  devtools_app_shared: 0.0.5
+  devtools_extensions: 0.1.0
+  devtools_app_shared: 0.1.0
   flutter_solidart:
     path: ../flutter_solidart
   collection: ^1.18.0
@@ -19,7 +19,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  flutter_lints: ^2.0.0
+  flutter_lints: ^3.0.2
+
+dependency_overrides:
+  vm_service: ^13.0.0
 
 flutter:
   uses-material-design: true
