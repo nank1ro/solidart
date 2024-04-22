@@ -97,8 +97,8 @@ class _ShowState<T extends bool> extends State<Show<T>> {
   void initState() {
     super.initState();
     disposeEffect = Effect((_) {
-      show.value = widget.when.call();
-    });
+      show.value = widget.when();
+    }).call;
   }
 
   @override
