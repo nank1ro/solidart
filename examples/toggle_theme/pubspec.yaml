@@ -34,7 +34,7 @@ dependencies:
   flutter_solidart: ^1.7.0
 
 dev_dependencies:
-  custom_lint: ^0.5.11
+  custom_lint: ^0.6.4
   flutter_test:
     sdk: flutter
 
