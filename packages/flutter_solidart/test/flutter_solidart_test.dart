@@ -1105,7 +1105,7 @@ void main() {
             home: Scaffold(
               body: SignalBuilder(
                 builder: (_, __) {
-                  return Text(doubleCounter.toString());
+                  return Text(doubleCounter().toString());
                 },
               ),
             ),
