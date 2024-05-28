@@ -152,9 +152,12 @@ class SignalBuilderElement extends ComponentElement {
   @override
   Widget build() {
     // ignore: invalid_use_of_protected_member
-    _effect!.track(() {
-      _built = _widget.build(_parent!);
-    });
+    _effect!.track(
+      () {
+        _built = _widget.build(_parent!);
+      },
+      preventDisposal: true,
+    );
 
     return _built!;
   }

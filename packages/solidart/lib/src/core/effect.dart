@@ -218,6 +218,9 @@ class Effect implements ReactionInterface {
 
   final Set<Atom> __observables = {};
 
+  // The list of dependencies which the dispose has been prevented.
+  final Set<Atom> _observablesDisposePrevented = {};
+
   @override
   // ignore: prefer_final_fields
   Set<Atom> get _observables => __observables;
@@ -249,7 +252,7 @@ class Effect implements ReactionInterface {
   ///
   /// This method must not be used directly.
   @protected
-  void track(void Function() fn) {
+  void track(void Function() fn, {bool preventDisposal = false}) {
     _context.startBatch();
 
     _isRunning = true;
@@ -270,7 +273,12 @@ class Effect implements ReactionInterface {
       }
       // coverage:ignore-end
     }
-
+    if (preventDisposal) {
+      for (final ob in __observables) {
+        ob._disposable = false;
+        _observablesDisposePrevented.add(ob);
+      }
+    }
     _context.endBatch();
   }
 
@@ -316,11 +324,19 @@ class Effect implements ReactionInterface {
 
     if (_isRunning) return;
 
+    for (final ob in _observablesDisposePrevented) {
+      ob
+        .._disposable = true
+        .._mayDispose();
+    }
+
     // ignore: cascade_invocations
     _context
       ..startBatch()
       ..clearObservables(this)
       ..endBatch();
+    __observables.clear();
+    _newObservables?.clear();
   }
 
   @override
