@@ -247,7 +247,8 @@ class _SignalsState extends State<Signals> {
                                         theme.colorScheme.onSecondary,
                                     selectedColor:
                                         theme.colorScheme.onSurfaceVariant,
-                                    tileColor: theme.colorScheme.surfaceVariant,
+                                    tileColor: theme
+                                        .colorScheme.surfaceContainerHighest,
                                     title: Text(name),
                                     titleAlignment:
                                         ListTileTitleAlignment.center,
