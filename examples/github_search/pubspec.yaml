@@ -47,7 +47,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^2.0.3
-  custom_lint: ^0.5.11
+  custom_lint: ^0.6.4
   solidart_lint: ^1.1.0
   json_serializable: ^6.7.1
   build_runner: ^2.4.9
