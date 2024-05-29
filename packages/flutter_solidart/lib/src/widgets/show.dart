@@ -114,7 +114,7 @@ class _ShowState<T extends bool> extends State<Show<T>> {
       valueListenable: show,
       builder: (context, condition, _) {
         if (!condition) {
-          return widget.fallback?.call(context) ?? const SizedBox();
+          return widget.fallback?.call(context) ?? const SizedBox.shrink();
         }
         return widget.builder(context);
       },
