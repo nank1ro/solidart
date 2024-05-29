@@ -68,9 +68,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ResourceBuilder(
-            resource: r,
-            builder: (context, resourceState) {
+          body: SignalBuilder(
+            builder: (context, child) {
+              final resourceState = r.state;
               return resourceState.on(
                 ready: (data) {
                   return Text(
@@ -125,9 +125,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ResourceBuilder(
-            resource: r,
-            builder: (context, resourceState) {
+          body: SignalBuilder(
+            builder: (context, child) {
+              final resourceState = r.state;
               return resourceState.on(
                 ready: (data) {
                   return Text(
@@ -165,7 +165,7 @@ void main() {
     expect(loadingFinder, findsNothing);
   });
 
-  testWidgets('ResourceBuilder widget works properly in ResourceError state',
+  testWidgets('SignalBuilder widget works properly in ResourceError state',
       (tester) async {
     final s = Signal(0);
     Future<int> fetcher() {
@@ -179,9 +179,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ResourceBuilder(
-            resource: r,
-            builder: (context, resourceState) {
+          body: SignalBuilder(
+            builder: (context, child) {
+              final resourceState = r.state;
               return resourceState.on(
                 ready: (data) {
                   return Text(
@@ -1130,10 +1130,9 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: ResourceBuilder(
-                resource: r,
-                builder: (_, resourceState) {
-                  return Text(resourceState.toString());
+              body: SignalBuilder(
+                builder: (_, __) {
+                  return Text(r.state.toString());
                 },
               ),
             ),

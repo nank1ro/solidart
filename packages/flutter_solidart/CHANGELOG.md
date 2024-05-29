@@ -1,26 +1,9 @@
 ## 2.0.0-dev.1
 
 - **CHORE**: Improved `Solid` widget performance by more than 3000% in finding ancestor providers.
-- **FEAT**: The `SignalBuilder` widget now automatically tracks the `Signal`s used in the `builder` function allowing you to react to N signals at the same time.
-  _Before_:
-  ```dart
-  SignalBuilder(
-    signal: counter,
-    builder: (context, value, child) {
-      return Text('$value');
-    },
-  ),
-  ```
-
-  _Now_:
-  ```dart
-  SignalBuilder(
-    builder: (context, child) {
-      return Text('${counter.value}');
-    },
-  ),
-  ```
+- **FEAT**: The `SignalBuilder` widget now automatically tracks the `Signal`s used in the `builder` function allowing you to react to N signals at the same time. See the [migration guide](https://docs.page/nank1ro/solidart~dev/migration).
 - **BREAKING CHANGE**: Removed `DualSignalBuilder` and `TripleSignalBuilder` in favor of `SignalBuilder`.
+- **BREAKING CHANGE**: Removed `ResourceBuilder` in favor of `SignalBuilder`. See the [migration guide](https://docs.page/nank1ro/solidart~dev/migration).
 
 
 ### Changes from solidart
