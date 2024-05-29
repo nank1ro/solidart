@@ -23,15 +23,16 @@ class WrapWithSolid extends DartAssist {
 
       final changeBuilder = reporter.createChangeBuilder(
         message: 'Wrap with Solid',
-        priority: 4,
+        priority: 0,
       );
 
       changeBuilder.addDartFileEdit((builder) {
         builder.addSimpleInsertion(
             node.offset,
             'Solid(\n'
-            'child: ');
-        builder.addSimpleInsertion(node.end, ',)');
+            '  providers: [],\n'
+            '  child: ');
+        builder.addSimpleInsertion(node.end, ',\n)');
       });
     });
   }

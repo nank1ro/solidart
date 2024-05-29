@@ -260,9 +260,9 @@ class _SearchBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox.expand(
-      child: ResourceBuilder(
-        resource: context.get<GithubSearchBloc>().searchResult,
-        builder: (context, searchResultState) {
+      child: SignalBuilder(
+        builder: (context, child) {
+          final searchResultState = context.get<GithubSearchBloc>().searchResult.state;
           return Stack(
             children: [
               searchResultState.on(
@@ -292,7 +292,7 @@ class _SearchBody extends StatelessWidget {
 }
 ```
 
-Here we're accessing the `searchResult` resource by using `context.get<GithubSearchBloc>().searchResult` and passing it to a `ResourceBuilder`.
-Whenever the `searchResult` state changes, the ResourceBuilder will rebuild and will render the current state correcly.
+Here we're accessing the `searchResult` resource by using `context.get<GithubSearchBloc>().searchResult` and passing it to a `SignalBuilder`.
+Whenever the `searchResult` state changes, the SignalBuilder will rebuild and will render the current state correcly.
 
 In addition, we're displaying a `CircularProgressIndicator` with some background opacity when the state of the resource is refreshing.

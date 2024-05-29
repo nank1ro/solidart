@@ -1,6 +1,7 @@
 ## 2.0.0-dev.1
 
 - Remove the deprecated `invalid_observe_type` lint
+- Remove `Wrap with ResourceBuilder` assist
 
 ## 1.1.1
 

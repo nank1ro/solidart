@@ -36,10 +36,6 @@ dart run custom_lint
 
 ![Wrap with SignalBuilder sample](https://raw.githubusercontent.com/nank1ro/solidart/main/packages/solidart_lint/assets/wrap_with_signal_builder.gif)
 
-### Wrap with ResourceBuilder
-
-![Wrap with ResourceBuilder sample](https://raw.githubusercontent.com/nank1ro/solidart/main/packages/solidart_lint/assets/wrap_with_resource_builder.gif)
-
 ### Wrap with Show
 
 ![Wrap with Show sample](https://raw.githubusercontent.com/nank1ro/solidart/main/packages/solidart_lint/assets/wrap_with_show.gif)

@@ -122,12 +122,12 @@ final user = Resource(fetcher: fetchUser, source: userId);
 A Resource can also be driven from a [stream] instead of a Future.
 In this case you just need to pass the `stream` field to the `Resource` class.
 
-If you're using `ResourceBuilder` you can react to the state of the resource:
+If you're using `SignalBuilder` you can react to the state of the resource:
 
 ```dart
-ResourceBuilder(
-  resource: user,
-  builder: (_, userState) {
+SignalBuilder(
+  builder: (_, __) {
+    final userState = user.state;
     return userState.on(
       ready: (data) {
         return Column(
@@ -309,5 +309,5 @@ Learn every feature of `flutter_solidart` including:
 3. `Computed`
 4. `Effect`s
 5. `SignalBuilder`, `DualSignalBuilder` and `TripleSignalBuilder`
-6. `Resource` and `ResourceBuilder`
+6. `Resource`
 7. `Solid` and its fine-grained reactivity

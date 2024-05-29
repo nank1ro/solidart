@@ -4,7 +4,6 @@
 library solidart_lint;
 
 import 'package:custom_lint_builder/custom_lint_builder.dart';
-import 'package:solidart_lint/src/assists/wrap_with_resource_builder.dart';
 import 'package:solidart_lint/src/assists/wrap_with_show.dart';
 import 'package:solidart_lint/src/assists/wrap_with_signal_builder.dart';
 import 'package:solidart_lint/src/assists/wrap_with_solid.dart';
@@ -26,7 +25,6 @@ class _SolidartPlugin extends PluginBase {
   List<Assist> getAssists() => [
         WrapWithSolid(),
         WrapWithSignalBuilder(),
-        WrapWithResourceBuilder(),
         WrapWithShow(),
       ];
 }

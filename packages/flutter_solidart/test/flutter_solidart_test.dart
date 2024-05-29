@@ -57,7 +57,7 @@ void main() {
     expect(fallbackFinder, findsOneWidget);
   });
 
-  testWidgets('ResourceBuilder widget works properly in ResourceReady state',
+  testWidgets('SignalBuilder widget works properly in ResourceReady state',
       (tester) async {
     final s = Signal(0);
     Future<int> fetcher() {
@@ -114,7 +114,7 @@ void main() {
     expect(loadingFinder, findsNothing);
   });
 
-  testWidgets('ResourceBuilder widget works properly in ResourceLoading state',
+  testWidgets('SignalBuilder widget works properly in ResourceLoading state',
       (tester) async {
     final s = Signal(0);
     Future<int> fetcher() {

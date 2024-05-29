@@ -68,10 +68,6 @@
           "/flutter/signal-builder"
         ],
         [
-          "ResourceBuilder",
-          "/flutter/resource-builder"
-        ],
-        [
           "Solid",
           "/flutter/solid"
         ]
@@ -146,10 +142,6 @@
         [
           "SignalBuilder",
           "/api-docs/signal-builder"
-        ],
-        [
-          "ResourceBuilder",
-          "/api-docs/resource-builder"
         ],
         [
           "Solid",
