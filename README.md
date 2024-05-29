@@ -207,7 +207,7 @@ class MyApp extends StatelessWidget {
       // using the builder method to immediately access the signal
       builder: (context) {
         // observe the theme mode value this will rebuild every time the themeMode signal changes.
-        final themeMode = context.observe<ThemeMode>(); // [2]
+        final themeMode = context.observe<Signal<ThemeMode>>().value; // [2]
         return MaterialApp(
           title: 'Toggle theme',
           themeMode: themeMode,
@@ -268,7 +268,7 @@ you never access the signal it never gets created.
 In the `Provider` you can also specify an `id`entifier for having multiple
 signals of the same type.
 
-At `[2]` we `observe` the value of a signal. The `observe` method listen to the signal value and rebuilds the widget when the value changes. It takes an optional `id` that is the signal identifier that you want to use. This method must be called only inside the `build` method.
+At `[2]` we `observe` the signal. The `observe` method listen to the signal value and rebuilds the widget when the value changes. It takes an optional `id` that is the signal identifier that you want to use. This method must be called only inside the `build` method.
 
 At `[3]` we `get` the signal with the given signal type. This doesn't listen to signal value. You may use this method inside the `initState` and `build` methods.
 
@@ -281,10 +281,7 @@ And finally at `[5]` we update the signal value.
 ```dart
 Provider<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))
 ```
-and `context.observe<ThemeMode>` where ThemeMode is the type of the signal
-value.
-`context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type
-of signal with its type value.
+and `context.observe<Signal<ThemeMode>>`, `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
 
 ## DevTools
 

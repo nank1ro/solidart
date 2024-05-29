@@ -19,58 +19,8 @@ extension SolidExtensions on BuildContext {
   }
 
   /// {@macro solid.observe}
-  T observe<T, S>([Identifier? id]) {
-    return Solid.observe<T, S>(this, id);
-  }
-
-  /// Shorthand to observe a [Signal] with the given [T] type and [id].
-  ///
-  /// Equivalent to `context.observe<T, Signal<T>>(id)`
-  T observeSignal<T>([Identifier? id]) {
-    return Solid.observe<T, Signal<T>>(this, id);
-  }
-
-  /// Shorthand to observe a [Computed] with the given [T] type and [id].
-  ///
-  /// Equivalent to `context.observe<T, Computed<T>>(id)`
-  T observeComputed<T>([Identifier? id]) {
-    return Solid.observe<T, Computed<T>>(this, id);
-  }
-
-  /// Shorthand to observe a [ReadSignal] with the given [T] type and [id].
-  ///
-  /// Equivalent to `context.observe<T, ReadSignal<T>>(id)`
-  T observeReadSignal<T>([Identifier? id]) {
-    return Solid.observe<T, ReadSignal<T>>(this, id);
-  }
-
-  /// Shorthand to observe a [ListSignal] with the given [T] type and [id].
-  ///
-  /// Equivalent to `context.observe<T, ListSignal<T>>(id)`
-  T observeListSignal<T>([Identifier? id]) {
-    return Solid.observe<T, ListSignal<T>>(this, id);
-  }
-
-  /// Shorthand to observe a [SetSignal] with the given [T] type and [id].
-  ///
-  /// Equivalent to `context.observe<T, SetSignal<T>>(id)`
-  T observeSetSignal<T>([Identifier? id]) {
-    return Solid.observe<T, SetSignal<T>>(this, id);
-  }
-
-  /// Shorthand to observe a [MapSignal] with the given types [K] and [V] and
-  /// [id].
-  ///
-  /// Equivalent to `context.observe<V, MapSignal<K, V>>(id)`
-  V observeMapSignal<K, V>([Identifier? id]) {
-    return Solid.observe<V, MapSignal<K, V>>(this, id);
-  }
-
-  /// Shorthand to observe a [Resource] with the given [T] type and [id].
-  ///
-  /// Equivalent to `context.observe<ResourceState<T>, Resource<T>>(this, id)`
-  ResourceState<T> observeResource<T>([Identifier? id]) {
-    return Solid.observe<ResourceState<T>, Resource<T>>(this, id);
+  T observe<T extends SignalBase<dynamic>>([Identifier? id]) {
+    return Solid.observe<T>(this, id);
   }
 
   /// {@macro solid.update}

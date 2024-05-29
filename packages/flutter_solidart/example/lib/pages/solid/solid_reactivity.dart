@@ -32,7 +32,7 @@ class _SolidReactivityPageState extends State<SolidReactivityPage> {
                 Text(
                   'Check the console to see that the context.observe behaves in a fine-grained way, rebuilding only the specific descendants with the new value. '
                   "It's like using SignalBuilder but works differently under the hood. "
-                  'The context.observe should be placed deeper as it causes the whole widget to rebuild as the value changes.',
+                  'The context.observe should be placed deeper as it causes the whole widget (BuildContext) to rebuild as the value changes.',
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: 16),
@@ -77,7 +77,7 @@ class _Counter1 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter1 = context.observeSignal<int>(#firstCounter);
+    final counter1 = context.observe<Signal<int>>(#firstCounter).value;
     print('build counter1');
     return Text('Counter1: $counter1');
   }
@@ -89,7 +89,7 @@ class _Counter2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter2 = context.observeSignal<int>(#secondCounter);
+    final counter2 = context.observe<Signal<int>>(#secondCounter).value;
     print('build counter2');
     return Text('Counter2: $counter2');
   }

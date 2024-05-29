@@ -315,14 +315,12 @@ void main() {
                   id: 'double-counter',
                 ),
               ],
-              child: Builder(
-                builder: (context) {
-                  final counter = context.observeSignal<int>('counter');
-                  final doubleCounter =
-                      context.observeComputed<int>('double-counter');
-                  return Text('$counter $doubleCounter');
-                },
-              ),
+              builder: (context) {
+                final counter = context.observe<Signal<int>>('counter').value;
+                final doubleCounter =
+                    context.observe<Computed<int>>('double-counter').value;
+                return Text('$counter $doubleCounter');
+              },
             ),
           ),
         ),
@@ -347,12 +345,10 @@ void main() {
                   create: () => Computed(() => s() * 2),
                 ),
               ],
-              child: Builder(
-                builder: (context) {
-                  final doubleCounter = context.observeComputed<int>();
-                  return Text('$doubleCounter');
-                },
-              ),
+              builder: (context) {
+                final doubleCounter = context.observe<Computed<int>>().value;
+                return Text('$doubleCounter');
+              },
             ),
           ),
         ),
@@ -374,12 +370,10 @@ void main() {
               providers: [
                 Provider<ReadSignal<int>>(create: s.toReadSignal),
               ],
-              child: Builder(
-                builder: (context) {
-                  final counter = context.observeReadSignal<int>();
-                  return Text('$counter');
-                },
-              ),
+              builder: (context) {
+                final counter = context.observe<ReadSignal<int>>().value;
+                return Text('$counter');
+              },
             ),
           ),
         ),
@@ -404,12 +398,11 @@ void main() {
                   id: #counter,
                 ),
               ],
-              child: Builder(
-                builder: (context) {
-                  final counter = context.observeReadSignal<int>(#counter);
-                  return Text('$counter');
-                },
-              ),
+              builder: (context) {
+                final counter =
+                    context.observe<ReadSignal<int>>(#counter).value;
+                return Text('$counter');
+              },
             ),
           ),
         ),
@@ -437,18 +430,16 @@ void main() {
                 id: 'double-counter',
               ),
             ],
-            child: Builder(
-              builder: (context) {
-                final counter = context.get<Signal<int>>('counter');
-                final doubleCounter =
-                    context.get<ReadSignal<int>>('double-counter');
-                return SignalBuilder(
-                  builder: (context, _) {
-                    return Text('${counter()} ${doubleCounter()}');
-                  },
-                );
-              },
-            ),
+            builder: (context) {
+              final counter = context.get<Signal<int>>('counter');
+              final doubleCounter =
+                  context.get<ReadSignal<int>>('double-counter');
+              return SignalBuilder(
+                builder: (context, _) {
+                  return Text('${counter()} ${doubleCounter()}');
+                },
+              );
+            },
           ),
         ),
       ),
@@ -474,16 +465,14 @@ void main() {
                 id: 'counter',
               ),
             ],
-            child: Builder(
-              builder: (context) {
-                final counter = context.get<Signal<int>>('invalid-counter');
-                return SignalBuilder(
-                  builder: (context, _) {
-                    return Text(counter().toString());
-                  },
-                );
-              },
-            ),
+            builder: (context) {
+              final counter = context.get<Signal<int>>('invalid-counter');
+              return SignalBuilder(
+                builder: (context, _) {
+                  return Text(counter().toString());
+                },
+              );
+            },
           ),
         ),
       ),
@@ -508,7 +497,8 @@ void main() {
               element: context.getElement<Signal<int>>('counter'),
               child: Builder(
                 builder: (innerContext) {
-                  final counter = innerContext.observeSignal<int>('counter');
+                  final counter =
+                      innerContext.observe<Signal<int>>('counter').value;
                   return Text('Dialog counter: $counter');
                 },
               ),
@@ -525,16 +515,14 @@ void main() {
               providers: [
                 Provider<Signal<int>>(create: () => s, id: 'counter'),
               ],
-              child: Builder(
-                builder: (context) {
-                  return ElevatedButton(
-                    onPressed: () {
-                      showCounterDialog(context: context);
-                    },
-                    child: const Text('show dialog'),
-                  );
-                },
-              ),
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () {
+                    showCounterDialog(context: context);
+                  },
+                  child: const Text('show dialog'),
+                );
+              },
             ),
           ),
         ),
@@ -597,16 +585,14 @@ void main() {
                   id: 'double-counter',
                 ),
               ],
-              child: Builder(
-                builder: (context) {
-                  return ElevatedButton(
-                    onPressed: () {
-                      showCounterDialog(context: context);
-                    },
-                    child: const Text('show dialog'),
-                  );
-                },
-              ),
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () {
+                    showCounterDialog(context: context);
+                  },
+                  child: const Text('show dialog'),
+                );
+              },
             ),
           ),
         ),
@@ -843,16 +829,14 @@ void main() {
                 id: 2,
               ),
             ],
-            child: Builder(
-              builder: (context) {
-                final nameProvider = context.get<NameProvider>();
-                final numberProvider1 = context.get<NumberProvider>(1);
-                final numberProvider2 = context.get<NumberProvider>(2);
-                return Text(
-                  '''${nameProvider.name} ${numberProvider1.number} ${numberProvider2.number}''',
-                );
-              },
-            ),
+            builder: (context) {
+              final nameProvider = context.get<NameProvider>();
+              final numberProvider1 = context.get<NumberProvider>(1);
+              final numberProvider2 = context.get<NumberProvider>(2);
+              return Text(
+                '''${nameProvider.name} ${numberProvider1.number} ${numberProvider2.number}''',
+              );
+            },
           ),
         ),
       ),
@@ -881,13 +865,11 @@ void main() {
                 create: () => const NumberProvider(1),
               ),
             ],
-            child: Builder(
-              builder: (context) {
-                // NameProvider is not present
-                final nameProvider = context.get<NameProvider>();
-                return Text(nameProvider.name);
-              },
-            ),
+            builder: (context) {
+              // NameProvider is not present
+              final nameProvider = context.get<NameProvider>();
+              return Text(nameProvider.name);
+            },
           ),
         ),
       ),
@@ -956,22 +938,20 @@ void main() {
             providers: [
               Provider<Signal<int>>(create: () => Signal(0)),
             ],
-            child: Builder(
-              builder: (context) {
-                final counter = context.observeSignal<int>();
-                return Column(
-                  children: [
-                    Text('$counter'),
-                    ElevatedButton(
-                      onPressed: () {
-                        context.update<int>((value) => value + 1);
-                      },
-                      child: const Text('add'),
-                    ),
-                  ],
-                );
-              },
-            ),
+            builder: (context) {
+              final counter = context.observe<Signal<int>>().value;
+              return Column(
+                children: [
+                  Text('$counter'),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.update<int>((value) => value + 1);
+                    },
+                    child: const Text('add'),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -1030,15 +1010,13 @@ void main() {
                   id: 2,
                 ),
               ],
-              child: Builder(
-                builder: (context) {
-                  final numberProvider1 = context.get<NumberProvider>(1);
-                  final numberProvider2 = context.get<NumberProvider>(2);
-                  return Text(
-                    '''${numberProvider1.number} ${numberProvider2.number}''',
-                  );
-                },
-              ),
+              builder: (context) {
+                final numberProvider1 = context.get<NumberProvider>(1);
+                final numberProvider2 = context.get<NumberProvider>(2);
+                return Text(
+                  '''${numberProvider1.number} ${numberProvider2.number}''',
+                );
+              },
             ),
           ),
         ),

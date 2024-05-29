@@ -207,7 +207,7 @@ class MyApp extends StatelessWidget {
       // using the builder method to immediately access the signal
       builder: (context) {
         // observe the theme mode value this will rebuild every time the themeMode signal changes.
-        final themeMode = context.observe<ThemeMode>(); // [2]
+        final themeMode = context.observe<Signal<ThemeMode>>().value; // [2]
         return MaterialApp(
           title: 'Toggle theme',
           themeMode: themeMode,
@@ -281,10 +281,7 @@ And finally at `[5]` we update the signal value.
 ```dart
 Provider<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))
 ```
-and `context.observe<ThemeMode>` where ThemeMode is the type of the signal
-value.
-`context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type
-of signal with its type value.
+, `context.observe<ThemeMode>` and `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
 
 ## DevTools
 

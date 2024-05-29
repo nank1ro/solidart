@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-class DualSignalBuilderPage extends StatefulWidget {
-  const DualSignalBuilderPage({super.key});
+class SignalBuilderPage extends StatefulWidget {
+  const SignalBuilderPage({super.key});
 
   @override
-  State<DualSignalBuilderPage> createState() => _DualSignalBuilderPageState();
+  State<SignalBuilderPage> createState() => _SignalBuilderPageState();
 }
 
-class _DualSignalBuilderPageState extends State<DualSignalBuilderPage> {
+class _SignalBuilderPageState extends State<SignalBuilderPage> {
   final counter1 = Signal(0, options: SignalOptions(name: 'counter1'));
   final counter2 = Signal(0, options: SignalOptions(name: 'counter2'));
 
@@ -64,10 +64,8 @@ class _DualSignalBuilderPageState extends State<DualSignalBuilderPage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 60),
               child: Text(
-                'Using a DualSignalBuilder the builder is fired for each change in any signal. '
-                'Even when only one signal updates, the whole builder is called again. '
-                'Prefer using the DualSignalBuilder over nesting two [SignalBuilder]s in a single build method.\n\n'
-                'See also TripleSignalBuilder for reacting to three signals at once.',
+                'Using a SignalBuilder the builder is fired for each change in any signal. '
+                'Even when only one signal updates, the whole builder is called again. ',
                 style: textTheme.titleMedium!.copyWith(color: Colors.blueGrey),
               ),
             )

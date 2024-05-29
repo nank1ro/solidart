@@ -43,7 +43,7 @@ part '../models/solid_element.dart';
 ///       // using the builder method to immediately access the signal
 ///       builder: (context) {
 ///         // observe the theme mode value this will rebuild every time the themeMode signal changes.
-///         final themeMode = context.observe<ThemeMode>();
+///         final themeMode = context.observe<Signal<ThemeMode>>().value;
 ///         return MaterialApp(
 ///           title: 'Toggle theme',
 ///           themeMode: themeMode,
@@ -117,10 +117,8 @@ part '../models/solid_element.dart';
 /// ```dart
 /// Provider<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))
 /// ```
-/// and `context.observe<ThemeMode>` where ThemeMode is the type of the signal
-/// value.
-/// `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type
-/// of signal with its type value.
+/// , `context.observe<Signal<ThemeMode>>` and `context.get<Signal<ThemeMode>>`
+/// where `Signal<ThemeMode>` is the type of signal with its type value.
 ///
 /// ## Providers
 ///
@@ -407,12 +405,11 @@ class Solid extends StatefulWidget {
   ///
   /// WARNING: Doesn't support observing a Resource.
   /// {@endtemplate}
-  static T observe<T, S>(BuildContext context, [Identifier? id]) {
-    final state = _findState<S>(context, id: id, listen: true);
-    var createdSignal = state._createdProviders[(id: id, type: S)];
-    // if the signal is not already present, create it
-    createdSignal ??= state.createProvider<S>(id)!;
-    return (createdSignal as SignalBase<T>).value;
+  static T observe<T extends SignalBase<dynamic>>(
+    BuildContext context, [
+    Identifier? id,
+  ]) {
+    return _getOrCreateProvider<T>(context, id: id, listen: true);
   }
 
   /// {@template solid.update}
@@ -431,7 +428,7 @@ class Solid extends StatefulWidget {
   /// ```
   /// but shorter when you don't need the signal for anything else.
   ///
-  /// WARNING: Supports only the `Signal<T>` type
+  /// WARNING: Supports only the `Signal` type
   /// {@endtemplate}
   static void update<T>(
     BuildContext context,
@@ -446,8 +443,12 @@ class Solid extends StatefulWidget {
   /// it.
   ///
   /// The provider is created in case the find fails.
-  static T _getOrCreateProvider<T>(BuildContext context, {Identifier? id}) {
-    final state = _findState<T>(context, id: id);
+  static T _getOrCreateProvider<T>(
+    BuildContext context, {
+    Identifier? id,
+    bool listen = false,
+  }) {
+    final state = _findState<T>(context, id: id, listen: listen);
     final createdProvider = state._createdProviders[(id: id, type: T)];
     if (createdProvider != null) return createdProvider as T;
     // if the provider is not already present, create it lazily
