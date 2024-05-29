@@ -33,7 +33,7 @@
 
 ## 1.3.0
 
-- **FEAT**: Automatic disposal, [see the docs here](https://docs.page/nank1ro/solidart~85/advanced/automatic-disposal)
+- **FEAT**: Automatic disposal, [see the docs here](https://docs.page/nank1ro/solidart~dev/advanced/automatic-disposal)
 
 ## 1.2.2
 

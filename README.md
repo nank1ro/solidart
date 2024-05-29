@@ -19,7 +19,7 @@ The objectives of this project are:
 
 ## Learning
 
-For a comprehensive and updated documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart~85)
+For a comprehensive and updated documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart~dev)
 
 There are 5 main concepts you should be aware:
 
