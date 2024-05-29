@@ -1,3 +1,7 @@
+## 2.0.0-dev.1
+
+- **CHORE**: Add `trackInDevTools` to `SignalOptions` and `ResourceOptions` to disable the DevTools tracking for specific signals and resources, defaults to `SolidartConfig.devToolsEnabled`.
+
 ## 1.5.4
 
 - **CHORE**: Add `devToolsEnabled` option to manually disable the DevTools extension that defaults to `kDebugMode`

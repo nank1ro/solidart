@@ -1,3 +1,7 @@
+## 2.0.0-dev.1
+
+- Remove the deprecated `invalid_observe_type` lint
+
 ## 1.1.1
 
 - Update dependencies

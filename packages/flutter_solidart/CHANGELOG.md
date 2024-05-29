@@ -1,4 +1,4 @@
-## 2.0.0
+## 2.0.0-dev.1
 
 - **CHORE**: Improved `Solid` widget performance by more than 3000% in finding ancestor providers.
 - **FEAT**: The `SignalBuilder` widget now automatically tracks the `Signal`s used in the `builder` function allowing you to react to N signals at the same time.

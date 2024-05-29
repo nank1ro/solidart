@@ -24,9 +24,10 @@ class SignalOptions<T> {
     this.name,
     this.equals = false,
     this.comparator = identical,
-    this.trackInDevTools = true,
     bool? autoDispose,
-  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose;
+    bool? trackInDevTools,
+  })  : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+        trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled;
 
   /// Whether to check the equality of the value with the == equality.
   ///
@@ -45,13 +46,15 @@ class SignalOptions<T> {
   /// The name of the signal, useful for logging purposes.
   final String? name;
 
-  /// Whether to automatically dispose the signal (defaults to true).
+  /// Whether to automatically dispose the signal (defaults to
+  /// [SolidartConfig.autoDispose]).
   ///
   /// This happens automatically when there are no longer subscribers.
   /// If you set it to false, you should remember to dispose the signal manually
   final bool autoDispose;
 
-  /// Whether to track the signal in the DevTools extension, defaults to true.
+  /// Whether to track the signal in the DevTools extension, defaults to
+  /// [SolidartConfig.devToolsEnabled].
   final bool trackInDevTools;
 
   @override
@@ -87,7 +90,9 @@ class ResourceOptions {
     this.name,
     this.lazy = true,
     bool? autoDispose,
-  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose;
+    bool? trackInDevTools,
+  })  : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+        trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled;
 
   /// Indicates whether the resource should be computed lazily, defaults to true
   final bool lazy;
@@ -102,6 +107,10 @@ class ResourceOptions {
   /// manually
   final bool autoDispose;
 
+  /// Whether to track the Resource in the DevTools extension, defaults to
+  /// [SolidartConfig.devToolsEnabled].
+  final bool trackInDevTools;
+
   /// coverage:ignore-start
   /// Converts the [ResourceOptions] to a [SignalOptions].
   @internal
@@ -109,6 +118,7 @@ class ResourceOptions {
     return SignalOptions<ResourceState<T>>(
       name: name,
       autoDispose: autoDispose,
+      trackInDevTools: trackInDevTools,
     );
   }
 
@@ -124,6 +134,7 @@ class ResourceOptions {
       lazy: lazy,
       name: name ?? this.name,
       autoDispose: autoDispose,
+      trackInDevTools: trackInDevTools,
     );
   }
 
