@@ -284,9 +284,8 @@ class _ToolbarState extends State<Toolbar> {
             final todosCount = mapFilterToTodosList(filter);
             // Each tab bar is using its specific todos count signal
             return SignalBuilder(
-              signal: todosCount,
-              builder: (context, todosCount, _) {
-                return Tab(text: '${filter.name} ($todosCount)');
+              builder: (context, _) {
+                return Tab(text: '${filter.name} (${todosCount.value})');
               },
             );
           },
@@ -348,9 +347,9 @@ class _TodoListState extends State<TodoList> {
     final activeFilter = context.observe<Signal<TodosFilter>>().value;
 
     return SignalBuilder(
-      // react to the correct list of todos list
-      signal: mapFilterToTodosList(activeFilter),
-      builder: (_, todos, __) {
+      builder: (_, __) {
+        // react to the correct list of todos list
+        final todos = mapFilterToTodosList(activeFilter).value;
         return ListView.builder(
           itemCount: todos.length,
           itemBuilder: (BuildContext context, int index) {

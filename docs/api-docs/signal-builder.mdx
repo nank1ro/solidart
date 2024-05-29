@@ -13,9 +13,8 @@ final counter = Signal(0);
 @override
 Widget build(BuildContext context) {
   return SignalBuilder(
-    signal: counter,
-    builder: (context, value, child) {
-      return Text('$value');
+    builder: (context, child) {
+      return Text('${counter.value}');
     },
   );
 }

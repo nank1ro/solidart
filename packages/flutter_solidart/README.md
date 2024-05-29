@@ -235,12 +235,12 @@ class MyHomePage extends StatelessWidget {
         child:
             // Listen to the theme mode signal rebuilding only the IconButton
             SignalBuilder( // [4]
-          signal: themeMode,
-          builder: (_, mode, __) {
+          builder: (_, __) {
+            final mode = themeMode.value;
             return IconButton(
               onPressed: () { // [5]
                 // toggle the theme mode
-                if (themeMode.value == ThemeMode.light) {
+                if (mode == ThemeMode.light) {
                   themeMode.value = ThemeMode.dark;
                 } else {
                   themeMode.value = ThemeMode.light;

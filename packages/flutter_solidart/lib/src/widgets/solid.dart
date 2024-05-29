@@ -70,9 +70,9 @@ part '../models/solid_element.dart';
 ///       body: Center(
 ///         child:
 ///             // Listen to the theme mode signal rebuilding only the IconButton
-///             SignalBuilder(
-///           signal: themeMode,
-///           builder: (_, mode, __) {
+///         SignalBuilder(
+///           builder: (_, __) {
+///             final mode = themeMode.value;
 ///             return IconButton(
 ///               onPressed: () {
 ///                 // toggle the theme mode

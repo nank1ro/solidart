@@ -29,9 +29,8 @@ void dispose() {
 To display the `counter` value we've used a `SignalBuilder` that rebuild any time the `counter` value changes:
 ```dart
 SignalBuilder(
-  signal: counter,
-  builder: (_, value, __) {
-    return Text('$value');
+  builder: (_, __) {
+    return Text('${counter.value}');  
   },
 )
 ```
