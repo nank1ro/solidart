@@ -25,7 +25,7 @@ part '../models/solid_element.dart';
 ///
 /// Let's see an example to grasp the concept.
 ///
-/// You're going to see how to build a toggle theme feature using `Solid`, this example is present also [here](https://docs.page/nank1ro/solidart/examples/toggle-theme)
+/// You're going to see how to build a toggle theme feature using `Solid`, this example is present also [here](https://docs.page/nank1ro/solidart~85/examples/toggle-theme)
 ///
 /// ```dart
 /// class MyApp extends StatelessWidget {
