@@ -70,8 +70,8 @@ class FullName extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = context.observe<String>(#firstName);
-    final lastName = context.observe<String>(#lastName);
+    final firstName = context.observe<Signal<String>>(#firstName).value;
+    final lastName = context.observe<Signal<String>>(#lastName).value;
     return ListTile(
       title: Text('First Name: $firstName'),
       subtitle: Text('LastName: $lastName'),

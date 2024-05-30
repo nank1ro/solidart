@@ -56,9 +56,9 @@ class _ResourcePageState extends State<ResourcePage> {
               },
             ),
             const SizedBox(height: 16),
-            ResourceBuilder(
-              resource: user,
-              builder: (_, userState) {
+            SignalBuilder(
+              builder: (context, child) {
+                final userState = user.state;
                 return userState.on(
                   ready: (data) {
                     return Column(
@@ -104,9 +104,9 @@ class _ResourcePageState extends State<ResourcePage> {
             const Text(
               'You can also `select` a value from a resource, but still continuing to handle the loading and error states',
             ),
-            ResourceBuilder(
-              resource: userHairColor,
-              builder: (context, hairColorState) {
+            SignalBuilder(
+              builder: (context, child) {
+                final hairColorState = userHairColor.state;
                 return hairColorState.on(
                   ready: (hairColor) {
                     return ListTile(

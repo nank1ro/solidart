@@ -15,16 +15,15 @@ final loggedIn = Signal(false);
 @override
 Widget build(BuildContext context) {
   return SignalBuilder(
-    signal: loggedIn,
-    builder: (context, isUserLoggedIn, child) {
-      if (isUserLoggedIn) return const Text('Logged in');
+    builder: (context, child) {
+      if (loggedIn()) return const Text('Logged in');
       return const Text('Logged out');
     },
   );
 }
 ```
 
-You may be tempted to use a [SignalBuilder](/flutter/signal-builder) but with the `Show` widget is even simpler:
+You may be tempted to use a [SignalBuilder](/flutter/signal-builder) but with the `Show` widget is more readable.
 ```dart
 @override
 Widget build(BuildContext context) {

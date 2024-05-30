@@ -1,15 +1,10 @@
-import 'package:collection/collection.dart';
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
 part '../models/solid_element.dart';
-
-enum _SignalType {
-  signal,
-  computed,
-  readSignal,
-}
 
 /// {@template solid}
 /// Provides [providers] to descendants.
@@ -30,7 +25,7 @@ enum _SignalType {
 ///
 /// Let's see an example to grasp the concept.
 ///
-/// You're going to see how to build a toggle theme feature using `Solid`, this example is present also [here](https://docs.page/nank1ro/solidart/examples/toggle-theme)
+/// You're going to see how to build a toggle theme feature using `Solid`, this example is present also [here](https://docs.page/nank1ro/solidart~dev/examples/toggle-theme)
 ///
 /// ```dart
 /// class MyApp extends StatelessWidget {
@@ -48,7 +43,7 @@ enum _SignalType {
 ///       // using the builder method to immediately access the signal
 ///       builder: (context) {
 ///         // observe the theme mode value this will rebuild every time the themeMode signal changes.
-///         final themeMode = context.observe<ThemeMode>();
+///         final themeMode = context.observe<Signal<ThemeMode>>().value;
 ///         return MaterialApp(
 ///           title: 'Toggle theme',
 ///           themeMode: themeMode,
@@ -75,9 +70,9 @@ enum _SignalType {
 ///       body: Center(
 ///         child:
 ///             // Listen to the theme mode signal rebuilding only the IconButton
-///             SignalBuilder(
-///           signal: themeMode,
-///           builder: (_, mode, __) {
+///         SignalBuilder(
+///           builder: (_, __) {
+///             final mode = themeMode.value;
 ///             return IconButton(
 ///               onPressed: () {
 ///                 // toggle the theme mode
@@ -122,10 +117,8 @@ enum _SignalType {
 /// ```dart
 /// Provider<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))
 /// ```
-/// and `context.observe<ThemeMode>` where ThemeMode is the type of the signal
-/// value.
-/// `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type
-/// of signal with its type value.
+/// , `context.observe<Signal<ThemeMode>>` and `context.get<Signal<ThemeMode>>`
+/// where `Signal<ThemeMode>` is the type of signal with its type value.
 ///
 /// ## Providers
 ///
@@ -342,16 +335,6 @@ class Solid extends StatefulWidget {
   ///
   /// Throws if no such element or [Solid] widget is found.
   ///
-  /// Calling this method is O(N) with a small constant factor where N is the
-  /// number of [Solid] ancestors needed to traverse to find the provider with
-  /// the given [id].
-  ///
-  /// If you've a single Solid widget in the whole app N is equal to 1.
-  /// If you have two Solid ancestors and the provider is present in the nearest
-  /// ancestor, N is still 1.
-  /// If you have two Solid ancestors and the provider is present in the farest
-  /// ancestor, N is 2, and so on.
-  ///
   /// This method should not be called from State.dispose because the element
   /// tree is no longer stable at that time.
   ///
@@ -368,16 +351,6 @@ class Solid extends StatefulWidget {
   /// the nearest [Solid] widget.
   ///
   /// Throws if no such element or [Solid] widget is found.
-  ///
-  /// Calling this method is O(N) with a small constant factor where N is the
-  /// number of [Solid] ancestors needed to traverse to find the provider with
-  /// the given [id].
-  ///
-  /// If you've a single Solid widget in the whole app N is equal to 1.
-  /// If you have two Solid ancestors and the provider is present in the nearest
-  /// ancestor, N is still 1.
-  /// If you have two Solid ancestors and the provider is present in the farest
-  /// ancestor, N is 2, and so on.
   ///
   /// This method should not be called from State.dispose because the element
   /// tree is no longer stable at that time.
@@ -403,16 +376,6 @@ class Solid extends StatefulWidget {
   ///
   /// Throws if no such element or [Solid] widget is found.
   ///
-  /// Calling this method is O(N) with a small constant factor where N is the
-  /// number of [Solid] ancestors needed to traverse to find the provider with
-  /// the given [id].
-  ///
-  /// If you've a single Solid widget in the whole app N is equal to 1.
-  /// If you have two Solid ancestors and the provider is present in the nearest
-  /// ancestor, N is still 1.
-  /// If you have two Solid ancestors and the provider is present in the farest
-  /// ancestor, N is 2, and so on.
-  ///
   /// This method should not be called from State.dispose because the element
   /// tree is no longer stable at that time.
   ///
@@ -422,9 +385,7 @@ class Solid extends StatefulWidget {
   /// {@endtemplate}
   static SolidElement<T> getElement<T>(BuildContext context, [Identifier? id]) {
     final state = _findState<T>(context, id: id);
-    final element = state.widget.providers.firstWhere((element) {
-      return element is SolidElement<T> && element.id == id;
-    });
+    final element = state._getProvider<T>(id)!;
     return element as SolidElement<T>;
   }
 
@@ -435,16 +396,6 @@ class Solid extends StatefulWidget {
   ///
   /// Throws if no such element or [Solid] widget is found.
   ///
-  /// Calling this method is O(N) with a small constant factor where N is the
-  /// number of [Solid] ancestors needed to traverse to find the signal with
-  /// the given [id].
-  ///
-  /// If you've a single Solid widget in the whole app N is equal to 1.
-  /// If you have two Solid ancestors and the signal is present in the nearest
-  /// ancestor, N is still 1.
-  /// If you have two Solid ancestors and the signal is present in the farest
-  /// ancestor, N is 2, and so on.
-  ///
   /// This method should not be called from State.dispose because the element
   /// tree is no longer stable at that time.
   ///
@@ -454,66 +405,11 @@ class Solid extends StatefulWidget {
   ///
   /// WARNING: Doesn't support observing a Resource.
   /// {@endtemplate}
-  static T observe<T>(BuildContext context, [Identifier? id]) {
-    SolidState? state;
-    var signalType = _SignalType.signal;
-    if (id != null) {
-      state = _findState<Never>(
-        context,
-        id: id,
-        listen: true,
-      );
-      final signalValueType = state.widget.providers
-          .where((element) => element._isSignal)
-          .firstWhere((element) => element.id == id)
-          ._valueType;
-      if (signalValueType == Signal<T>) {
-        signalType = _SignalType.signal;
-      } else if (signalValueType == Computed<T>) {
-        signalType = _SignalType.computed;
-      } else if (signalValueType == ReadSignal<T>) {
-        signalType = _SignalType.readSignal;
-      }
-    } else {
-      try {
-        state = _findState<Signal<T>>(context, listen: true);
-        signalType = _SignalType.signal;
-      } catch (_) {
-        try {
-          state = _findState<Computed<T>>(context, listen: true);
-          signalType = _SignalType.computed;
-        } catch (e) {
-          state = _findState<ReadSignal<T>>(context, listen: true);
-          signalType = _SignalType.readSignal;
-        }
-      }
-    }
-
-    var createdSignal = state._createdProviders.entries.firstWhereOrNull(
-      (element) {
-        return switch (signalType) {
-          _SignalType.signal =>
-            element.value is Signal<T> && element.key.id == id,
-          _SignalType.computed =>
-            element.value is Computed<T> && element.key.id == id,
-          _SignalType.readSignal =>
-            element.value is ReadSignal<T> && element.key.id == id,
-        };
-      },
-    )?.value;
-
-    // if the signal is not already present, create it
-    if (createdSignal == null) {
-      switch (signalType) {
-        case _SignalType.signal:
-          createdSignal = state.createProvider<Signal<T>>(id);
-        case _SignalType.computed:
-          createdSignal = state.createProvider<Computed<T>>(id);
-        case _SignalType.readSignal:
-          createdSignal = state.createProvider<ReadSignal<T>>(id);
-      }
-    }
-    return (createdSignal as SignalBase<T>).value;
+  static T observe<T extends SignalBase<dynamic>>(
+    BuildContext context, [
+    Identifier? id,
+  ]) {
+    return _getOrCreateProvider<T>(context, id: id, listen: true);
   }
 
   /// {@template solid.update}
@@ -532,7 +428,7 @@ class Solid extends StatefulWidget {
   /// ```
   /// but shorter when you don't need the signal for anything else.
   ///
-  /// WARNING: Supports only the `Signal<T>` type
+  /// WARNING: Supports only the `Signal` type
   /// {@endtemplate}
   static void update<T>(
     BuildContext context,
@@ -547,13 +443,13 @@ class Solid extends StatefulWidget {
   /// it.
   ///
   /// The provider is created in case the find fails.
-  static T _getOrCreateProvider<T>(BuildContext context, {Identifier? id}) {
-    final state = _findState<T>(context, id: id);
-    final createdProvider =
-        state._createdProviders.entries.firstWhereOrNull((element) {
-      return element.value is T && element.key.id == id;
-    })?.value;
-
+  static T _getOrCreateProvider<T>(
+    BuildContext context, {
+    Identifier? id,
+    bool listen = false,
+  }) {
+    final state = _findState<T>(context, id: id, listen: listen);
+    final createdProvider = state._createdProviders[(id: id, type: T)];
     if (createdProvider != null) return createdProvider as T;
     // if the provider is not already present, create it lazily
     return state.createProvider<T>(id);
@@ -562,42 +458,52 @@ class Solid extends StatefulWidget {
 
 /// The state of the [Solid] widget
 class SolidState extends State<Solid> {
+  /// Stores all the providers in the current scope
+  final _allProvidersInScope =
+      HashMap<({Type type, Object? id}), SolidElement<dynamic>>();
+
   // Stores all the created providers.
   // The key is the provider, while the value is its value.
-  final Map<SolidElement<dynamic>, dynamic> _createdProviders = {};
-
-  var _changedDependencies = <Identifier>[];
-  var _changesCounter = 0;
+  final _createdProviders = HashMap<({Type type, Object? id}), Object?>();
 
   // Stores all the disposeFn for each signal
   final _signalDisposeCallbacks = <DisposeEffect>[];
+  Identifier? _changedDependency;
+  int _dependenciesVersion = 0;
 
   @override
   void initState() {
     super.initState();
-    // check if the provider type is not dynamic
-    // check if there are multiple providers of the same type
-    final types = <Type>[];
-    for (final provider in widget.providers) {
-      final type = provider._valueType;
-      if (type == dynamic) throw ProviderDynamicError();
+    assert(
+      () {
+        // check if the provider type is not dynamic
+        // check if there are multiple providers of the same type
+        final types = <Type>[];
+        for (final provider in widget.providers) {
+          final type = provider._valueType;
+          if (type == dynamic) throw ProviderDynamicError();
 
-      if (types.contains(type) && provider.id == null) {
-        throw ProviderMultipleProviderOfSameTypeError(
-          providerType: type,
-        );
-      } else {
-        types.add(type);
+          if (types.contains(type) && provider.id == null) {
+            throw ProviderMultipleProviderOfSameTypeError(
+              providerType: type,
+            );
+          }
+          types.add(type);
+        }
+        return true;
+      }(),
+      '',
+    );
+    for (final provider in widget.providers) {
+      final key = (id: provider.id, type: provider._valueType);
+      _allProvidersInScope[key] = provider;
+
+      // create non lazy providers.
+      if (provider is Provider && !provider.lazy) {
+        // create and store the provider
+        _createdProviders[key] = provider.create();
       }
     }
-    // create non lazy providers.
-    widget.providers
-        .whereType<Provider<dynamic>>()
-        .where((element) => !element.lazy)
-        .forEach((provider) {
-      // create and store the provider
-      _createdProviders[provider] = provider.create();
-    });
   }
 
   @override
@@ -609,13 +515,13 @@ class SolidState extends State<Solid> {
 
     // dispose all the created providers
     if (widget._canAutoDisposeProviders) {
-      _createdProviders.forEach((provider, value) {
-        provider._disposeFn(context, value);
+      _createdProviders.forEach((key, value) {
+        _allProvidersInScope[key]!._disposeFn(context, value);
       });
     }
 
     _signalDisposeCallbacks.clear();
-    _changedDependencies.clear();
+    _allProvidersInScope.clear();
     _createdProviders.clear();
     super.dispose();
   }
@@ -623,15 +529,9 @@ class SolidState extends State<Solid> {
   /// -- Signals logic
   void _initializeSignal(SignalBase<dynamic> signal, {required Identifier id}) {
     final unobserve = signal.observe((_, value) {
-      _changedDependencies = [..._changedDependencies, id];
-      _changesCounter++;
-      Future.microtask(() {
-        if (mounted) {
-          setState(() {});
-          // after build, reset the dependencies
-          WidgetsBinding.instance
-              .addPostFrameCallback((_) => _changedDependencies = []);
-        }
+      setState(() {
+        _changedDependency = id;
+        _dependenciesVersion++;
       });
     });
     signal.onDispose(unobserve);
@@ -644,22 +544,7 @@ class SolidState extends State<Solid> {
   SolidElement<dynamic>? _getProvider<T>(
     Identifier? id,
   ) {
-    SolidElement<dynamic>? provider;
-    if (id != null) {
-      provider = widget.providers.firstWhereOrNull(
-        (element) => element.id == id,
-      );
-    } else {
-      provider = widget.providers.firstWhereOrNull(
-        (element) {
-          return element is SolidElement<T>;
-        },
-      );
-    }
-    // search by type next
-
-    if (provider == null) return null;
-    return provider;
+    return _allProvidersInScope[(type: T, id: id)];
   }
 
   /// Creates a provider of type T and stores it
@@ -673,8 +558,7 @@ class SolidState extends State<Solid> {
     }
 
     // store the created provider
-    _createdProviders[provider] = value;
-
+    _createdProviders[(type: T, id: id)] = value;
     return value;
   }
 
@@ -689,8 +573,8 @@ class SolidState extends State<Solid> {
   Widget build(BuildContext context) {
     return _InheritedSolid(
       state: this,
-      changedDependencies: _changedDependencies,
-      changesCounter: _changesCounter,
+      dependenciesVersion: _dependenciesVersion,
+      changedDependency: _changedDependency,
       child: widget.builder != null
           ? Builder(builder: (context) => widget.builder!(context))
           : widget.child!,
@@ -717,18 +601,18 @@ class _InheritedSolid extends InheritedModel<Object> {
     // ignore: unused_element
     super.key,
     required this.state,
-    required this.changesCounter,
-    required this.changedDependencies,
+    required this.changedDependency,
+    required this.dependenciesVersion,
     required super.child,
   });
 
   final SolidState state;
-  final int changesCounter;
-  final List<Identifier> changedDependencies;
+  final Identifier? changedDependency;
+  final int dependenciesVersion;
 
   @override
   bool updateShouldNotify(covariant _InheritedSolid oldWidget) {
-    return oldWidget.changesCounter != changesCounter;
+    return oldWidget.dependenciesVersion != dependenciesVersion;
   }
 
   bool isSupportedAspectWithType<T>(Identifier? id) {
@@ -741,7 +625,7 @@ class _InheritedSolid extends InheritedModel<Object> {
     covariant _InheritedSolid oldWidget,
     Set<Object> dependencies,
   ) {
-    return changedDependencies.any((element) => dependencies.contains(element));
+    return dependencies.contains(changedDependency);
   }
 
   // The following two methods are taken from [InheritedModel] and modified

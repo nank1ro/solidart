@@ -19,7 +19,7 @@ The objectives of this project are:
 
 ## Learning
 
-For a comprehensive and updated documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart)
+For a comprehensive and updated documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart~dev)
 
 There are 5 main concepts you should be aware:
 
@@ -122,12 +122,12 @@ final user = Resource(fetcher: fetchUser, source: userId);
 A Resource can also be driven from a [stream] instead of a Future.
 In this case you just need to pass the `stream` field to the `Resource` class.
 
-If you're using `ResourceBuilder` you can react to the state of the resource:
+If you're using `SignalBuilder` you can react to the state of the resource:
 
 ```dart
-ResourceBuilder(
-  resource: user,
-  builder: (_, userState) {
+SignalBuilder(
+  builder: (_, __) {
+    final userState = user.state;
     return userState.on(
       ready: (data) {
         return Column(
@@ -207,7 +207,7 @@ class MyApp extends StatelessWidget {
       // using the builder method to immediately access the signal
       builder: (context) {
         // observe the theme mode value this will rebuild every time the themeMode signal changes.
-        final themeMode = context.observe<ThemeMode>(); // [2]
+        final themeMode = context.observe<Signal<ThemeMode>>().value; // [2]
         return MaterialApp(
           title: 'Toggle theme',
           themeMode: themeMode,
@@ -235,12 +235,12 @@ class MyHomePage extends StatelessWidget {
         child:
             // Listen to the theme mode signal rebuilding only the IconButton
             SignalBuilder( // [4]
-          signal: themeMode,
-          builder: (_, mode, __) {
+          builder: (_, __) {
+            final mode = themeMode.value;
             return IconButton(
               onPressed: () { // [5]
                 // toggle the theme mode
-                if (themeMode.value == ThemeMode.light) {
+                if (mode == ThemeMode.light) {
                   themeMode.value = ThemeMode.dark;
                 } else {
                   themeMode.value = ThemeMode.light;
@@ -268,7 +268,7 @@ you never access the signal it never gets created.
 In the `Provider` you can also specify an `id`entifier for having multiple
 signals of the same type.
 
-At `[2]` we `observe` the value of a signal. The `observe` method listen to the signal value and rebuilds the widget when the value changes. It takes an optional `id` that is the signal identifier that you want to use. This method must be called only inside the `build` method.
+At `[2]` we `observe` the signal. The `observe` method listen to the signal value and rebuilds the widget when the value changes. It takes an optional `id` that is the signal identifier that you want to use. This method must be called only inside the `build` method.
 
 At `[3]` we `get` the signal with the given signal type. This doesn't listen to signal value. You may use this method inside the `initState` and `build` methods.
 
@@ -281,10 +281,7 @@ And finally at `[5]` we update the signal value.
 ```dart
 Provider<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))
 ```
-and `context.observe<ThemeMode>` where ThemeMode is the type of the signal
-value.
-`context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type
-of signal with its type value.
+and `context.observe<Signal<ThemeMode>>`, `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
 
 ## DevTools
 
@@ -312,7 +309,7 @@ Learn every feature of `flutter_solidart` including:
 3. `Computed`
 4. `Effect`s
 5. `SignalBuilder`, `DualSignalBuilder` and `TripleSignalBuilder`
-6. `Resource` and `ResourceBuilder`
+6. `Resource`
 7. `Solid` and its fine-grained reactivity
 
 ## Contributors

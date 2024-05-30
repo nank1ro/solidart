@@ -26,6 +26,10 @@ class Atom {
 
   bool disposed = false;
 
+  // Whether the atom can be disposed. Used to prevent disposing when using
+  // SignalBuilder, and releasing when the widget is disposed.
+  bool _disposable = true;
+
   final Set<Derivation> _observers = {};
 
   bool get hasObservers => _observers.isNotEmpty;
@@ -51,10 +55,7 @@ class Atom {
 
   void _removeObserver(Derivation d) {
     _observers.remove(d);
-    if (_observers.isEmpty) {
-      _context.enqueueForUnobservation(this);
-      _mayDispose();
-    }
+    _mayDispose();
   }
 
   // coverage:ignore-start

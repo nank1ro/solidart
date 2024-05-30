@@ -39,11 +39,9 @@ class _EffectsPageState extends State<EffectsPage> {
           children: [
             const Text('Check the console to see the effect printing'),
             const SizedBox(height: 16),
-            SignalBuilder(
-                signal: count,
-                builder: (context, value, __) {
-                  return Text('Count: $value');
-                }),
+            SignalBuilder(builder: (context, child) {
+              return Text('Count: ${count.value}');
+            }),
           ],
         ),
       ),

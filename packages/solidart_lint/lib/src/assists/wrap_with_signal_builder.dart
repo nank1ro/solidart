@@ -23,17 +23,16 @@ class WrapWithSignalBuilder extends DartAssist {
 
       final changeBuilder = reporter.createChangeBuilder(
         message: 'Wrap with SignalBuilder',
-        priority: 3,
+        priority: 0,
       );
 
       changeBuilder.addDartFileEdit((builder) {
         builder.addSimpleInsertion(
             node.offset,
             'SignalBuilder(\n'
-            'signal: null,\n'
-            'builder: (context, value, child) {\n'
-            'return ');
-        builder.addSimpleInsertion(node.end, '; },)');
+            '  builder: (context, child) {\n'
+            '    return ');
+        builder.addSimpleInsertion(node.end, ';\n  },\n)');
       });
     });
   }

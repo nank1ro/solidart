@@ -1,0 +1,30 @@
+---
+title: Batch
+description: Learn the batch function
+---
+
+# Batch
+
+*solidart*'s reactivity is synchronous which means, by the next line after any change, the observers will be notified.
+And for the most part this is perfectly fine. Unrelated changes "rendering" twice don't actually mean wasted work.
+
+What if the changes are related? *solidart*'s batch helper allows to queue up multiple changes and then apply them all at the same time before notifying their observers.
+
+## Example
+
+```dart
+final x = Signal(10);
+final y = Signal(20);
+
+Effect((_) => print('x = ${x.value}, y = ${y.value}'));
+// The Effect above prints 'x = 10, y = 20'
+
+batch(() {
+  x.value++;
+  y.value++;
+});
+// The Effect above prints 'x = 11, y = 21'
+```
+
+As you can see, the effect is not executed until the batch is completed.
+So when `x` changes, the effect is paused and you never see it printing: `"x = 11, y = 20"`.

@@ -43,7 +43,7 @@ class MyHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     // expect_lint: missing_solid_get_type
     final myClass = context.get();
-    // expect_lint: invalid_observe_type
+
     final counter = context.observe<Signal<int>>('counter');
 
     return ElevatedButton(

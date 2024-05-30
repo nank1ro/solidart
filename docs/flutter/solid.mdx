@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
       // using the builder method to immediately access the signal
       builder: (context) {
         // observe the theme mode value this will rebuild every time the themeMode signal changes.
-        final themeMode = context.observe<ThemeMode>();
+        final themeMode = context.observe<Signal<ThemeMode>>().value;
         return MaterialApp(
           title: 'Toggle theme',
           themeMode: themeMode,
@@ -64,8 +64,8 @@ class MyHomePage extends StatelessWidget {
         child:
             // Listen to the theme mode signal rebuilding only the IconButton
             SignalBuilder(
-          signal: themeMode,
-          builder: (_, mode, __) {
+          builder: (_, __) {
+            final mode = themeMode.value;
             return IconButton(
               onPressed: () {
                 // toggle the theme mode
@@ -97,8 +97,8 @@ The `context.get()` method doesn't listen to the signal value. You may use this 
 
 > It is mandatory to set the type of signal to the `Provider` otherwise you're going to encounter an error, for example:
 
-1. `Provider<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))` and `context.observe<ThemeMode>` where ThemeMode is the type of the signal value.
-2. `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
+1. `Provider<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))`
+2. `context.observe<Signal<ThemeMode>>` and `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
 
 ## Providers
 
