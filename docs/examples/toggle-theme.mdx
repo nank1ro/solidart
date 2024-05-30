@@ -71,7 +71,7 @@ Now using the `context.observe` method we effectively listen to the `themeMode` 
 ```dart
 Builder(
   builder: (context) {
-    final themeMode = context.observe<ThemeMode>();
+    final themeMode = context.observe<Signal<ThemeMode>>().value;
 
     return MaterialApp(
       theme: ThemeData.light(),
@@ -105,11 +105,10 @@ The `get` method obtains the signal for the given identifier (optional) without 
 To react to the signal we've used a `SignalBuilder`:
 ```dart
 SignalBuilder(
-  signal: themeMode,
-  builder: (_, mode, __) {
+  builder: (_, __) {
     return IconButton(
       icon: Icon(
-        mode == ThemeMode.light ? Icons.dark_mode : Icons.light_mode,
+        themeMode.value == ThemeMode.light ? Icons.dark_mode : Icons.light_mode,
       ),
     );
   },
@@ -119,8 +118,8 @@ SignalBuilder(
 and to update our `themeMode` signal we just update the signal value inside the `onPressed` callback:
 ```dart
 SignalBuilder(
-  signal: themeMode,
-  builder: (_, mode, __) {
+  builder: (_, __) {
+    final mode = themeMode.value;
     return IconButton(
       onPressed: () {
         // toggle the theme mode

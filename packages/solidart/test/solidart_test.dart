@@ -1562,6 +1562,44 @@ void main() {
         count.dispose();
         verify(observer.didDisposeSignal(count)).called(1);
       });
+
+      test('modifications are batched', () {
+        final x = Signal(10);
+        final y = Signal(20);
+        final total = Signal(30);
+
+        final calls = <({int x, int y, int total})>[];
+        expect(calls, isEmpty);
+        expect(total.value, equals(30));
+
+        final disposeEffect = Effect((_) {
+          calls.add((x: x.value, y: y.value, total: total.value));
+        });
+
+        addTearDown(disposeEffect);
+
+        expect(
+          calls,
+          equals([
+            (x: 10, y: 20, total: 30),
+          ]),
+        );
+
+        batch(() {
+          x.value++;
+          y.value++;
+
+          total.value = x.value + y.value;
+        });
+
+        expect(
+          calls,
+          equals([
+            (x: 10, y: 20, total: 30),
+            (x: 11, y: 21, total: 32),
+          ]),
+        );
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );

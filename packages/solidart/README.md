@@ -17,7 +17,7 @@ The objectives of this project are:
 
 ## Learning
 
-For a comprehensive and updated documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart)
+For a comprehensive and updated documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart~dev)
 
 There are 4 main concepts you should be aware:
 
@@ -119,12 +119,12 @@ final user = Resource(fetcher: fetchUser, source: userId);
 A Resource can also be driven from a [stream] instead of a Future.
 In this case you just need to pass the `stream` field to the `Resource` class.
 
-If you're using `ResourceBuilder` you can react to the state of the resource:
+If you're using `SignalBuilder` you can react to the state of the resource:
 
 ```dart
-ResourceBuilder(
-  resource: user,
-  builder: (_, userState) {
+SignalBuilder(
+  builder: (_, __) {
+    final userState = user.state;
     return userState.on(
       ready: (data) {
         return Column(

@@ -1,0 +1,76 @@
+---
+title: Migration
+description: All the migration guides
+---
+
+# Migration Guide
+
+## v2.0.0
+
+Removed the `DualSignalBuilder` and `TripleSignalBuilder` classes, and refactor the `SignalBuilder` class.
+
+**v1.x.x**:
+```dart
+SignalBuilder(
+  signal: counter,
+  builder: (context, value, child) {
+    return Text('$value');
+  },
+),
+```
+
+**v2.x.x**:
+```dart
+SignalBuilder(
+  builder: (context, child) {
+    return Text('${counter.value}');
+  },
+),
+```
+
+The new `SignalBuilder` is more powerful because it tracks any number of signals used in the builder method.
+
+---
+
+The `context.observe` method now needs `T` to be a `SignalBase`.
+
+**v1.x.x**:
+```dart
+final counter = context.observe<int>();
+```
+
+**v2.x.x**:
+```dart
+final counter = context.observe<Signal<int>>().value;
+```
+
+---
+
+`ResourceBuilder` has been removed in favor of `SignalBuilder`.
+
+**v1.x.x**:
+```dart
+ResourceBuilder(
+  resource: user,
+  builder: (context, userState) {
+    return userState.on(
+      ready: (data) { ... },
+      error: (error, stackTrace) { ... },
+      loading: () { ... },
+    );
+  },
+),
+```
+
+**v2.x.x**:
+```dart
+SignalBuilder(
+  builder: (context, child) {
+    return user.state.on(
+      ready: (data) { ... },
+      error: (error, stackTrace) { ... },
+      loading: () { ... },
+    );
+  },
+),
+```

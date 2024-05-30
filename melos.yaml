@@ -20,3 +20,5 @@ scripts:
       dir-exists: test
 
   combine_coverage: melos exec -- "\$MELOS_ROOT_PATH/scripts/combine_coverage.sh"
+
+  open_coverage: melos exec -- genhtml "\$MELOS_ROOT_PATH/lcov.info" -o "\$MELOS_ROOT_PATH/coverage/html" && open coverage/html/index.html

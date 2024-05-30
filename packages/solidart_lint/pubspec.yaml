@@ -1,8 +1,8 @@
 name: solidart_lint
 description: solidart_lint is a developer tool for users of solidart, designed to help stop common issues and simplify repetitive tasks
-version: 1.1.1
+version: 2.0.0-dev.1
 repository: https://github.com/nank1ro/solidart
-documentation: https://docs.page/nank1ro/solidart
+documentation: https://docs.page/nank1ro/solidart~dev
 topics:
   - state-management
   - signals
@@ -20,5 +20,5 @@ dependencies:
 dev_dependencies:
   lints: ^3.0.0
   test: ^1.25.2
-  solidart: ^1.5.4
-  flutter_solidart: ^1.7.0
+  solidart: ^2.0.0-dev.1
+  flutter_solidart: ^2.0.0-dev.1

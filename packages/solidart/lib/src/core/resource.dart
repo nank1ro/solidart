@@ -60,10 +60,6 @@ Resource<T> createResource<T>({
 /// In this case you just need to pass the `stream` field to the
 /// `Resource` method.
 ///
-/// If you are using the `flutter_solidart` library, check
-/// `ResourceBuilder` to learn how to react to the state of the resource in the
-/// UI.
-///
 /// The resource has a [state] named [ResourceState], that provides many useful
 /// convenience methods to correctly handle the state of the resource.
 ///
@@ -256,9 +252,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
   }
 
   /// Runs the [fetcher] for the first time.
-  ///
-  /// You may not use this method directly on Flutter apps because the
-  /// operation is already performed by `ResourceBuilder`.
   Future<void> _fetch() async {
     assert(fetcher != null, 'You are trying to fetch, but fetcher is null');
     try {

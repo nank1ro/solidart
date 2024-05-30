@@ -23,3 +23,4 @@ part 'resource.dart';
 part 'signal.dart';
 part 'signal_base.dart';
 part 'signal_options.dart';
+part 'batch.dart';

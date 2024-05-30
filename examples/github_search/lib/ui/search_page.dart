@@ -97,9 +97,10 @@ class _SearchBody extends StatelessWidget {
     return SizedBox.expand(
       child:
           // Handle the search result state
-          ResourceBuilder(
-        resource: context.get<GithubSearchBloc>().searchResult,
+          SignalBuilder(
         builder: (context, searchResultState) {
+          final searchResultState =
+              context.get<GithubSearchBloc>().searchResult.state;
           return Stack(
             children: [
               searchResultState.on(

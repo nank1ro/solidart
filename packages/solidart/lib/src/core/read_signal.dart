@@ -178,9 +178,14 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   @override
   void _mayDispose() {
     if (!options.autoDispose) return;
-    if (_listeners.isEmpty && _observers.isEmpty) {
-      dispose();
-    }
+
+    bool mayDispose() =>
+        _listeners.isEmpty && _observers.isEmpty && _disposable;
+
+    if (!mayDispose()) return;
+
+    _context.enqueueForUnobservation(this);
+    if (mayDispose()) dispose();
   }
 
   @override
@@ -202,9 +207,9 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     });
     return completer.future;
   }
-  // coverage:ignore-end
 
   void _notifySignalCreation() {
+    if (!options.trackInDevTools) return;
     for (final obs in SolidartConfig.observers) {
       obs.didCreateSignal(this);
     }
@@ -212,6 +217,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   }
 
   void _notifySignalUpdate() {
+    if (!options.trackInDevTools) return;
     for (final obs in SolidartConfig.observers) {
       obs.didUpdateSignal(this);
     }
@@ -219,6 +225,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   }
 
   void _notifySignalDisposal() {
+    if (!options.trackInDevTools) return;
     for (final obs in SolidartConfig.observers) {
       obs.didDisposeSignal(this);
     }

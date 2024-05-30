@@ -30,14 +30,14 @@ class _ToolbarState extends State<Toolbar> {
   }
 
   /// Maps the given [filter] to the correct list of todos
-  ReadSignal<int> mapFilterToTodosList(TodosFilter filter) {
+  int mapFilterToTodosCount(TodosFilter filter) {
     switch (filter) {
       case TodosFilter.all:
-        return allTodosCount;
+        return allTodosCount();
       case TodosFilter.incomplete:
-        return incompleteTodosCount;
+        return incompleteTodosCount();
       case TodosFilter.completed:
-        return completedTodosCount;
+        return completedTodosCount();
     }
   }
 
@@ -50,11 +50,10 @@ class _ToolbarState extends State<Toolbar> {
         labelColor: Colors.black,
         tabs: TodosFilter.values.map(
           (filter) {
-            final todosCount = mapFilterToTodosList(filter);
             // Each tab bar is using its specific todos count signal
             return SignalBuilder(
-              signal: todosCount,
-              builder: (context, todosCount, _) {
+              builder: (context, _) {
+                final todosCount = mapFilterToTodosCount(filter);
                 return Tab(text: '${filter.name} ($todosCount)');
               },
             );

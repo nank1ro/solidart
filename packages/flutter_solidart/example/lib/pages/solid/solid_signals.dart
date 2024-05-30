@@ -57,17 +57,15 @@ class SomeChild extends StatelessWidget {
         children: [
           // render the count value
           SignalBuilder(
-            signal: count,
-            builder: (context, value, child) {
-              return Text('count: $value');
+            builder: (context, child) {
+              return Text('count: ${count.value}');
             },
           ),
           const SizedBox(height: 8),
           // render the double count value
           SignalBuilder(
-            signal: doubleCount,
-            builder: (context, value, child) {
-              return Text('doubleCount: $value');
+            builder: (context, child) {
+              return Text('doubleCount: ${doubleCount.value}');
             },
           ),
           const SizedBox(height: 8),

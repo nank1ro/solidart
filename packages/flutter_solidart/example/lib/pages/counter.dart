@@ -17,9 +17,8 @@ class _CounterPageState extends State<CounterPage> {
       appBar: AppBar(title: const Text('Counter')),
       body: Center(
         child: SignalBuilder(
-          signal: counter,
-          builder: (context, count, _) {
-            return Text('Counter: $count');
+          builder: (_, __) {
+            return Text('Counter: ${counter()}');
           },
         ),
       ),

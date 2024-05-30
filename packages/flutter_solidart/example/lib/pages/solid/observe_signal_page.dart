@@ -26,20 +26,20 @@ class SomeChild extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // retrieve the count signal, this works only if you don't have another signal of type int
-    final count = context.observe<int>();
+    // retrieve the count signal
+    final count = context.observe<Signal<int>>();
 
     return Center(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // render the count value
-          Text('count: $count'),
+          Text('count: ${count.value}'),
           const SizedBox(height: 8),
           ElevatedButton(
             onPressed: () {
               // update the count signal value
-              context.update<int>((value) => value += 1);
+              count.updateValue((value) => value += 1);
             },
             child: const Text('Increment'),
           ),
