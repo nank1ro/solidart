@@ -7,7 +7,9 @@
 
 ### Changes from solidart
 
-- **CHORE**: Add `devToolsEnabled` option to manually disable the DevTools extension that defaults to `kDebugMode`
+- **FEAT**: Add `batch` function to execute a callback that will not side-effect until its top-most batch is completed. See docs [here](https://docs.page/nank1ro/solidart~dev/learning/batch)
+- **CHORE**: Add `trackInDevTools` to `SignalOptions` and `ResourceOptions` to disable the DevTools tracking for specific signals and resources, defaults to `SolidartConfig.devToolsEnabled`.
+
 ## 1.7.1
 
 - Update dependencies
