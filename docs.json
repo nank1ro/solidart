@@ -58,148 +58,148 @@
           "Batch",
           "/learning/batch"
         ]
-      ],
+      ]
+    ],
+    [
+      "Flutter",
       [
-        "Flutter",
         [
-          [
-            "Show",
-            "/flutter/show"
-          ],
-          [
-            "SignalBuilder",
-            "/flutter/signal-builder"
-          ],
-          [
-            "Solid",
-            "/flutter/solid"
-          ]
+          "Show",
+          "/flutter/show"
+        ],
+        [
+          "SignalBuilder",
+          "/flutter/signal-builder"
+        ],
+        [
+          "Solid",
+          "/flutter/solid"
         ]
-      ],
+      ]
+    ],
+    [
+      "Advanced",
       [
-        "Advanced",
         [
-          [
-            "Automatic disposal",
-            "/advanced/automatic-disposal"
-          ]
+          "Automatic disposal",
+          "/advanced/automatic-disposal"
         ]
-      ],
+      ]
+    ],
+    [
+      "Testing",
       [
-        "Testing",
         [
-          [
-            "Introduction",
-            "/testing/introduction"
-          ]
+          "Introduction",
+          "/testing/introduction"
         ]
-      ],
+      ]
+    ],
+    [
+      "Migration",
       [
-        "Migration",
         [
-          [
-            "Migration",
-            "/migration"
-          ]
+          "Migration",
+          "/migration"
         ]
-      ],
+      ]
+    ],
+    [
+      "API",
       [
-        "API",
         [
-          [
-            "ReadSignal",
-            "/api-docs/read-signal"
-          ],
-          [
-            "Signal",
-            "/api-docs/signal"
-          ],
-          [
-            "Computed",
-            "/api-docs/computed"
-          ],
-          [
-            "Effect",
-            "/api-docs/effect"
-          ],
-          [
-            "Resource",
-            "/api-docs/resource"
-          ],
-          [
-            "ResourceState",
-            "/api-docs/resource-state"
-          ],
-          [
-            "SignalOptions",
-            "/api-docs/signal-options"
-          ],
-          [
-            "EffectOptions",
-            "/api-docs/effect-options"
-          ],
-          [
-            "Show",
-            "/api-docs/show"
-          ],
-          [
-            "SignalBuilder",
-            "/api-docs/signal-builder"
-          ],
-          [
-            "Solid",
-            "/api-docs/solid"
-          ],
-          [
-            "Provider",
-            "/api-docs/provider"
-          ],
-          [
-            "SolidartConfig",
-            "/api-docs/solidart-config"
-          ],
-          [
-            "SolidartObserver",
-            "/api-docs/solidart-observer"
-          ]
+          "ReadSignal",
+          "/api-docs/read-signal"
+        ],
+        [
+          "Signal",
+          "/api-docs/signal"
+        ],
+        [
+          "Computed",
+          "/api-docs/computed"
+        ],
+        [
+          "Effect",
+          "/api-docs/effect"
+        ],
+        [
+          "Resource",
+          "/api-docs/resource"
+        ],
+        [
+          "ResourceState",
+          "/api-docs/resource-state"
+        ],
+        [
+          "SignalOptions",
+          "/api-docs/signal-options"
+        ],
+        [
+          "EffectOptions",
+          "/api-docs/effect-options"
+        ],
+        [
+          "Show",
+          "/api-docs/show"
+        ],
+        [
+          "SignalBuilder",
+          "/api-docs/signal-builder"
+        ],
+        [
+          "Solid",
+          "/api-docs/solid"
+        ],
+        [
+          "Provider",
+          "/api-docs/provider"
+        ],
+        [
+          "SolidartConfig",
+          "/api-docs/solidart-config"
+        ],
+        [
+          "SolidartObserver",
+          "/api-docs/solidart-observer"
         ]
-      ],
+      ]
+    ],
+    [
+      "Lints",
       [
-        "Lints",
         [
-          [
-            "All the assists",
-            "/lints/assists"
-          ],
-          [
-            "All the lints",
-            "/lints/lints"
-          ]
+          "All the assists",
+          "/lints/assists"
+        ],
+        [
+          "All the lints",
+          "/lints/lints"
         ]
-      ],
+      ]
+    ],
+    [
+      "Examples",
       [
-        "Examples",
         [
-          [
-            "General",
-            "/examples/general"
-          ],
-          [
-            "Counter",
-            "/examples/counter"
-          ],
-          [
-            "Todos",
-            "/examples/todos"
-          ],
-          [
-            "Toggle theme",
-            "/examples/toggle-theme"
-          ],
-          [
-            "Github search",
-            "/examples/github-search"
-          ]
+          "General",
+          "/examples/general"
+        ],
+        [
+          "Counter",
+          "/examples/counter"
+        ],
+        [
+          "Todos",
+          "/examples/todos"
+        ],
+        [
+          "Toggle theme",
+          "/examples/toggle-theme"
+        ],
+        [
+          "Github search",
+          "/examples/github-search"
         ]
       ]
     ]
