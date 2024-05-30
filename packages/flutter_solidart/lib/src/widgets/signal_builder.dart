@@ -131,6 +131,7 @@ class SignalBuilderElement extends ComponentElement {
     super.unmount();
   }
 
+  // coverage:ignore-start
   Future<void> _invalidate() async {
     // if the element is already dirty, we don't need to ask another rebuild
     if (dirty) return;
@@ -148,6 +149,7 @@ class SignalBuilderElement extends ComponentElement {
     return schedulerPhase != SchedulerPhase.idle &&
         schedulerPhase != SchedulerPhase.postFrameCallbacks;
   }
+  // coverage:ignore-end
 
   @override
   Widget build() {

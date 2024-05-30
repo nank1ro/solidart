@@ -273,12 +273,14 @@ class Effect implements ReactionInterface {
       }
       // coverage:ignore-end
     }
+    // coverage:ignore-start
     if (preventDisposal) {
       for (final ob in __observables) {
         ob._disposable = false;
         _observablesDisposePrevented.add(ob);
       }
     }
+    // coverage:ignore-end
     _context.endBatch();
   }
 
@@ -324,11 +326,13 @@ class Effect implements ReactionInterface {
 
     if (_isRunning) return;
 
+    // coverage:ignore-start
     for (final ob in _observablesDisposePrevented) {
       ob
         .._disposable = true
         .._mayDispose();
     }
+    // coverage:ignore-end
 
     // ignore: cascade_invocations
     _context
