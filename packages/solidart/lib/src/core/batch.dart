@@ -9,14 +9,12 @@ part of 'core.dart';
 /// final y = Signal(20);
 ///
 /// Effect((_) => print('x = ${x.value}, y = ${y.value}'));
-///
 /// // The Effect above prints 'x = 10, y = 20'
 ///
 /// batch(() {
 ///   x.value++;
 ///   y.value++;
 /// });
-///
 /// // The Effect above prints 'x = 11, y = 21'
 /// ```
 /// As you can see, the effect is not executed until the batch is completed.
