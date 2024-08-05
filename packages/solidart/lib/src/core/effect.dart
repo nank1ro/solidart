@@ -45,19 +45,6 @@ class EffectOptions {
   // coverage:ignore-end
 }
 
-// coverage:ignore-start
-
-/// {@macro effect}
-@Deprecated('Use Effect instead')
-DisposeEffect createEffect(
-  void Function(DisposeEffect dispose) callback, {
-  ErrorCallback? onError,
-  EffectOptions? options,
-}) {
-  return Effect(callback, onError: onError, options: options).dispose;
-}
-// coverage:ignore-end
-
 /// The reaction interface
 abstract class ReactionInterface implements Derivation {
   /// Indicate if the reaction is dispose
