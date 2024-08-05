@@ -1,5 +1,7 @@
 part of 'core.dart';
 
+/// coverage:ignore-start
+
 /// The type of the event emitted to the devtools
 enum DevToolsEventType {
   /// The signal was created
