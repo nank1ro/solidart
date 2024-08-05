@@ -12,7 +12,7 @@ By default when you create a `Signal`, `Computed`, `Resource` or `Effect` the li
 You can customize this behaviour for a specific trackable Object using the options, for example for a `Signal` you have to create it with `autoDispose` set to `false`.
 
 ```dart
-final counter = Signal(0, options: const SignalOptions<int>(autoDispose: false));
+final counter = Signal(0, autoDispose: false);
 ```
 
 If you want to disable it globally instead, use
