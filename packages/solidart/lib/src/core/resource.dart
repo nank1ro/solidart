@@ -1,25 +1,5 @@
 part of 'core.dart';
 
-// coverage:ignore-start
-
-/// {@macro resource}
-@Deprecated('Use Resource instead')
-Resource<T> createResource<T>({
-  Future<T> Function()? fetcher,
-  Stream<T> Function()? stream,
-  SignalBase<dynamic>? source,
-  ResourceOptions? options,
-}) {
-  return Resource<T>(
-    fetcher: fetcher,
-    stream: stream,
-    source: source,
-    options: options,
-  );
-}
-
-// coverage:ignore-end
-
 /// {@template resource}
 /// `Resources` are special `Signal`s designed specifically to handle Async
 /// loading. Their purpose is wrap async values in a way that makes them easy
@@ -97,31 +77,49 @@ class Resource<T> extends Signal<ResourceState<T>> {
   factory Resource({
     Future<T> Function()? fetcher,
     Stream<T>? Function()? stream,
-    ResourceOptions? options,
     SignalBase<dynamic>? source,
+
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// Indicates whether the resource should be computed lazily, defaults to
+    /// true.
+    bool lazy = true,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('Resource');
-    final resourceOptions =
-        (options ?? ResourceOptions(name: name)).copyWith(name: name);
-    final signalOptions = resourceOptions.toSignalOptions<T>();
     return Resource._internal(
       fetcher: fetcher,
       stream: stream,
       source: source,
-      name: name,
-      options: signalOptions,
-      resourceOptions: resourceOptions,
+      name: name ?? ReactiveContext.main.nameFor('Resource'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      lazy: lazy,
     );
   }
 
   Resource._internal({
     required super.name,
-    required super.options,
-    required this.resourceOptions,
+    required super.equals,
+    required this.lazy,
+    required super.autoDispose,
+    required super.trackInDevTools,
     this.fetcher,
     this.stream,
     this.source,
-  }) : super._internal(initialValue: ResourceState<T>.loading()) {
+  }) : super._internal(
+          initialValue: ResourceState<T>.loading(),
+          comparator: identical,
+        ) {
     if (this is! ResourceSelector) {
       assert(
         (fetcher != null) ^ (stream != null),
@@ -129,17 +127,17 @@ class Resource<T> extends Signal<ResourceState<T>> {
       );
     }
     // resolve the resource immediately if not lazy
-    if (!resourceOptions.lazy) _resolve();
+    if (!lazy) _resolve();
   }
+
+  /// Indicates whether the resource should be computed lazily, defaults to true
+  final bool lazy;
 
   /// Reactive signal values passed to the fetcher, optional.
   final SignalBase<dynamic>? source;
 
   /// The asynchrounous function used to retrieve data.
   final Future<T> Function()? fetcher;
-
-  /// The resource options
-  final ResourceOptions resourceOptions;
 
   /// The stream used to retrieve data.
   final Stream<T>? Function()? stream;
@@ -384,7 +382,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     _streamSubscriptions.clear();
     // Dispose the source, if needed
     if (source != null) {
-      if (source!.options.autoDispose && source!.listenerCount == 0) {
+      if (source!.autoDispose && source!.listenerCount == 0) {
         source!.dispose();
       }
     }
@@ -393,7 +391,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   @override
   String toString() =>
-      '''Resource<$T>(state: $_value, previousState: $_previousValue, options; $options)''';
+      '''Resource<$T>(state: $_value, previousState: $_previousValue)''';
 }
 
 /// Manages all the different states of a [Resource]:
@@ -603,11 +601,10 @@ class ResourceSelector<Input, Output> extends Resource<Output> {
     required this.selector,
     required super.name,
   }) : super._internal(
-          options: SignalOptions<ResourceState<Output>>(
-            name: name,
-            autoDispose: resource.options.autoDispose,
-          ),
-          resourceOptions: resource.resourceOptions,
+          autoDispose: resource.autoDispose,
+          trackInDevTools: resource.trackInDevTools,
+          equals: resource.equals,
+          lazy: resource.lazy,
         ) {
     // set current state
     state = _mapInputState(resource.state);

@@ -76,10 +76,7 @@ void main() {
     () {
       test('with equals true it notifies only when the value changes',
           () async {
-        final counter = Signal(
-          0,
-          options: SignalOptions<int>(equals: true, name: ''),
-        );
+        final counter = Signal(0, equals: true);
 
         final cb = MockCallbackFunction();
         final unobserve = counter.observe((_, __) => cb());
@@ -108,10 +105,7 @@ void main() {
       test(
           'with the identical comparator it notifies only when the comparator '
           'returns false', () async {
-        final signal = Signal(
-          null,
-          options: SignalOptions<_A>(),
-        );
+        final signal = Signal<_A?>(null);
         final cb = MockCallbackFunction();
         final unobserve = signal.observe((_, __) => cb());
 
@@ -324,9 +318,7 @@ void main() {
         final a = Signal(SampleList([1]));
         final selected = Computed(
           () => a().numbers,
-          options: SignalOptions<List<int>>(
-            comparator: (a, b) => const ListEquality<int>().equals(a, b),
-          ),
+          comparator: (a, b) => const ListEquality<int>().equals(a, b),
         );
 
         final cb = MockCallbackFunction();
@@ -495,7 +487,7 @@ void main() {
             return Stream.value(count());
           },
           source: count,
-          options: ResourceOptions(lazy: false),
+          lazy: false,
         );
 
         addTearDown(() {
@@ -566,7 +558,7 @@ void main() {
         Future<User> getUser() => throw Exception();
         final resource = Resource<User>(
           fetcher: getUser,
-          options: ResourceOptions(lazy: false),
+          lazy: false,
         );
 
         addTearDown(resource.dispose);
@@ -587,7 +579,7 @@ void main() {
         final resource = Resource(
           fetcher: getUser,
           source: userId,
-          options: ResourceOptions(lazy: false),
+          lazy: false,
         );
 
         await pumpEventQueue();
@@ -831,7 +823,7 @@ void main() {
       test('check toString()', () async {
         final r = Resource(
           fetcher: () => Future.value(1),
-          options: ResourceOptions(lazy: false),
+          lazy: false,
         );
         await pumpEventQueue();
         expect(
@@ -1161,7 +1153,7 @@ void main() {
       test('check set with equals', () {
         final list = ListSignal<int>(
           [1, 2],
-          options: SignalOptions(equals: true),
+          equals: true,
         );
         expect(list, [1, 2]);
         list.set([3, 4]);
@@ -1341,8 +1333,7 @@ void main() {
       });
 
       test('check set with equals', () {
-        final set =
-            SetSignal<int>({1, 2}, options: SignalOptions(equals: true));
+        final set = SetSignal<int>({1, 2}, equals: true);
         expect(set, {1, 2});
         set.set({3, 4});
         expect(set, {3, 4});
@@ -1515,7 +1506,7 @@ void main() {
       test('check set with equals', () {
         final map = MapSignal<String, int>(
           {'a': 1, 'b': 2},
-          options: SignalOptions(equals: true),
+          equals: true,
         );
         expect(map, {'a': 1, 'b': 2});
         map.set({'c': 3, 'd': 4});
@@ -1541,7 +1532,7 @@ void main() {
       test('didCreateSignal is fired on signal creation', () {
         final observer = MockSolidartObserver();
         SolidartConfig.observers.add(observer);
-        final count = Signal(0);
+        final count = Signal(0, trackInDevTools: true);
         verify(observer.didCreateSignal(count)).called(1);
       });
 

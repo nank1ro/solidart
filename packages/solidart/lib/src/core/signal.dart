@@ -1,12 +1,4 @@
 part of 'core.dart';
-// coverage:ignore-start
-
-/// {@macro signal}
-@Deprecated('Use Signal instead')
-Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
-    Signal<T>(value, options: options);
-
-// coverage:ignore-end
 
 /// {@template signal}
 /// # Signals
@@ -113,22 +105,38 @@ class Signal<T> extends ReadSignal<T> {
   /// {@macro signal}
   factory Signal(
     T initialValue, {
-    SignalOptions<T>? options,
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    ValueComparator<T?> comparator = identical,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('Signal');
-    final effectiveOptions =
-        (options ?? SignalOptions<T>(name: name)).copyWith(name: name);
     return Signal._internal(
       initialValue: initialValue,
-      options: effectiveOptions,
-      name: name,
+      name: name ?? ReactiveContext.main.nameFor('Signal'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      comparator: comparator,
     );
   }
 
   Signal._internal({
     required super.initialValue,
     required super.name,
-    required super.options,
+    required super.equals,
+    required super.autoDispose,
+    required super.trackInDevTools,
+    required super.comparator,
   }) : super._internal();
 
   /// {@macro set-signal-value}
@@ -152,5 +160,5 @@ class Signal<T> extends ReadSignal<T> {
 
   @override
   String toString() =>
-      '''Signal<$T>(value: $_value, previousValue: $_previousValue, options: $options)''';
+      '''Signal<$T>(value: $_value, previousValue: $_previousValue)''';
 }

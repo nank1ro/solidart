@@ -4,12 +4,15 @@ part of 'core.dart';
 /// The global configuration of the reactive system.
 /// {@endtemplate}
 abstract class SolidartConfig {
+  /// {@macro SignalBase.equals}
+  static bool equals = false;
+
   /// Whether to enable the auto disposal of the reactive system, defaults to
   /// true.
   static bool autoDispose = true;
 
-  /// Whether to enable the DevTools extension, defaults to kDebugMode.
-  static bool devToolsEnabled = true;
+  /// Whether to enable the DevTools extension, defaults to false.
+  static bool devToolsEnabled = false;
 
   /// The list of observers.
   static final observers = <SolidartObserver>[];

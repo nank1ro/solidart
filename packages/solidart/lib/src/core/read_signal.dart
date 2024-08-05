@@ -1,9 +1,6 @@
 part of 'core.dart';
 
 /// {@macro readsignal}
-@Deprecated(
-  '''Use ReadSignal instead. It will be removed in future releases.''',
-)
 typedef ReadableSignal<T> = ReadSignal<T>;
 
 /// {@template readsignal}
@@ -20,25 +17,57 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   /// {@macro readsignal}
   factory ReadSignal(
     T initialValue, {
-    SignalOptions<T>? options,
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    ValueComparator<T?> comparator = identical,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('ReadSignal');
-    final effectiveOptions =
-        (options ?? SignalOptions<T>(name: name)).copyWith(name: name);
     return ReadSignal._internal(
       initialValue: initialValue,
-      options: effectiveOptions,
-      name: name,
+      name: name ?? ReactiveContext.main.nameFor('ReadSignal'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      comparator: comparator,
     );
   }
 
   ReadSignal._internal({
     required T initialValue,
     required super.name,
-    required this.options,
+    required this.equals,
+    required this.autoDispose,
+    required this.trackInDevTools,
+    required this.comparator,
   }) : _value = initialValue {
     _notifySignalCreation();
   }
+
+  /// {@macro SignalBase.equals}
+  @override
+  final bool equals;
+
+  /// {@macro SignalBase.autoDispose}
+  @override
+  final bool autoDispose;
+
+  /// {@macro SignalBase.trackInDevTools}
+  @override
+  final bool trackInDevTools;
+
+  /// {@macro SignalBase.comparator}
+  @override
+  final ValueComparator<T?> comparator;
 
   // Tracks the internal value
   T _value;
@@ -93,12 +122,12 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   /// Indicates if the [oldValue] and the [newValue] are equal
   bool _areEqual(T? oldValue, T? newValue) {
     // skip if the value are equals
-    if (options.equals) {
+    if (equals) {
       return oldValue == newValue;
     }
 
     // return the [comparator] result
-    return options.comparator!(oldValue, newValue);
+    return comparator(oldValue, newValue);
   }
 
   @override
@@ -122,9 +151,6 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     _previousValue = value;
     _hasPreviousValue = true;
   }
-
-  @override
-  final SignalOptions<T> options;
 
   bool _disposed = false;
 
@@ -177,7 +203,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   @override
   void _mayDispose() {
-    if (!options.autoDispose) return;
+    if (!autoDispose) return;
 
     bool mayDispose() =>
         _listeners.isEmpty && _observers.isEmpty && _disposable;
@@ -209,30 +235,30 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   }
 
   void _notifySignalCreation() {
-    if (!options.trackInDevTools) return;
     for (final obs in SolidartConfig.observers) {
       obs.didCreateSignal(this);
     }
+    if (!trackInDevTools) return;
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.created);
   }
 
   void _notifySignalUpdate() {
-    if (!options.trackInDevTools) return;
     for (final obs in SolidartConfig.observers) {
       obs.didUpdateSignal(this);
     }
+    if (!trackInDevTools) return;
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
   }
 
   void _notifySignalDisposal() {
-    if (!options.trackInDevTools) return;
     for (final obs in SolidartConfig.observers) {
       obs.didDisposeSignal(this);
     }
+    if (!trackInDevTools) return;
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.disposed);
   }
 
   @override
   String toString() =>
-      '''ReadSignal<$T>(value: $_value, previousValue: $_previousValue, options: $options)''';
+      '''ReadSignal<$T>(value: $_value, previousValue: $_previousValue)''';
 }

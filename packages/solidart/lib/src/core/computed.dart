@@ -1,17 +1,5 @@
 part of 'core.dart';
 
-// coverage:ignore-start
-
-/// {@macro computed}
-@Deprecated('Use Computed instead')
-Computed<T> createComputed<T>(
-  T Function() selector, {
-  SignalOptions<T>? options,
-}) =>
-    Computed<T>(selector, options: options);
-
-// coverage:ignore-end
-
 /// {@template computed}
 /// A special Signal that notifies only whenever the selected
 /// values change.
@@ -66,22 +54,38 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   /// {@macro computed}
   factory Computed(
     T Function() selector, {
-    SignalOptions<T>? options,
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    ValueComparator<T?> comparator = identical,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('Computed');
-    final effectiveOptions =
-        (options ?? SignalOptions<T>(name: name)).copyWith(name: name);
     return Computed._internal(
       selector: selector,
-      name: name,
-      options: effectiveOptions,
+      name: name ?? ReactiveContext.main.nameFor('Computed'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      comparator: comparator,
     );
   }
 
   Computed._internal({
     required this.selector,
     required super.name,
-    required super.options,
+    required super.equals,
+    required super.autoDispose,
+    required super.trackInDevTools,
+    required super.comparator,
   }) : super._internal(initialValue: selector());
 
   /// The selector applied
@@ -231,5 +235,5 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
 
   @override
   String toString() =>
-      '''Computed<$T>(value: $_value, previousValue: $_previousValue, options; $options)''';
+      '''Computed<$T>(value: $_value, previousValue: $_previousValue)''';
 }

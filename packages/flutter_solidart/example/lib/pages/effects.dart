@@ -9,7 +9,7 @@ class EffectsPage extends StatefulWidget {
 }
 
 class _EffectsPageState extends State<EffectsPage> {
-  final count = Signal(0, options: SignalOptions(name: 'count'));
+  final count = Signal(0, name: 'count');
   late final DisposeEffect disposeEffect;
 
   @override

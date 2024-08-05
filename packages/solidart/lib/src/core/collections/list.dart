@@ -17,22 +17,38 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// {@macro list-signal}
   factory ListSignal(
     Iterable<E> initialValue, {
-    SignalOptions<List<E>>? options,
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    ValueComparator<List<E>?> comparator = identical,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('ListSignal');
-    final effectiveOptions =
-        (options ?? SignalOptions<List<E>>(name: name)).copyWith(name: name);
     return ListSignal._internal(
       initialValue: initialValue.toList(),
-      options: effectiveOptions,
-      name: name,
+      name: name ?? ReactiveContext.main.nameFor('ListSignal'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      comparator: comparator,
     );
   }
 
   ListSignal._internal({
     required super.initialValue,
     required super.name,
-    required super.options,
+    required super.equals,
+    required super.autoDispose,
+    required super.trackInDevTools,
+    required super.comparator,
   }) : super._internal();
 
   @override
@@ -52,12 +68,12 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   @override
   bool _areEqual(List<E>? oldValue, List<E>? newValue) {
     // skip if the value are equals
-    if (options.equals) {
+    if (equals) {
       return ListEquality<E>().equals(oldValue, newValue);
     }
 
     // return the [comparator] result
-    return options.comparator!(oldValue, newValue);
+    return comparator(oldValue, newValue);
   }
 
   /// The number of objects in this list.
@@ -909,7 +925,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
 
   @override
   String toString() =>
-      '''ListSignal<$E>(value: $_value, previousValue: $_previousValue, options; $options)''';
+      '''ListSignal<$E>(value: $_value, previousValue: $_previousValue)''';
 
   void _notifyChanged() {
     _reportChanged();
