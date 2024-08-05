@@ -91,7 +91,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   /// Sets the current signal value with [newValue].
   ///
   /// This operation may be skipped if the value is equal to the previous one,
-  /// check [SignalOptions.equals] and [SignalOptions.comparator].
+  /// check [equals] and [comparator].
   /// {@endtemplate}
   void _setValue(T newValue) {
     // skip if the value are equals

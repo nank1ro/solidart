@@ -5,6 +5,9 @@ part of 'core.dart';
 /// A callback that stops an observation when called
 typedef DisposeObservation = void Function();
 
+/// A custom comparator function
+typedef ValueComparator<T> = bool Function(T a, T b);
+
 /// The base of a signal.
 abstract class SignalBase<T> {
   /// The base of a signal.
