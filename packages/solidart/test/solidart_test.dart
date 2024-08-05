@@ -1532,7 +1532,7 @@ void main() {
       test('didCreateSignal is fired on signal creation', () {
         final observer = MockSolidartObserver();
         SolidartConfig.observers.add(observer);
-        final count = Signal(0, trackInDevTools: true);
+        final count = Signal(0);
         verify(observer.didCreateSignal(count)).called(1);
       });
 
