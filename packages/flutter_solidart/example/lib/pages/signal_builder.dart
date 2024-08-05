@@ -9,8 +9,8 @@ class SignalBuilderPage extends StatefulWidget {
 }
 
 class _SignalBuilderPageState extends State<SignalBuilderPage> {
-  final counter1 = Signal(0, options: SignalOptions(name: 'counter1'));
-  final counter2 = Signal(0, options: SignalOptions(name: 'counter2'));
+  final counter1 = Signal(0, name: 'counter1');
+  final counter2 = Signal(0, name: 'counter2');
 
   @override
   Widget build(BuildContext context) {

@@ -18,19 +18,18 @@ import 'package:flutter_solidart/flutter_solidart.dart';
 class Logger implements SolidartObserver {
   @override
   void didCreateSignal(SignalBase<Object?> signal) {
-    dev.log(
-        'didCreateSignal(name: ${signal.options.name}, value: ${signal.value})');
+    dev.log('didCreateSignal(name: ${signal.name}, value: ${signal.value})');
   }
 
   @override
   void didDisposeSignal(SignalBase<Object?> signal) {
-    dev.log('didDisposeSignal(name: ${signal.options.name})');
+    dev.log('didDisposeSignal(name: ${signal.name})');
   }
 
   @override
   void didUpdateSignal(SignalBase<Object?> signal) {
     dev.log(
-        'didUpdateSignal(name: ${signal.options.name}, previousValue: ${signal.previousValue}, value: ${signal.value})');
+        'didUpdateSignal(name: ${signal.name}, previousValue: ${signal.previousValue}, value: ${signal.value})');
   }
 }
 

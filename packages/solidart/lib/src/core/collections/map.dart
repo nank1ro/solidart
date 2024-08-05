@@ -17,22 +17,38 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// {@macro map-signal}
   factory MapSignal(
     Map<K, V> initialValue, {
-    SignalOptions<Map<K, V>>? options,
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    ValueComparator<Map<K, V>?> comparator = identical,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('MapSignal');
-    final effectiveOptions =
-        (options ?? SignalOptions<Map<K, V>>(name: name)).copyWith(name: name);
     return MapSignal._internal(
       initialValue: Map<K, V>.of(initialValue),
-      options: effectiveOptions,
-      name: name,
+      name: name ?? ReactiveContext.main.nameFor('MapSignal'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      comparator: comparator,
     );
   }
 
   MapSignal._internal({
     required super.initialValue,
     required super.name,
-    required super.options,
+    required super.equals,
+    required super.autoDispose,
+    required super.trackInDevTools,
+    required super.comparator,
   }) : super._internal();
 
   @override
@@ -52,12 +68,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   @override
   bool _areEqual(Map<K, V>? oldValue, Map<K, V>? newValue) {
     // skip if the value are equals
-    if (options.equals) {
+    if (equals) {
       return MapEquality<K, V>().equals(oldValue, newValue);
     }
 
     // return the [comparator] result
-    return options.comparator!(oldValue, newValue);
+    return comparator(oldValue, newValue);
   }
 
   /// The value for the given [key], or `null` if [key] is not in the map.
@@ -417,7 +433,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
 
   @override
   String toString() =>
-      '''MapSignal<$K, $V>(value: $_value, previousValue: $_previousValue, options; $options)''';
+      '''MapSignal<$K, $V>(value: $_value, previousValue: $_previousValue)''';
 
   void _notifyChanged() {
     _reportChanged();

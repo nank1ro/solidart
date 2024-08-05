@@ -17,22 +17,38 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// {@macro set-signal}
   factory SetSignal(
     Iterable<E> initialValue, {
-    SignalOptions<Set<E>>? options,
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    ValueComparator<Set<E>?> comparator = identical,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('SetSignal');
-    final effectiveOptions =
-        (options ?? SignalOptions<Set<E>>(name: name)).copyWith(name: name);
     return SetSignal._internal(
       initialValue: initialValue.toSet(),
-      options: effectiveOptions,
-      name: name,
+      name: name ?? ReactiveContext.main.nameFor('SetSignal'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      comparator: comparator,
     );
   }
 
   SetSignal._internal({
     required super.initialValue,
     required super.name,
-    required super.options,
+    required super.equals,
+    required super.autoDispose,
+    required super.trackInDevTools,
+    required super.comparator,
   }) : super._internal();
 
   @override
@@ -52,12 +68,12 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   @override
   bool _areEqual(Set<E>? oldValue, Set<E>? newValue) {
     // skip if the value are equals
-    if (options.equals) {
+    if (equals) {
       return SetEquality<E>().equals(oldValue, newValue);
     }
 
     // return the [comparator] result
-    return options.comparator!(oldValue, newValue);
+    return comparator(oldValue, newValue);
   }
 
   /// Adds [value] to the set.
@@ -459,7 +475,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
 
   @override
   String toString() =>
-      '''SetSignal<$E>(value: $_value, previousValue: $_previousValue, options; $options)''';
+      '''SetSignal<$E>(value: $_value, previousValue: $_previousValue)''';
 
   void _notifyChanged() {
     _reportChanged();

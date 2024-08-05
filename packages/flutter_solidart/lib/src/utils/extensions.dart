@@ -19,8 +19,24 @@ extension SignalToValueNotifier<T> on SignalBase<T> {
 /// {@endtemplate}
 extension ValueNotifierToSignal<T> on ValueNotifier<T> {
   /// {@macro value-notifier-to-signal}
-  Signal<T> toSignal() {
-    final signal = Signal(value, options: SignalOptions<T>(equals: true));
+  Signal<T> toSignal({
+    /// {macro SignalBase.name}
+    String? name,
+
+    /// {macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+  }) {
+    final signal = Signal(
+      value,
+      equals: true,
+      name: name,
+      autoDispose: autoDispose,
+      trackInDevTools: trackInDevTools,
+    );
+
     void setValue() => signal.set(value);
     addListener(setValue);
     signal.onDispose(() => removeListener(setValue));

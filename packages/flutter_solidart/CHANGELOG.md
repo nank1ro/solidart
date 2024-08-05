@@ -1,3 +1,10 @@
+## 2.0.0-dev.2
+
+### Changes from solidart
+
+- *CHORE*: Remove deprecated `createSignal`, `createComputed`, `createEffect` and `createResource` helpers.
+- *CHORE*: Remove `SignalOptions` and `ResourceOptions` classes.
+
 ## 2.0.0-dev.1
 
 - **FEAT**: The `SignalBuilder` widget now automatically tracks the `Signal`s used in the `builder` function allowing you to react to N signals at the same time. See the [migration guide](https://docs.page/nank1ro/solidart~dev/migration).

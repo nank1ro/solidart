@@ -74,3 +74,16 @@ SignalBuilder(
   },
 ),
 ```
+---
+
+Removed `SignalOptions` and `ResourceOptions` classes.
+
+**v1.x.x**:
+```dart
+final counter = Signal(0, options: const SignalOptions<int>(name: 'counter'));
+```
+
+**v2.x.x**:
+```dart
+final counter = Signal(0, name: 'counter');
+```

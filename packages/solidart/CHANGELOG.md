@@ -1,3 +1,8 @@
+## 2.0.0-dev.2
+
+- *CHORE*: Remove deprecated `createSignal`, `createComputed`, `createEffect` and `createResource` helpers.
+- *CHORE*: Remove `SignalOptions` and `ResourceOptions` classes.
+
 ## 2.0.0-dev.1
 
 - **FEAT**: Add `batch` function to execute a callback that will not side-effect until its top-most batch is completed. See docs [here](https://docs.page/nank1ro/solidart~dev/learning/batch)

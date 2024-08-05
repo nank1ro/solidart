@@ -15,8 +15,7 @@ class MapSignalPage extends StatefulWidget {
 }
 
 class _MapSignalPageState extends State<MapSignalPage> {
-  final items =
-      MapSignal({'a': 1, 'b': 2}, options: SignalOptions(name: 'items'));
+  final items = MapSignal({'a': 1, 'b': 2}, name: 'items');
 
   @override
   void initState() {

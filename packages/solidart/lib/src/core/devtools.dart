@@ -1,18 +1,6 @@
 part of 'core.dart';
 
-// coverage:ignore-start
-bool get _devtoolsEnabled {
-  if (!SolidartConfig.devToolsEnabled) return false;
-  var debugMode = false;
-  assert(
-    () {
-      debugMode = true;
-      return true;
-    }(),
-    '',
-  );
-  return debugMode;
-}
+/// coverage:ignore-start
 
 /// The type of the event emitted to the devtools
 enum DevToolsEventType {
@@ -49,7 +37,7 @@ void _notifyDevToolsAboutSignal(
   ReadSignal<Object?> signal, {
   required DevToolsEventType eventType,
 }) {
-  if (!_devtoolsEnabled) return;
+  if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
   final eventName = 'solidart.signal.${eventType.name}';
   var value = signal._value;
   var previousValue = signal._previousValue;
@@ -61,7 +49,7 @@ void _notifyDevToolsAboutSignal(
   final jsonPreviousValue = _toJson(previousValue);
 
   dev.postEvent(eventName, {
-    'name': signal.options.name,
+    'name': signal.name,
     'value': jsonValue,
     'previousValue': jsonPreviousValue,
     'hasPreviousValue': signal._hasPreviousValue,
@@ -78,7 +66,7 @@ void _notifyDevToolsAboutSignal(
     if (signal._hasPreviousValue)
       'previousValueType': previousValue.runtimeType.toString(),
     'disposed': signal._disposed,
-    'autoDispose': signal.options.autoDispose,
+    'autoDispose': signal.autoDispose,
     'listenerCount': signal.listenerCount,
     'lastUpdate': DateTime.now().toIso8601String(),
   });
