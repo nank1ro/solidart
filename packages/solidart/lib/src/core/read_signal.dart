@@ -49,9 +49,18 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     required this.autoDispose,
     required this.trackInDevTools,
     required this.comparator,
-  }) : _value = initialValue {
+  })  : _value = initialValue,
+        _hasValue = true {
     _notifySignalCreation();
   }
+
+  ReadSignal._internalLazy({
+    required super.name,
+    required this.equals,
+    required this.autoDispose,
+    required this.trackInDevTools,
+    required this.comparator,
+  }) : _hasValue = false;
 
   /// {@macro SignalBase.equals}
   @override
@@ -70,7 +79,15 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   final ValueComparator<T?> comparator;
 
   // Tracks the internal value
-  T _value;
+  late T _value;
+
+  @override
+  bool get hasValue {
+    _reportObserved();
+    return _hasValue;
+  }
+
+  bool _hasValue = false;
 
   // Tracks the internal previous value
   T? _previousValue;
@@ -83,6 +100,11 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   @override
   T get value {
+    if (!_hasValue) {
+      throw StateError(
+        '''The signal named "$name" is lazy and has not been initialized yet, cannot access its value''',
+      );
+    }
     _reportObserved();
     return _value;
   }
@@ -94,19 +116,27 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   /// check [equals] and [comparator].
   /// {@endtemplate}
   void _setValue(T newValue) {
+    final firstValue = !_hasValue;
+    _hasValue = true;
+
     // skip if the value are equals
-    if (_areEqual(_value, newValue)) {
+    if (!firstValue && _areEqual(_value, newValue)) {
       return;
     }
 
     // store the previous value
-    _setPreviousValue(_value);
+    if (!firstValue) _setPreviousValue(_value);
 
     // notify with the new value
     _value = newValue;
     _reportChanged();
     _notifyListeners();
-    _notifySignalUpdate();
+
+    if (firstValue) {
+      _notifySignalCreation();
+    } else {
+      _notifySignalUpdate();
+    }
   }
 
   void _notifyListeners() {

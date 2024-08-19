@@ -219,6 +219,20 @@ void main() {
         signal.toggle();
         expect(signal(), true);
       });
+
+      test('lazy Signal', () {
+        final signal = Signal<bool>.lazy();
+        expect(signal.hasValue, false);
+        signal.value = true;
+        expect(signal.hasValue, true);
+      });
+
+      test(
+          '''lazy Signal trows StateError when accessing value before setting one''',
+          () {
+        final signal = Signal<bool>.lazy();
+        expect(() => signal.value, throwsStateError);
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
