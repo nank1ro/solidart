@@ -16,7 +16,7 @@ dependencies:
   flutter:
     sdk: flutter
   meta: ^1.11.0
-  solidart: ^2.0.0-dev.1
+  solidart: ^2.0.0-dev.3
 
 dev_dependencies:
   flutter_test:

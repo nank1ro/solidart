@@ -3,6 +3,7 @@ import 'dart:developer' as dev;
 import 'package:example/pages/counter.dart';
 import 'package:example/pages/derived_signal.dart';
 import 'package:example/pages/effects.dart';
+import 'package:example/pages/lazy_counter.dart';
 import 'package:example/pages/map_signal.dart';
 import 'package:example/pages/resource.dart';
 import 'package:example/pages/set_signal.dart';
@@ -59,6 +60,7 @@ class MyApp extends StatelessWidget {
 // Maps the routes to the specific widget page.
 final routes = <String, WidgetBuilder>{
   '/counter': (_) => const CounterPage(),
+  '/lazy-counter': (_) => const LazyCounterPage(),
   '/show': (_) => const ShowPage(),
   '/derived-signal': (_) => const DerivedSignalsPage(),
   '/effects': (_) => const EffectsPage(),
