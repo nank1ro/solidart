@@ -60,6 +60,9 @@ abstract class SignalBase<T> {
   /// The current signal value
   T get value;
 
+  /// Whether or not the signal has been initialized with a value.
+  bool get hasValue;
+
   /// The current signal value
   T call();
 

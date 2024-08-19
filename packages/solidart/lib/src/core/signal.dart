@@ -130,6 +130,36 @@ class Signal<T> extends ReadSignal<T> {
     );
   }
 
+  /// {@macro signal}
+  ///
+  /// This is a lazy signal, it doesn't have a value at the moment of creation.
+  /// But would throw a StateError if you try to access the value before setting
+  /// one.
+  factory Signal.lazy({
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    ValueComparator<T?> comparator = identical,
+  }) {
+    return Signal._internalLazy(
+      name: name ?? ReactiveContext.main.nameFor('Signal'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      comparator: comparator,
+    );
+  }
+
   Signal._internal({
     required super.initialValue,
     required super.name,
@@ -138,6 +168,14 @@ class Signal<T> extends ReadSignal<T> {
     required super.trackInDevTools,
     required super.comparator,
   }) : super._internal();
+
+  Signal._internalLazy({
+    required super.name,
+    required super.equals,
+    required super.autoDispose,
+    required super.trackInDevTools,
+    required super.comparator,
+  }) : super._internalLazy();
 
   /// {@macro set-signal-value}
   set value(T newValue) => set(newValue);
