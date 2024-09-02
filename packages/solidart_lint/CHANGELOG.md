@@ -1,3 +1,7 @@
+## 2.0.0-dev.2
+
+- Fix `LintCode` issue (thanks to @manuel-plavsic)
+
 ## 2.0.0-dev.1
 
 - Remove the deprecated `invalid_observe_type` lint

@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/error/error.dart' hide LintCode;
+import 'package:analyzer/error/error.dart' as analyzer_error;
 import 'package:analyzer/error/listener.dart';
 import 'package:collection/collection.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
@@ -10,7 +10,7 @@ class AvoidDynamicProvider extends DartLintRule {
 
   static const _code = LintCode(
     name: 'avoid_dynamic_provider',
-    errorSeverity: ErrorSeverity.ERROR,
+    errorSeverity: analyzer_error.ErrorSeverity.ERROR,
     problemMessage: 'The Provider cannot be dynamic',
   );
 
@@ -43,8 +43,8 @@ class _ProviderTypeFix extends DartFix {
     CustomLintResolver resolver,
     ChangeReporter reporter,
     CustomLintContext context,
-    AnalysisError analysisError,
-    List<AnalysisError> others,
+    analyzer_error.AnalysisError analysisError,
+    List<analyzer_error.AnalysisError> others,
   ) {
     context.registry.addInstanceCreationExpression(
       (node) {
