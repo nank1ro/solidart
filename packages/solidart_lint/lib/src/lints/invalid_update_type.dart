@@ -1,14 +1,13 @@
-import 'package:analyzer/error/error.dart';
+import 'package:analyzer/error/error.dart' hide LintCode;
 import 'package:collection/collection.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:solidart_lint/src/types.dart';
-import 'package:custom_lint_core/custom_lint_core.dart' as lint_codes;
 
 class InvalidUpdateType extends DartLintRule {
   const InvalidUpdateType() : super(code: _code);
 
-  static const _code = lint_codes.LintCode(
+  static const _code = LintCode(
     name: 'invalid_update_type',
     errorSeverity: ErrorSeverity.ERROR,
     problemMessage: 'The update type is invalid, must not implement SignalBase',

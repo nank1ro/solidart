@@ -1,15 +1,14 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/error/error.dart';
+import 'package:analyzer/error/error.dart' hide LintCode;
 import 'package:analyzer/error/listener.dart';
 import 'package:collection/collection.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:solidart_lint/src/types.dart';
-import 'package:custom_lint_core/custom_lint_core.dart' as lint_codes;
 
 class AvoidDynamicProvider extends DartLintRule {
   const AvoidDynamicProvider() : super(code: _code);
 
-  static const _code = lint_codes.LintCode(
+  static const _code = LintCode(
     name: 'avoid_dynamic_provider',
     errorSeverity: ErrorSeverity.ERROR,
     problemMessage: 'The Provider cannot be dynamic',
