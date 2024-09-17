@@ -1,3 +1,7 @@
+## 1.1.2
+
+- Fix `LintCode` issue (thanks to @manuel-plavsic)
+
 ## 1.1.1
 
 - Update dependencies

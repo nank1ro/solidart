@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/error/error.dart';
+import 'package:analyzer/error/error.dart' as analyzer_error;
 import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:solidart_lint/src/types.dart';
@@ -9,7 +9,7 @@ class MissingSolidGetType extends DartLintRule {
 
   static const _code = LintCode(
     name: 'missing_solid_get_type',
-    errorSeverity: ErrorSeverity.ERROR,
+    errorSeverity: analyzer_error.ErrorSeverity.ERROR,
     problemMessage: 'Specify the provider or signal type you want to get',
   );
 
