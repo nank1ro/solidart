@@ -1,4 +1,4 @@
-import 'package:analyzer/error/error.dart';
+import 'package:analyzer/error/error.dart' as analyzer_error;
 import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:solidart_lint/src/types.dart';
@@ -8,7 +8,7 @@ class InvalidObserveType extends DartLintRule {
 
   static const _code = LintCode(
     name: 'invalid_observe_type',
-    errorSeverity: ErrorSeverity.ERROR,
+    errorSeverity: analyzer_error.ErrorSeverity.ERROR,
     problemMessage:
         'The observe type is invalid, must not implement SignalBase',
   );
