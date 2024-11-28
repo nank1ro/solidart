@@ -102,3 +102,38 @@ class HomePage extends StatelessWidget {
     );
   }
 }
+
+class MyClass {
+  final counter = Signal(0);
+}
+
+class MyExample extends StatefulWidget {
+  const MyExample({super.key});
+
+  @override
+  State<MyExample> createState() => _MyExampleState();
+}
+
+class _MyExampleState extends State<MyExample> {
+  final myClass = MyClass();
+
+  @override
+  void initState() {
+    super.initState();
+    Effect((_) {
+      if (myClass.counter() == 10) {
+        print('show popup');
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Solid(
+      providers: [
+        Provider<MyClass>(create: () => myClass),
+      ],
+      child: const Text('wathever'),
+    );
+  }
+}
