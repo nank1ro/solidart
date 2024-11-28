@@ -1,0 +1,6 @@
+{
+  "appTitle": "flutter_arch_comp",
+  "@appTitle": {
+    "description": "The title of the application"
+  }
+}
