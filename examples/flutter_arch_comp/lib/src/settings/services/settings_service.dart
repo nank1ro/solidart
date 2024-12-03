@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// A service that stores and retrieves user settings.
 ///
@@ -16,6 +15,3 @@ class SettingsService {
     // http package to persist settings over the network.
   }
 }
-
-/// settingsServiceProvider provides the settings service
-final settingsServiceProvider = Provider((_) => SettingsService());

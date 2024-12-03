@@ -17,8 +17,8 @@ dependencies:
 
   # https://pub.dev/packages/cached_network_image
   cached_network_image: ^3.4.1
-  # https://pub.dev/packages/flutter_riverpod
-  flutter_riverpod: ^2.4.10
+  # https://pub.dev/packages/flutter_solidart
+  flutter_solidart: ^2.0.0-dev.2
   # https://pub.dev/packages/flutter_svg
   flutter_svg: ^2.0.16
   # https://pub.dev/packages/http
@@ -37,6 +37,8 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   # https://pub.dev/packages/json_serializable
   json_serializable: ^6.9.0
+  solidart_lint: ^2.0.0-dev.2
+  custom_lint: ^0.6.8
 
 flutter:
   uses-material-design: true

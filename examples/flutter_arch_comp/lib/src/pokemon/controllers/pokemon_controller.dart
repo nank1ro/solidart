@@ -1,26 +1,29 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_arch_comp/src/pokemon/models/data/pokemon.dart';
-import 'package:flutter_arch_comp/src/pokemon/models/repositories/pokemon_repository.dart';
 import 'package:flutter_arch_comp/src/pokemon/views/ui_states/pokemon_ui_state.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
 
 import '../../core/models/repositories/repository.dart';
 import '../../core/utils/demo_hacks_helper.dart';
 
 /// PokemonController represents the controller of the pokemon page
 class PokemonController extends ChangeNotifier {
-  PokemonController(this.pokemonRepository) {
-    _pokemonSubscription = pokemonRepository.watchAll().listen((pokemon) async {
-      _onData(pokemon);
-    });
-  }
-
+  PokemonController(this.pokemonRepository);
   final Repository<Pokemon> pokemonRepository;
-  late final StreamSubscription _pokemonSubscription;
-  PokemonUiState _state = PokemonUiState();
-  PokemonUiState get state => _state;
+
+  late final _pokemons = Resource<List<PokemonItemUiState>>(stream: () {
+    return pokemonRepository
+        .watchAll()
+        .transform(StreamTransformer.fromHandlers(handleData: (pokemons, sink) {
+      sink.add(UnmodifiableListView(
+          pokemons.map((p) => PokemonItemUiState.fromPokemon(p)).toList()));
+    }));
+  });
+
+  late final pokemons = _pokemons.toReadSignal();
 
   Future<void> create(Pokemon pokemon) async {
     /// demo only, the param 'pokemon' passed to create() is not really used;
@@ -62,7 +65,6 @@ class PokemonController extends ChangeNotifier {
     _onLoading();
     try {
       await pokemonRepository.refresh();
-      // _onData is handled through watchPokemon
     } on Exception catch (e) {
       _onError('Unable to refresh pokemon, $e');
     }
@@ -83,54 +85,30 @@ class PokemonController extends ChangeNotifier {
 
   @override
   void dispose() {
-    _pokemonSubscription.cancel();
     pokemonRepository.dispose();
     super.dispose();
-  }
-
-  void consumeError() {
-    _state = _state.copy(errorMsg: '');
-    notifyListeners();
   }
 
   /// demo only
   void resetLocal() {
     DemoHacksHelper.instance.resetLocal();
-    _state = _state.copy(pokemon: []);
+    _pokemons.state = ResourceReady([]);
     notifyListeners();
   }
 
   void _onLoading() {
-    _state = _state.copy(
-      pokemon: null,
-      isFetchingPokemon: true,
-      errorMsg: '',
+    _pokemons.update(
+      (state) => state.map(
+        ready: (ready) {
+          return ready.copyWith(isRefreshing: true);
+        },
+        error: (error) {
+          return error.copyWith(isRefreshing: true);
+        },
+        loading: (_) {
+          return ResourceState.loading();
+        },
+      ),
     );
-    notifyListeners();
-  }
-
-  void _onData(List<Pokemon> data) {
-    _state = _state.copy(
-      pokemon: data.map((p) => PokemonItemUiState.fromPokemon(p)).toList(),
-      isFetchingPokemon: false,
-      errorMsg: '',
-    );
-    notifyListeners();
-  }
-
-  void _onError(String msg) {
-    // unsuccessful case, keep previous data
-    _state = _state.copy(
-      pokemon: null,
-      isFetchingPokemon: false,
-      errorMsg: msg,
-    );
-    notifyListeners();
   }
 }
-
-/// pokemonControllerProvider provides the pokemon controller
-final pokemonControllerProvider = ChangeNotifierProvider((ref) {
-  final pokemonRepository = ref.read(pokemonRepositoryProvider);
-  return PokemonController(pokemonRepository);
-});

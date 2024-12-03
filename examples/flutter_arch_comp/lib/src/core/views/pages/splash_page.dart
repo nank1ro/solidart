@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_arch_comp/src/core/views/pages/home_page.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_arch_comp/src/settings/controllers/settings_controller.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
 
-import '../../../settings/controllers/settings_controller.dart';
-
-class SplashPage extends ConsumerStatefulWidget {
+class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
   static const routeName = '/';
 
   @override
-  ConsumerState<SplashPage> createState() => _SplashPageState();
+  State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends ConsumerState<SplashPage> {
+class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
@@ -32,10 +31,8 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   Future<void> _afterSplash(BuildContext context) async {
     // initialize the settings controller
-    await ref.read(settingsControllerProvider).loadSettings();
-    if (!context.mounted) {
-      return;
-    }
+    await context.get<SettingsController>().loadSettings();
+    if (!context.mounted) return;
     Navigator.restorablePushNamed(context, HomePage.routeName);
   }
 }

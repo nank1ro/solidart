@@ -1,31 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_arch_comp/src/core/utils/extensions.dart';
+import 'package:flutter_arch_comp/src/pokemon/models/repositories/pokemon_repository.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
 
 import '../../../core/views/widgets/circular_image.dart';
 import '../../controllers/pokemon_details_controller.dart';
 import '../widgets/loading_indicator.dart';
 
 /// Displays detailed information about a pokemon
-class PokemonDetailsPage extends StatelessWidget {
-  const PokemonDetailsPage({super.key});
+class PokemonDetailsPage extends StatefulWidget {
+  const PokemonDetailsPage({super.key, required this.pokemonId});
 
   static const routeName = 'pokemon_details';
+  final String pokemonId;
 
   @override
-  Widget build(BuildContext context) {
-    final pokemonId =
-        (ModalRoute.of(context)!.settings.arguments as PokemonDetailsViewArgs)
-            .id;
+  State<PokemonDetailsPage> createState() => _PokemonDetailsPageState();
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pokemon Details'),
+class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Solid(
+      providers: [
+        Provider<PokemonDetailsController>(
+            create: () => PokemonDetailsController(
+                context.get<PokemonRepository>(), widget.pokemonId))
+      ],
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Pokemon Details'),
+        ),
+        body: _PokemonDetailsPanel(widget.pokemonId),
       ),
-      body: Stack(children: [
-        _PokemonDetailsPanel(pokemonId),
-        _LoadingIndicator(pokemonId),
-        _ErrorIndicator(pokemonId),
-      ]),
     );
   }
 }
@@ -35,73 +42,73 @@ class PokemonDetailsViewArgs {
   const PokemonDetailsViewArgs(this.id);
 }
 
-class _LoadingIndicator extends ConsumerWidget {
-  const _LoadingIndicator(this.id);
-  final String id;
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isFetchingPokemon = ref.watch(pokemonDetailsControllerProvider(id)
-        .select((c) => c.state.isFetchingPokemon));
-    return isFetchingPokemon
-        ? const LoadingIndicator()
-        : const SizedBox.shrink();
-  }
-}
-
-class _PokemonDetailsPanel extends ConsumerWidget {
+class _PokemonDetailsPanel extends StatefulWidget {
   const _PokemonDetailsPanel(this.id);
   final String id;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pokemon = ref.watch(
-        pokemonDetailsControllerProvider(id).select((c) => c.state.pokemon));
-    return pokemon.isEmpty
-        ? Center(
-            child: Text(
-              'No information for pokemon with id $id',
-              style: const TextStyle(fontSize: 20),
-            ),
-          )
-        : SingleChildScrollView(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: CircularImage(imageUrl: pokemon.image, size: 200),
-                ),
-                _Tile(title: 'Name', content: pokemon.name),
-                _Tile(title: 'Experience', content: pokemon.baseExperience),
-                _Tile(title: 'Height (dm)', content: pokemon.height),
-                _Tile(title: 'Weight (hg)', content: pokemon.weight),
-                _Tile(title: 'Types', content: pokemon.types.toString()),
-                _Tile(title: 'Abilities', content: pokemon.abilities),
-                _Tile(title: 'Moves', content: pokemon.moves.toString()),
-              ],
-            ),
-          );
-  }
+  State<_PokemonDetailsPanel> createState() => _PokemonDetailsPanelState();
 }
 
-class _ErrorIndicator extends ConsumerWidget {
-  const _ErrorIndicator(this.id);
-  final String id;
+class _PokemonDetailsPanelState extends State<_PokemonDetailsPanel> {
+  late final controller = context.get<PokemonDetailsController>();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final msg = ref.watch(
-        pokemonDetailsControllerProvider(id).select((c) => c.state.errorMsg));
-
-    if (msg.isNotEmpty) {
-      WidgetsBinding.instance
-          .addPostFrameCallback((final _) => _showSnackbar(context, ref, msg));
-    }
-    return const SizedBox.shrink();
+  void initState() {
+    super.initState();
+    controller.pokemonDetails.observe((previous, current) {
+      if (current.hasError) {
+        context.showErrorSnackbar(current.error.toString());
+      }
+    });
   }
 
-  void _showSnackbar(BuildContext context, WidgetRef ref, String msg) {
-    final snackBar = SnackBar(content: Text('Oops something went wrong: $msg'));
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
-    ref.read(pokemonDetailsControllerProvider(id)).consumeError();
+  @override
+  Widget build(BuildContext context) {
+    return SignalBuilder(
+      builder: (context, child) {
+        return controller.pokemonDetails().on(
+              ready: (pokemon) {
+                return pokemon.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No information for pokemon with id ${widget.id}',
+                          style: const TextStyle(fontSize: 20),
+                        ),
+                      )
+                    : SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(32.0),
+                              child: CircularImage(
+                                  imageUrl: pokemon.image, size: 200),
+                            ),
+                            _Tile(title: 'Name', content: pokemon.name),
+                            _Tile(
+                                title: 'Experience',
+                                content: pokemon.baseExperience),
+                            _Tile(
+                                title: 'Height (dm)', content: pokemon.height),
+                            _Tile(
+                                title: 'Weight (hg)', content: pokemon.weight),
+                            _Tile(
+                                title: 'Types',
+                                content: pokemon.types.toString()),
+                            _Tile(
+                                title: 'Abilities', content: pokemon.abilities),
+                            _Tile(
+                                title: 'Moves',
+                                content: pokemon.moves.toString()),
+                          ],
+                        ),
+                      );
+              },
+              loading: () => LoadingIndicator(),
+              error: (error, stackTrace) => Text('Error: $error'),
+            );
+      },
+    );
   }
 }
 
