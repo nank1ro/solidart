@@ -1,15 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter_arch_comp/src/core/models/repositories/repository.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/data_sources/data_source.dart';
 import '../../../core/utils/demo_hacks_helper.dart';
 import '../../../network/utils/connectivity.dart';
 import '../data/pokemon.dart';
 import '../data/pokemon_api_model.dart';
-import '../data_sources/pokemon_local_data_source.dart';
-import '../data_sources/pokemon_remote_data_source.dart';
 
 /// PokemonRepository represents a [Repository] for pokemon. For more
 /// information on repositories, see
@@ -168,9 +165,3 @@ class PokemonRepository implements Repository<Pokemon> {
     }
   }
 }
-
-/// pokemonRepositoryProvider provides the pokemon repository (singleton)
-final pokemonRepositoryProvider = Provider<Repository<Pokemon>>((ref) {
-  return PokemonRepository(PokemonLocalDataSource(), PokemonRemoteDataSource(),
-      Connectivity.instance);
-});

@@ -80,6 +80,7 @@ class PokemonRemoteDataSource implements DataSource<PokemonApiModel> {
     }
 
     try {
+      print('Reading all pokemon from API');
       final pokemon = await Future.wait<PokemonApiModel>(urls.map((url) async {
         final res = await http.get(Uri.parse(url));
         if (res.statusCode == 200) {

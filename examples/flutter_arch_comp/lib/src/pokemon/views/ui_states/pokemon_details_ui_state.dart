@@ -2,45 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_arch_comp/src/core/utils/extensions.dart';
 import 'package:flutter_arch_comp/src/pokemon/models/data/pokemon.dart';
 
-/// PokemonDetailsUiState represents the UI state for the pokemon details page
-@immutable
-class PokemonDetailsUiState {
-  const PokemonDetailsUiState({
-    this.pokemon = const PokemonDetailsItemUiState(),
-    this.isFetchingPokemon = false,
-    this.errorMsg = '',
-  });
-
-  final PokemonDetailsItemUiState pokemon;
-  final bool isFetchingPokemon;
-  final String errorMsg;
-
-  PokemonDetailsUiState copy({
-    PokemonDetailsItemUiState? pokemon,
-    bool? isFetchingPokemon,
-    String? errorMsg,
-  }) {
-    return PokemonDetailsUiState(
-      pokemon: pokemon ?? this.pokemon,
-      isFetchingPokemon: isFetchingPokemon ?? this.isFetchingPokemon,
-      errorMsg: errorMsg ?? this.errorMsg,
-    );
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is PokemonDetailsUiState &&
-          runtimeType == other.runtimeType &&
-          pokemon == other.pokemon &&
-          isFetchingPokemon == other.isFetchingPokemon &&
-          errorMsg == other.errorMsg;
-
-  @override
-  int get hashCode =>
-      pokemon.hashCode ^ isFetchingPokemon.hashCode ^ errorMsg.hashCode;
-}
-
 /// PokemonDetailsItemUiState represents the UI state for an item of the
 /// pokemon details page
 @immutable

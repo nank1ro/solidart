@@ -4,28 +4,29 @@ import 'package:flutter_arch_comp/src/core/views/pages/splash_page.dart';
 import 'package:flutter_arch_comp/src/pokemon/views/pages/pokemon_details_page.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
 
 import '../pokemon/views/pages/pokemon_page.dart';
 import '../settings/controllers/settings_controller.dart';
 import '../settings/views/pages/settings_page.dart';
 
 /// The Widget that configures your application.
-class MyApp extends ConsumerWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settingsController = ref.watch(settingsControllerProvider);
+  Widget build(BuildContext context) {
+    final settingsController = context.get<SettingsController>();
 
     // Glue the SettingsController to the MaterialApp.
     //
     // The AnimatedBuilder Widget listens to the SettingsController for changes.
     // Whenever the user updates their settings, the MaterialApp is rebuilt.
-    return AnimatedBuilder(
-      animation: settingsController,
+    return SignalBuilder(
       builder: (BuildContext context, Widget? child) {
+        final themeMode = settingsController.themeMode();
         return MaterialApp(
+          debugShowCheckedModeBanner: false,
           // Providing a restorationScopeId allows the Navigator built by the
           // MaterialApp to restore the navigation stack when a user leaves and
           // returns to the app after it has been killed while running in the
@@ -58,7 +59,7 @@ class MyApp extends ConsumerWidget {
           // SettingsController to display the correct theme.
           theme: ThemeData(),
           darkTheme: ThemeData.dark(),
-          themeMode: settingsController.themeMode,
+          themeMode: themeMode,
 
           // Define a function to handle named routes in order to support
           // Flutter web url navigation and deep linking.
@@ -74,7 +75,10 @@ class MyApp extends ConsumerWidget {
                   case PokemonPage.routeName:
                     return const PokemonPage();
                   case PokemonDetailsPage.routeName:
-                    return const PokemonDetailsPage();
+                    final args =
+                        routeSettings.arguments as PokemonDetailsViewArgs;
+                    return PokemonDetailsPage(pokemonId: args.id);
+
                   default:
                     return const SplashPage();
                 }
