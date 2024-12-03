@@ -32,7 +32,7 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^0.13.6
-  flutter_solidart: ^2.0.0-dev.1
+  flutter_solidart: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -44,8 +44,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^3.0.2
-  custom_lint: ^0.6.4
-  solidart_lint: ^2.0.0-dev.1
+  custom_lint: ^0.7.0
+  solidart_lint: ^2.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
