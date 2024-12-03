@@ -1227,4 +1227,25 @@ void main() {
       const TypeMatcher<MultipleSolidOverrideError>(),
     );
   });
+
+  testWidgets(
+      '''SolidOverride.of(context) throws an error if no SolidOverride is found in the widget tree''',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              SolidOverride.of(context);
+              return const SizedBox();
+            },
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.takeException(),
+      const TypeMatcher<FlutterError>(),
+    );
+  });
 }

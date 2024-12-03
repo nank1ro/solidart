@@ -93,8 +93,10 @@ class _InheritedSolidOverride extends InheritedWidget {
   /// The data to be provided
   final SolidOverrideState state;
 
+  // coverage:ignore-start
   @override
   bool updateShouldNotify(covariant _InheritedSolidOverride oldWidget) {
     return false;
   }
+  // coverage:ignore-end
 }
