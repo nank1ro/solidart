@@ -8,8 +8,10 @@ topics:
   - signals
 
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.6.0
   flutter: ">=1.17.0"
+
+resolution: workspace
 
 dependencies:
   collection: ^1.18.0

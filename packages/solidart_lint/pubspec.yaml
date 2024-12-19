@@ -9,7 +9,9 @@ topics:
   - linter
 
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.6.0
+
+resolution: workspace
 
 dependencies:
   analyzer: ^6.6.0
