@@ -1,7 +1,7 @@
-import 'package:dart_reactivity_benchmark/reactive_framework.dart';
-import 'package:dart_reactivity_benchmark/run_framework_bench.dart';
-import 'package:dart_reactivity_benchmark/utils/create_computed.dart';
-import 'package:dart_reactivity_benchmark/utils/create_signal.dart';
+import 'package:reactivity_benchmark/reactive_framework.dart';
+import 'package:reactivity_benchmark/run_framework_bench.dart';
+import 'package:reactivity_benchmark/utils/create_computed.dart';
+import 'package:reactivity_benchmark/utils/create_signal.dart';
 import 'package:solidart/solidart.dart' as solidart;
 
 class SolidartReactiveFramework extends ReactiveFramework {
