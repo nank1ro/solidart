@@ -1,6 +1,17 @@
-name: solidart_melos
-
+name: _
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.6.0
+
+namespace:
+  - packages/solidart
+
 dev_dependencies:
-  melos: ^3.4.0
+  melos: ^6.2.0
+  dart_reactivity_benchmark:
+    git:
+      url: https://github.com/medz/dart-reactivity-benchmark.git
+      ref: main
+
+dependency_overrides:
+  solidart:
+    path: packages/solidart

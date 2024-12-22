@@ -1,18 +1,13 @@
 /// Support for doing something awesome.
 ///
 /// More dartdocs go here.
-library solidart;
+library;
 
-export 'src/core/core.dart'
-    hide
-        Atom,
-        Derivation,
-        DerivationState,
-        ReactionErrorHandler,
-        ReactionInterface,
-        ReactiveConfig,
-        ReactiveContext,
-        ValueComparator;
-export 'src/extensions.dart';
-export 'src/utils.dart'
-    show SolidartCaughtException, SolidartException, SolidartReactionException;
+export 'src/api_batch.dart';
+export 'src/api_untrack.dart';
+export 'src/compat.dart';
+export 'src/computed.dart';
+export 'src/effect.dart';
+export 'src/effect_scope.dart';
+export 'src/namespace.dart';
+export 'src/signal.dart';
