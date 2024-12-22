@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
 /// {@template signal-to-value-notifier}
-/// Converts a [SignalBase] into a [ValueNotifier];
+/// Converts a [ReadableSignal] into a [ValueNotifier];
 /// {@endtemplate}
-extension SignalToValueNotifier<T> on SignalBase<T> {
+extension SignalToValueNotifier<T> on ReadableSignal<T> {
   /// {@macro signal-to-value-notifier}
   ValueNotifier<T> toValueNotifier() {
     final notifier = ValueNotifier(value);
-    final unobserve = Effect((_) => notifier.value = value);
-    onDispose(unobserve.call);
+    // final unobserve =
+    Effect((_) => notifier.value = value);
+    // onDispose(unobserve.call); // TODO
     return notifier;
   }
 }
@@ -27,19 +28,19 @@ extension ValueNotifierToSignal<T> on ValueNotifier<T> {
     bool? autoDispose,
 
     /// {macro SignalBase.trackInDevTools}
-    bool? trackInDevTools,
+    // bool? trackInDevTools,
   }) {
     final signal = Signal(
       value,
       equals: true,
-      name: name,
-      autoDispose: autoDispose,
-      trackInDevTools: trackInDevTools,
+      name: name ?? 'ValueNotifier<$T>',
+      // autoDispose: autoDispose,
+      // trackInDevTools: trackInDevTools,
     );
 
     void setValue() => signal.set(value);
     addListener(setValue);
-    signal.onDispose(() => removeListener(setValue));
+    // signal.onDispose(() => removeListener(setValue)); // TODO
     return signal;
   }
 }

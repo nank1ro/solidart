@@ -13,7 +13,7 @@ class _SolidSignalsPageState extends State<SolidSignalsPage> {
 
   @override
   void dispose() {
-    count.dispose();
+    // count.dispose();
     super.dispose();
   }
 

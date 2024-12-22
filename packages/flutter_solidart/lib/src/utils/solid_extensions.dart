@@ -19,7 +19,7 @@ extension SolidExtensions on BuildContext {
   }
 
   /// {@macro solid.observe}
-  T observe<T extends SignalBase<dynamic>>([Identifier? id]) {
+  T observe<T extends ReadableSignal<dynamic>>([Identifier? id]) {
     return Solid.observe<T>(this, id);
   }
 

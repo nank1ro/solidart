@@ -29,7 +29,7 @@ abstract class SolidElement<T> {
   /// Returns the type of the value
   Type get _valueType => T;
 
-  bool get _isSignal => this is SolidElement<SignalBase>;
+  bool get _isSignal => this is SolidElement<ReadableSignal>;
 
   void _disposeFn(BuildContext context, dynamic value);
 }

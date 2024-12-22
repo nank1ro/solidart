@@ -1,4 +1,6 @@
 import 'package:alien_signals/alien_signals.dart';
+import 'package:solidart/src/devtools/_utils.dart';
+import 'package:solidart/src/namespace.dart';
 import 'package:solidart/src/signal.dart';
 
 // ignore: public_member_api_docs
@@ -16,8 +18,19 @@ abstract interface class Computed<T> implements ReadableSignal<T> {
 
 final class _Computed<T> extends SignalOptions
     implements Computed<T>, IComputed<T?> {
-  _Computed(this.getter,
-      {super.name = 'Computed', super.comparator, super.equals});
+  _Computed(
+    this.getter, {
+    super.name = 'Computed',
+    super.comparator,
+    super.equals,
+  }) {
+    notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.created);
+    if (Solidart.dev && Solidart.observers.isNotEmpty) {
+      for (final obs in Solidart.observers) {
+        obs.didCreateSignal(this);
+      }
+    }
+  }
 
   final ComputedGetter<T> getter;
 
@@ -80,6 +93,12 @@ final class _Computed<T> extends SignalOptions
     } finally {
       setActiveSub(prevSub, prevTrackId);
       endTrack(this);
+      notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
+      if (Solidart.dev && Solidart.observers.isNotEmpty) {
+        for (final obs in Solidart.observers) {
+          obs.didUpdateSignal(this);
+        }
+      }
     }
   }
 }

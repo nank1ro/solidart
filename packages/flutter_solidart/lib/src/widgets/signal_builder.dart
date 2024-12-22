@@ -104,7 +104,6 @@ class SignalBuilderElement extends ComponentElement {
   final void Function(Object error)? onError;
 
   Element? _parent;
-  Widget? _built;
   Effect? _effect;
 
   SignalBuilder get _widget => widget as SignalBuilder;
@@ -112,7 +111,10 @@ class SignalBuilderElement extends ComponentElement {
   @override
   void mount(Element? parent, Object? newSlot) {
     _parent = parent;
-    _effect = Effect((_) => _invalidate(), onError: onError);
+    _effect = switch (onError) {
+      != null => Effect((_) => _invalidate(), onError: onError!),
+      _ => Effect((_) => _invalidate()),
+    };
     // mounting intentionally after effect is initialized and widget is built
     super.mount(parent, newSlot);
   }
@@ -153,14 +155,6 @@ class SignalBuilderElement extends ComponentElement {
 
   @override
   Widget build() {
-    // ignore: invalid_use_of_protected_member
-    _effect!.track(
-      () {
-        _built = _widget.build(_parent!);
-      },
-      preventDisposal: true,
-    );
-
-    return _built!;
+    return _widget.build(_parent!);
   }
 }

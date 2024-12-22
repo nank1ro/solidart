@@ -1,4 +1,5 @@
 import 'package:alien_signals/alien_signals.dart';
+import 'package:solidart/src/devtools/_utils.dart';
 import 'package:solidart/src/namespace.dart';
 
 /// Solidart signal options
@@ -60,7 +61,14 @@ final class _Signal<T> extends SignalOptions
     super.name = 'Signal',
     super.comparator,
     super.equals,
-  });
+  }) {
+    notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.created);
+    if (Solidart.dev && Solidart.observers.isNotEmpty) {
+      for (final obs in Solidart.observers) {
+        obs.didCreateSignal(this);
+      }
+    }
+  }
 
   @override
   T currentValue;
@@ -90,6 +98,13 @@ final class _Signal<T> extends SignalOptions
     if (!comparator(currentValue, value)) {
       currentValue = value;
       if (subs != null) propagate(subs);
+
+      notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
+      if (Solidart.dev && Solidart.observers.isNotEmpty) {
+        for (final obs in Solidart.observers) {
+          obs.didUpdateSignal(this);
+        }
+      }
     }
   }
 }

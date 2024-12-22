@@ -405,7 +405,7 @@ class Solid extends StatefulWidget {
   ///
   /// WARNING: Doesn't support observing a Resource.
   /// {@endtemplate}
-  static T observe<T extends SignalBase<dynamic>>(
+  static T observe<T extends ReadableSignal<dynamic>>(
     BuildContext context, [
     Identifier? id,
   ]) {
@@ -435,8 +435,10 @@ class Solid extends StatefulWidget {
     T Function(T value) callback, [
     Identifier? id,
   ]) {
+    final signal = get<Signal<T>>(context, id);
+    final value = untrack(signal);
     // retrieve the signal and update its value
-    get<Signal<T>>(context, id).updateValue(callback);
+    signal.value = callback(value);
   }
 
   /// Tries to find a provider of type T from the created providers and returns
@@ -467,7 +469,7 @@ class SolidState extends State<Solid> {
   final _createdProviders = HashMap<({Type type, Object? id}), Object?>();
 
   // Stores all the disposeFn for each signal
-  final _signalDisposeCallbacks = <DisposeEffect>[];
+  final _effects = <Effect>[];
   Identifier? _changedDependency;
   int _dependenciesVersion = 0;
 
@@ -509,8 +511,8 @@ class SolidState extends State<Solid> {
   @override
   void dispose() {
     // stop listening to signals and dispose all of them if needed
-    for (final disposeFn in _signalDisposeCallbacks) {
-      disposeFn();
+    for (final effect in _effects) {
+      effect.dispose();
     }
 
     // dispose all the created providers
@@ -520,22 +522,24 @@ class SolidState extends State<Solid> {
       });
     }
 
-    _signalDisposeCallbacks.clear();
+    _effects.clear();
     _allProvidersInScope.clear();
     _createdProviders.clear();
     super.dispose();
   }
 
   /// -- Signals logic
-  void _initializeSignal(SignalBase<dynamic> signal, {required Identifier id}) {
-    final unobserve = signal.observe((_, value) {
+  void _initializeSignal(
+    ReadableSignal<dynamic> signal, {
+    required Identifier id,
+  }) {
+    final effect = Effect((_) {
       setState(() {
         _changedDependency = id;
         _dependenciesVersion++;
       });
     });
-    signal.onDispose(unobserve);
-    _signalDisposeCallbacks.add(unobserve);
+    _effects.add(effect);
   }
 
   /// -- Providers logic
@@ -553,7 +557,7 @@ class SolidState extends State<Solid> {
     final provider = _getProvider<T>(id)!;
     // create and return it
     final value = provider.create() as T;
-    if (provider._isSignal && value is SignalBase) {
+    if (provider._isSignal && value is ReadableSignal) {
       _initializeSignal(value, id: id ?? T);
     }
 
@@ -731,10 +735,10 @@ class ProviderError<T> extends Error {
     return '''
 Error could not fint a Solid containing the given Provider type $T and id $id
 To fix, please:
-          
+
   * Be sure to have a Solid ancestor, the context used must be a descendant.
-  * Provide types to context.get<ProviderType>() 
-  * Create providers providing types: 
+  * Provide types to context.get<ProviderType>()
+  * Create providers providing types:
     ```
     Solid(
       providers: [
@@ -748,7 +752,7 @@ To fix, please:
     )
     ```
   * The type `NameProvider` and `Signal<int>` are the provider's types.
-  
+
 If none of these solutions work, please file a bug at:
 https://github.com/nank1ro/solidart/issues/new
       ''';

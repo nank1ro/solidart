@@ -2,16 +2,13 @@ name: _
 environment:
   sdk: ^3.6.0
 
-namespace:
+workspace:
   - packages/solidart
+  - packages/flutter_solidart
 
 dev_dependencies:
   melos: ^6.2.0
-  dart_reactivity_benchmark:
-    git:
-      url: https://github.com/medz/dart-reactivity-benchmark.git
-      ref: main
-
-dependency_overrides:
-  solidart:
-    path: packages/solidart
+  # dart_reactivity_benchmark: // TODO
+  #   git:
+  #     url: https://github.com/medz/dart-reactivity-benchmark.git
+  #     ref: main

@@ -39,7 +39,7 @@ class SomeChild extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               // update the count signal value
-              count.updateValue((value) => value += 1);
+              count.value++;
             },
             child: const Text('Increment'),
           ),

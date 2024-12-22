@@ -1,4 +1,13 @@
-part of 'core.dart';
+import 'dart:convert';
+import 'dart:developer' as dev;
+
+import 'package:solidart/src/api_untrack.dart';
+import 'package:solidart/src/computed.dart';
+import 'package:solidart/src/namespace.dart';
+import 'package:solidart/src/reactive/list.dart';
+import 'package:solidart/src/reactive/map.dart';
+import 'package:solidart/src/reactive/set.dart';
+import 'package:solidart/src/signal.dart';
 
 /// coverage:ignore-start
 
@@ -33,18 +42,16 @@ dynamic _toJson(Object? obj) {
   }
 }
 
-void _notifyDevToolsAboutSignal(
-  ReadSignal<Object?> signal, {
+void notifyDevToolsAboutSignal(
+  ReadableSignal<Object?> signal, {
   required DevToolsEventType eventType,
 }) {
-  if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
+  if (!Solidart.dev) return;
   final eventName = 'solidart.signal.${eventType.name}';
-  var value = signal._value;
-  var previousValue = signal._previousValue;
-  if (signal is Resource) {
-    value = signal._value.asReady?.value;
-    previousValue = signal._previousValue?.asReady?.value;
-  }
+  // ignore: prefer_final_locals
+  final value = untrack(signal);
+  // ignore: prefer_final_locals, avoid_init_to_null, prefer_const_declarations
+  final previousValue = null; // TODO
   final jsonValue = _toJson(value);
   final jsonPreviousValue = _toJson(previousValue);
 
@@ -52,22 +59,22 @@ void _notifyDevToolsAboutSignal(
     'name': signal.name,
     'value': jsonValue,
     'previousValue': jsonPreviousValue,
-    'hasPreviousValue': signal._hasPreviousValue,
+    'hasPreviousValue': false, // TODO
     'type': switch (signal) {
-      Resource() => 'Resource',
+      // Resource() => 'Resource',
       ListSignal() => 'ListSignal',
       MapSignal() => 'MapSignal',
       SetSignal() => 'SetSignal',
       Signal() => 'Signal',
       Computed() => 'Computed',
-      ReadSignal() => 'ReadSignal',
+      ReadableSignal() => 'ReadSignal', // TODO: rename
     },
     'valueType': value.runtimeType.toString(),
-    if (signal._hasPreviousValue)
-      'previousValueType': previousValue.runtimeType.toString(),
-    'disposed': signal._disposed,
-    'autoDispose': signal.autoDispose,
-    'listenerCount': signal.listenerCount,
+    // if (signal._hasPreviousValue)
+    //   'previousValueType': previousValue.runtimeType.toString(),
+    'disposed': false,
+    'autoDispose': false,
+    'listenerCount': 0,
     'lastUpdate': DateTime.now().toIso8601String(),
   });
 }
