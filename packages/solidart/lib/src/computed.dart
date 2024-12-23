@@ -17,7 +17,7 @@ abstract interface class Computed<T> implements ReadableSignal<T> {
 }
 
 final class _Computed<T> extends SignalOptions
-    implements Computed<T>, IComputed<T?> {
+    implements Computed<T>, IComputed {
   _Computed(
     this.getter, {
     super.name = 'Computed',
@@ -34,7 +34,6 @@ final class _Computed<T> extends SignalOptions
 
   final ComputedGetter<T> getter;
 
-  @override
   T? currentValue;
 
   @override
@@ -58,10 +57,14 @@ final class _Computed<T> extends SignalOptions
   @override
   T get value {
     if ((flags & SubscriberFlags.dirty) != 0) {
-      update();
+      if (update() && subs != null) {
+        shallowPropagate(subs);
+      }
     } else if ((flags & SubscriberFlags.toCheckDirty) != 0) {
       if (checkDirty(deps)) {
-        update();
+        if (update() && subs != null) {
+          shallowPropagate(subs);
+        }
       } else {
         flags &= ~SubscriberFlags.toCheckDirty;
       }
@@ -69,12 +72,12 @@ final class _Computed<T> extends SignalOptions
     if (activeTrackId != 0) {
       if (lastTrackedId != activeTrackId) {
         lastTrackedId = activeTrackId;
-        link(this, activeSub!).value = currentValue;
+        link(this, activeSub!);
       }
     } else if (activeScopeTrackId != 0) {
       if (lastTrackedId != activeScopeTrackId) {
         lastTrackedId = activeScopeTrackId;
-        link(this, activeEffectScope!).value = currentValue;
+        link(this, activeEffectScope!);
       }
     }
 
@@ -82,14 +85,16 @@ final class _Computed<T> extends SignalOptions
   }
 
   @override
-  T update() {
+  bool update() {
     final prevSub = activeSub;
     final prevTrackId = activeTrackId;
     setActiveSub(this, nextTrackId());
     startTrack(this);
 
     try {
-      return currentValue = getter();
+      final oldValue = currentValue;
+      currentValue = getter();
+      return oldValue != currentValue;
     } finally {
       setActiveSub(prevSub, prevTrackId);
       endTrack(this);

@@ -54,8 +54,7 @@ abstract interface class Signal<T> implements ReadableSignal<T> {
   set value(_);
 }
 
-final class _Signal<T> extends SignalOptions
-    implements Signal<T>, Dependency<T> {
+final class _Signal<T> extends SignalOptions implements Signal<T>, Dependency {
   _Signal(
     this.currentValue, {
     super.name = 'Signal',
@@ -70,7 +69,6 @@ final class _Signal<T> extends SignalOptions
     }
   }
 
-  @override
   T currentValue;
 
   @override

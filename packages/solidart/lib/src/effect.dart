@@ -33,8 +33,7 @@ typedef OnEffectDispose = void Function(void Function() cleanup);
 // ignore: public_member_api_docs
 typedef EffectRunner = void Function(OnEffectDispose onDispose);
 
-final class _Effect
-    implements Effect, EffectOptions, IEffect, Dependency<void> {
+final class _Effect implements Effect, EffectOptions, IEffect, Dependency {
   _Effect(
     this.runner, {
     this.delay,
@@ -77,9 +76,6 @@ final class _Effect
 
   @override
   bool disposed = false;
-
-  @override
-  void currentValue;
 
   @override
   Link? deps;
@@ -141,8 +137,8 @@ final class _Effect
         flags &= ~SubscriberFlags.toCheckDirty;
       }
     }
-    if ((flags & SubscriberFlags.runInnerEffects) != 0) {
-      flags &= ~SubscriberFlags.runInnerEffects;
+    if ((flags & SubscriberFlags.innerEffectsPending) != 0) {
+      flags &= ~SubscriberFlags.innerEffectsPending;
       var link = deps;
       do {
         final dep = link!.dep;
