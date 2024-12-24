@@ -4,6 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:solidart/solidart.dart';
 
+// ignore: depend_on_referenced_packages, directives_ordering
+import 'package:alien_signals/alien_signals.dart'
+    // ignore: combinators_ordering
+    show
+        activeSub,
+        activeTrackId,
+        setActiveSub,
+        nextTrackId,
+        Subscriber;
+
 /// The [SignalBuilder] function used to build the widget tracking the signals.
 typedef SignalBuilderFn = Widget Function(
   BuildContext context,
@@ -155,6 +165,14 @@ class SignalBuilderElement extends ComponentElement {
 
   @override
   Widget build() {
-    return _widget.build(_parent!);
+    final prevSub = activeSub;
+    final prevTrackId = activeTrackId;
+    setActiveSub(_effect as Subscriber?, nextTrackId());
+
+    try {
+      return _widget.build(_parent!);
+    } finally {
+      setActiveSub(prevSub, prevTrackId);
+    }
   }
 }

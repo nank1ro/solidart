@@ -42,7 +42,7 @@ class ListSignal<E> extends ListBase<E> implements Signal<List<E>>, List<E> {
 
   @override
   set length(int value) {
-    final untracked = untrack(this);
+    final untracked = untrack(() => _inner.value);
     final oldValue = untracked.length;
     // ignore: inference_failure_on_untyped_parameter
     final eq = equals ? comparator : (a, b) => a == b;
@@ -62,7 +62,7 @@ class ListSignal<E> extends ListBase<E> implements Signal<List<E>>, List<E> {
 
   @override
   void operator []=(int index, E value) {
-    final untracked = untrack(this);
+    final untracked = untrack(() => _inner.value);
     final oldValue = untracked[index];
     // ignore: inference_failure_on_untyped_parameter
     final eq = equals ? comparator : (a, b) => a == b;

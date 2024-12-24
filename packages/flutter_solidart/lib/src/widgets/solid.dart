@@ -436,7 +436,7 @@ class Solid extends StatefulWidget {
     Identifier? id,
   ]) {
     final signal = get<Signal<T>>(context, id);
-    final value = untrack(signal);
+    final value = untrack(() => signal.value);
     // retrieve the signal and update its value
     signal.value = callback(value);
   }

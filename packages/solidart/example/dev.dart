@@ -9,7 +9,9 @@ final class Logger implements SolidartObserver {
   @override
   void didCreateSignal(ReadableSignal<Object?> signal) {
     // ignore: avoid_print
-    print('Creates a new signal: ${signal.name}, value: ${untrack(signal)}');
+    print('Creates a new signal: ${signal.name}, value: ${untrack(
+      () => signal.value,
+    )}');
   }
 
   @override
@@ -20,7 +22,9 @@ final class Logger implements SolidartObserver {
   @override
   void didUpdateSignal(ReadableSignal<Object?> signal) {
     // ignore: avoid_print
-    print('Updates a signal: ${signal.name}, value: ${untrack(signal)}');
+    print('Updates a signal: ${signal.name}, value: ${untrack(
+      () => signal.value,
+    )}');
   }
 }
 

@@ -41,7 +41,7 @@ class SetSignal<E> extends SetBase<E> implements Signal<Set<E>> {
 
   @override
   bool add(E value) {
-    final result = untrack(this).add(value);
+    final result = untrack(() => _inner.value).add(value);
     if (result) {
       final subs = (_inner as Dependency).subs;
       if (subs != null) {
@@ -70,7 +70,7 @@ class SetSignal<E> extends SetBase<E> implements Signal<Set<E>> {
 
   @override
   bool remove(Object? value) {
-    if (untrack(this).remove(value)) {
+    if (untrack(() => _inner.value).remove(value)) {
       final subs = (_inner as Dependency).subs;
       if (subs != null) {
         propagate(subs);

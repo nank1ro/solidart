@@ -48,7 +48,7 @@ class MapSignal<K, V>
 
   @override
   void operator []=(K key, V value) {
-    final untracked = untrack(this);
+    final untracked = untrack(() => _inner.value);
     final oldValue = untracked[key];
     // ignore: inference_failure_on_untyped_parameter
     final eq = equals ? comparator : (a, b) => a == b;
@@ -63,7 +63,7 @@ class MapSignal<K, V>
 
   @override
   void clear() {
-    final untracked = untrack(this);
+    final untracked = untrack(() => value);
     if (untracked.isEmpty) return;
     untracked.clear();
     final subs = (_inner as Dependency).subs;
@@ -77,7 +77,7 @@ class MapSignal<K, V>
 
   @override
   V? remove(Object? key) {
-    final untracked = untrack(this);
+    final untracked = untrack(() => value);
     final oldLenght = untracked.length;
 
     try {

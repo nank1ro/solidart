@@ -49,7 +49,7 @@ void notifyDevToolsAboutSignal(
   if (!Solidart.dev) return;
   final eventName = 'solidart.signal.${eventType.name}';
   // ignore: prefer_final_locals
-  final value = untrack(signal);
+  final value = untrack(() => signal.value);
   // ignore: prefer_final_locals, avoid_init_to_null, prefer_const_declarations
   final previousValue = null; // TODO
   final jsonValue = _toJson(value);
