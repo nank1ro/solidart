@@ -33,12 +33,12 @@ part of 'core.dart';
 /// }
 ///
 /// // The resource (source is optional)
-/// final user = Resource(fetcher: fetchUser, source: userId);
+/// final user = Resource(fetchUser, source: userId);
 /// ```
 ///
 /// A Resource can also be driven from a [stream] instead of a Future.
 /// In this case you just need to pass the `stream` field to the
-/// `Resource` method.
+/// `Resource.stream` constructor.
 ///
 /// The resource has a [state] named [ResourceState], that provides many useful
 /// convenience methods to correctly handle the state of the resource.
@@ -74,9 +74,8 @@ part of 'core.dart';
 /// {@endtemplate}
 class Resource<T> extends Signal<ResourceState<T>> {
   /// {@macro resource}
-  factory Resource({
-    Future<T> Function()? fetcher,
-    Stream<T> Function()? stream,
+  factory Resource(
+    Future<T> Function() fetcher, {
     SignalBase<dynamic>? source,
 
     /// {@macro SignalBase.name}
@@ -97,6 +96,37 @@ class Resource<T> extends Signal<ResourceState<T>> {
   }) {
     return Resource._internal(
       fetcher: fetcher,
+      source: source,
+      name: name ?? ReactiveContext.main.nameFor('Resource'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      lazy: lazy,
+    );
+  }
+
+  /// {@macro resource}
+  factory Resource.stream(
+    Stream<T> Function() stream, {
+    SignalBase<dynamic>? source,
+
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// Indicates whether the resource should be computed lazily, defaults to
+    /// true.
+    bool lazy = true,
+  }) {
+    return Resource._internal(
       stream: stream,
       source: source,
       name: name ?? ReactiveContext.main.nameFor('Resource'),

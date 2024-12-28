@@ -64,7 +64,7 @@ void main() {
       return Future.delayed(const Duration(milliseconds: 50), () => s.value);
     }
 
-    final r = Resource(fetcher: fetcher, source: s);
+    final r = Resource(fetcher, source: s);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -121,7 +121,7 @@ void main() {
       return Future.delayed(const Duration(milliseconds: 150), () => s.value);
     }
 
-    final r = Resource(fetcher: fetcher, source: s);
+    final r = Resource(fetcher, source: s);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -175,7 +175,7 @@ void main() {
       );
     }
 
-    final r = Resource(fetcher: fetcher, source: s);
+    final r = Resource(fetcher, source: s);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -1126,7 +1126,7 @@ void main() {
     testWidgets(
       'Resource autoDispose',
       (tester) async {
-        final r = Resource(fetcher: () => Future.value(0));
+        final r = Resource(() => Future.value(0));
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
