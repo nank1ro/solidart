@@ -598,8 +598,6 @@ class SolidState extends State<Solid> {
 @immutable
 class _InheritedSolid extends InheritedModel<Object> {
   const _InheritedSolid({
-    // ignore: unused_element
-    super.key,
     required this.state,
     required this.changedDependency,
     required this.dependenciesVersion,
