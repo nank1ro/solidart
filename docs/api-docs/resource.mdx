@@ -16,7 +16,7 @@ A __Resource__ extends a [Signal](/api-docs/signal), so all the API of __Signal_
 ```dart
 Resource({
   Future<T> Function()? fetcher,
-  Stream<T>? Function()? stream,
+  Stream<T> Function()? stream,
   ResourceOptions? options,
   SignalBase<dynamic>? source,
 });

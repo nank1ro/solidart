@@ -76,7 +76,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// {@macro resource}
   factory Resource({
     Future<T> Function()? fetcher,
-    Stream<T>? Function()? stream,
+    Stream<T> Function()? stream,
     SignalBase<dynamic>? source,
 
     /// {@macro SignalBase.name}
@@ -140,7 +140,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   final Future<T> Function()? fetcher;
 
   /// The stream used to retrieve data.
-  final Stream<T>? Function()? stream;
+  final Stream<T> Function()? stream;
   StreamSubscription<T>? _streamSubscription;
 
   // The source dispose observation
@@ -188,7 +188,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   // The stream trasformed in a broadcast stream, if needed
   Stream<T> get _stream {
-    final s = stream!()!;
+    final s = stream!();
     if (!_broadcastStreams.keys.contains(s)) {
       _broadcastStreams[s] = s.isBroadcast
           ? s
