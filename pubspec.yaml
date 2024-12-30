@@ -7,6 +7,7 @@ dev_dependencies:
   melos: ^3.4.0
 workspace:
   - packages/flutter_solidart
+  - packages/flutter_solidart/example
   - packages/solidart
   - packages/solidart_devtools_extension
   - packages/solidart_lint
