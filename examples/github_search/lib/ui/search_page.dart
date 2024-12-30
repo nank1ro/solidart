@@ -46,8 +46,7 @@ class SearchPageBody extends StatelessWidget {
 }
 
 class _SearchBar extends StatefulWidget {
-  // ignore: unused_element
-  const _SearchBar({super.key});
+  const _SearchBar();
 
   @override
   State<_SearchBar> createState() => __SearchBarState();
@@ -89,8 +88,7 @@ class __SearchBarState extends State<_SearchBar> {
 }
 
 class _SearchBody extends StatelessWidget {
-  // ignore: unused_element
-  const _SearchBody({super.key});
+  const _SearchBody();
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +115,7 @@ class _SearchBody extends StatelessWidget {
                 Positioned.fill(
                   child: Container(
                     alignment: Alignment.center,
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     child: const CircularProgressIndicator(),
                   ),
                 ),
@@ -131,8 +129,6 @@ class _SearchBody extends StatelessWidget {
 
 class _SearchResults extends StatelessWidget {
   const _SearchResults({
-    // ignore: unused_element
-    super.key,
     required this.items,
   });
 
