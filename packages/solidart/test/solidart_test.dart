@@ -464,7 +464,7 @@ void main() {
         final streamController = StreamController<int>();
         addTearDown(streamController.close);
 
-        final resource = Resource(stream: () => streamController.stream);
+        final resource = Resource.stream(() => streamController.stream);
         expect(resource.state, isA<ResourceLoading<int>>());
         expect(resource.previousState, isNull);
         streamController.add(1);
@@ -495,8 +495,8 @@ void main() {
       test('check Resource with stream and source', () async {
         final count = Signal(-1);
 
-        final resource = Resource(
-          stream: () {
+        final resource = Resource.stream(
+          () {
             if (count() < 1) return Stream.value(0);
             return Stream.value(count());
           },
@@ -533,8 +533,8 @@ void main() {
           source.dispose();
         });
 
-        final resource = Resource(
-          stream: () {
+        final resource = Resource.stream(
+          () {
             if (source().isEven) {
               return streamControllerA.stream;
             }
@@ -571,7 +571,7 @@ void main() {
       test('check Resource with future that throws', () async {
         Future<User> getUser() => throw Exception();
         final resource = Resource<User>(
-          fetcher: getUser,
+          getUser,
           lazy: false,
         );
 
@@ -591,7 +591,7 @@ void main() {
         }
 
         final resource = Resource(
-          fetcher: getUser,
+          getUser,
           source: userId,
           lazy: false,
         );
@@ -625,7 +625,7 @@ void main() {
 
       test('update ResourceState', () async {
         Future<int> fetcher() => Future.value(1);
-        final resource = Resource(fetcher: fetcher);
+        final resource = Resource(fetcher);
         expect(resource.state, isA<ResourceLoading<int>>());
         await pumpEventQueue();
         expect(
@@ -646,7 +646,7 @@ void main() {
               const Duration(milliseconds: 200),
               () => 1,
             );
-        final resource = Resource(fetcher: fetcher);
+        final resource = Resource(fetcher);
         expect(resource.state, isA<ResourceLoading<int>>());
         await Future<void>.delayed(const Duration(milliseconds: 100));
         expect(resource.state, isA<ResourceLoading<int>>());
@@ -659,7 +659,7 @@ void main() {
       });
       test('refresh Resource with stream while loading', () async {
         final controller = StreamController<int>();
-        final resource = Resource(stream: () => controller.stream);
+        final resource = Resource.stream(() => controller.stream);
         expect(resource.state, isA<ResourceLoading<int>>());
 
         await resource.refresh();
@@ -677,7 +677,7 @@ void main() {
           return Future.value(User(id: userId()));
         }
 
-        final resource = Resource(fetcher: getUser, source: userId);
+        final resource = Resource(getUser, source: userId);
         final idResource = resource.select((data) => data.id);
 
         await pumpEventQueue();
@@ -716,7 +716,7 @@ void main() {
           return Stream.value(User(id: userId()));
         }
 
-        final resource = Resource(stream: getUser, source: userId);
+        final resource = Resource.stream(getUser, source: userId);
         final idResource = resource.select((data) => data.id);
 
         await pumpEventQueue();
@@ -761,7 +761,7 @@ void main() {
         var errorCalledTimes = 0;
         var refreshingOnDataTimes = 0;
         var refreshingOnErrorTimes = 0;
-        final resource = Resource(fetcher: fetcher);
+        final resource = Resource(fetcher);
 
         Effect(
           (_) {
@@ -828,7 +828,7 @@ void main() {
                 const Duration(milliseconds: 300),
                 () => 1,
               );
-          final count = Resource(fetcher: fetcher);
+          final count = Resource(fetcher);
 
           await expectLater(count.untilReady(), completion(1));
         },
@@ -836,7 +836,7 @@ void main() {
 
       test('check toString()', () async {
         final r = Resource(
-          fetcher: () => Future.value(1),
+          () => Future.value(1),
           lazy: false,
         );
         await pumpEventQueue();

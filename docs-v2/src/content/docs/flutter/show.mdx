@@ -1,0 +1,85 @@
+---
+title: Show
+description: Learn Show in flutter_solidart
+sidebar:
+  order: 1
+---
+
+You should typically find yourself in the condition of wanting to render one widget or another based on the state of a signal.
+
+Let's look at a simple example where we show the text 'Logged In' if the user is logged in or 'Logged out'.
+
+```dart {9-10} {14-19}
+class Sample extends StatefulWidget {
+  const Sample({super.key});
+
+  @override
+  State<Sample> createState() => _SampleState();
+}
+
+class _SampleState extends State<Sample> {
+  // sample signal that tells if the user is logged in or not
+  final loggedIn = Signal(false);
+
+  @override
+  Widget build(BuildContext context) {
+    return SignalBuilder(
+      builder: (context, child) {
+        if (loggedIn()) return const Text('Logged in');
+        return const Text('Logged out');
+      },
+    );
+  }
+}
+```
+
+You may be tempted to use a [SignalBuilder](/flutter/signal-builder) but with the `Show` widget is more readable.
+```dart {9} {13-17}
+class Sample extends StatefulWidget {
+  const Sample({super.key});
+
+  @override
+  State<Sample> createState() => _SampleState();
+}
+
+class _SampleState extends State<Sample> {
+  final loggedIn = Signal(false);
+
+  @override
+  Widget build(BuildContext context) {
+    return Show(
+      when: loggedIn,
+      builder: (context) => const Text('Logged In'),
+      fallback: (context) => const Text('Logged out'),
+    );
+  }
+}
+```
+
+The `Show` widget conditionally renders its `builder` or the `fallback` widget based on the `when` evaluation.
+The `fallback` widget builder is optional, by default nothing is rendered.
+
+The `Show` widget takes a functions that returns a `bool`.
+You can easily convert any type to `bool`, for example:
+
+```dart {9} {13-17}
+class Sample extends StatefulWidget {
+  const Sample({super.key});
+
+  @override
+  State<Sample> createState() => _SampleState();
+}
+
+class _SampleState extends State<Sample> {
+  final count = Signal(0);
+
+  @override
+  Widget build(BuildContext context) {
+    return Show(
+      when: () => count() > 5,
+      builder: (context) => const Text('Count is greater than 5'),
+      fallback: (context) => const Text('Count is lower than 6'),
+    );
+  }
+}
+```

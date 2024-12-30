@@ -29,12 +29,12 @@ class InvalidUpdateType extends DartLintRule {
           if (!isContext) return;
           final typeArgument = node.typeArguments?.arguments.firstOrNull?.type;
           if (typeArgument == null) {
-            return reporter.reportErrorForNode(_code, node);
+            return reporter.atNode(node, _code);
           }
           final isSignalBase =
               signalBaseType.isAssignableFromType(typeArgument);
           if (isSignalBase) {
-            return reporter.reportErrorForNode(_code, node);
+            return reporter.atNode(node, _code);
           }
         }
       },

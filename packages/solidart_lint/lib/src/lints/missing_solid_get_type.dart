@@ -28,7 +28,7 @@ class MissingSolidGetType extends DartLintRule {
               buildContextType.isExactlyType(node.target!.staticType!);
           if (!isContext) return;
           if (node.staticType is DynamicType) {
-            reporter.reportErrorForNode(_code, node);
+            reporter.atNode(node, _code);
           }
         }
       },

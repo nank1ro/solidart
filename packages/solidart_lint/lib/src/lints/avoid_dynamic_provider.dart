@@ -25,9 +25,9 @@ class AvoidDynamicProvider extends DartLintRule {
 
       final type = node.staticType;
       if (type == null) return;
-      final name = type.getDisplayString(withNullability: false);
+      final name = type.getDisplayString();
       if (providerType.isExactlyType(type) && name == 'Provider<dynamic>') {
-        reporter.reportErrorForToken(_code, node.beginToken);
+        reporter.atToken(node.beginToken, _code);
         return;
       }
     });
