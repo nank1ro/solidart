@@ -34,12 +34,6 @@ abstract class SolidElement<T> {
   void _disposeFn(BuildContext context, dynamic value);
 }
 
-// coverage:ignore-start
-/// {@macro provider}
-@Deprecated('Use Provider instead')
-typedef SolidProvider<T> = Provider<T>;
-// coverage:ignore-end
-
 /// {@template provider}
 /// A Provider that manages the lifecycle of the value it provides by
 // delegating to a pair of [create] and [dispose].

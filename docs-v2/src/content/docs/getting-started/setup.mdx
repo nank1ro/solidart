@@ -1,0 +1,83 @@
+---
+title: Setup
+description: How to install solidart in your project
+---
+import { Aside } from '@astrojs/starlight/components';
+
+The library is made up of three packages:
+1. [solidart](#solidart)
+2. [flutter_solidart](#flutter_solidart)
+2. [solidart_lint](#solidart_lint)
+
+## solidart
+
+This package is meant to be used only in Dart applications.
+
+### Install
+
+Run this command in the root of your project:
+```sh
+dart pub add solidart
+```
+
+### Import it
+
+```dart
+import 'package:solidart/solidart.dart';
+```
+
+## flutter_solidart
+
+This package extends the functionatilies of `solidart` and is meant to be used only in Flutter applications.
+
+### Install
+
+Run this command in the root of your project:
+```sh
+flutter pub add flutter_solidart
+```
+
+### Import it
+
+```dart
+import 'package:flutter_solidart/flutter_solidart.dart';
+```
+
+## solidart_lint
+
+This package is a developer tool for users of flutter_solidart, designed to help stop common issues and simplify repetitive tasks.
+<Aside type="tip">I highly recommend using this package to avoid errors and understand how to properly use flutter_solidart</Aside>
+
+### Install
+
+Run this command in the root of your Flutter project:
+```sh
+flutter pub add -d solidart_lint custom_lint
+```
+
+Then edit your `analysis_options.yaml` file and add these lines of code:
+
+```yaml
+analyzer:
+  plugins:
+    - custom_lint
+```
+
+Then run:
+```sh
+rm pubspec.lock
+flutter clean
+flutter pub get
+dart run custom_lint
+```
+
+## Update lints (suggested)
+
+You may also update the `analysis_options.yaml` rules to work well with solidart.
+
+```yaml
+linter:
+  rules:
+    use_late_for_private_fields_and_variables: false
+    implicit_call_tearoffs: false
+```
