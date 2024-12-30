@@ -1,0 +1,46 @@
+---
+title: Effect
+description: Learn effects in solidart
+sidebar:
+  order: 4
+---
+import { Aside } from '@astrojs/starlight/components';
+
+Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
+
+An effect can be created by using the `Effect` class.
+The effect automatically subscribes to any signal and reruns when any of them change.
+So let's create an Effect that reruns whenever `counter` changes:
+
+```dart
+final disposeEffect = Effect((dispose) {
+    print("The count is now ${counter.value}");
+});
+```
+
+The effect run immediately and prints `The count is now 0`;
+
+
+Try incrementing the counter by 1:
+```dart
+counter.value++;
+```
+
+The effect prints `The count is now 1`;
+
+The `Effect` class returns a `Dispose` callback, invoke it to stop listening and clearing the effect.
+
+```dart
+final disposeEffect = Effect((dispose) {
+    print("The count is now ${counter.value}");
+});
+
+// Somewhere else, dispose the effect
+disposeEffect();
+```
+
+You can also dispose an effect from inside the callback for a given condition, just call the `dispose` callback provided as an argument.
+
+<Aside>The effect runs immediately with the current signals' values</Aside>
+
+<Aside type="danger">An effect is useless after it is disposed, you must not use it anymore.</Aside>

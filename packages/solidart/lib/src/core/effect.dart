@@ -252,7 +252,7 @@ class Effect implements ReactionInterface {
 
     if (_context.hasCaughtException(this)) {
       if (_onError != null) {
-        _onError!.call(_errorValue!);
+        _onError.call(_errorValue!);
       }
       // coverage:ignore-start
       else {
@@ -287,7 +287,7 @@ class Effect implements ReactionInterface {
         // Note: "on Object" accounts for both Error and Exception
         _errorValue = SolidartCaughtException(e, stackTrace: s);
         if (_onError != null) {
-          _onError!.call(_errorValue!);
+          _onError.call(_errorValue!);
         } else {
           throw _errorValue!;
         }

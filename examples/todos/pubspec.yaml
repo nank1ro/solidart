@@ -31,15 +31,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_solidart: ^2.0.0-dev.1
+  flutter_solidart: ^2.0.0
   uuid: ^4.4.0
 
 dev_dependencies:
-  custom_lint: ^0.6.4
+  custom_lint: ^0.7.0
   flutter_test:
     sdk: flutter
 
-  solidart_lint: ^2.0.0-dev.1
+  solidart_lint: ^2.0.0
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your

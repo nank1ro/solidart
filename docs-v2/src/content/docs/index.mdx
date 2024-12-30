@@ -1,0 +1,40 @@
+---
+title: Welcome to solidart
+description: Simple and performant reactivity in Dart and Flutter, inspired by SolidJS
+template: splash
+hero:
+  tagline: Simple and performant reactivity in Dart and Flutter, inspired by SolidJS
+  image:
+    file: ../../assets/solidart.webp
+  actions:
+    - text: Get started
+      link: /getting-started/overview
+      icon: right-arrow
+    - text: API reference
+      link: https://pub.dev/documentation/flutter_solidart/latest/flutter_solidart/flutter_solidart-library.html
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Next steps
+
+<CardGrid stagger>
+	<Card title="Performant" icon="rocket">
+		Isolate rebuilds and automatically dispose of unused resources.
+	</Card>
+	<Card title="Productive" icon="setting">
+    Ergonomics and familiarity that make building simple or complex frontends a breeze.
+	</Card>
+	<Card title="100% Dart native" icon="seti:dart">
+      Supports Dart JS (HTML), Shelf Server, CLI (and Native), VM, Flutter (Web, Mobile and Desktop). solidart can be used in any Dart project!
+	</Card>
+	<Card title="Linter" icon="seti:eslint">
+		Get amazing lints and refactors, such as "Wrap with SignalBuilder" and many more. See the [list of lints](/guides/lints/).
+	</Card>
+	<Card title="DevTools Extension" icon="pkl">
+		Debug your signals using the [DevTools Extension](/guides/devtools/).
+	</Card>
+
+</CardGrid>

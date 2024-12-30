@@ -30,10 +30,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_solidart: ^2.0.0-dev.1
+  flutter_solidart: ^2.0.0
 
 dev_dependencies:
-  custom_lint: ^0.6.4
+  custom_lint: ^0.7.0
   solidart_lint:
     path: ../
   flutter_test:

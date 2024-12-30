@@ -19,8 +19,10 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 version: 1.0.0+1
 
+resolution: workspace
+
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.6.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -32,7 +34,7 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^0.13.6
-  flutter_solidart: ^2.0.0-dev.1
+  flutter_solidart: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -44,8 +46,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^3.0.2
-  custom_lint: ^0.6.4
-  solidart_lint: ^2.0.0-dev.1
+  custom_lint: ^0.7.0
+  solidart_lint: ^2.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

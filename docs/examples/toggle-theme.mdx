@@ -108,7 +108,7 @@ SignalBuilder(
   builder: (_, __) {
     return IconButton(
       icon: Icon(
-        themeMode.value == ThemeMode.light ? Icons.dark_mode : Icons.light_mode,
+        themeMode.value == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
       ),
     );
   },
@@ -130,7 +130,7 @@ SignalBuilder(
         }
       },
       icon: Icon(
-        mode == ThemeMode.light ? Icons.dark_mode : Icons.light_mode,
+        mode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
       ),
     );
   },
