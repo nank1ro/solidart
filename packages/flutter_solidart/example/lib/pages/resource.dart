@@ -14,7 +14,7 @@ class ResourcePage extends StatefulWidget {
 class _ResourcePageState extends State<ResourcePage> {
   final userId = Signal(1, name: 'userId');
 
-  late final user = Resource(fetcher: fetchUser, source: userId, name: 'user');
+  late final user = Resource(fetchUser, source: userId, name: 'user');
 
   late final userHairColor = user.select((data) {
     return jsonDecode(data)['hair_color'] as String;
