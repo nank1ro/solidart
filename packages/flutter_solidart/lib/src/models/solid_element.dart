@@ -70,6 +70,14 @@ class Provider<T> extends ProviderElement<T> {
     super.id,
   });
 
+  /// {@macro provider}
+  const Provider.context(
+    ProviderContext<T> context, {
+    required super.create,
+    this.dispose,
+    this.lazy = true,
+  }) : super(id: context);
+
   /// An optional dispose function called when the Solid that created this
   /// provider disposes
   final DisposeValue<T>? dispose;
