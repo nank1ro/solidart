@@ -116,7 +116,7 @@ Future<String> fetchUser() async {
 }
 
 // The resource
-final user = Resource(fetcher: fetchUser, source: userId);
+final user = Resource(fetchUser, source: userId);
 ```
 
 A Resource can also be driven from a [stream] instead of a Future.

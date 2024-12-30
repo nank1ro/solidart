@@ -22,7 +22,7 @@ class GithubSearchBloc {
 
   /// Handles the fetching of current search results
   late final searchResult = Resource(
-    fetcher: _search,
+    _search,
     source: _searchTerm,
   );
 
