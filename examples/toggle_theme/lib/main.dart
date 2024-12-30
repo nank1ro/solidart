@@ -11,7 +11,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Provide the theme mode signal to descendats
-    return Solid(
+    return ProviderScope.builder(
       providers: [
         Provider<Signal<ThemeMode>>(
           create: () => Signal(ThemeMode.light),

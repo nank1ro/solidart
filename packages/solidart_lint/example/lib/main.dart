@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Solid(
+    return ProviderScope(
       providers: [
         // expect_lint: avoid_dynamic_provider
         Provider(create: () => MyClass()),

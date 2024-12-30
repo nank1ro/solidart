@@ -10,7 +10,7 @@ class ObserveSignalPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Observe Signal'),
       ),
-      body: Solid(
+      body: ProviderScope(
         providers: [
           // provide the count signal to descendants
           Provider<Signal<int>>(create: () => Signal(0)),

@@ -11,7 +11,7 @@ class MultipleSignalsPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Multiple Signals'),
       ),
-      body: Solid(
+      body: ProviderScope(
         providers: [
           // provide the firstName signal to descendants
           Provider<Signal<String>>(

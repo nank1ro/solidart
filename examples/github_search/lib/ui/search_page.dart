@@ -9,7 +9,7 @@ class SearchPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Solid(
+    return ProviderScope(
       providers: [
         // Provide the [GithubSearchBloc] to descendants
         Provider<GithubSearchBloc>(

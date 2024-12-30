@@ -13,7 +13,7 @@ class SolidReactivityPage extends StatefulWidget {
 class _SolidReactivityPageState extends State<SolidReactivityPage> {
   @override
   Widget build(BuildContext context) {
-    return Solid(
+    return ProviderScope(
       providers: [
         Provider<Signal<int>>(create: () => Signal(0), id: #firstCounter),
         Provider<Signal<int>>(create: () => Signal(0), id: #secondCounter),

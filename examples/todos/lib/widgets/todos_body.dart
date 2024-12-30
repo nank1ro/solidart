@@ -27,7 +27,7 @@ class _TodosBodyState extends State<TodosBody> {
     // in both the `initState` and `build` methods.
     final todosController = context.get<TodosController>();
 
-    return Solid(
+    return ProviderScope(
       providers: [
         // make the active filter signal visible only to descendants.
         // created here because this is where it starts to be necessary.

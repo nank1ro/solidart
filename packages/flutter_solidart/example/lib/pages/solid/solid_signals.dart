@@ -23,7 +23,7 @@ class _SolidSignalsPageState extends State<SolidSignalsPage> {
       appBar: AppBar(
         title: const Text('Solid Signals'),
       ),
-      body: Solid(
+      body: ProviderScope(
         providers: [
           // provide the count signal to descendants
           Provider<Signal<int>>(

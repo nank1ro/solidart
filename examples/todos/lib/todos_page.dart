@@ -10,7 +10,7 @@ class TodosPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Using Provider here to provide the [TodosController] to descendants.
-    return Solid(
+    return ProviderScope(
       providers: [
         Provider<TodosController>(
           create: () => TodosController(initialTodos: Todo.sample),

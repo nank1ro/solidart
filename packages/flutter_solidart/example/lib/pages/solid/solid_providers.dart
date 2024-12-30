@@ -26,7 +26,7 @@ class ProvidersPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Providers'),
       ),
-      body: Solid(
+      body: ProviderScope(
         providers: [
           Provider<NameProvider>(
             create: () => const NameProvider('Ale'),
@@ -58,7 +58,7 @@ class SomeChild extends StatelessWidget {
   Future<void> openDialog(BuildContext context) {
     return showDialog(
       context: context,
-      builder: (_) => Solid.value(
+      builder: (_) => ProviderScope.value(
         elements: [
           context.getElement<NameProvider>(),
           context.getElement<NumberProvider>(#firstNumber),

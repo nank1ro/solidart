@@ -307,7 +307,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: Solid(
+            body: ProviderScope.builder(
               providers: [
                 Provider<Signal<int>>(create: () => s, id: 'counter'),
                 Provider<Computed<int>>(
@@ -339,7 +339,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: Solid(
+            body: ProviderScope.builder(
               providers: [
                 Provider<Computed<int>>(
                   create: () => Computed(() => s() * 2),
@@ -366,7 +366,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: Solid(
+            body: ProviderScope.builder(
               providers: [
                 Provider<ReadSignal<int>>(create: s.toReadSignal),
               ],
@@ -391,7 +391,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: Solid(
+            body: ProviderScope.builder(
               providers: [
                 Provider<ReadSignal<int>>(
                   create: s.toReadSignal,
@@ -422,7 +422,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Solid(
+          body: ProviderScope.builder(
             providers: [
               Provider<Signal<int>>(create: () => s, id: 'counter'),
               Provider<ReadSignal<int>>(
@@ -458,7 +458,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Solid(
+          body: ProviderScope.builder(
             providers: [
               Provider<Signal<int>>(
                 create: () => Signal(0),
@@ -493,7 +493,7 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return Solid.value(
+            return ProviderScope.value(
               element: context.getElement<Signal<int>>('counter'),
               child: Builder(
                 builder: (innerContext) {
@@ -511,7 +511,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: Solid(
+            body: ProviderScope.builder(
               providers: [
                 Provider<Signal<int>>(create: () => s, id: 'counter'),
               ],
@@ -546,8 +546,8 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return Solid.value(
-              elements: [
+            return ProviderScope(
+              providers: [
                 context.getElement<Signal<int>>('counter'),
                 context.getElement<Computed<int>>('double-counter'),
               ],
@@ -574,7 +574,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: Solid(
+            body: ProviderScope.builder(
               providers: [
                 Provider<Signal<int>>(
                   create: () => s,
@@ -617,7 +617,7 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return Solid.value(
+            return ProviderScope.value(
               element: context.getElement<NumberProvider>(),
               child: Builder(
                 builder: (innerContext) {
@@ -633,7 +633,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: Solid(
+            body: ProviderScope.builder(
               providers: [
                 Provider<NumberProvider>(
                   create: () => const NumberProvider(1),
@@ -667,7 +667,7 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return Solid.value(
+            return ProviderScope.value(
               element: context.getElement<NumberProvider>(),
               child: Builder(
                 builder: (innerContext) {
@@ -683,7 +683,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: Solid(
+            body: ProviderScope.builder(
               providers: [
                 Provider<NameProvider>(
                   create: () => MockNameProvider('name'),
@@ -716,7 +716,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Solid(
+          body: ProviderScope.builder(
             providers: [
               Provider<NameProvider>(
                 create: () => MockNameProvider('name'),
@@ -812,7 +812,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Solid(
+          body: ProviderScope.builder(
             providers: [
               Provider<NameProvider>(
                 create: () => nameProvider,
@@ -859,7 +859,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Solid(
+          body: ProviderScope.builder(
             providers: [
               Provider<NumberProvider>(
                 create: () => const NumberProvider(1),
@@ -889,7 +889,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Solid(
+          body: ProviderScope(
             providers: [
               Provider(create: () => const NumberProvider(1)),
             ],
@@ -910,7 +910,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Solid(
+          body: ProviderScope(
             providers: [
               Provider<NumberProvider>(
                 create: () => const NumberProvider(1),
@@ -934,7 +934,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Solid(
+          body: ProviderScope.builder(
             providers: [
               Provider<Signal<int>>(create: () => Signal(0)),
             ],
@@ -994,7 +994,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Solid(
+          body: ProviderScope(
             providers: [
               Provider<NumberProvider>(
                 create: () => const NumberProvider(1),
@@ -1002,7 +1002,7 @@ void main() {
                 id: 1,
               ),
             ],
-            child: Solid(
+            child: ProviderScope.builder(
               providers: [
                 Provider<NumberProvider>(
                   create: () => const NumberProvider(100),

@@ -9,12 +9,12 @@ typedef DisposeValue<T> = void Function(T value);
 /// The idenfifier of the element.
 typedef Identifier = Object;
 
-/// {@template solidelement}
+/// {@template provider-element}
 /// The base class of a solid provider
 /// {@endtemplate}
-abstract class SolidElement<T> {
-  /// {@macro solidelement}
-  const SolidElement({
+abstract class ProviderElement<T> {
+  /// {@macro provider-element}
+  const ProviderElement({
     required this.create,
     this.id,
   });
@@ -29,7 +29,7 @@ abstract class SolidElement<T> {
   /// Returns the type of the value
   Type get _valueType => T;
 
-  bool get _isSignal => this is SolidElement<SignalBase>;
+  bool get _isSignal => this is ProviderElement<SignalBase>;
 
   void _disposeFn(BuildContext context, dynamic value);
 }
@@ -42,7 +42,7 @@ typedef SolidProvider<T> = Provider<T>;
 
 /// {@template provider}
 /// A Provider that manages the lifecycle of the value it provides by
-// delegating to a pair of [create] and [dispose].
+/// delegating to a pair of [create] and [dispose].
 ///
 /// It is usually used to avoid making a StatefulWidget for something trivial,
 /// such as instantiating a BLoC.
@@ -61,7 +61,7 @@ typedef SolidProvider<T> = Provider<T>;
 ///
 /// {@endtemplate}
 @immutable
-class Provider<T> extends SolidElement<T> {
+class Provider<T> extends ProviderElement<T> {
   /// {@macro provider}
   const Provider({
     required super.create,
