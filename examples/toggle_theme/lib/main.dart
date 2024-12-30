@@ -60,7 +60,7 @@ class MyHomePage extends StatelessWidget {
                 }
               },
               icon: Icon(
-                mode == ThemeMode.light ? Icons.dark_mode : Icons.light_mode,
+                mode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
               ),
             );
           },

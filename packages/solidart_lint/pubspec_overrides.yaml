@@ -1,5 +1,0 @@
-dependency_overrides:
-  solidart:
-    path: ../solidart/
-  flutter_solidart:
-    path: ../flutter_solidart/

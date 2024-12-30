@@ -8,3 +8,4 @@ export 'src/utils/solid_extensions.dart';
 export 'src/widgets/show.dart';
 export 'src/widgets/signal_builder.dart';
 export 'src/widgets/solid.dart';
+export 'src/widgets/solid_override.dart';
