@@ -1,0 +1,224 @@
+---
+title: Solid
+description: Learn Solid in flutter_solidart
+sidebar:
+  order: 1
+---
+import { Aside } from '@astrojs/starlight/components';
+
+The Flutter framework works like a Tree. There are ancestors and there are descendants.
+
+You may incur the need to pass a Signal deep into the tree, this is discouraged.
+You should never pass a signal as a parameter.
+
+To avoid this there's the _Solid_ widget.
+
+With this widget you can pass a signal down the tree to anyone who needs it.
+
+You will have already seen `Theme.of(context)` or `MediaQuery.of(context)`, the procedure is practically the same.
+
+Let's see an example to grasp the concept.
+
+You're going to see how to build a toggle theme feature using `Solid`, this example is present also [here](/examples/toggle-theme)
+
+```dart {7-16} {19} {34-35} {41-43} {47-51} {54}
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Provide the theme mode signal to descendants
+    return Solid(
+      providers: [
+        Provider<Signal<ThemeMode>>(
+          create: () => Signal(ThemeMode.light),
+        ),
+      ],
+      // using the builder method to immediately access the signal
+      builder: (context) {
+        // observe the theme mode value, this will rebuild every time the themeMode signal changes.
+        final themeMode = context.observe<Signal<ThemeMode>>().value;
+        return MaterialApp(
+          title: 'Toggle theme',
+          themeMode: themeMode,
+          theme: ThemeData.light(),
+          darkTheme: ThemeData.dark(),
+          home: const MyHomePage(),
+        );
+      },
+    );
+  }
+}
+
+class MyHomePage extends StatelessWidget {
+  const MyHomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // retrieve the theme mode signal, doesn't rebuild when the signal changes
+    final themeMode = context.get<Signal<ThemeMode>>();
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Toggle theme'),
+      ),
+      body: Center(
+        child: SignalBuilder( // Listen to the theme mode signal rebuilding only the IconButton
+          builder: (_, __) {
+            final mode = themeMode.value;
+            return IconButton(
+              onPressed: () {
+                // toggle the theme mode
+                if (mode == ThemeMode.light) {
+                  themeMode.value = ThemeMode.dark;
+                } else {
+                  themeMode.value = ThemeMode.light;
+                }
+              },
+              icon: Icon(
+                mode == ThemeMode.light ? Icons.dark_mode : Icons.light_mode,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+```
+
+The `Solid` widgets takes a List of `providers`:
+The `Provider` has a `create` function that returns the signal. You may create a signal or a derived signal. The value is a function because the signal is created lazily only when used for the first time, if you never access the signal it never gets created.
+In the `Provider` you can also specify an `id`entifier for having multiple signals of the same type.
+
+The `context.observe()` method listen to the signal value and rebuilds the widget when the value changes. It takes an optional `id` that is the signal identifier that you want to use. This method must be called only inside the `build` method.
+
+The `context.get()` method doesn't listen to the signal value. You may use this method inside the `initState` and `build` methods.
+
+> It is mandatory to set the type of signal to the `Provider` otherwise you're going to encounter an error, for example:
+
+1. `Provider<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))`
+2. `context.observe<Signal<ThemeMode>>` and `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
+
+## Providers
+
+You can also pass `Object`s to descendants:
+
+```dart {1-15} {26-45} {54-56} {61} {63} {65}
+class NameProvider {
+  const NameProvider(this.name);
+
+  final String name;
+
+  void dispose() {
+    print('dispose name provider');
+  }
+}
+
+class NumberProvider {
+  const NumberProvider(this.number);
+
+  final int number;
+}
+
+class ProvidersPage extends StatelessWidget {
+  const ProvidersPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Providers'),
+      ),
+      body: Solid(
+        providers: [
+          Provider<NameProvider>(
+            create: () => const NameProvider('Ale'),
+            // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
+            dispose: (provider) => provider.dispose(),
+          ),
+          Provider<NumberProvider>(
+            create: () => const NumberProvider(1),
+            // Do not create the provider lazily, but immediately
+            lazy: false,
+            id: 1,
+          ),
+          Provider<NumberProvider>(
+            create: () => const NumberProvider(10),
+            id: 2,
+          ),
+        ],
+        child: const SomeChildThatNeedsProviders(),
+      ),
+    );
+  }
+}
+
+class SomeChildThatNeedsProviders extends StatelessWidget {
+  const SomeChildThatNeedsProviders({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final nameProvider = context.get<NameProvider>();
+    final numberProvider = context.get<NumberProvider>(1);
+    final numberProvider2 = context.get<NumberProvider>(2);
+    return Center(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text('name: ${nameProvider.name}'),
+          const SizedBox(height: 8),
+          Text('number: ${numberProvider.number}'),
+          const SizedBox(height: 8),
+          Text('number2: ${numberProvider2.number}'),
+        ],
+      ),
+    );
+  }
+}
+```
+<Aside>You can have multiple providers of the same type in the same Solid widget specifying a different id to each one.</Aside>
+
+## Solid.value
+
+The `Solid.value` factory is useful for passing `providers`
+to modals, because they are spawned in a new tree.
+`Solid.value` takes a list of `ProviderElement`s.
+
+### Access providers in modals
+
+```dart {5-11} {13-18} {23-25}
+Future<void> openDialog(BuildContext context) {
+   return showDialog(
+     context: context,
+     builder: (_) =>
+      // using `Solid.value` we provide the existing provider(s) to the dialog
+      Solid.value(
+       elements: [
+         context.getElement<NameProvider>(),
+         context.getElement<NumberProvider>(ProviderId.firstNumber),
+         context.getElement<NumberProvider>(ProviderId.secondNumber),
+       ],
+       child: Dialog(
+         child: Builder(builder: (innerContext) {
+           final nameProvider = innerContext.get<NameProvider>();
+           final numberProvider1 =
+               innerContext.get<NumberProvider>(ProviderId.firstNumber);
+           final numberProvider2 =
+               innerContext.get<NumberProvider>(ProviderId.secondNumber);
+           return SizedBox.square(
+             dimension: 100,
+             child: Center(
+               child: Text('''
+ name: ${nameProvider.name}
+ number1: ${numberProvider1.number}
+ number2: ${numberProvider2.number}
+ '''),
+            ),
+          );
+        }),
+      ),
+    ),
+  );
+}
+```
+
+<Aside>Note the `context` being used to retrieve elements, it's the same passed to the `showDialog` function.</Aside>

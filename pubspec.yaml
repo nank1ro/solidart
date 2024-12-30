@@ -1,6 +1,13 @@
 name: solidart_melos
+publish_to: none
 
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.6.0
 dev_dependencies:
   melos: ^3.4.0
+workspace:
+  - packages/flutter_solidart
+  - packages/flutter_solidart/example
+  - packages/solidart
+  - packages/solidart_devtools_extension
+  - packages/solidart_lint
