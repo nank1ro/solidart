@@ -928,7 +928,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
       '''ListSignal<$E>(value: $_value, previousValue: $_previousValue)''';
 
   void _notifyChanged() {
-    _reportChanged();
+    // _reportChanged();
     _notifyListeners();
     _notifySignalUpdate();
   }

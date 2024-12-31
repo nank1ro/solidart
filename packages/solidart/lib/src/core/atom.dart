@@ -18,11 +18,11 @@ class Atom {
   // ignore this lint, is a false statement, because the values is changed by
   // reactive context.
   // ignore: prefer_final_fields
-  bool _isPendingUnobservation = false;
-  DerivationState _lowestObserverState = DerivationState.notTracking;
-
-  // ignore: prefer_final_fields
-  bool _isBeingObserved = false;
+  // bool _isPendingUnobservation = false;
+  // DerivationState _lowestObserverState = DerivationState.notTracking;
+  //
+  // // ignore: prefer_final_fields
+  // bool _isBeingObserved = false;
 
   bool disposed = false;
 
@@ -38,25 +38,25 @@ class Atom {
     // _context.reportObserved(this);
   }
 
-  void _reportChanged() {
-    _context
-      ..startBatch()
-      ..propagateChanged(this)
-      ..endBatch();
-  }
+  // void _reportChanged() {
+  //   _context
+  //     ..startBatch()
+  //     ..propagateChanged(this)
+  //     ..endBatch();
+  // }
 
-  void _addObserver(Derivation d) {
-    _observers.add(d);
+  // void _addObserver(Derivation d) {
+  //   _observers.add(d);
+  //
+  //   if (_lowestObserverState.index > d._dependenciesState.index) {
+  //     _lowestObserverState = d._dependenciesState;
+  //   }
+  // }
 
-    if (_lowestObserverState.index > d._dependenciesState.index) {
-      _lowestObserverState = d._dependenciesState;
-    }
-  }
-
-  void _removeObserver(Derivation d) {
-    _observers.remove(d);
-    _mayDispose();
-  }
+  // void _removeObserver(Derivation d) {
+  //   _observers.remove(d);
+  //   _mayDispose();
+  // }
 
   // coverage:ignore-start
   void dispose() {}

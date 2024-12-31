@@ -436,7 +436,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
       '''MapSignal<$K, $V>(value: $_value, previousValue: $_previousValue)''';
 
   void _notifyChanged() {
-    _reportChanged();
+    // _reportChanged();
     _notifyListeners();
     _notifySignalUpdate();
   }

@@ -104,23 +104,23 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
 
   late final alien.Computed<T> _internalComputed;
 
-  @override
-  SolidartCaughtException? _errorValue;
+  // @override
+  // SolidartCaughtException? _errorValue;
 
   final Set<Atom> __observables = {};
 
-  @override
-  Set<Atom> get _observables => __observables;
+  // @override
+  // Set<Atom> get _observables => __observables;
 
-  @override
-  set _observables(Set<Atom> value) {
-    __observables
-      ..clear()
-      ..addAll(value);
-  }
+  // @override
+  // set _observables(Set<Atom> value) {
+  //   __observables
+  //     ..clear()
+  //     ..addAll(value);
+  // }
 
-  @override
-  Set<Atom>? _newObservables;
+  // @override
+  // Set<Atom>? _newObservables;
 
   @override
   // ignore: prefer_final_fields
@@ -134,10 +134,10 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
     super.dispose();
   }
 
-  @override
-  void _onBecomeStale() {
-    // _context.propagatePossiblyChanged(this);
-  }
+  // @override
+  // void _onBecomeStale() {
+  //   // _context.propagatePossiblyChanged(this);
+  // }
 
   @override
   T get value {
@@ -167,46 +167,46 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
     });
   }
 
-  T? _computeValue({required bool track}) {
-    // _isComputing = true;
-    _context.pushComputation();
+  // T? _computeValue({required bool track}) {
+  //   // _isComputing = true;
+  //   _context.pushComputation();
+  //
+  //   T? computedValue;
+  //   if (track) {
+  //     computedValue = _context.trackDerivation(this, selector);
+  //   } else {
+  //     try {
+  //       computedValue = selector();
+  //       _errorValue = null;
+  //     } on Object catch (e, s) {
+  //       _errorValue = SolidartCaughtException(e, stackTrace: s);
+  //     }
+  //   }
+  //
+  //   _context.popComputation();
+  //   // _isComputing = false;
+  //
+  //   return computedValue;
+  // }
 
-    T? computedValue;
-    if (track) {
-      computedValue = _context.trackDerivation(this, selector);
-    } else {
-      try {
-        computedValue = selector();
-        _errorValue = null;
-      } on Object catch (e, s) {
-        _errorValue = SolidartCaughtException(e, stackTrace: s);
-      }
-    }
-
-    _context.popComputation();
-    // _isComputing = false;
-
-    return computedValue;
-  }
-
-  bool _trackAndCompute() {
-    final oldValue = _value;
-    final wasSuspended = _dependenciesState == DerivationState.notTracking;
-    final hadCaughtException = _context.hasCaughtException(this);
-
-    final newValue = _computeValue(track: true);
-
-    final changedException =
-        hadCaughtException != _context.hasCaughtException(this);
-    final changed =
-        wasSuspended || changedException || !_compare(oldValue, newValue);
-
-    if (changed && newValue is T) {
-      _setValue(newValue);
-    }
-
-    return changed;
-  }
+  // bool _trackAndCompute() {
+  //   final oldValue = _value;
+  //   final wasSuspended = _dependenciesState == DerivationState.notTracking;
+  //   final hadCaughtException = _context.hasCaughtException(this);
+  //
+  //   final newValue = _computeValue(track: true);
+  //
+  //   final changedException =
+  //       hadCaughtException != _context.hasCaughtException(this);
+  //   final changed =
+  //       wasSuspended || changedException || !_compare(oldValue, newValue);
+  //
+  //   if (changed && newValue is T) {
+  //     _setValue(newValue);
+  //   }
+  //
+  //   return changed;
+  // }
 
   @override
   String toString() =>

@@ -27,17 +27,17 @@ enum DerivationState {
 }
 
 abstract class Derivation {
-  Set<Atom> get _observables;
-
-  set _observables(Set<Atom> newObservables);
-
-  Set<Atom>? _newObservables;
-
-  SolidartCaughtException? _errorValue;
-
-  late DerivationState _dependenciesState;
-
-  void _onBecomeStale();
-
+  // Set<Atom> get _observables;
+  //
+  // set _observables(Set<Atom> newObservables);
+  //
+  // Set<Atom>? _newObservables;
+  //
+  // SolidartCaughtException? _errorValue;
+  //
+  // late DerivationState _dependenciesState;
+  //
+  // void _onBecomeStale();
+  //
   void _mayDispose();
 }
