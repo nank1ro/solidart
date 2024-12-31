@@ -110,7 +110,6 @@ class Signal<T> extends ReadSignal<T> {
 
     /// {@macro SignalBase.equals}
     bool? equals,
-
     /// {@macro SignalBase.autoDispose}
     bool? autoDispose,
 

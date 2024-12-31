@@ -49,8 +49,8 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     required this.autoDispose,
     required this.trackInDevTools,
     required this.comparator,
-  })  : _value = initialValue,
-        _hasValue = true {
+  }) : _hasValue = true {
+    _internalSignal = alien.Signal(initialValue);
     _notifySignalCreation();
   }
 
@@ -78,8 +78,8 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   @override
   final ValueComparator<T?> comparator;
 
-  // Tracks the internal value
-  late T _value;
+  /// Tracks the internal value
+  late final alien.Signal<T> _internalSignal;
 
   @override
   bool get hasValue {
@@ -95,6 +95,31 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   // Whether or not there is a previous value
   bool _hasPreviousValue = false;
 
+  T get _value => _internalSignal.get();
+
+  late T _untrackedValue;
+
+  /// Returns the value without triggering the reactive system.
+  T get untrackedValue {
+    if (!_hasValue) {
+      throw StateError(
+        '''The signal named "$name" is lazy and has not been initialized yet, cannot access its value''',
+      );
+    }
+    // _reportObserved();
+    return _untrackedValue;
+  }
+
+  set _value(T newValue) {
+    _untrackedValue = newValue;
+    // _internalSignal.set(newValue);
+    _internalSignal.currentValue = newValue;
+    final subs = _internalSignal.subs;
+    if (subs != null) {
+      alien.propagate(subs);
+    }
+  }
+
   /// All the observers
   final List<ObserveCallback<T>> _listeners = [];
 
@@ -105,7 +130,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
         '''The signal named "$name" is lazy and has not been initialized yet, cannot access its value''',
       );
     }
-    _reportObserved();
+    // _reportObserved();
     return _value;
   }
 
@@ -117,10 +142,12 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   /// {@endtemplate}
   void _setValue(T newValue) {
     final firstValue = !_hasValue;
+
+    if (firstValue) _internalSignal = alien.Signal(newValue);
     _hasValue = true;
 
-    // skip if the value are equals
-    if (!firstValue && _areEqual(_value, newValue)) {
+    // skip if the value are equal
+    if (!firstValue && _compare(_value, newValue)) {
       return;
     }
 
@@ -129,7 +156,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
     // notify with the new value
     _value = newValue;
-    _reportChanged();
+    // _reportChanged();
     _notifyListeners();
 
     if (firstValue) {
@@ -141,16 +168,16 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   void _notifyListeners() {
     if (_listeners.isNotEmpty) {
-      _context.untracked(() {
-        for (final listener in _listeners.toList(growable: false)) {
-          listener(_previousValue, _value);
-        }
-      });
+      // _context.untracked(() {
+      for (final listener in _listeners.toList(growable: false)) {
+        listener(_previousValue, _untrackedValue);
+      }
+      // });
     }
   }
 
   /// Indicates if the [oldValue] and the [newValue] are equal
-  bool _areEqual(T? oldValue, T? newValue) {
+  bool _compare(T? oldValue, T? newValue) {
     // skip if the value are equals
     if (equals) {
       return oldValue == newValue;
@@ -165,14 +192,18 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   @override
   bool get hasPreviousValue {
-    _reportObserved();
+    // _reportObserved();
+    // cause observation
+    value;
     return _hasPreviousValue;
   }
 
   /// The previous value, if any.
   @override
   T? get previousValue {
-    _reportObserved();
+    // _reportObserved();
+    // cause observation
+    value;
     return _previousValue;
   }
 

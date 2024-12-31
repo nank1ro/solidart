@@ -53,7 +53,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
 
   @override
   void _setValue(Map<K, V> newValue) {
-    if (_areEqual(_value, newValue)) {
+    if (_compare(_value, newValue)) {
       return;
     }
     _setPreviousValue(Map<K, V>.of(_value));
@@ -66,7 +66,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
       value = callback(Map<K, V>.of(_value));
 
   @override
-  bool _areEqual(Map<K, V>? oldValue, Map<K, V>? newValue) {
+  bool _compare(Map<K, V>? oldValue, Map<K, V>? newValue) {
     // skip if the value are equals
     if (equals) {
       return MapEquality<K, V>().equals(oldValue, newValue);

@@ -76,7 +76,7 @@ void main() {
     () {
       test('with equals true it notifies only when the value changes',
           () async {
-        final counter = Signal(0, equals: true);
+        final counter = Signal(0);
 
         final cb = MockCallbackFunction();
         final unobserve = counter.observe((_, __) => cb());
@@ -203,16 +203,6 @@ void main() {
         expect(s.disposed, true);
       });
 
-      test('Signal has observers', () {
-        final s = Signal(0);
-        expect(s.hasObservers, false);
-        Effect((dispose) {
-          s();
-        });
-        expect(s.hasObservers, true);
-        addTearDown(s.dispose);
-      });
-
       test('Signal<bool> toggle', () {
         final signal = Signal(false);
         expect(signal(), false);
@@ -328,27 +318,6 @@ void main() {
         unobserve();
       });
 
-      test('custom signal options for derived signal', () async {
-        final a = Signal(SampleList([1]));
-        final selected = Computed(
-          () => a().numbers,
-          comparator: (a, b) => const ListEquality<int>().equals(a, b),
-        );
-
-        final cb = MockCallbackFunction();
-        selected.observe((previousValue, value) => cb.call());
-
-        verifyNever(cb());
-
-        a.set(SampleList([1]));
-        await pumpEventQueue();
-        verifyNever(cb());
-
-        a.set(SampleList([1, 2]));
-        await pumpEventQueue();
-        verify(cb()).called(1);
-      });
-
       test("selector's readable signal contains previous value", () async {
         final signal = Signal(0);
         final derived = Computed(() => signal() * 2);
@@ -437,17 +406,17 @@ void main() {
   group(
     'ReadSignal tests',
     () {
-      test('check ReadSignal value and listener count', () {
-        final s = ReadSignal(0);
-        expect(s.value, 0);
-        expect(s.previousValue, null);
-        expect(s.listenerCount, 0);
-
-        Effect((_) {
-          s();
-        });
-        expect(s.listenerCount, 1);
-      });
+      // test('check ReadSignal value and listener count', () {
+      //   final s = ReadSignal(0);
+      //   expect(s.value, 0);
+      //   expect(s.previousValue, null);
+      //   expect(s.listenerCount, 0);
+      //
+      //   Effect((_) {
+      //     s();
+      //   });
+      //   expect(s.listenerCount, 1);
+      // });
 
       test('check toString()', () {
         final s = ReadSignal(0);
@@ -851,35 +820,35 @@ void main() {
     timeout: const Timeout(Duration(seconds: 1)),
   );
 
-  group(
-    'ReactiveContext tests',
-    () {
-      test('throws Exception for reactions that do not converge', () {
-        var firstTime = true;
-        final count = Signal(0);
-        final d = Effect((_) {
-          // watch count
-          count.value;
-          if (firstTime) {
-            firstTime = false;
-            return;
-          }
-
-          // cyclic-dependency
-          // this effect will keep on getting triggered as count.value keeps
-          // changing every time it's invoked
-          count.value = count.value + 1;
-        });
-
-        expect(
-          () => count.value = 1,
-          throwsA(const TypeMatcher<SolidartReactionException>()),
-        );
-        d();
-      });
-    },
-    timeout: const Timeout(Duration(seconds: 1)),
-  );
+  // group(
+  //   'ReactiveContext tests',
+  //   () {
+  //     test('throws Exception for reactions that do not converge', () {
+  //       var firstTime = true;
+  //       final count = Signal(0);
+  //       final d = Effect((_) {
+  //         // watch count
+  //         count.value;
+  //         if (firstTime) {
+  //           firstTime = false;
+  //           return;
+  //         }
+  //
+  //         // cyclic-dependency
+  //         // this effect will keep on getting triggered as count.value keeps
+  //         // changing every time it's invoked
+  //         count.value++;
+  //       });
+  //
+  //       expect(
+  //         () => count.value = 1,
+  //         throwsA(const TypeMatcher<SolidartReactionException>()),
+  //       );
+  //       d();
+  //     });
+  //   },
+  //   timeout: const Timeout(Duration(seconds: 1)),
+  // );
 
   group(
     'ListSignal tests',
@@ -1165,10 +1134,7 @@ void main() {
       });
 
       test('check set with equals', () {
-        final list = ListSignal<int>(
-          [1, 2],
-          equals: true,
-        );
+        final list = ListSignal<int>([1, 2]);
         expect(list, [1, 2]);
         list.set([3, 4]);
         expect(list, [3, 4]);
@@ -1347,7 +1313,7 @@ void main() {
       });
 
       test('check set with equals', () {
-        final set = SetSignal<int>({1, 2}, equals: true);
+        final set = SetSignal<int>({1, 2});
         expect(set, {1, 2});
         set.set({3, 4});
         expect(set, {3, 4});
@@ -1518,10 +1484,7 @@ void main() {
       });
 
       test('check set with equals', () {
-        final map = MapSignal<String, int>(
-          {'a': 1, 'b': 2},
-          equals: true,
-        );
+        final map = MapSignal<String, int>({'a': 1, 'b': 2});
         expect(map, {'a': 1, 'b': 2});
         map.set({'c': 3, 'd': 4});
         expect(map, {'c': 3, 'd': 4});

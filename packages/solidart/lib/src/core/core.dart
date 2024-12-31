@@ -4,11 +4,13 @@ import 'dart:convert';
 import 'dart:developer' as dev;
 import 'dart:math';
 
+import 'package:alien_signals/alien_signals.dart' as alien;
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:solidart/src/utils.dart';
 
 part 'atom.dart';
+part 'batch.dart';
 part 'collections/list.dart';
 part 'collections/map.dart';
 part 'collections/set.dart';
@@ -22,4 +24,3 @@ part 'read_signal.dart';
 part 'resource.dart';
 part 'signal.dart';
 part 'signal_base.dart';
-part 'batch.dart';

@@ -53,7 +53,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
 
   @override
   void _setValue(List<E> newValue) {
-    if (_areEqual(_value, newValue)) {
+    if (_compare(_value, newValue)) {
       return;
     }
     _setPreviousValue(List<E>.of(_value));
@@ -66,7 +66,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
       value = callback(List<E>.of(_value));
 
   @override
-  bool _areEqual(List<E>? oldValue, List<E>? newValue) {
+  bool _compare(List<E>? oldValue, List<E>? newValue) {
     // skip if the value are equals
     if (equals) {
       return ListEquality<E>().equals(oldValue, newValue);

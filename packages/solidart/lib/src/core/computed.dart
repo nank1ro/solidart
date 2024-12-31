@@ -86,10 +86,23 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
     required super.autoDispose,
     required super.trackInDevTools,
     required super.comparator,
-  }) : super._internal(initialValue: selector());
+  }) : super._internal(initialValue: selector()) {
+    _internalComputed = alien.Computed((previousValue) {
+      if (previousValue is T) {
+        super._setPreviousValue(previousValue);
+      }
+      try {
+        return selector();
+      } catch (e, s) {
+        throw SolidartCaughtException(e, stackTrace: s);
+      }
+    });
+  }
 
   /// The selector applied
   final T Function() selector;
+
+  late final alien.Computed<T> _internalComputed;
 
   @override
   SolidartCaughtException? _errorValue;
@@ -113,49 +126,22 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   // ignore: prefer_final_fields
   DerivationState _dependenciesState = DerivationState.notTracking;
 
-  bool _isComputing = false;
+  // bool _isComputing = false;
 
   @override
   void dispose() {
-    _context.clearObservables(this);
+    // _context.clearObservables(this);
     super.dispose();
   }
 
   @override
   void _onBecomeStale() {
-    _context.propagatePossiblyChanged(this);
+    // _context.propagatePossiblyChanged(this);
   }
 
   @override
   T get value {
-    if (_isComputing) {
-      // coverage:ignore-start
-      throw SolidartReactionException(
-        'Cycle detected in computation $name: $selector',
-      );
-      // coverage:ignore-end
-    }
-
-    if (!_context.isWithinBatch && _observers.isEmpty) {
-      if (_context.shouldCompute(this)) {
-        _context.startBatch();
-        final newValue = _computeValue(track: false);
-        if (newValue is T) _setValue(newValue);
-        _context.endBatch();
-      }
-    } else {
-      _reportObserved();
-      if (_context.shouldCompute(this)) {
-        if (_trackAndCompute()) {
-          _context.propagateChangeConfirmed(this);
-        }
-      }
-    }
-
-    if (_context.hasCaughtException(this)) {
-      throw _errorValue!;
-    }
-    return _value;
+    return _internalComputed.get();
   }
 
   @override
@@ -166,34 +152,23 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   }
 
   @override
-  bool get hasPreviousValue {
-    // cause observation
-    value;
-    return super._hasPreviousValue;
-  }
-
-  @override
   DisposeObservation observe(
     ObserveCallback<T> listener, {
     bool fireImmediately = false,
   }) {
-    // cause observation
-    final disposeEffect = Effect((_) {
-      value;
+    var skipped = false;
+    return Effect((_) {
+      final v = value;
+      if (!fireImmediately && !skipped) {
+        skipped = true;
+        return;
+      }
+      listener(previousValue, v);
     });
-    final disposeObservation = super.observe(
-      listener,
-      fireImmediately: fireImmediately,
-    );
-
-    return () {
-      disposeEffect();
-      disposeObservation();
-    };
   }
 
   T? _computeValue({required bool track}) {
-    _isComputing = true;
+    // _isComputing = true;
     _context.pushComputation();
 
     T? computedValue;
@@ -209,7 +184,7 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
     }
 
     _context.popComputation();
-    _isComputing = false;
+    // _isComputing = false;
 
     return computedValue;
   }
@@ -224,7 +199,7 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
     final changedException =
         hadCaughtException != _context.hasCaughtException(this);
     final changed =
-        wasSuspended || changedException || !_areEqual(oldValue, newValue);
+        wasSuspended || changedException || !_compare(oldValue, newValue);
 
     if (changed && newValue is T) {
       _setValue(newValue);

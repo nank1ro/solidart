@@ -35,7 +35,7 @@ class Atom {
   bool get hasObservers => _observers.isNotEmpty;
 
   void _reportObserved() {
-    _context.reportObserved(this);
+    // _context.reportObserved(this);
   }
 
   void _reportChanged() {

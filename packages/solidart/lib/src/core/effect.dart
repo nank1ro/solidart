@@ -124,7 +124,7 @@ class Effect implements ReactionInterface {
     final effectiveOptions = (options ?? EffectOptions()).copyWith(name: name);
     if (effectiveOptions.delay == null) {
       effect = Effect._internal(
-        callback: () => effect.track(() => callback(effect.dispose)),
+        callback: () => callback(effect.dispose),
         onError: onError,
         options: effectiveOptions,
       );
@@ -146,7 +146,7 @@ class Effect implements ReactionInterface {
             timer = scheduler(() {
               isScheduled = false;
               if (!effect.disposed) {
-                effect.track(() => callback(effect.dispose));
+                callback(effect.dispose);
               } else {
                 // coverage:ignore-start
                 timer?.cancel();
@@ -171,7 +171,8 @@ class Effect implements ReactionInterface {
     ErrorCallback? onError,
   })  : _onError = onError,
         name = options.name!,
-        _callback = callback;
+        _callback = callback,
+        _internalEffect = alien.Effect(callback);
 
   /// The name of the effect, useful for logging purposes.
   final String name;
@@ -185,10 +186,12 @@ class Effect implements ReactionInterface {
   /// {@macro effect-options}
   final EffectOptions options;
 
-  final _context = ReactiveContext.main;
+  // final _context = ReactiveContext.main;
   bool _isScheduled = false;
   bool _disposed = false;
   bool _isRunning = false;
+
+  late final alien.Effect<void> _internalEffect;
 
   @override
   // ignore: prefer_final_fields
@@ -225,14 +228,19 @@ class Effect implements ReactionInterface {
   }
 
   void _schedule() {
-    if (_isScheduled) {
-      return;
+    // if (_isScheduled) {
+    //   return;
+    // }
+    try {
+      _internalEffect.run();
+    } catch (e, s) {
+      _onError?.call(SolidartCaughtException(e, stackTrace: s));
     }
 
-    _isScheduled = true;
-    _context
-      ..addPendingReaction(this)
-      ..runReactions();
+    // _isScheduled = true;
+    // _context
+    //   ..addPendingReaction(this)
+    //   ..runReactions();
   }
 
   /// Tracks the observables present in the given [fn] function
@@ -240,26 +248,27 @@ class Effect implements ReactionInterface {
   /// This method must not be used directly.
   @protected
   void track(void Function() fn, {bool preventDisposal = false}) {
-    _context.startBatch();
+    // _context.startBatch();
 
     _isRunning = true;
-    _context.trackDerivation(this, fn);
+    _internalEffect.run();
+    // _context.trackDerivation(this, fn);
     _isRunning = false;
 
-    if (_disposed) {
-      _context.clearObservables(this);
-    }
+    // if (_disposed) {
+    //   _context.clearObservables(this);
+    // }
 
-    if (_context.hasCaughtException(this)) {
-      if (_onError != null) {
-        _onError.call(_errorValue!);
-      }
-      // coverage:ignore-start
-      else {
-        throw _errorValue!;
-      }
-      // coverage:ignore-end
-    }
+    // if (_context.hasCaughtException(this)) {
+    //   if (_onError != null) {
+    //     _onError.call(_errorValue!);
+    //   }
+    //   // coverage:ignore-start
+    //   else {
+    //     throw _errorValue!;
+    //   }
+    //   // coverage:ignore-end
+    // }
     // coverage:ignore-start
     if (preventDisposal) {
       for (final ob in __observables) {
@@ -268,34 +277,34 @@ class Effect implements ReactionInterface {
       }
     }
     // coverage:ignore-end
-    _context.endBatch();
+    // _context.endBatch();
   }
 
   @override
   void _run() {
-    if (_disposed) return;
-
-    _context.startBatch();
-
-    _isScheduled = false;
-
-    if (_context.shouldCompute(this)) {
-      try {
-        _callback();
-      } on Object catch (e, s) {
-        // coverage:ignore-start
-        // Note: "on Object" accounts for both Error and Exception
-        _errorValue = SolidartCaughtException(e, stackTrace: s);
-        if (_onError != null) {
-          _onError.call(_errorValue!);
-        } else {
-          throw _errorValue!;
-        }
-        // coverage:ignore-end
-      }
-    }
-
-    _context.endBatch();
+    // if (_disposed) return;
+    //
+    // _context.startBatch();
+    //
+    // _isScheduled = false;
+    //
+    // if (_context.shouldCompute(this)) {
+    //   try {
+    //     _callback();
+    //   } on Object catch (e, s) {
+    //     // coverage:ignore-start
+    //     // Note: "on Object" accounts for both Error and Exception
+    //     _errorValue = SolidartCaughtException(e, stackTrace: s);
+    //     if (_onError != null) {
+    //       _onError.call(_errorValue!);
+    //     } else {
+    //       throw _errorValue!;
+    //     }
+    //     // coverage:ignore-end
+    //   }
+    // }
+    //
+    // _context.endBatch();
   }
 
   /// Invalidates the effect.
@@ -322,10 +331,10 @@ class Effect implements ReactionInterface {
     // coverage:ignore-end
 
     // ignore: cascade_invocations
-    _context
-      ..startBatch()
-      ..clearObservables(this)
-      ..endBatch();
+    // _context
+    //   ..startBatch()
+    //   ..clearObservables(this)
+    //   ..endBatch();
     __observables.clear();
     _newObservables?.clear();
   }

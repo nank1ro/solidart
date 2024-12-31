@@ -53,7 +53,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
 
   @override
   void _setValue(Set<E> newValue) {
-    if (_areEqual(_value, newValue)) {
+    if (_compare(_value, newValue)) {
       return;
     }
     _setPreviousValue(Set<E>.of(_value));
@@ -66,7 +66,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
       value = callback(Set<E>.of(_value));
 
   @override
-  bool _areEqual(Set<E>? oldValue, Set<E>? newValue) {
+  bool _compare(Set<E>? oldValue, Set<E>? newValue) {
     // skip if the value are equals
     if (equals) {
       return SetEquality<E>().equals(oldValue, newValue);

@@ -83,7 +83,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
     /// {@macro SignalBase.equals}
     bool? equals,
-
     /// {@macro SignalBase.autoDispose}
     bool? autoDispose,
 
@@ -115,7 +114,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
     /// {@macro SignalBase.equals}
     bool? equals,
-
     /// {@macro SignalBase.autoDispose}
     bool? autoDispose,
 
