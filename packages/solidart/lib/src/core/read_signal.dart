@@ -269,9 +269,6 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     bool mayDispose() =>
         _listeners.isEmpty && _observers.isEmpty && _disposable;
 
-    if (!mayDispose()) return;
-
-    // _context.enqueueForUnobservation(this);
     if (mayDispose()) dispose();
   }
 
