@@ -1,10 +1,11 @@
-name: solidart_melos
+name: _
 publish_to: none
 
 environment:
   sdk: ^3.6.0
 dev_dependencies:
   melos: ^3.4.0
+  reactivity_benchmark: ^0.0.1
 workspace:
   - packages/flutter_solidart
   - packages/flutter_solidart/example
