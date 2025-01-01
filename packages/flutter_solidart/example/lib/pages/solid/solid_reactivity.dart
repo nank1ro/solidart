@@ -75,8 +75,7 @@ class _SolidReactivityPageState extends State<SolidReactivityPage> {
 }
 
 class _Counter1 extends StatelessWidget {
-  // ignore: unused_element
-  const _Counter1({super.key});
+  const _Counter1();
 
   @override
   Widget build(BuildContext context) {
@@ -87,8 +86,7 @@ class _Counter1 extends StatelessWidget {
 }
 
 class _Counter2 extends StatelessWidget {
-  // ignore: unused_element
-  const _Counter2({super.key});
+  const _Counter2();
 
   @override
   Widget build(BuildContext context) {

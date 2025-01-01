@@ -64,7 +64,7 @@ void main() {
       return Future.delayed(const Duration(milliseconds: 50), () => s.value);
     }
 
-    final r = Resource(fetcher: fetcher, source: s);
+    final r = Resource(fetcher, source: s);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -121,7 +121,7 @@ void main() {
       return Future.delayed(const Duration(milliseconds: 150), () => s.value);
     }
 
-    final r = Resource(fetcher: fetcher, source: s);
+    final r = Resource(fetcher, source: s);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -175,7 +175,7 @@ void main() {
       );
     }
 
-    final r = Resource(fetcher: fetcher, source: s);
+    final r = Resource(fetcher, source: s);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -1161,7 +1161,7 @@ void main() {
     testWidgets(
       'Resource autoDispose',
       (tester) async {
-        final r = Resource(fetcher: () => Future.value(0));
+        final r = Resource(() => Future.value(0));
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -1212,4 +1212,75 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
+
+  testWidgets(
+      'SolidOverride should override providers regardless of the hierarchy',
+      (tester) async {
+    await tester.pumpWidget(
+      SolidOverride(
+        providers: [
+          Provider<Signal<int>>(create: () => Signal(100)),
+        ],
+        child: MaterialApp(
+          home: Solid(
+            providers: [
+              Provider<Signal<int>>(create: () => Signal(0)),
+            ],
+            builder: (context) {
+              final counter = context.observe<Signal<int>>().value;
+              return Text(counter.toString());
+            },
+          ),
+        ),
+      ),
+    );
+    expect(find.text('100'), findsOneWidget);
+  });
+
+  testWidgets('Only one SolidOverride must be present in the widget tree',
+      (tester) async {
+    await tester.pumpWidget(
+      SolidOverride(
+        providers: [
+          Provider<Signal<int>>(create: () => Signal(100)),
+        ],
+        child: MaterialApp(
+          home: SolidOverride(
+            providers: [
+              Provider<Signal<int>>(create: () => Signal(0)),
+            ],
+            builder: (context) {
+              final counter = context.observe<Signal<int>>().value;
+              return Text(counter.toString());
+            },
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.takeException(),
+      const TypeMatcher<MultipleSolidOverrideError>(),
+    );
+  });
+
+  testWidgets(
+      '''SolidOverride.of(context) throws an error if no SolidOverride is found in the widget tree''',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              SolidOverride.of(context);
+              return const SizedBox();
+            },
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.takeException(),
+      const TypeMatcher<FlutterError>(),
+    );
+  });
 }

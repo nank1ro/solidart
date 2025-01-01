@@ -6,12 +6,6 @@ typedef InitProviderValueFn<T> = T Function();
 /// A function that disposes an object of type [T].
 typedef DisposeProviderValueFn<T> = void Function(T value);
 
-// coverage:ignore-start
-/// {@macro provider}
-@Deprecated('Use Provider instead')
-typedef SolidProvider<T> = Provider<T>;
-// coverage:ignore-end
-
 /// {@template provider}
 /// A Provider that manages the lifecycle of the value it provides by
 /// delegating to a pair of [_init] and [_dispose].

@@ -2,7 +2,8 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:flutter_solidart/src/widgets/solid_override.dart';
+import 'package:solidart/solidart.dart';
 
 part '../models/solid_element.dart';
 part '../models/provider_id.dart';
@@ -323,9 +324,9 @@ class ProviderScope extends StatefulWidget {
   final List<Provider<dynamic>> providers;
 
   /// By default signals and providers are going to be auto-disposed when the
-  //  Solid widget disposes.
+  ///  Solid widget disposes.
   /// When using Solid.value this is not wanted because the signals and
-  // providers are already managed by another Solid widget.
+  /// providers are already managed by another Solid widget.
   final bool _canAutoDisposeProviders;
 
   @override
@@ -339,6 +340,13 @@ class ProviderScope extends StatefulWidget {
     required ProviderId<T> id,
     bool listen = false,
   }) {
+    // try finding the solid override first
+    final solidOverride = SolidOverride.maybeOf(context);
+    if (solidOverride != null) {
+      final state = solidOverride.solidState;
+      if (state.isProviderInScope<T>(id)) return state;
+    }
+
     final state = _InheritedProvider.inheritFromNearest<T>(
       context,
       id,
@@ -631,8 +639,6 @@ class ProviderScopeState extends State<ProviderScope> {
 @immutable
 class _InheritedProvider extends InheritedModel<Object> {
   const _InheritedProvider({
-    // ignore: unused_element
-    super.key,
     required this.state,
     required this.changedDependency,
     required this.dependenciesVersion,
