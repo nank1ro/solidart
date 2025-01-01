@@ -1218,7 +1218,7 @@ void main() {
       (tester) async {
     final counterId = ProviderId<Signal<int>>();
     await tester.pumpWidget(
-      SolidOverride(
+      ProviderScopeOverride(
         providers: [
           counterId.createProvider(init: () => Signal(100)),
         ],
@@ -1242,12 +1242,12 @@ void main() {
       (tester) async {
     final counterId = ProviderId<Signal<int>>();
     await tester.pumpWidget(
-      SolidOverride(
+      ProviderScopeOverride(
         providers: [
           counterId.createProvider(init: () => Signal(100)),
         ],
         child: MaterialApp(
-          home: SolidOverride.builder(
+          home: ProviderScopeOverride.builder(
             providers: [
               counterId.createProvider(init: () => Signal(0)),
             ],
@@ -1273,7 +1273,7 @@ void main() {
         home: Scaffold(
           body: Builder(
             builder: (context) {
-              SolidOverride.of(context);
+              ProviderScopeOverride.of(context);
               return const SizedBox();
             },
           ),

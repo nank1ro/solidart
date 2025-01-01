@@ -14,16 +14,16 @@ class MultipleSolidOverrideError extends Error {
 ///
 /// This is useful for widget testing where mocking is needed.
 /// {@endtemplate}
-class SolidOverride extends StatefulWidget {
+class ProviderScopeOverride extends StatefulWidget {
   /// {@macro solid_override}
-  const SolidOverride({
+  const ProviderScopeOverride({
     super.key,
     required this.providers,
     required this.child,
   }) : builder = null;
 
   /// {@macro solid_override}
-  const SolidOverride.builder({
+  const ProviderScopeOverride.builder({
     super.key,
     required this.providers,
     required this.builder,
@@ -39,10 +39,10 @@ class SolidOverride extends StatefulWidget {
   /// [ProviderScope].
   final List<Provider<dynamic>> providers;
 
-  /// Returns the [SolidOverrideState] of the [SolidOverride] widget.
-  /// Throws an [AssertionError] if the [SolidOverride] widget is not found in
+  /// Returns the [ProviderScopeOverrideState] of the [ProviderScopeOverride] widget.
+  /// Throws an [AssertionError] if the [ProviderScopeOverride] widget is not found in
   /// the ancestor widget tree.
-  static SolidOverrideState of(BuildContext context) {
+  static ProviderScopeOverrideState of(BuildContext context) {
     final inherited = maybeOf(context);
     if (inherited == null) {
       throw FlutterError(
@@ -52,10 +52,10 @@ class SolidOverride extends StatefulWidget {
     return inherited;
   }
 
-  /// Returns the [SolidOverrideState] of the [SolidOverride] widget.
-  /// Returns null if the [SolidOverride] widget is not found in the ancestor
+  /// Returns the [ProviderScopeOverrideState] of the [ProviderScopeOverride] widget.
+  /// Returns null if the [ProviderScopeOverride] widget is not found in the ancestor
   /// widget tree.
-  static SolidOverrideState? maybeOf(BuildContext context) {
+  static ProviderScopeOverrideState? maybeOf(BuildContext context) {
     final provider = context
         .getElementForInheritedWidgetOfExactType<_InheritedSolidOverride>()
         ?.widget;
@@ -63,20 +63,20 @@ class SolidOverride extends StatefulWidget {
   }
 
   @override
-  State<SolidOverride> createState() => SolidOverrideState();
+  State<ProviderScopeOverride> createState() => ProviderScopeOverrideState();
 }
 
-/// The state of the [SolidOverride] widget.
-class SolidOverrideState extends State<SolidOverride> {
-  /// The key of the [ProviderScopeState] of the [SolidOverride] widget.
+/// The state of the [ProviderScopeOverride] widget.
+class ProviderScopeOverrideState extends State<ProviderScopeOverride> {
+  /// The key of the [ProviderScopeState] of the [ProviderScopeOverride] widget.
   final _solidStateKey = GlobalKey<ProviderScopeState>();
 
-  /// The [ProviderScopeState] of the [SolidOverride] widget.
+  /// The [ProviderScopeState] of the [ProviderScopeOverride] widget.
   ProviderScopeState get solidState => _solidStateKey.currentState!;
 
   @override
   Widget build(BuildContext context) {
-    if (SolidOverride.maybeOf(context) != null) {
+    if (ProviderScopeOverride.maybeOf(context) != null) {
       throw MultipleSolidOverrideError();
     }
     return _InheritedSolidOverride(
@@ -103,7 +103,7 @@ class _InheritedSolidOverride extends InheritedWidget {
   });
 
   /// The data to be provided
-  final SolidOverrideState state;
+  final ProviderScopeOverrideState state;
 
   // coverage:ignore-start
   @override

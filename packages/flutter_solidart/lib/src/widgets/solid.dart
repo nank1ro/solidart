@@ -341,7 +341,7 @@ class ProviderScope extends StatefulWidget {
     bool listen = false,
   }) {
     // try finding the solid override first
-    final solidOverride = SolidOverride.maybeOf(context);
+    final solidOverride = ProviderScopeOverride.maybeOf(context);
     if (solidOverride != null) {
       final state = solidOverride.solidState;
       if (state.isProviderInScope<T>(id)) return state;
