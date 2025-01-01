@@ -60,11 +60,12 @@ class SomeChild extends StatelessWidget {
   Future<void> openDialog(BuildContext context) {
     return showDialog(
       context: context,
-      builder: (_) => ProviderScope.value(
-        elements: [
-          _nameId.getElement(context),
-          _firstNumberId.getElement(context),
-          _secondNumberId.getElement(context),
+      builder: (_) => ProviderScope.values(
+        mainTreeContext: context,
+        providerIds: [
+          _nameId,
+          _firstNumberId,
+          _secondNumberId,
         ],
         child: Dialog(
           child: Builder(builder: (innerContext) {

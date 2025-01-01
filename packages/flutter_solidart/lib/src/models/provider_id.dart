@@ -26,6 +26,17 @@ class ProviderId<T> {
   }) =>
       Provider._(this, init: init, dispose: dispose, lazy: lazy);
 
+  /// This is a bit of a hack: it is used in [ProviderScope.value] and
+  /// [ProviderScope.values].
+  /// If [ProviderScope._getProvider] were used directly by the two
+  /// constructors, the type will be wrongly inferred to `dynamic` instead
+  /// of the precise type, and it would result in runtime exception.
+  Provider<T> _getProvider(
+    BuildContext context,
+  ) {
+    return ProviderScope._getProvider<T>(context, this);
+  }
+
   /// Returns the type of the value
   Type get _valueType => T;
 }

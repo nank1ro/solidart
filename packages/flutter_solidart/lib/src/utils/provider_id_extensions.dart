@@ -11,11 +11,6 @@ extension InjectExtensionProviderId<T> on ProviderId<T> {
   T? maybeGet(BuildContext context) {
     return ProviderScope.maybeGet(context, this);
   }
-
-  /// {@macro provider-scope.getElement}
-  ProviderElement<T> getElement(BuildContext context) {
-    return ProviderScope.getElement(context, this);
-  }
 }
 
 extension ObserveExtensionProviderId<T extends SignalBase<dynamic>>

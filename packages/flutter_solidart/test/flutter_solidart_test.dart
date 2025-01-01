@@ -507,7 +507,8 @@ void main() {
           context: context,
           builder: (dialogContext) {
             return ProviderScope.value(
-              element: counterId.getElement(context),
+              mainTreeContext: context,
+              providerId: counterId,
               child: Builder(
                 builder: (innerContext) {
                   final counter = counterId.observe(innerContext).value;
@@ -561,10 +562,11 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return ProviderScope(
-              providers: [
-                counterId.getElement(context),
-                doubleCounterId.getElement(context),
+            return ProviderScope.values(
+              mainTreeContext: context,
+              providerIds: [
+                counterId,
+                doubleCounterId,
               ],
               child: Builder(
                 builder: (innerContext) {
@@ -632,10 +634,11 @@ void main() {
           context: context,
           builder: (dialogContext) {
             return ProviderScope.value(
-              element: numberProviderId.getElement(context),
+              providerId: numberProviderId,
+              mainTreeContext: context,
               child: Builder(
                 builder: (innerContext) {
-                  final numberProvider = numberProviderId.get(context);
+                  final numberProvider = numberProviderId.get(innerContext);
                   return Text('${numberProvider.number}');
                 },
               ),
@@ -685,7 +688,8 @@ void main() {
           context: context,
           builder: (dialogContext) {
             return ProviderScope.value(
-              element: numberProviderId.getElement(context),
+              providerId: numberProviderId,
+              mainTreeContext: context,
               child: Builder(
                 builder: (innerContext) {
                   final numberProvider = numberProviderId.get(innerContext);

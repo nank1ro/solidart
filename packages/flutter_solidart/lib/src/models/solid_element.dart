@@ -6,28 +6,6 @@ typedef InitProviderValueFn<T> = T Function();
 /// A function that disposes an object of type [T].
 typedef DisposeProviderValueFn<T> = void Function(T value);
 
-/// {@template provider-element}
-/// The base class of a solid provider
-/// {@endtemplate}
-abstract class ProviderElement<T> {
-  /// {@macro provider-element}
-  const ProviderElement._({
-    required InitProviderValueFn<T> init,
-    required this.id,
-  }) : _init = init;
-
-  /// The function called to create the element.
-  final InitProviderValueFn<T> _init;
-
-  /// The identifier of the provider, useful to distinguish between providers
-  /// with the same Type.
-  final ProviderId<T> id;
-
-  bool get _isSignal => this is ProviderElement<SignalBase>;
-
-  void _disposeFn(BuildContext context, dynamic value);
-}
-
 // coverage:ignore-start
 /// {@macro provider}
 @Deprecated('Use Provider instead')
@@ -55,19 +33,19 @@ typedef SolidProvider<T> = Provider<T>;
 ///
 /// {@endtemplate}
 @immutable
-class Provider<T> extends ProviderElement<T> {
+class Provider<T> {
   /// {@macro provider}
   const Provider._(
-    ProviderId<T> id, {
-    required super.init,
-    DisposeProviderValueFn<T>? dispose,
-    this.lazy = true,
-  })  : _dispose = dispose,
-        super._(id: id);
+    this.id, {
+    required InitProviderValueFn<T> init,
+    required DisposeProviderValueFn<T>? dispose,
+    required this.lazy,
+  })  : _init = init,
+        _dispose = dispose;
 
-  /// An optional dispose function called when the Solid that created this
-  /// provider disposes
-  final DisposeProviderValueFn<T>? _dispose;
+  /// The identifier of the provider, useful to distinguish between providers
+  /// with the same Type.
+  final ProviderId<T> id;
 
   /// Make the provider creation lazy, defaults to true.
   ///
@@ -75,8 +53,16 @@ class Provider<T> extends ProviderElement<T> {
   /// when retrieved from descendants.
   final bool lazy;
 
-  /// Dispose function, do not use.
-  @override
+  bool get _isSignal => this is Provider<SignalBase>;
+
+  /// The function called to create the element.
+  final InitProviderValueFn<T> _init;
+
+  /// An optional dispose function called when the Solid that created this
+  /// provider gets disposed.
+  final DisposeProviderValueFn<T>? _dispose;
+
+  /// Function internally used by [ProviderScopeState] that calls [_dispose].
   void _disposeFn(BuildContext context, dynamic value) {
     _dispose?.call(value as T);
   }

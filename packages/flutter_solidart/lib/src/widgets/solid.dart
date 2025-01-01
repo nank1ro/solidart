@@ -262,11 +262,11 @@ class ProviderScope extends StatefulWidget {
         _canAutoDisposeProviders = true;
 
   /// Private constructor used internally to hide the `autoDispose` field
-  const ProviderScope._internal({
-    super.key,
-    this.providers = const [],
-    this.child,
-    this.builder,
+  const ProviderScope._valueInternal({
+    required super.key,
+    required this.providers,
+    required this.child,
+    required this.builder,
     required bool autoDispose,
   })  : assert(
           (child != null) ^ (builder != null),
@@ -274,24 +274,41 @@ class ProviderScope extends StatefulWidget {
         ),
         _canAutoDisposeProviders = autoDispose;
 
-  /// Provide a single or multiple [ProviderElement]s to a new route.
+  /// Provide a single [ProviderElement] to a new route.
   ///
   /// This is useful for passing multiple providers to modals, because are
   /// spawned in a new tree.
   factory ProviderScope.value({
     Key? key,
-    ProviderElement<dynamic>? element,
-    List<ProviderElement<dynamic>>? elements,
+    required BuildContext mainTreeContext,
+    required ProviderId<dynamic> providerId,
     required Widget child,
   }) {
-    assert(
-      (element != null) ^ (elements != null),
-      'Provide either a single element or multiple elements',
-    );
-    return ProviderScope._internal(
+    return ProviderScope._valueInternal(
       key: key,
-      providers: elements ?? [element!],
+      providers: [providerId._getProvider(mainTreeContext)],
       autoDispose: false,
+      builder: null,
+      child: child,
+    );
+  }
+
+  /// Provide multiple [ProviderElement]s to a new route.
+  ///
+  /// This is useful for passing multiple providers to modals, because are
+  /// spawned in a new tree.
+  factory ProviderScope.values({
+    Key? key,
+    required BuildContext mainTreeContext,
+    required List<ProviderId<dynamic>> providerIds,
+    required Widget child,
+  }) {
+    return ProviderScope._valueInternal(
+      key: key,
+      providers:
+          providerIds.map((id) => id._getProvider(mainTreeContext)).toList(),
+      autoDispose: false,
+      builder: null,
       child: child,
     );
   }
@@ -303,7 +320,7 @@ class ProviderScope extends StatefulWidget {
   final WidgetBuilder? builder;
 
   /// All the providers provided to all the descendants of [ProviderScope].
-  final List<ProviderElement<dynamic>> providers;
+  final List<Provider<dynamic>> providers;
 
   /// By default signals and providers are going to be auto-disposed when the
   //  Solid widget disposes.
@@ -385,13 +402,12 @@ class ProviderScope extends StatefulWidget {
   ///
   /// You may call this method inside the `initState` or `build` methods.
   /// {@endtemplate}
-  static ProviderElement<T> getElement<T>(
+  static Provider<T> _getProvider<T>(
     BuildContext context,
     ProviderId<T> id,
   ) {
     final state = _findState<T>(context, id: id);
-    final element = state._getProvider<T>(id)!;
-    return element;
+    return state._getProvider<T>(id)!;
   }
 
   /// {@template provider-scope.observe}
@@ -469,12 +485,13 @@ class ProviderScope extends StatefulWidget {
 /// The state of the [ProviderScope] widget
 class ProviderScopeState extends State<ProviderScope> {
   /// Stores all the providers in the current scope
-  final _allProvidersInScope = HashMap<({Type type, ProviderId<dynamic> id}),
-      ProviderElement<dynamic>>();
+  final _allProvidersInScope =
+      HashMap<({Type type, ProviderId<dynamic> id}), Provider<dynamic>>();
 
   // Stores all the created providers.
   // The key is the provider, while the value is its value.
-  final _createdProviders = HashMap<({Type type, Object? id}), Object?>();
+  final _createdProviders =
+      HashMap<({Type type, ProviderId<dynamic> id}), Object?>();
 
   // Stores all the disposeFn for each signal
   final _signalDisposeCallbacks = <DisposeEffect>[];
@@ -484,30 +501,36 @@ class ProviderScopeState extends State<ProviderScope> {
   @override
   void initState() {
     super.initState();
-    assert(() {
-      // check if the provider type is not dynamic
-      // check if there are multiple providers of the same type
-      final ids = <ProviderId<dynamic>>[];
-      for (final provider in widget.providers) {
-        final id = provider.id;
-        if (id._valueType == dynamic) throw ProviderDynamicError();
 
-        if (ids.contains(id)) {
-          throw ProviderMultipleProviderOfSameTypeError(
-            providerType: id._valueType,
-            id: id,
-          );
+    assert(
+      () {
+        // check if the provider type is not dynamic
+        // check if there are multiple providers of the same type
+        final ids = <ProviderId<dynamic>>[];
+        for (final provider in widget.providers) {
+          final id = provider.id;
+          if (id._valueType == dynamic) throw ProviderDynamicError();
+
+          if (ids.contains(id)) {
+            throw ProviderMultipleProviderOfSameTypeError(
+              providerType: id._valueType,
+              id: id,
+            );
+          }
+          ids.add(id);
         }
-        ids.add(id);
-      }
-      return true;
-    }(), '');
+        return true;
+      }(),
+      '',
+    );
+
     for (final provider in widget.providers) {
       final key = (id: provider.id, type: provider.id._valueType);
       _allProvidersInScope[key] = provider;
 
+      // todo: check if injected providers with ProviderScope.value/values get initialized again...
       // create non lazy providers.
-      if (provider is Provider && !provider.lazy) {
+      if (!provider.lazy) {
         // create and store the provider
         _createdProviders[key] = provider._init();
       }
@@ -552,8 +575,8 @@ class ProviderScopeState extends State<ProviderScope> {
   /// -- Providers logic
 
   /// Try to find a [Provider] of type <T> or [id] and returns it
-  ProviderElement<T>? _getProvider<T>(ProviderId<T> id) {
-    return _allProvidersInScope[(type: T, id: id)] as ProviderElement<T>?;
+  Provider<T>? _getProvider<T>(ProviderId<T> id) {
+    return _allProvidersInScope[(type: T, id: id)] as Provider<T>?;
   }
 
   /// Creates a provider of type T and stores it
@@ -789,7 +812,7 @@ class ProviderMultipleProviderOfSameTypeError extends Error {
   @override
   String toString() {
     return '''
-      You cannot create multiple providers with the same ProviderId together.
+      You cannot create or inject multiple providers with the same ProviderId together.
       Provider type: $providerType
       ProviderId: $id
       ''';
