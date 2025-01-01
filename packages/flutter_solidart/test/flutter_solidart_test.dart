@@ -304,21 +304,25 @@ void main() {
   group('Test Solid context.observe', () {
     testWidgets('Observe signals ids', (tester) async {
       final s = Signal(0);
+
+      final counterId = ProviderId<Signal<int>>();
+      final doubleCounterId = ProviderId<Computed<int>>();
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: ProviderScope.builder(
               providers: [
-                Provider<Signal<int>>(create: () => s, id: 'counter'),
-                Provider<Computed<int>>(
-                  create: () => Computed(() => s() * 2),
-                  id: 'double-counter',
+                counterId.createProvider(
+                  init: () => s,
+                ),
+                doubleCounterId.createProvider(
+                  init: () => Computed(() => s() * 2),
                 ),
               ],
               builder: (context) {
-                final counter = context.observe<Signal<int>>('counter').value;
-                final doubleCounter =
-                    context.observe<Computed<int>>('double-counter').value;
+                final counter = counterId.observe(context).value;
+                final doubleCounter = doubleCounterId.observe(context).value;
                 return Text('$counter $doubleCounter');
               },
             ),
@@ -336,17 +340,20 @@ void main() {
 
     testWidgets('Observe Computed', (tester) async {
       final s = Signal(0);
+
+      final doubleCounterId = ProviderId<Computed<int>>();
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: ProviderScope.builder(
               providers: [
-                Provider<Computed<int>>(
-                  create: () => Computed(() => s() * 2),
+                doubleCounterId.createProvider(
+                  init: () => Computed(() => s() * 2),
                 ),
               ],
               builder: (context) {
-                final doubleCounter = context.observe<Computed<int>>().value;
+                final doubleCounter = doubleCounterId.observe(context).value;
                 return Text('$doubleCounter');
               },
             ),
@@ -363,15 +370,18 @@ void main() {
 
     testWidgets('Observe ReadSignal', (tester) async {
       final s = Signal(0);
+
+      final counterId = ProviderId<ReadSignal<int>>();
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: ProviderScope.builder(
               providers: [
-                Provider<ReadSignal<int>>(create: s.toReadSignal),
+                counterId.createProvider(init: s.toReadSignal),
               ],
               builder: (context) {
-                final counter = context.observe<ReadSignal<int>>().value;
+                final counter = counterId.observe(context).value;
                 return Text('$counter');
               },
             ),
@@ -388,19 +398,20 @@ void main() {
 
     testWidgets('Observe ReadSignal with id', (tester) async {
       final s = Signal(0);
+
+      final counterId = ProviderId<ReadSignal<int>>();
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: ProviderScope.builder(
               providers: [
-                Provider<ReadSignal<int>>(
-                  create: s.toReadSignal,
-                  id: #counter,
+                counterId.createProvider(
+                  init: s.toReadSignal,
                 ),
               ],
               builder: (context) {
-                final counter =
-                    context.observe<ReadSignal<int>>(#counter).value;
+                final counter = counterId.observe(context).value;
                 return Text('$counter');
               },
             ),
@@ -419,21 +430,21 @@ void main() {
   testWidgets('Test Solid context.get with Signal', (tester) async {
     final s = Signal(0);
     final s2 = Computed(() => s() * 2);
+
+    final counterId = ProviderId<Signal<int>>();
+    final doubleCounterId = ProviderId<ReadSignal<int>>();
+
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: ProviderScope.builder(
             providers: [
-              Provider<Signal<int>>(create: () => s, id: 'counter'),
-              Provider<ReadSignal<int>>(
-                create: () => s2,
-                id: 'double-counter',
-              ),
+              counterId.createProvider(init: () => s),
+              doubleCounterId.createProvider(init: () => s2),
             ],
             builder: (context) {
-              final counter = context.get<Signal<int>>('counter');
-              final doubleCounter =
-                  context.get<ReadSignal<int>>('double-counter');
+              final counter = counterId.get(context);
+              final doubleCounter = doubleCounterId.get(context);
               return SignalBuilder(
                 builder: (context, _) {
                   return Text('${counter()} ${doubleCounter()}');
@@ -455,18 +466,18 @@ void main() {
 
   testWidgets('Test Solid throws an error for a not found signal',
       (tester) async {
+    final counterId = ProviderId<Signal<int>>();
+    final invalidCounterId = ProviderId<Signal<int>>();
+
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: ProviderScope.builder(
             providers: [
-              Provider<Signal<int>>(
-                create: () => Signal(0),
-                id: 'counter',
-              ),
+              counterId.createProvider(init: () => Signal(0)),
             ],
             builder: (context) {
-              final counter = context.get<Signal<int>>('invalid-counter');
+              final counter = invalidCounterId.get(context);
               return SignalBuilder(
                 builder: (context, _) {
                   return Text(counter().toString());
@@ -480,25 +491,26 @@ void main() {
     expect(
       tester.takeException(),
       const TypeMatcher<ProviderError<Signal<int>>>().having(
-        (p0) => p0.id,
-        'Check error id',
-        equals('invalid-counter'),
+        (pe) => pe.id,
+        'Matching the wrong ID should result in a ProviderError.',
+        equals(invalidCounterId),
       ),
     );
   });
 
   group('Test Solid.value', () {
     testWidgets('Test Solid.value with observe', (tester) async {
+      final counterId = ProviderId<Signal<int>>();
+
       Future<void> showCounterDialog({required BuildContext context}) {
         return showDialog(
           context: context,
           builder: (dialogContext) {
             return ProviderScope.value(
-              element: context.getElement<Signal<int>>('counter'),
+              element: counterId.getElement(context),
               child: Builder(
                 builder: (innerContext) {
-                  final counter =
-                      innerContext.observe<Signal<int>>('counter').value;
+                  final counter = counterId.observe(innerContext).value;
                   return Text('Dialog counter: $counter');
                 },
               ),
@@ -513,7 +525,7 @@ void main() {
           home: Scaffold(
             body: ProviderScope.builder(
               providers: [
-                Provider<Signal<int>>(create: () => s, id: 'counter'),
+                counterId.createProvider(init: () => s),
               ],
               builder: (context) {
                 return ElevatedButton(
@@ -542,20 +554,22 @@ void main() {
     });
 
     testWidgets('Test Solid.value for signals with get', (tester) async {
+      final counterId = ProviderId<Signal<int>>();
+      final doubleCounterId = ProviderId<Computed<int>>();
+
       Future<void> showCounterDialog({required BuildContext context}) {
         return showDialog(
           context: context,
           builder: (dialogContext) {
             return ProviderScope(
               providers: [
-                context.getElement<Signal<int>>('counter'),
-                context.getElement<Computed<int>>('double-counter'),
+                counterId.getElement(context),
+                doubleCounterId.getElement(context),
               ],
               child: Builder(
                 builder: (innerContext) {
-                  final counter = innerContext.get<Signal<int>>('counter');
-                  final doubleCounter =
-                      innerContext.get<Computed<int>>('double-counter');
+                  final counter = counterId.get(innerContext);
+                  final doubleCounter = doubleCounterId.get(innerContext);
                   return SignalBuilder(
                     builder: (_, __) {
                       return Text(
@@ -576,13 +590,11 @@ void main() {
           home: Scaffold(
             body: ProviderScope.builder(
               providers: [
-                Provider<Signal<int>>(
-                  create: () => s,
-                  id: 'counter',
+                counterId.createProvider(
+                  init: () => s,
                 ),
-                Provider<Computed<int>>(
-                  create: () => Computed(() => s() * 2),
-                  id: 'double-counter',
+                doubleCounterId.createProvider(
+                  init: () => Computed(() => s() * 2),
                 ),
               ],
               builder: (context) {
@@ -613,15 +625,17 @@ void main() {
     });
 
     testWidgets('Test Solid.value for providers', (tester) async {
+      final numberProviderId = ProviderId<NumberProvider>();
+
       Future<void> showNumberDialog({required BuildContext context}) {
         return showDialog(
           context: context,
           builder: (dialogContext) {
             return ProviderScope.value(
-              element: context.getElement<NumberProvider>(),
+              element: numberProviderId.getElement(context),
               child: Builder(
                 builder: (innerContext) {
-                  final numberProvider = innerContext.get<NumberProvider>();
+                  final numberProvider = numberProviderId.get(context);
                   return Text('${numberProvider.number}');
                 },
               ),
@@ -635,8 +649,8 @@ void main() {
           home: Scaffold(
             body: ProviderScope.builder(
               providers: [
-                Provider<NumberProvider>(
-                  create: () => const NumberProvider(1),
+                numberProviderId.createProvider(
+                  init: () => const NumberProvider(1),
                 ),
               ],
               builder: (context) {
@@ -663,15 +677,18 @@ void main() {
 
     testWidgets('Test Solid.value throws an error for a not found provider',
         (tester) async {
+      final numberProviderId = ProviderId<NumberProvider>();
+      final nameProviderId = ProviderId<NameProvider>();
+
       Future<void> showNumberDialog({required BuildContext context}) {
         return showDialog(
           context: context,
           builder: (dialogContext) {
             return ProviderScope.value(
-              element: context.getElement<NumberProvider>(),
+              element: numberProviderId.getElement(context),
               child: Builder(
                 builder: (innerContext) {
-                  final numberProvider = innerContext.get<NumberProvider>();
+                  final numberProvider = numberProviderId.get(innerContext);
                   return Text('${numberProvider.number}');
                 },
               ),
@@ -685,8 +702,8 @@ void main() {
           home: Scaffold(
             body: ProviderScope.builder(
               providers: [
-                Provider<NameProvider>(
-                  create: () => MockNameProvider('name'),
+                nameProviderId.createProvider(
+                  init: () => MockNameProvider('name'),
                 ),
               ],
               builder: (context) {
@@ -713,17 +730,19 @@ void main() {
 
   testWidgets('Test Solid.maybeGet returns null for a not found provider',
       (tester) async {
+    final numberProviderId = ProviderId<NumberProvider>();
+    final nameProviderId = ProviderId<NameProvider>();
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: ProviderScope.builder(
             providers: [
-              Provider<NameProvider>(
-                create: () => MockNameProvider('name'),
+              nameProviderId.createProvider(
+                init: () => MockNameProvider('name'),
               ),
             ],
             builder: (context) {
-              final numberProvider = context.maybeGet<NumberProvider>();
+              final numberProvider = numberProviderId.maybeGet(context);
               return Text(numberProvider.toString());
             },
           ),
@@ -807,32 +826,35 @@ void main() {
     );
   });
 
-  testWidgets('Test Solid context.get with Provider', (tester) async {
+  testWidgets('Test ProviderScope context.get with Provider', (tester) async {
     final nameProvider = MockNameProvider('Ale');
+
+    final numberProvider1Id = ProviderId<NumberProvider>();
+    final numberProvider2Id = ProviderId<NumberProvider>();
+    final nameProviderId = ProviderId<NameProvider>();
+
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: ProviderScope.builder(
             providers: [
-              Provider<NameProvider>(
-                create: () => nameProvider,
+              nameProviderId.createProvider(
+                init: () => nameProvider,
                 dispose: (provider) => provider.dispose(),
               ),
-              Provider<NumberProvider>(
-                create: () => const NumberProvider(1),
+              numberProvider1Id.createProvider(
+                init: () => const NumberProvider(1),
                 lazy: false,
-                id: 1,
               ),
-              Provider<NumberProvider>(
-                create: () => const NumberProvider(100),
+              numberProvider2Id.createProvider(
+                init: () => const NumberProvider(100),
                 lazy: false,
-                id: 2,
               ),
             ],
             builder: (context) {
-              final nameProvider = context.get<NameProvider>();
-              final numberProvider1 = context.get<NumberProvider>(1);
-              final numberProvider2 = context.get<NumberProvider>(2);
+              final nameProvider = nameProviderId.get(context);
+              final numberProvider1 = numberProvider1Id.get(context);
+              final numberProvider2 = numberProvider2Id.get(context);
               return Text(
                 '''${nameProvider.name} ${numberProvider1.number} ${numberProvider2.number}''',
               );
@@ -856,18 +878,21 @@ void main() {
 
   testWidgets('Test Solid throws an error for a not found provider',
       (tester) async {
+    final numberProviderId = ProviderId<NumberProvider>();
+    final nameProviderId = ProviderId<NameProvider>();
+
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: ProviderScope.builder(
             providers: [
-              Provider<NumberProvider>(
-                create: () => const NumberProvider(1),
+              numberProviderId.createProvider(
+                init: () => const NumberProvider(1),
               ),
             ],
             builder: (context) {
               // NameProvider is not present
-              final nameProvider = context.get<NameProvider>();
+              final nameProvider = nameProviderId.get(context);
               return Text(nameProvider.name);
             },
           ),
@@ -877,21 +902,24 @@ void main() {
     expect(
       tester.takeException(),
       const TypeMatcher<ProviderError<NameProvider>>().having(
-        (p0) => p0.id,
-        'Check error id null',
-        isNull,
+        (pe) => pe.id,
+        'The wrong ID is used.',
+        nameProviderId,
       ),
     );
   });
 
   testWidgets('Test Solid throws an error for a Provider<dynamic>',
       (tester) async {
+    final numberProviderId = ProviderId<dynamic>();
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: ProviderScope(
             providers: [
-              Provider(create: () => const NumberProvider(1)),
+              numberProviderId.createProvider(
+                init: () => const NumberProvider(1),
+              ),
             ],
             child: const SizedBox(),
           ),
@@ -907,16 +935,17 @@ void main() {
   testWidgets(
       'Test Solid throws an error for multiple providers of the same type',
       (tester) async {
+    final numberProviderId = ProviderId<NumberProvider>();
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: ProviderScope(
             providers: [
-              Provider<NumberProvider>(
-                create: () => const NumberProvider(1),
+              numberProviderId.createProvider(
+                init: () => const NumberProvider(1),
               ),
-              Provider<NumberProvider>(
-                create: () => const NumberProvider(2),
+              numberProviderId.createProvider(
+                init: () => const NumberProvider(2),
               ),
             ],
             child: const SizedBox(),
@@ -931,21 +960,22 @@ void main() {
   });
 
   testWidgets('Test Solid.update method', (tester) async {
+    final counterId = ProviderId<Signal<int>>();
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: ProviderScope.builder(
             providers: [
-              Provider<Signal<int>>(create: () => Signal(0)),
+              counterId.createProvider(init: () => Signal(0)),
             ],
             builder: (context) {
-              final counter = context.observe<Signal<int>>().value;
+              final counter = counterId.observe(context).value;
               return Column(
                 children: [
                   Text('$counter'),
                   ElevatedButton(
                     onPressed: () {
-                      context.update<int>((value) => value + 1);
+                      counterId.update(context, (value) => value + 1);
                     },
                     child: const Text('add'),
                   ),
@@ -991,28 +1021,29 @@ void main() {
 
   testWidgets('Test Solid multiple ancestor providers of the same Type',
       (tester) async {
+    final numberProvider1Id = ProviderId<NumberProvider>();
+    final numberProvider2Id = ProviderId<NumberProvider>();
+
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: ProviderScope(
             providers: [
-              Provider<NumberProvider>(
-                create: () => const NumberProvider(1),
+              numberProvider1Id.createProvider(
+                init: () => const NumberProvider(1),
                 lazy: false,
-                id: 1,
               ),
             ],
             child: ProviderScope.builder(
               providers: [
-                Provider<NumberProvider>(
-                  create: () => const NumberProvider(100),
+                numberProvider2Id.createProvider(
+                  init: () => const NumberProvider(100),
                   lazy: false,
-                  id: 2,
                 ),
               ],
               builder: (context) {
-                final numberProvider1 = context.get<NumberProvider>(1);
-                final numberProvider2 = context.get<NumberProvider>(2);
+                final numberProvider1 = numberProvider1Id.get(context);
+                final numberProvider2 = numberProvider2Id.get(context);
                 return Text(
                   '''${numberProvider1.number} ${numberProvider2.number}''',
                 );

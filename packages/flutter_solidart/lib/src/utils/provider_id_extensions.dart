@@ -1,0 +1,34 @@
+import 'package:flutter/widgets.dart' show BuildContext;
+import 'package:flutter_solidart/flutter_solidart.dart';
+
+extension InjectExtensionProviderId<T> on ProviderId<T> {
+  /// {@macro provider-scope.get}
+  T get(BuildContext context) {
+    return ProviderScope.get(context, this);
+  }
+
+  /// {@macro provider-scope.maybeGet}
+  T? maybeGet(BuildContext context) {
+    return ProviderScope.maybeGet(context, this);
+  }
+
+  /// {@macro provider-scope.getElement}
+  ProviderElement<T> getElement(BuildContext context) {
+    return ProviderScope.getElement(context, this);
+  }
+}
+
+extension ObserveExtensionProviderId<T extends SignalBase<dynamic>>
+    on ProviderId<T> {
+  /// {@macro provider-scope.observe}
+  T observe(BuildContext context) {
+    return ProviderScope.observe<T>(context, this);
+  }
+}
+
+extension UpdateExtensionProviderId<T> on ProviderId<Signal<T>> {
+  /// {@macro provider-scope.update}
+  void update(BuildContext context, T Function(T value) callback) {
+    return ProviderScope.update<T>(context, callback, this);
+  }
+}

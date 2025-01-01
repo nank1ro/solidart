@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:todos/controllers/controller.dart';
 import 'package:todos/models/todo.dart';
+import 'package:todos/provider_ids.dart';
 
 class Toolbar extends StatefulWidget {
   const Toolbar({super.key});
@@ -12,7 +13,7 @@ class Toolbar extends StatefulWidget {
 
 class _ToolbarState extends State<Toolbar> {
   // retrieve the [TodosController]
-  late final todosController = context.get<TodosController>();
+  late final todosController = TodosController.id.get(context);
 
   /// All the derived signals, they will react only when the `length` property changes
   late final allTodosCount = Computed(() => todosController.todos().length);
@@ -61,7 +62,7 @@ class _ToolbarState extends State<Toolbar> {
         ).toList(),
         onTap: (index) {
           // update the current active filter
-          context.update<TodosFilter>((_) => TodosFilter.values[index]);
+          todosFilterId.update(context, (_) => TodosFilter.values[index]);
         },
       ),
     );

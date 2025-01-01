@@ -14,6 +14,8 @@ class TodosController {
     List<Todo> initialTodos = const [],
   }) : todos = ListSignal(initialTodos);
 
+  static final ProviderId<TodosController> id = ProviderId();
+
   // The list of todos
   final ListSignal<Todo> todos;
 

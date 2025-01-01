@@ -7,6 +7,10 @@ void main() {
   runApp(MyApp());
 }
 
+final myClassId = ProviderId<MyClass>();
+final counterId = ProviderId<Signal<int>>();
+final doubleCounterId = ProviderId<Computed<int>>();
+
 class MyClass {}
 
 class MyApp extends StatelessWidget {
@@ -18,14 +22,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProviderScope(
       providers: [
-        // expect_lint: avoid_dynamic_provider
-        Provider(create: () => MyClass()),
-        // expect_lint: avoid_dynamic_provider
-        Provider(create: () => Signal(0), id: 'counter'),
-        // expect_lint: avoid_dynamic_provider
-        Provider(
-          create: () => Computed(() => counter() * 2),
-          id: 'double-counter',
+        myClassId.createProvider(init: () => MyClass()),
+        counterId.createProvider(init: () => Signal(0)),
+        doubleCounterId.createProvider(
+          init: () => Computed(() => counter() * 2),
         ),
       ],
       child: const MaterialApp(
@@ -41,17 +41,13 @@ class MyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // expect_lint: missing_solid_get_type
-    final myClass = context.get();
-
-    final counter = context.observe<Signal<int>>('counter');
+    final myClass = myClassId.get(context);
+    final counter = counterId.observe(context);
 
     return ElevatedButton(
       child: const Text('Increment'),
       onPressed: () {
-        // expect_lint: invalid_update_type
-        context.update<Signal<int>>(
-            (value) => throw UnimplementedError(), 'counter');
+        counterId.update(context, (value) => throw UnimplementedError());
       },
     );
   }

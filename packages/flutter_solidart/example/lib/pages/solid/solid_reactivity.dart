@@ -3,6 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
+final _firstCounterId = ProviderId<Signal<int>>();
+final _secondCounterId = ProviderId<Signal<int>>();
+
 class SolidReactivityPage extends StatefulWidget {
   const SolidReactivityPage({super.key});
 
@@ -15,8 +18,8 @@ class _SolidReactivityPageState extends State<SolidReactivityPage> {
   Widget build(BuildContext context) {
     return ProviderScope(
       providers: [
-        Provider<Signal<int>>(create: () => Signal(0), id: #firstCounter),
-        Provider<Signal<int>>(create: () => Signal(0), id: #secondCounter),
+        _firstCounterId.createProvider(init: () => Signal(0)),
+        _secondCounterId.createProvider(init: () => Signal(0)),
       ],
       child: Scaffold(
         appBar: AppBar(
@@ -52,13 +55,13 @@ class _SolidReactivityPageState extends State<SolidReactivityPage> {
               children: [
                 TextButton(
                   onPressed: () {
-                    context.update<int>((value) => value += 1, #firstCounter);
+                    _firstCounterId.update(context, (value) => value += 1);
                   },
                   child: const Text('+1 counter1'),
                 ),
                 TextButton(
                   onPressed: () {
-                    context.update<int>((value) => value += 1, #secondCounter);
+                    _secondCounterId.update(context, (value) => value += 1);
                   },
                   child: const Text('+1 counter2'),
                 ),
@@ -77,7 +80,7 @@ class _Counter1 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter1 = context.observe<Signal<int>>(#firstCounter).value;
+    final counter1 = _firstCounterId.observe(context).value;
     print('build counter1');
     return Text('Counter1: $counter1');
   }
@@ -89,7 +92,7 @@ class _Counter2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter2 = context.observe<Signal<int>>(#secondCounter).value;
+    final counter2 = _secondCounterId.observe(context).value;
     print('build counter2');
     return Text('Counter2: $counter2');
   }

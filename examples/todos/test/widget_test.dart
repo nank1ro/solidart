@@ -22,8 +22,8 @@ Widget wrapWithMockedTodosController({
   return MaterialApp(
     home: ProviderScope(
       providers: [
-        Provider<TodosController>(
-          create: () => todosController,
+        TodosController.id.createProvider(
+          init: () => todosController,
           dispose: (controller) => controller.dispose(),
         ),
       ],

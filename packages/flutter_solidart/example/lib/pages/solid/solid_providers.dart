@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
+final _nameId = ProviderId<NameProvider>();
+final _firstNumberId = ProviderId<NumberProvider>();
+final _secondNumberId = ProviderId<NumberProvider>();
+
 class NameProvider {
   const NameProvider(this.name);
   final String name;
@@ -28,22 +32,20 @@ class ProvidersPage extends StatelessWidget {
       ),
       body: ProviderScope(
         providers: [
-          Provider<NameProvider>(
-            create: () => const NameProvider('Ale'),
+          _nameId.createProvider(
+            init: () => const NameProvider('Ale'),
             // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
             dispose: (provider) => provider.dispose(),
           ),
-          Provider<NumberProvider>(
-            create: () => const NumberProvider(1),
+          _firstNumberId.createProvider(
+            init: () => const NumberProvider(1),
             // Do not create the provider lazily, but immediately
             lazy: false,
-            id: #firstNumber,
           ),
-          Provider<NumberProvider>(
-            create: () => const NumberProvider(100),
+          _secondNumberId.createProvider(
+            init: () => const NumberProvider(100),
             // Do not create the provider lazily, but immediately
             lazy: false,
-            id: #secondNumber,
           ),
         ],
         child: const SomeChild(),
@@ -60,17 +62,15 @@ class SomeChild extends StatelessWidget {
       context: context,
       builder: (_) => ProviderScope.value(
         elements: [
-          context.getElement<NameProvider>(),
-          context.getElement<NumberProvider>(#firstNumber),
-          context.getElement<NumberProvider>(#secondNumber),
+          _nameId.getElement(context),
+          _firstNumberId.getElement(context),
+          _secondNumberId.getElement(context),
         ],
         child: Dialog(
           child: Builder(builder: (innerContext) {
-            final nameProvider = innerContext.get<NameProvider>();
-            final numberProvider1 =
-                innerContext.get<NumberProvider>(#firstNumber);
-            final numberProvider2 =
-                innerContext.get<NumberProvider>(#secondNumber);
+            final nameProvider = _nameId.get(innerContext);
+            final numberProvider1 = _firstNumberId.get(innerContext);
+            final numberProvider2 = _secondNumberId.get(innerContext);
             return SizedBox.square(
               dimension: 100,
               child: Center(
@@ -89,9 +89,9 @@ number2: ${numberProvider2.number}
 
   @override
   Widget build(BuildContext context) {
-    final nameProvider = context.get<NameProvider>();
-    final numberProvider = context.get<NumberProvider>(#firstNumber);
-    final numberProvider2 = context.get<NumberProvider>(#secondNumber);
+    final nameProvider = _nameId.get(context);
+    final numberProvider = _firstNumberId.get(context);
+    final numberProvider2 = _secondNumberId.get(context);
 
     return Center(
       child: Column(
