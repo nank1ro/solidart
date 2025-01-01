@@ -1216,18 +1216,19 @@ void main() {
   testWidgets(
       'SolidOverride should override providers regardless of the hierarchy',
       (tester) async {
+    final counterId = ProviderId<Signal<int>>();
     await tester.pumpWidget(
       SolidOverride(
         providers: [
-          Provider<Signal<int>>(create: () => Signal(100)),
+          counterId.createProvider(init: () => Signal(100)),
         ],
         child: MaterialApp(
-          home: Solid(
+          home: ProviderScope.builder(
             providers: [
-              Provider<Signal<int>>(create: () => Signal(0)),
+              counterId.createProvider(init: () => Signal(0)),
             ],
             builder: (context) {
-              final counter = context.observe<Signal<int>>().value;
+              final counter = counterId.observe(context).value;
               return Text(counter.toString());
             },
           ),
@@ -1239,18 +1240,19 @@ void main() {
 
   testWidgets('Only one SolidOverride must be present in the widget tree',
       (tester) async {
+    final counterId = ProviderId<Signal<int>>();
     await tester.pumpWidget(
       SolidOverride(
         providers: [
-          Provider<Signal<int>>(create: () => Signal(100)),
+          counterId.createProvider(init: () => Signal(100)),
         ],
         child: MaterialApp(
-          home: SolidOverride(
+          home: SolidOverride.builder(
             providers: [
-              Provider<Signal<int>>(create: () => Signal(0)),
+              counterId.createProvider(init: () => Signal(0)),
             ],
             builder: (context) {
-              final counter = context.observe<Signal<int>>().value;
+              final counter = counterId.observe(context).value;
               return Text(counter.toString());
             },
           ),

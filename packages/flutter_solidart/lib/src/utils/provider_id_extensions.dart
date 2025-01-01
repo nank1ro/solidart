@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart' show BuildContext;
 import 'package:flutter_solidart/flutter_solidart.dart';
 
+/// Get the value of a provider.
 extension InjectExtensionProviderId<T> on ProviderId<T> {
   /// {@macro provider-scope.get}
   T get(BuildContext context) {
@@ -13,6 +14,7 @@ extension InjectExtensionProviderId<T> on ProviderId<T> {
   }
 }
 
+/// Observe the value of a [SignalBase] that is in a provider.
 extension ObserveExtensionProviderId<T extends SignalBase<dynamic>>
     on ProviderId<T> {
   /// {@macro provider-scope.observe}
@@ -21,6 +23,7 @@ extension ObserveExtensionProviderId<T extends SignalBase<dynamic>>
   }
 }
 
+/// Observe the value of a [Signal] that is in a provider.
 extension UpdateExtensionProviderId<T> on ProviderId<Signal<T>> {
   /// {@macro provider-scope.update}
   void update(BuildContext context, T Function(T value) callback) {

@@ -10,7 +10,7 @@ class MultipleSolidOverrideError extends Error {
 }
 
 /// {@template solid_override}
-/// Overrides providers of the [Solid] widget.
+/// Overrides providers of the [ProviderScope] widget.
 ///
 /// This is useful for widget testing where mocking is needed.
 /// {@endtemplate}
@@ -19,9 +19,15 @@ class SolidOverride extends StatefulWidget {
   const SolidOverride({
     super.key,
     required this.providers,
-    this.builder,
-    this.child,
-  });
+    required this.child,
+  }) : builder = null;
+
+  /// {@macro solid_override}
+  const SolidOverride.builder({
+    super.key,
+    required this.providers,
+    required this.builder,
+  }) : child = null;
 
   /// The widget child that gets access to the [providers].
   final Widget? child;
@@ -29,8 +35,9 @@ class SolidOverride extends StatefulWidget {
   /// The widget builder that gets access to the [providers].
   final WidgetBuilder? builder;
 
-  /// All the overriden providers provided to all the descendants of [Solid].
-  final List<SolidElement<dynamic>> providers;
+  /// All the overriden providers provided to all the descendants of
+  /// [ProviderScope].
+  final List<Provider<dynamic>> providers;
 
   /// Returns the [SolidOverrideState] of the [SolidOverride] widget.
   /// Throws an [AssertionError] if the [SolidOverride] widget is not found in
@@ -61,11 +68,11 @@ class SolidOverride extends StatefulWidget {
 
 /// The state of the [SolidOverride] widget.
 class SolidOverrideState extends State<SolidOverride> {
-  /// The key of the [SolidState] of the [SolidOverride] widget.
-  final _solidStateKey = GlobalKey<SolidState>();
+  /// The key of the [ProviderScopeState] of the [SolidOverride] widget.
+  final _solidStateKey = GlobalKey<ProviderScopeState>();
 
-  /// The [SolidState] of the [SolidOverride] widget.
-  SolidState get solidState => _solidStateKey.currentState!;
+  /// The [ProviderScopeState] of the [SolidOverride] widget.
+  ProviderScopeState get solidState => _solidStateKey.currentState!;
 
   @override
   Widget build(BuildContext context) {
@@ -74,12 +81,17 @@ class SolidOverrideState extends State<SolidOverride> {
     }
     return _InheritedSolidOverride(
       state: this,
-      child: Solid(
-        key: _solidStateKey,
-        providers: widget.providers,
-        builder: widget.builder,
-        child: widget.child,
-      ),
+      child: widget.builder == null
+          ? ProviderScope(
+              key: _solidStateKey,
+              providers: widget.providers,
+              child: widget.child,
+            )
+          : ProviderScope.builder(
+              key: _solidStateKey,
+              providers: widget.providers,
+              builder: widget.builder,
+            ),
     );
   }
 }

@@ -275,7 +275,7 @@ class ProviderScope extends StatefulWidget {
         ),
         _canAutoDisposeProviders = autoDispose;
 
-  /// Provide a single [ProviderElement] to a new route.
+  /// Provide a single [Provider] to a new route.
   ///
   /// This is useful for passing multiple providers to modals, because are
   /// spawned in a new tree.
@@ -294,7 +294,7 @@ class ProviderScope extends StatefulWidget {
     );
   }
 
-  /// Provide multiple [ProviderElement]s to a new route.
+  /// Provide multiple [Provider]s to a new route.
   ///
   /// This is useful for passing multiple providers to modals, because are
   /// spawned in a new tree.
@@ -420,8 +420,8 @@ class ProviderScope extends StatefulWidget {
 
   /// {@template provider-scope.observe}
   /// Subscribe to the [Signal] of the given value type and [id] corresponding
-  /// to the nearest [ProviderScope] widget rebuilding the widget when the value exposed
-  /// by the [Signal] changes.
+  /// to the nearest [ProviderScope] widget rebuilding the widget when the value
+  /// exposed by the [Signal] changes.
   ///
   /// Throws if no such element or [ProviderScope] widget is found.
   ///
@@ -810,9 +810,10 @@ class ProviderMultipleProviderOfSameTypeError extends Error {
     required this.id,
   });
 
-  /// The type of the provider
+  // ignore: public_member_api_docs
   final Type providerType;
 
+  // ignore: public_member_api_docs
   final ProviderId<dynamic> id;
 
   @override
