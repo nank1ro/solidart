@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:flutter_solidart/src/widgets/solid.dart';
+import 'package:flutter_solidart/src/widgets/provider_scope.dart';
 
 /// Error thrown when there are multiple SolidOverride widgets in the widget
 /// tree.

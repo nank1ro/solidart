@@ -1,4 +1,4 @@
-part of '../widgets/solid.dart';
+part of '../widgets/provider_scope.dart';
 
 /// {@template provider-id}
 /// A [ProviderId] is a type-safe identifier for [Provider]s. It is not only

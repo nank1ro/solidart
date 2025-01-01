@@ -1,4 +1,4 @@
-part of '../widgets/solid.dart';
+part of '../widgets/provider_scope.dart';
 
 /// A function that creates an object of type [T].
 typedef InitProviderValueFn<T> = T Function();

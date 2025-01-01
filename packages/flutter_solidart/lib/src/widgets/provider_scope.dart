@@ -2,10 +2,10 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/src/widgets/solid_override.dart';
+import 'package:flutter_solidart/src/widgets/provider_scope_override.dart';
 import 'package:solidart/solidart.dart';
 
-part '../models/solid_element.dart';
+part '../models/provider.dart';
 part '../models/provider_id.dart';
 
 /// {@template provider-scope}
