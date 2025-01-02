@@ -13,7 +13,7 @@ typedef ReadableSignal<T> = ReadSignal<T>;
 /// All derived-signals are [ReadSignal]s because they depend
 /// on the value of a [Signal].
 /// {@endtemplate}
-class ReadSignal<T> extends Atom implements SignalBase<T> {
+class ReadSignal<T> implements SignalBase<T> {
   /// {@macro readsignal}
   factory ReadSignal(
     T initialValue, {
@@ -31,6 +31,9 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
     /// {@macro SignalBase.comparator}
     ValueComparator<T?> comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
   }) {
     return ReadSignal._internal(
       initialValue: initialValue,
@@ -38,29 +41,37 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      trackPreviousValue:
+          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
       comparator: comparator,
     );
   }
 
   ReadSignal._internal({
     required T initialValue,
-    required super.name,
+    required this.name,
     required this.equals,
     required this.autoDispose,
     required this.trackInDevTools,
     required this.comparator,
+    required this.trackPreviousValue,
   }) : _hasValue = true {
     _internalSignal = alien.Signal(initialValue);
     _notifySignalCreation();
   }
 
   ReadSignal._internalLazy({
-    required super.name,
+    required this.name,
     required this.equals,
     required this.autoDispose,
     required this.trackInDevTools,
     required this.comparator,
+    required this.trackPreviousValue,
   }) : _hasValue = false;
+
+  /// {@macro SignalBase.name}
+  @override
+  final String name;
 
   /// {@macro SignalBase.equals}
   @override
@@ -74,6 +85,10 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   @override
   final bool trackInDevTools;
 
+  /// {@macro SignalBase.trackPreviousValue}
+  @override
+  final bool trackPreviousValue;
+
   /// {@macro SignalBase.comparator}
   @override
   final ValueComparator<T?> comparator;
@@ -83,7 +98,8 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   @override
   bool get hasValue {
-    _reportObserved();
+    // cause obersevation
+    value;
     return _hasValue;
   }
 
@@ -95,7 +111,12 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   // Whether or not there is a previous value
   bool _hasPreviousValue = false;
 
-  T get _value => _internalSignal.get();
+  T get _value {
+    if (_disposed) {
+      return alien.untrack(() => _internalSignal.get());
+    }
+    return _internalSignal.get();
+  }
 
   late T _untrackedValue;
 
@@ -112,7 +133,6 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   set _value(T newValue) {
     _untrackedValue = newValue;
-    // _internalSignal.set(newValue);
     _internalSignal.currentValue = newValue;
     final subs = _internalSignal.subs;
     if (subs != null) {
@@ -146,7 +166,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     if (firstValue) _internalSignal = alien.Signal(newValue);
     _hasValue = true;
 
-    // skip if the value are equal
+    // // skip if the value are equal
     if (!firstValue && _compare(_value, newValue)) {
       return;
     }
@@ -156,7 +176,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
     // notify with the new value
     _value = newValue;
-    // _reportChanged();
+
     _notifyListeners();
 
     if (firstValue) {
@@ -168,11 +188,9 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   void _notifyListeners() {
     if (_listeners.isNotEmpty) {
-      // _context.untracked(() {
       for (final listener in _listeners.toList(growable: false)) {
         listener(_previousValue, _untrackedValue);
       }
-      // });
     }
   }
 
@@ -192,7 +210,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   @override
   bool get hasPreviousValue {
-    // _reportObserved();
+    if (!trackPreviousValue) return false;
     // cause observation
     value;
     return _hasPreviousValue;
@@ -201,7 +219,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   /// The previous value, if any.
   @override
   T? get previousValue {
-    // _reportObserved();
+    if (!trackPreviousValue) return null;
     // cause observation
     value;
     return _previousValue;
@@ -209,6 +227,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   /// Sets the previous signal value to [value].
   void _setPreviousValue(T value) {
+    if (!trackPreviousValue) return;
     _previousValue = value;
     _hasPreviousValue = true;
   }
@@ -221,7 +240,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   /// Returns the number of listeners listening to this signal.
   @override
-  int get listenerCount => _observers.length + _listeners.length;
+  int get listenerCount => _listeners.length;
 
   @override
   void dispose() {
@@ -236,9 +255,9 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     }
     _onDisposeCallbacks.clear();
     _notifySignalDisposal();
-    for (final o in _observers.toList()) {
-      o._mayDispose();
-    }
+    // for (final o in _observers.toList()) {
+    //   o._mayDispose();
+    // }
   }
 
   @override
@@ -267,7 +286,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     if (!autoDispose) return;
 
     bool mayDispose() =>
-        _listeners.isEmpty && _observers.isEmpty && _disposable;
+        _listeners.isEmpty; //&& _observers.isEmpty && _disposable;
 
     if (mayDispose()) dispose();
   }

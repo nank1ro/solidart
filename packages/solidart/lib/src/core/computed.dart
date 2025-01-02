@@ -68,6 +68,9 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
 
     /// {@macro SignalBase.comparator}
     ValueComparator<T?> comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
   }) {
     return Computed._internal(
       selector: selector,
@@ -75,6 +78,8 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      trackPreviousValue:
+          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
       comparator: comparator,
     );
   }
@@ -86,6 +91,7 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
     required super.autoDispose,
     required super.trackInDevTools,
     required super.comparator,
+    required super.trackPreviousValue,
   }) : super._internal(initialValue: selector()) {
     _internalComputed = alien.Computed((previousValue) {
       if (previousValue is T) {
@@ -104,51 +110,18 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
 
   late final alien.Computed<T> _internalComputed;
 
-  // @override
-  // SolidartCaughtException? _errorValue;
-
-  final Set<Atom> __observables = {};
-
-  // @override
-  // Set<Atom> get _observables => __observables;
-
-  // @override
-  // set _observables(Set<Atom> value) {
-  //   __observables
-  //     ..clear()
-  //     ..addAll(value);
-  // }
-
-  // @override
-  // Set<Atom>? _newObservables;
-
-  @override
-  // ignore: prefer_final_fields
-  DerivationState _dependenciesState = DerivationState.notTracking;
-
-  // bool _isComputing = false;
-
   @override
   void dispose() {
     // _context.clearObservables(this);
     super.dispose();
   }
 
-  // @override
-  // void _onBecomeStale() {
-  //   // _context.propagatePossiblyChanged(this);
-  // }
-
   @override
   T get value {
+    if (_disposed) {
+      return alien.untrack(() => _internalSignal.get());
+    }
     return _internalComputed.get();
-  }
-
-  @override
-  T? get previousValue {
-    // cause observation
-    value;
-    return super.previousValue;
   }
 
   @override
@@ -166,47 +139,6 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
       listener(previousValue, v);
     });
   }
-
-  // T? _computeValue({required bool track}) {
-  //   // _isComputing = true;
-  //   _context.pushComputation();
-  //
-  //   T? computedValue;
-  //   if (track) {
-  //     computedValue = _context.trackDerivation(this, selector);
-  //   } else {
-  //     try {
-  //       computedValue = selector();
-  //       _errorValue = null;
-  //     } on Object catch (e, s) {
-  //       _errorValue = SolidartCaughtException(e, stackTrace: s);
-  //     }
-  //   }
-  //
-  //   _context.popComputation();
-  //   // _isComputing = false;
-  //
-  //   return computedValue;
-  // }
-
-  // bool _trackAndCompute() {
-  //   final oldValue = _value;
-  //   final wasSuspended = _dependenciesState == DerivationState.notTracking;
-  //   final hadCaughtException = _context.hasCaughtException(this);
-  //
-  //   final newValue = _computeValue(track: true);
-  //
-  //   final changedException =
-  //       hadCaughtException != _context.hasCaughtException(this);
-  //   final changed =
-  //       wasSuspended || changedException || !_compare(oldValue, newValue);
-  //
-  //   if (changed && newValue is T) {
-  //     _setValue(newValue);
-  //   }
-  //
-  //   return changed;
-  // }
 
   @override
   String toString() =>

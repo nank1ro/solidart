@@ -52,9 +52,6 @@ abstract class ReactionInterface implements Derivation {
 
   /// Disposes the reaction
   void dispose();
-
-  /// Runs the reaction
-  void _run();
 }
 
 /// {@template effect}
@@ -186,61 +183,25 @@ class Effect implements ReactionInterface {
   /// {@macro effect-options}
   final EffectOptions options;
 
-  // final _context = ReactiveContext.main;
-  bool _isScheduled = false;
   bool _disposed = false;
   bool _isRunning = false;
 
   late final alien.Effect<void> _internalEffect;
 
   @override
-  // ignore: prefer_final_fields
-  DerivationState _dependenciesState = DerivationState.notTracking;
-
-  @override
-  SolidartCaughtException? _errorValue;
-
-  @override
-  Set<Atom>? _newObservables;
-
-  @override
   bool get disposed => _disposed;
 
-  final Set<Atom> __observables = {};
+  final Set __observables = {};
 
   // The list of dependencies which the dispose has been prevented.
-  final Set<Atom> _observablesDisposePrevented = {};
-
-  @override
-  // ignore: prefer_final_fields
-  Set<Atom> get _observables => __observables;
-
-  @override
-  set _observables(Set<Atom> newObservables) {
-    __observables
-      ..clear()
-      ..addAll(newObservables);
-  }
-
-  @override
-  void _onBecomeStale() {
-    _schedule();
-  }
+  final Set _observablesDisposePrevented = {};
 
   void _schedule() {
-    // if (_isScheduled) {
-    //   return;
-    // }
     try {
       _internalEffect.run();
     } catch (e, s) {
       _onError?.call(SolidartCaughtException(e, stackTrace: s));
     }
-
-    // _isScheduled = true;
-    // _context
-    //   ..addPendingReaction(this)
-    //   ..runReactions();
   }
 
   /// Tracks the observables present in the given [fn] function
@@ -248,27 +209,10 @@ class Effect implements ReactionInterface {
   /// This method must not be used directly.
   @protected
   void track(void Function() fn, {bool preventDisposal = false}) {
-    // _context.startBatch();
-
     _isRunning = true;
     _internalEffect.run();
-    // _context.trackDerivation(this, fn);
     _isRunning = false;
 
-    // if (_disposed) {
-    //   _context.clearObservables(this);
-    // }
-
-    // if (_context.hasCaughtException(this)) {
-    //   if (_onError != null) {
-    //     _onError.call(_errorValue!);
-    //   }
-    //   // coverage:ignore-start
-    //   else {
-    //     throw _errorValue!;
-    //   }
-    //   // coverage:ignore-end
-    // }
     // coverage:ignore-start
     if (preventDisposal) {
       for (final ob in __observables) {
@@ -277,33 +221,6 @@ class Effect implements ReactionInterface {
       }
     }
     // coverage:ignore-end
-    // _context.endBatch();
-  }
-
-  @override
-  void _run() {
-    // if (_disposed) return;
-    //
-    // _context.startBatch();
-    //
-    // _isScheduled = false;
-    //
-    // if (_context.shouldCompute(this)) {
-    //   try {
-    //     _callback();
-    //   } on Object catch (e, s) {
-    //     // coverage:ignore-start
-    //     // Note: "on Object" accounts for both Error and Exception
-    //     _errorValue = SolidartCaughtException(e, stackTrace: s);
-    //     if (_onError != null) {
-    //       _onError.call(_errorValue!);
-    //     } else {
-    //       throw _errorValue!;
-    //     }
-    //     // coverage:ignore-end
-    //   }
-    // }
-    //
     // _context.endBatch();
   }
 
@@ -329,20 +246,12 @@ class Effect implements ReactionInterface {
         .._mayDispose();
     }
     // coverage:ignore-end
-
-    // ignore: cascade_invocations
-    // _context
-    //   ..startBatch()
-    //   ..clearObservables(this)
-    //   ..endBatch();
     __observables.clear();
-    _newObservables?.clear();
   }
 
   @override
   void _mayDispose() {
-    if (options.autoDispose &&
-        (_observables.isEmpty || _observables.every((ob) => ob.disposed))) {
+    if (options.autoDispose) {
       dispose();
     }
   }

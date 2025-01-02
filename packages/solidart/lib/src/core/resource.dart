@@ -83,6 +83,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
     /// {@macro SignalBase.equals}
     bool? equals,
+
     /// {@macro SignalBase.autoDispose}
     bool? autoDispose,
 
@@ -114,6 +115,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
     /// {@macro SignalBase.equals}
     bool? equals,
+
     /// {@macro SignalBase.autoDispose}
     bool? autoDispose,
 
@@ -141,11 +143,16 @@ class Resource<T> extends Signal<ResourceState<T>> {
     required this.lazy,
     required super.autoDispose,
     required super.trackInDevTools,
+
+    /// Whether to track the previous state of the resource, defaults to true.
+    bool? trackPreviousState,
     this.fetcher,
     this.stream,
     this.source,
   }) : super._internal(
           initialValue: ResourceState<T>.loading(),
+          trackPreviousValue:
+              trackPreviousState ?? SolidartConfig.trackPreviousValue,
           comparator: identical,
         ) {
     if (this is! ResourceSelector) {

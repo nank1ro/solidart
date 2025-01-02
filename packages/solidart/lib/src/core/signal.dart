@@ -110,6 +110,7 @@ class Signal<T> extends ReadSignal<T> {
 
     /// {@macro SignalBase.equals}
     bool? equals,
+
     /// {@macro SignalBase.autoDispose}
     bool? autoDispose,
 
@@ -118,6 +119,9 @@ class Signal<T> extends ReadSignal<T> {
 
     /// {@macro SignalBase.comparator}
     ValueComparator<T?> comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
   }) {
     return Signal._internal(
       initialValue: initialValue,
@@ -125,6 +129,8 @@ class Signal<T> extends ReadSignal<T> {
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      trackPreviousValue:
+          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
       comparator: comparator,
     );
   }
@@ -149,12 +155,17 @@ class Signal<T> extends ReadSignal<T> {
 
     /// {@macro SignalBase.comparator}
     ValueComparator<T?> comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
   }) {
     return Signal._internalLazy(
       name: name ?? ReactiveContext.main.nameFor('Signal'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      trackPreviousValue:
+          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
       comparator: comparator,
     );
   }
@@ -166,6 +177,7 @@ class Signal<T> extends ReadSignal<T> {
     required super.autoDispose,
     required super.trackInDevTools,
     required super.comparator,
+    required super.trackPreviousValue,
   }) : super._internal();
 
   Signal._internalLazy({
@@ -174,6 +186,7 @@ class Signal<T> extends ReadSignal<T> {
     required super.autoDispose,
     required super.trackInDevTools,
     required super.comparator,
+    required super.trackPreviousValue,
   }) : super._internalLazy();
 
   /// {@macro set-signal-value}

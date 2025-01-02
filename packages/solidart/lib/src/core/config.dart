@@ -14,6 +14,9 @@ abstract class SolidartConfig {
   /// Whether to enable the DevTools extension, defaults to false.
   static bool devToolsEnabled = false;
 
+  /// Whether to track the previous value of the signal, defaults to true.
+  static bool trackPreviousValue = true;
+
   /// The list of observers.
   static final observers = <SolidartObserver>[];
 }

@@ -17,9 +17,12 @@ abstract class SignalBase<T> {
     bool? equals,
     bool? autoDispose,
     bool? trackInDevTools,
+    bool? trackPreviousValue,
   })  : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
         trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
-        equals = equals ?? SolidartConfig.equals;
+        equals = equals ?? SolidartConfig.equals,
+        trackPreviousValue =
+            trackPreviousValue ?? SolidartConfig.trackPreviousValue;
 
   /// {@template SignalBase.name}
   /// The name of the signal, useful for logging purposes.
@@ -42,7 +45,7 @@ abstract class SignalBase<T> {
   ///
   /// Taken into account only if [equals] is false.
   /// {@endtemplate}
-  final ValueComparator<T?>? comparator;
+  final ValueComparator<T?> comparator;
 
   /// {@template SignalBase.autoDispose}
   /// Whether to automatically dispose the signal (defaults to
@@ -56,6 +59,9 @@ abstract class SignalBase<T> {
   /// Whether to track the signal in the DevTools extension, defaults to
   /// [SolidartConfig.devToolsEnabled].
   final bool trackInDevTools;
+
+  /// Whether to track the previous value of the signal, defaults to true
+  final bool trackPreviousValue;
 
   /// The current signal value
   T get value;
