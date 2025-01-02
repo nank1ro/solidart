@@ -28,18 +28,27 @@ typedef DisposeProviderValueFn<T> = void Function(T value);
 /// {@endtemplate}
 @immutable
 class Provider<T> {
+  //! NB: do not make the constructor `const`, since that would give the same
+  //! hash code to different instances of `Provider` with the same generic
+  //! type.
+
   /// {@macro provider}
-  const Provider._(
-    this.id, {
-    required InitProviderValueFn<T> init,
-    required DisposeProviderValueFn<T>? dispose,
-    required this.lazy,
+  // ignore: prefer_const_constructors_in_immutables
+  Provider(
+    InitProviderValueFn<T> init, {
+    DisposeProviderValueFn<T>? dispose,
+    this.lazy = true,
   })  : _init = init,
         _dispose = dispose;
 
-  /// The identifier of the provider, useful to distinguish between providers
-  /// with the same Type.
-  final ProviderId<T> id;
+  /// This constructor purposely leaves out [_init]. This way
+  /// [ProviderWithArg.new] can leverage the [ProviderWithArg._arg] member
+  /// when setting [_init].
+  // ignore: prefer_const_constructors_in_immutables
+  Provider._withArg({
+    DisposeProviderValueFn<T>? dispose,
+    this.lazy = true,
+  }) : _dispose = dispose;
 
   /// Make the provider creation lazy, defaults to true.
   ///
@@ -50,7 +59,7 @@ class Provider<T> {
   bool get _isSignal => this is Provider<SignalBase>;
 
   /// The function called to create the element.
-  final InitProviderValueFn<T> _init;
+  late final InitProviderValueFn<T> _init;
 
   /// An optional dispose function called when the Solid that created this
   /// provider gets disposed.
@@ -60,4 +69,18 @@ class Provider<T> {
   void _disposeFn(BuildContext context, dynamic value) {
     _dispose?.call(value as T);
   }
+
+  /// This is a bit of a hack: it is used in [ProviderScope.value] and
+  /// [ProviderScope.values].
+  /// If [ProviderScope._getProvider] were used directly by the two
+  /// constructors, the type will be wrongly inferred to `dynamic` instead
+  /// of the precise type, and it would result in runtime exception.
+  Provider<T> _getProvider(
+    BuildContext context,
+  ) {
+    return ProviderScope._getProvider<T>(context, this);
+  }
+
+  /// Returns the type of the value
+  Type get _valueType => T;
 }

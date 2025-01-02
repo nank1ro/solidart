@@ -6,7 +6,7 @@ import 'package:flutter_solidart/src/widgets/provider_scope_override.dart';
 import 'package:solidart/solidart.dart';
 
 part '../models/provider.dart';
-part '../models/provider_id.dart';
+part '../models/provider_with_arg.dart';
 
 /// {@template provider-scope}
 /// Provides [providers] to descendants.
@@ -282,7 +282,7 @@ class ProviderScope extends StatefulWidget {
   factory ProviderScope.value({
     Key? key,
     required BuildContext mainTreeContext,
-    required ProviderId<dynamic> providerId,
+    required Provider<dynamic> providerId,
     required Widget child,
   }) {
     return ProviderScope._valueInternal(
@@ -301,7 +301,7 @@ class ProviderScope extends StatefulWidget {
   factory ProviderScope.values({
     Key? key,
     required BuildContext mainTreeContext,
-    required List<ProviderId<dynamic>> providerIds,
+    required List<Provider<dynamic>> providerIds,
     required Widget child,
   }) {
     return ProviderScope._valueInternal(
@@ -337,7 +337,7 @@ class ProviderScope extends StatefulWidget {
   /// If [listen] is true, the [context] gets subscribed to the given value.
   static ProviderScopeState _findState<T>(
     BuildContext context, {
-    required ProviderId<T> id,
+    required Provider<T> id,
     bool listen = false,
   }) {
     // try finding the solid override first
@@ -369,7 +369,7 @@ class ProviderScope extends StatefulWidget {
   ///
   /// You may call this method inside the `initState` or `build` methods.
   /// {@endtemplate}
-  static T get<T>(BuildContext context, ProviderId<T> id) {
+  static T get<T>(BuildContext context, Provider<T> id) {
     return _getOrCreateProvider<T>(context, id: id);
   }
 
@@ -386,7 +386,7 @@ class ProviderScope extends StatefulWidget {
   ///
   /// You may call this method inside the `initState` or `build` methods.
   /// {@endtemplate}
-  static T? maybeGet<T>(BuildContext context, ProviderId<T> id) {
+  static T? maybeGet<T>(BuildContext context, Provider<T> id) {
     try {
       return _getOrCreateProvider<T>(context, id: id);
     } catch (e) {
@@ -412,7 +412,7 @@ class ProviderScope extends StatefulWidget {
   /// {@endtemplate}
   static Provider<T> _getProvider<T>(
     BuildContext context,
-    ProviderId<T> id,
+    Provider<T> id,
   ) {
     final state = _findState<T>(context, id: id);
     return state._getProvider<T>(id)!;
@@ -436,7 +436,7 @@ class ProviderScope extends StatefulWidget {
   /// {@endtemplate}
   static T observe<T extends SignalBase<dynamic>>(
     BuildContext context,
-    ProviderId<T> id,
+    Provider<T> id,
   ) {
     return _getOrCreateProvider<T>(context, id: id, listen: true);
   }
@@ -467,7 +467,7 @@ class ProviderScope extends StatefulWidget {
   static void update<T>(
     BuildContext context,
     T Function(T value) callback,
-    ProviderId<Signal<T>> id,
+    Provider<Signal<T>> id,
   ) {
     // retrieve the signal and update its value
     get<Signal<T>>(context, id).updateValue(callback);
@@ -479,7 +479,7 @@ class ProviderScope extends StatefulWidget {
   /// The provider is created in case the find fails.
   static T _getOrCreateProvider<T>(
     BuildContext context, {
-    required ProviderId<T> id,
+    required Provider<T> id,
     bool listen = false,
   }) {
     final state = _findState<T>(context, id: id, listen: listen);
@@ -494,16 +494,16 @@ class ProviderScope extends StatefulWidget {
 class ProviderScopeState extends State<ProviderScope> {
   /// Stores all the providers in the current scope
   final _allProvidersInScope =
-      HashMap<({Type type, ProviderId<dynamic> id}), Provider<dynamic>>();
+      HashMap<({Type type, Provider<dynamic> id}), Provider<dynamic>>();
 
   // Stores all the created providers.
   // The key is the provider, while the value is its value.
   final _createdProviders =
-      HashMap<({Type type, ProviderId<dynamic> id}), Object?>();
+      HashMap<({Type type, Provider<dynamic> id}), Object?>();
 
   // Stores all the disposeFn for each signal
   final _signalDisposeCallbacks = <DisposeEffect>[];
-  ProviderId<dynamic>? _changedDependency;
+  Provider<dynamic>? _changedDependency;
   int _dependenciesVersion = 0;
 
   @override
@@ -514,13 +514,13 @@ class ProviderScopeState extends State<ProviderScope> {
       () {
         // check if the provider type is not dynamic
         // check if there are multiple providers of the same type
-        final ids = <ProviderId<dynamic>>[];
+        final ids = <Provider<dynamic>>[];
         for (final provider in widget.providers) {
-          final id = provider.id;
+          final id = provider; // the instance of the provider
           if (id._valueType == dynamic) throw ProviderDynamicError();
 
           if (ids.contains(id)) {
-            throw ProviderMultipleProviderOfSameTypeError(
+            throw MultipleProviderOfSameInstance(
               providerType: id._valueType,
               id: id,
             );
@@ -533,7 +533,7 @@ class ProviderScopeState extends State<ProviderScope> {
     );
 
     for (final provider in widget.providers) {
-      final key = (id: provider.id, type: provider.id._valueType);
+      final key = (id: provider, type: provider._valueType);
       _allProvidersInScope[key] = provider;
 
       // todo: check if injected providers with ProviderScope.value/values get initialized again...
@@ -568,7 +568,7 @@ class ProviderScopeState extends State<ProviderScope> {
   /// -- Signals logic
   void _initializeSignal<S extends SignalBase<dynamic>>(
     S signal, {
-    required ProviderId<S> id,
+    required Provider<S> id,
   }) {
     final unobserve = signal.observe((_, value) {
       setState(() {
@@ -583,12 +583,12 @@ class ProviderScopeState extends State<ProviderScope> {
   /// -- Providers logic
 
   /// Try to find a [Provider] of type <T> or [id] and returns it
-  Provider<T>? _getProvider<T>(ProviderId<T> id) {
+  Provider<T>? _getProvider<T>(Provider<T> id) {
     return _allProvidersInScope[(type: T, id: id)] as Provider<T>?;
   }
 
   /// Creates a provider of type T and stores it
-  T createProvider<T>(ProviderId<T> id) {
+  T createProvider<T>(Provider<T> id) {
     // find the provider in the list
     final provider = _getProvider<T>(id)!;
     // create and return it
@@ -596,7 +596,7 @@ class ProviderScopeState extends State<ProviderScope> {
     if (provider._isSignal) {
       _initializeSignal<SignalBase<dynamic>>(
         value as SignalBase,
-        id: id as ProviderId<SignalBase<dynamic>>,
+        id: id as Provider<SignalBase<dynamic>>,
       );
     }
 
@@ -607,7 +607,7 @@ class ProviderScopeState extends State<ProviderScope> {
 
   /// Used to determine if the requested provider is present in the current
   /// scope
-  bool isProviderInScope<T>(ProviderId<T> id) {
+  bool isProviderInScope<T>(Provider<T> id) {
     // Find the provider by type
     return _getProvider<T>(id) != null;
   }
@@ -646,7 +646,7 @@ class _InheritedProvider extends InheritedModel<Object> {
   });
 
   final ProviderScopeState state;
-  final ProviderId<dynamic>? changedDependency;
+  final Provider<dynamic>? changedDependency;
   final int dependenciesVersion;
 
   @override
@@ -654,7 +654,7 @@ class _InheritedProvider extends InheritedModel<Object> {
     return oldWidget.dependenciesVersion != dependenciesVersion;
   }
 
-  bool isSupportedAspectWithType<T>(ProviderId<T> id) {
+  bool isSupportedAspectWithType<T>(Provider<T> id) {
     return state.isProviderInScope<T>(id);
   }
 
@@ -676,7 +676,7 @@ class _InheritedProvider extends InheritedModel<Object> {
   // that supports the specified model [aspect].
   static InheritedElement? _findNearestModel<T>(
     BuildContext context,
-    ProviderId<T> id,
+    Provider<T> id,
   ) {
     final model =
         context.getElementForInheritedWidgetOfExactType<_InheritedProvider>();
@@ -728,7 +728,7 @@ class _InheritedProvider extends InheritedModel<Object> {
   /// If no ancestor of type T exists, null is returned.
   static _InheritedProvider? inheritFromNearest<T>(
     BuildContext context,
-    ProviderId<T> id, {
+    Provider<T> id, {
     // Whether to listen to the [InheritedModel], defaults to false.
     bool listen = false,
   }) {
@@ -756,7 +756,7 @@ class ProviderError<T> extends Error {
   ProviderError(this.id);
 
   /// The id of the provider
-  final ProviderId<T> id;
+  final Provider<T> id;
 
   @override
   String toString() {
@@ -803,9 +803,9 @@ class ProviderDynamicError extends Error {
 /// {@template Providermultipleproviderofsametypeerror}
 /// Error thrown when multiple providers of the same [id] are created together.
 /// {@endtemplate}
-class ProviderMultipleProviderOfSameTypeError extends Error {
+class MultipleProviderOfSameInstance extends Error {
   /// {@macro Providermultipleproviderofsametypeerror}
-  ProviderMultipleProviderOfSameTypeError({
+  MultipleProviderOfSameInstance({
     required this.providerType,
     required this.id,
   });
@@ -814,12 +814,12 @@ class ProviderMultipleProviderOfSameTypeError extends Error {
   final Type providerType;
 
   // ignore: public_member_api_docs
-  final ProviderId<dynamic> id;
+  final Provider<dynamic> id;
 
   @override
   String toString() {
     return '''
-      You cannot create or inject multiple providers with the same ProviderId together.
+      You cannot create or inject multiple providers with the same Provider instance together.
       Provider type: $providerType
       ProviderId: $id
       ''';

@@ -15,7 +15,7 @@ class SearchPage extends StatelessWidget {
       providers: [
         // Provide the [GithubSearchBloc] to descendants
         _githubSearchBlocId.createProvider(
-          init: () => GithubSearchBloc(),
+          () => GithubSearchBloc(),
           dispose: (bloc) => bloc.dispose(),
         ),
       ],

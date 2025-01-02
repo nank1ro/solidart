@@ -13,7 +13,7 @@ class TodosPage extends StatelessWidget {
     return ProviderScope(
       providers: [
         TodosController.id.createProvider(
-          init: () => TodosController(initialTodos: Todo.sample),
+          () => TodosController(initialTodos: Todo.sample),
           dispose: (controller) => controller.dispose(),
         ),
       ],

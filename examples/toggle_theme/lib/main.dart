@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
     return ProviderScope.builder(
       providers: [
         _themeModeId.createProvider(
-          init: () => Signal(ThemeMode.light),
+          () => Signal(ThemeMode.light),
         ),
       ],
       // using the builder method to immediately access the signal

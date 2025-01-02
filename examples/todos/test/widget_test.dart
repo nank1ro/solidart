@@ -23,7 +23,7 @@ Widget wrapWithMockedTodosController({
     home: ProviderScope(
       providers: [
         TodosController.id.createProvider(
-          init: () => todosController,
+          () => todosController,
           dispose: (controller) => controller.dispose(),
         ),
       ],
