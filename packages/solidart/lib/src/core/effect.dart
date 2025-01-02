@@ -237,7 +237,7 @@ class Effect implements ReactionInterface {
     if (_disposed) return;
     _disposed = true;
 
-    if (_isRunning) return;
+    alien.endTrack(_internalEffect);
 
     // coverage:ignore-start
     for (final ob in _observablesDisposePrevented) {

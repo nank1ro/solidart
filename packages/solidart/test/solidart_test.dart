@@ -393,7 +393,7 @@ void main() {
         );
       });
 
-      test('check toString', () {
+      test('check toString computed', () {
         final count = Signal(1);
         final doubleCount = Computed(() => count() * 2);
 
@@ -1567,6 +1567,83 @@ void main() {
             (x: 11, y: 21, total: 32),
           ]),
         );
+      });
+
+      test('should correctly propagate changes through computed signals', () {
+        final source = Signal(0);
+        final c1 = Computed(() => source() % 2);
+        final c2 = Computed(c1);
+        final c3 = Computed(c2);
+
+        c3.value;
+        source.set(1);
+        c2.value;
+        source.set(3);
+
+        expect(c3.value, equals(1));
+      });
+      test('should clear subscriptions when untracked by all subscribers', () {
+        int bRunTimes = 0;
+
+        final a = Signal(1);
+        final b = Computed(() {
+          bRunTimes++;
+          return a() * 2;
+        });
+        final disposeEffect = Effect((_) {
+          b();
+        });
+
+        expect(bRunTimes, equals(1));
+
+        a.set(2);
+        expect(bRunTimes, equals(2));
+
+        disposeEffect();
+        a.set(2);
+        expect(bRunTimes, equals(2));
+      });
+
+      test('should not run untracked inner effect', () {
+        final a = Signal(3);
+        final b = Computed(() => a() > 0);
+
+        Effect((_) {
+          if (b()) {
+            Effect((_) {
+              if (a() == 0) {
+                throw Error();
+              }
+            });
+          }
+        });
+
+        a.set(a() - 1);
+        a.set(a() - 1);
+        a.set(a() - 1);
+
+        expect(b(), isFalse);
+      });
+
+      test('should run outer effect first', () {
+        final a = Signal(1);
+        final b = Signal(1);
+
+        Effect((_) {
+          if (a() > 0) {
+            Effect((_) {
+              b();
+              if (a() == 0) {
+                throw Error();
+              }
+            });
+          }
+        });
+
+        batch(() {
+          a.set(0);
+          b.set(0);
+        });
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),

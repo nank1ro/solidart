@@ -50,7 +50,7 @@ part of 'core.dart';
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-class Computed<T> extends ReadSignal<T> implements Derivation {
+class Computed<T> extends SignalBase<T> implements Derivation {
   /// {@macro computed}
   factory Computed(
     T Function() selector, {
@@ -92,17 +92,20 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
     required super.trackInDevTools,
     required super.comparator,
     required super.trackPreviousValue,
-  }) : super._internal(initialValue: selector()) {
+  }) {
     _internalComputed = alien.Computed((previousValue) {
-      if (previousValue is T) {
-        super._setPreviousValue(previousValue);
+      if (trackPreviousValue && previousValue is T) {
+        _hasPreviousValue = true;
+        _untrackedPreviousValue = _previousValue = previousValue;
       }
       try {
-        return selector();
+        return _untrackedValue = selector();
       } catch (e, s) {
         throw SolidartCaughtException(e, stackTrace: s);
       }
     });
+    // start it immediately so the initial value is set
+    _internalComputed.get();
   }
 
   /// The selector applied
@@ -110,18 +113,56 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
 
   late final alien.Computed<T> _internalComputed;
 
+  bool _disposed = false;
+
+  late T _untrackedValue;
+
+  T? _previousValue;
+
+  T? _untrackedPreviousValue;
+
+  // Whether or not there is a previous value
+  bool _hasPreviousValue = false;
+
+  // Keeps track of all the callbacks passed to [onDispose].
+  // Used later to fire each callback when this signal is disposed.
+  final _onDisposeCallbacks = <VoidCallback>[];
+
+  // A computed signal is always initialized
+  @override
+  bool get hasValue => true;
+
   @override
   void dispose() {
-    // _context.clearObservables(this);
-    super.dispose();
+    if (_disposed) return;
+
+    _disposed = true;
   }
 
   @override
   T get value {
     if (_disposed) {
-      return alien.untrack(() => _internalSignal.get());
+      return alien.untrack(() => _internalComputed.get());
     }
     return _internalComputed.get();
+  }
+
+  /// Returns the previous value of the computed.
+  @override
+  T? get previousValue {
+    // cause observation
+    if (!disposed) value;
+    return _previousValue;
+  }
+
+  /// Returns the untracked value of the computed.
+  T get untrackedValue {
+    return _untrackedValue;
+  }
+
+  /// Returns the untracked previous value of the computed.
+  T? get untrackedPreviousValue {
+    return _untrackedPreviousValue;
   }
 
   @override
@@ -141,6 +182,34 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   }
 
   @override
-  String toString() =>
-      '''Computed<$T>(value: $_value, previousValue: $_previousValue)''';
+  void _mayDispose() {
+    // TODO: implement _mayDispose
+  }
+
+  @override
+  T call() => value;
+
+  @override
+  bool get disposed => _disposed;
+
+  @override
+  bool get hasPreviousValue {
+    if (!trackPreviousValue) return false;
+    // cause observation
+    value;
+    return _hasPreviousValue;
+  }
+
+  @override
+  int get listenerCount => throw UnimplementedError();
+
+  @override
+  void onDispose(VoidCallback cb) {
+    _onDisposeCallbacks.add(cb);
+  }
+
+  @override
+  String toString() {
+    return '''Computed<$T>(value: $untrackedValue, previousValue: $untrackedPreviousValue)''';
+  }
 }

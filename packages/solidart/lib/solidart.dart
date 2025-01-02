@@ -5,7 +5,6 @@ library solidart;
 
 export 'src/core/core.dart'
     hide
-        Atom,
         Derivation,
         DerivationState,
         ReactionErrorHandler,

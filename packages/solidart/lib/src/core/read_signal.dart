@@ -98,6 +98,8 @@ class ReadSignal<T> implements SignalBase<T> {
 
   @override
   bool get hasValue {
+    // TODO: this is bad
+    if (!_hasValue) return false;
     // cause obersevation
     value;
     return _hasValue;
