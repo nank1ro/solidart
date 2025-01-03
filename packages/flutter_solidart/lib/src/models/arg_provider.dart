@@ -4,12 +4,12 @@ part of '../widgets/provider_scope.dart';
 typedef InitProviderValueWithArgFn<A, T> = T Function(A arg);
 
 /// {@template provider-arg}
-/// Add docs.
+/// A provider that needs to be initially given an argument.
 /// {@endtemplate}
 // ignore: must_be_immutable
-class ProviderWithArg<A, T> extends Provider<T> {
+class ArgProvider<A, T> extends Provider<T> {
   /// {@macro provider-arg}
-  ProviderWithArg(
+  ArgProvider(
     InitProviderValueWithArgFn<A, T> init, {
     super.dispose,
     super.lazy,

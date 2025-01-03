@@ -42,7 +42,7 @@ class Provider<T> {
         _dispose = dispose;
 
   /// This constructor purposely leaves out [_init]. This way
-  /// [ProviderWithArg.new] can leverage the [ProviderWithArg._arg] member
+  /// [ProviderWithArg.new] can leverage the [ArgProvider._arg] member
   /// when setting [_init].
   // ignore: prefer_const_constructors_in_immutables
   Provider._withArg({

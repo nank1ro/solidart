@@ -976,7 +976,7 @@ void main() {
   });
 
   testWidgets('Test Solid.update method with ProviderWithArg', (tester) async {
-    final counterId = ProviderWithArg<int, Signal<int>>(Signal.new)
+    final counterId = ArgProvider<int, Signal<int>>(Signal.new)
       ..setInitialArg(0);
     await tester.pumpWidget(
       MaterialApp(

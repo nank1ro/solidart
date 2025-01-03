@@ -6,7 +6,7 @@ import 'package:flutter_solidart/src/widgets/provider_scope_override.dart';
 import 'package:solidart/solidart.dart';
 
 part '../models/provider.dart';
-part '../models/provider_with_arg.dart';
+part '../models/arg_provider.dart';
 
 /// {@template provider-scope}
 /// Provides [providers] to descendants.
