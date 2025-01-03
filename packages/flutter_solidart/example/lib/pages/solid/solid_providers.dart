@@ -1,12 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _nameId = ProviderId<NameProvider>();
-final _firstNumberId = ProviderId<NumberProvider>();
-final _secondNumberId = ProviderId<NumberProvider>();
+final _nameProvider = Provider<NameContainer>(
+  () => const NameContainer('Ale'),
+  // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
+  dispose: (provider) => provider.dispose(),
+);
+final _firstNumberProvider = Provider<NumberContainer>(
+  () => const NumberContainer(1),
+  // Do not create the provider lazily, but immediately
+  lazy: false,
+);
+final _secondNumberProvider = Provider<NumberContainer>(
+  () => const NumberContainer(100),
+  // Do not create the provider lazily, but immediately
+  lazy: false,
+);
 
-class NameProvider {
-  const NameProvider(this.name);
+class NameContainer {
+  const NameContainer(this.name);
   final String name;
 
   void dispose() {
@@ -16,8 +28,8 @@ class NameProvider {
   }
 }
 
-class NumberProvider {
-  const NumberProvider(this.number);
+class NumberContainer {
+  const NumberContainer(this.number);
   final int number;
 }
 
@@ -32,21 +44,9 @@ class ProvidersPage extends StatelessWidget {
       ),
       body: ProviderScope(
         providers: [
-          _nameId.createProvider(
-            init: () => const NameProvider('Ale'),
-            // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
-            dispose: (provider) => provider.dispose(),
-          ),
-          _firstNumberId.createProvider(
-            init: () => const NumberProvider(1),
-            // Do not create the provider lazily, but immediately
-            lazy: false,
-          ),
-          _secondNumberId.createProvider(
-            init: () => const NumberProvider(100),
-            // Do not create the provider lazily, but immediately
-            lazy: false,
-          ),
+          _nameProvider,
+          _firstNumberProvider,
+          _secondNumberProvider,
         ],
         child: const SomeChild(),
       ),
@@ -62,23 +62,23 @@ class SomeChild extends StatelessWidget {
       context: context,
       builder: (_) => ProviderScope.values(
         mainTreeContext: context,
-        providerIds: [
-          _nameId,
-          _firstNumberId,
-          _secondNumberId,
+        providers: [
+          _nameProvider,
+          _firstNumberProvider,
+          _secondNumberProvider,
         ],
         child: Dialog(
           child: Builder(builder: (innerContext) {
-            final nameProvider = _nameId.get(innerContext);
-            final numberProvider1 = _firstNumberId.get(innerContext);
-            final numberProvider2 = _secondNumberId.get(innerContext);
+            final nameContainer = _nameProvider.get(innerContext);
+            final numberContainer1 = _firstNumberProvider.get(innerContext);
+            final numberContainer2 = _secondNumberProvider.get(innerContext);
             return SizedBox.square(
               dimension: 100,
               child: Center(
                 child: Text('''
-name: ${nameProvider.name}
-number1: ${numberProvider1.number}
-number2: ${numberProvider2.number}
+name: ${nameContainer.name}
+number1: ${numberContainer1.number}
+number2: ${numberContainer2.number}
 '''),
               ),
             );
@@ -90,19 +90,19 @@ number2: ${numberProvider2.number}
 
   @override
   Widget build(BuildContext context) {
-    final nameProvider = _nameId.get(context);
-    final numberProvider = _firstNumberId.get(context);
-    final numberProvider2 = _secondNumberId.get(context);
+    final nameContainer = _nameProvider.get(context);
+    final numberContainer1 = _firstNumberProvider.get(context);
+    final numberContainer2 = _secondNumberProvider.get(context);
 
     return Center(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text('name: ${nameProvider.name}'),
+          Text('name: ${nameContainer.name}'),
           const SizedBox(height: 8),
-          Text('number1: ${numberProvider.number}'),
+          Text('number1: ${numberContainer1.number}'),
           const SizedBox(height: 8),
-          Text('number2: ${numberProvider2.number}'),
+          Text('number2: ${numberContainer2.number}'),
           const SizedBox(height: 8),
           ElevatedButton(
             onPressed: () => openDialog(context),

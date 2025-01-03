@@ -15,6 +15,11 @@ class GithubSearchBloc {
               cache: InMemoryCache(const Duration(minutes: 5)),
             );
 
+  static final provider = Provider(
+    () => GithubSearchBloc(),
+    dispose: (bloc) => bloc.dispose(),
+  );
+
   final GithubRepository _repository;
 
   // Keeps track of the current search term

@@ -250,15 +250,15 @@ part '../models/arg_provider.dart';
 @immutable
 class ProviderScope extends StatefulWidget {
   /// {@macro provider-scope}
-  const ProviderScope({super.key, this.child, this.providers = const []})
+  const ProviderScope({super.key, required this.child, required this.providers})
       : builder = null,
         _canAutoDisposeProviders = true;
 
   /// {@macro provider-scope}
   const ProviderScope.builder({
     super.key,
-    this.builder,
-    this.providers = const [],
+    required this.builder,
+    required this.providers,
   })  : child = null,
         _canAutoDisposeProviders = true;
 
@@ -282,12 +282,12 @@ class ProviderScope extends StatefulWidget {
   factory ProviderScope.value({
     Key? key,
     required BuildContext mainTreeContext,
-    required Provider<dynamic> providerId,
+    required Provider<dynamic> provider,
     required Widget child,
   }) {
     return ProviderScope._valueInternal(
       key: key,
-      providers: [providerId._getProvider(mainTreeContext)],
+      providers: [provider._getProvider(mainTreeContext)],
       autoDispose: false,
       builder: null,
       child: child,
@@ -301,13 +301,14 @@ class ProviderScope extends StatefulWidget {
   factory ProviderScope.values({
     Key? key,
     required BuildContext mainTreeContext,
-    required List<Provider<dynamic>> providerIds,
+    required List<Provider<dynamic>> providers,
     required Widget child,
   }) {
     return ProviderScope._valueInternal(
       key: key,
-      providers:
-          providerIds.map((id) => id._getProvider(mainTreeContext)).toList(),
+      providers: providers
+          .map((provider) => provider._getProvider(mainTreeContext))
+          .toList(),
       autoDispose: false,
       builder: null,
       child: child,
@@ -520,10 +521,7 @@ class ProviderScopeState extends State<ProviderScope> {
           if (id._valueType == dynamic) throw ProviderDynamicError();
 
           if (ids.contains(id)) {
-            throw MultipleProviderOfSameInstance(
-              providerType: id._valueType,
-              id: id,
-            );
+            throw MultipleProviderOfSameInstance(id);
           }
           ids.add(id);
         }
@@ -540,7 +538,7 @@ class ProviderScopeState extends State<ProviderScope> {
       // create non lazy providers.
       if (!provider.lazy) {
         // create and store the provider
-        _createdProviders[key] = provider._init();
+        _createdProviders[key] = provider._create();
       }
     }
   }
@@ -592,7 +590,7 @@ class ProviderScopeState extends State<ProviderScope> {
     // find the provider in the list
     final provider = _getProvider<T>(id)!;
     // create and return it
-    final value = provider._init();
+    final value = provider._create();
     if (provider._isSignal) {
       _initializeSignal<SignalBase<dynamic>>(
         value as SignalBase,
@@ -801,27 +799,21 @@ class ProviderDynamicError extends Error {
 }
 
 /// {@template Providermultipleproviderofsametypeerror}
-/// Error thrown when multiple providers of the same [id] are created together.
+/// Error thrown when multiple providers of the same [provider] are created together.
 /// {@endtemplate}
 class MultipleProviderOfSameInstance extends Error {
   /// {@macro Providermultipleproviderofsametypeerror}
-  MultipleProviderOfSameInstance({
-    required this.providerType,
-    required this.id,
-  });
+  MultipleProviderOfSameInstance(this.provider);
 
   // ignore: public_member_api_docs
-  final Type providerType;
-
-  // ignore: public_member_api_docs
-  final Provider<dynamic> id;
+  final Provider<dynamic> provider;
 
   @override
   String toString() {
     return '''
       You cannot create or inject multiple providers with the same Provider instance together.
-      Provider type: $providerType
-      ProviderId: $id
+      Provider type: ${provider._valueType}
+      Provider debug name: ${provider._debugName == null ? "not assigned" : provider._debugName!}
       ''';
   }
 }

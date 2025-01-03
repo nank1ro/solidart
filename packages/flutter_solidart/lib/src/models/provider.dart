@@ -1,20 +1,20 @@
 part of '../widgets/provider_scope.dart';
 
 /// A function that creates an object of type [T].
-typedef InitProviderValueFn<T> = T Function();
+typedef CreateProviderFn<T> = T Function();
 
 /// A function that disposes an object of type [T].
-typedef DisposeProviderValueFn<T> = void Function(T value);
+typedef DisposeProviderFn<T> = void Function(T value);
 
 /// {@template provider}
 /// A Provider that manages the lifecycle of the value it provides by
-/// delegating to a pair of [_init] and [_dispose].
+/// delegating to a pair of [_create] and [_dispose].
 ///
 /// It is usually used to avoid making a StatefulWidget for something trivial,
 /// such as instantiating a BLoC.
 ///
 /// Provider is the equivalent of a State.initState combined with State.dispose.
-/// [_init] is called only once in State.initState.
+/// [_create] is called only once in State.initState.
 /// The `create` callback is lazily called. It is called the first time the
 /// value is read, instead of the first time Provider is inserted in the widget
 /// tree.
@@ -35,35 +35,39 @@ class Provider<T> {
   /// {@macro provider}
   // ignore: prefer_const_constructors_in_immutables
   Provider(
-    InitProviderValueFn<T> init, {
-    DisposeProviderValueFn<T>? dispose,
+    CreateProviderFn<T> create, {
+    DisposeProviderFn<T>? dispose,
     this.lazy = true,
-  })  : _init = init,
-        _dispose = dispose;
+    String? debugName,
+  })  : _create = create,
+        _dispose = dispose,
+        _debugName = debugName;
 
-  /// This constructor purposely leaves out [_init]. This way
-  /// [ProviderWithArg.new] can leverage the [ArgProvider._arg] member
-  /// when setting [_init].
+  /// This constructor purposely leaves out [_create]. This way
+  /// [ArgProvider.new] can leverage the [ArgProvider._arg] member
+  /// when setting [_create].
   // ignore: prefer_const_constructors_in_immutables
   Provider._withArg({
-    DisposeProviderValueFn<T>? dispose,
+    DisposeProviderFn<T>? dispose,
     this.lazy = true,
-  }) : _dispose = dispose;
+    String? debugName,
+  })  : _dispose = dispose,
+        _debugName = debugName;
 
   /// Make the provider creation lazy, defaults to true.
   ///
-  /// If this value is true the provider will be [_init]d only
+  /// If this value is true the provider will be [_create]d only
   /// when retrieved from descendants.
   final bool lazy;
 
   bool get _isSignal => this is Provider<SignalBase>;
 
   /// The function called to create the element.
-  late final InitProviderValueFn<T> _init;
+  late final CreateProviderFn<T> _create;
 
   /// An optional dispose function called when the Solid that created this
   /// provider gets disposed.
-  final DisposeProviderValueFn<T>? _dispose;
+  final DisposeProviderFn<T>? _dispose;
 
   /// Function internally used by [ProviderScopeState] that calls [_dispose].
   void _disposeFn(BuildContext context, dynamic value) {
@@ -83,4 +87,8 @@ class Provider<T> {
 
   /// Returns the type of the value
   Type get _valueType => T;
+
+  /// Acts as an identifier. If set, it simplifies tracking down the provider
+  /// causing an exception.
+  final String? _debugName;
 }

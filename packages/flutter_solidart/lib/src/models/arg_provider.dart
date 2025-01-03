@@ -1,27 +1,30 @@
 part of '../widgets/provider_scope.dart';
 
 // ignore: public_member_api_docs
-typedef InitProviderValueWithArgFn<A, T> = T Function(A arg);
+typedef CreateProviderFnWithArg<A, T> = T Function(A arg);
 
-/// {@template provider-arg}
-/// A provider that needs to be initially given an argument.
+/// {@template arg-provider}
+/// A [Provider] that needs to be given an initial argument before
+/// it can be used. If this condition is not met, a
+/// [MissingProviderInitialArgument] will be thrown at runtime.
 /// {@endtemplate}
 // ignore: must_be_immutable
 class ArgProvider<A, T> extends Provider<T> {
-  /// {@macro provider-arg}
+  /// {@macro arg-provider}
   ArgProvider(
-    InitProviderValueWithArgFn<A, T> init, {
+    CreateProviderFnWithArg<A, T> create, {
     super.dispose,
     super.lazy,
-  })  : _initInternal = init,
+    super.debugName,
+  })  : _createInternal = create,
         super._withArg() {
-    super._init = () {
+    // set the _create member now (can't be done in the initializer list
+    // since _arg cannot be accessed from there yet).
+    super._create = () {
       if (!_argWasSet) {
-        throw SolidartException(
-          'Initial argument for this ProviderWithArg missing.',
-        );
+        throw MissingProviderInitialArgument<T>(this);
       }
-      return _initInternal(_arg as A);
+      return _createInternal(_arg as A);
     };
   }
 
@@ -41,5 +44,26 @@ class ArgProvider<A, T> extends Provider<T> {
   bool _argWasSet = false;
   A? _arg;
 
-  final InitProviderValueWithArgFn<A, T> _initInternal;
+  final CreateProviderFnWithArg<A, T> _createInternal;
+}
+
+/// {@template MissingProviderInitialArgument}
+/// Error thrown when the provider is being created but no initial value was
+/// set.
+/// {@endtemplate}
+class MissingProviderInitialArgument<T> extends Error {
+  /// {@macro MissingProviderInitialArgument}
+  MissingProviderInitialArgument(this.argProvider);
+
+  // ignore: public_member_api_docs
+  final ArgProvider<dynamic, T> argProvider;
+
+  @override
+  String toString() {
+    return '''
+      Initial argument for this ArgProvider missing.
+      Provider type: ${argProvider._valueType}
+      Provider debug name: ${argProvider._debugName == null ? "not assigned" : argProvider._debugName!}
+      ''';
+  }
 }

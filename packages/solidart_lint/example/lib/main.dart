@@ -7,9 +7,11 @@ void main() {
   runApp(MyApp());
 }
 
-final myClassId = ProviderId<MyClass>();
-final counterId = ProviderId<Signal<int>>();
-final doubleCounterId = ProviderId<Computed<int>>();
+final myClassProvider = Provider(() => MyClass());
+final counterProvider = Provider(() => Signal(0));
+final doubleCounterProvider = ArgProvider<Signal<int>, Computed<int>>(
+  (counter) => Computed(() => counter() * 2),
+);
 
 class MyClass {}
 
@@ -22,11 +24,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProviderScope(
       providers: [
-        myClassId.createProvider(init: () => MyClass()),
-        counterId.createProvider(init: () => Signal(0)),
-        doubleCounterId.createProvider(
-          init: () => Computed(() => counter() * 2),
-        ),
+        myClassProvider,
+        counterProvider,
+        doubleCounterProvider..setInitialArg(counter),
       ],
       child: const MaterialApp(
         title: 'Flutter Demo',
@@ -41,13 +41,13 @@ class MyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final myClass = myClassId.get(context);
-    final counter = counterId.observe(context);
+    final myClass = myClassProvider.get(context);
+    final counter = counterProvider.observe(context);
 
     return ElevatedButton(
       child: const Text('Increment'),
       onPressed: () {
-        counterId.update(context, (value) => throw UnimplementedError());
+        counterProvider.update(context, (value) => throw UnimplementedError());
       },
     );
   }

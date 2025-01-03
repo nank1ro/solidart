@@ -4,8 +4,6 @@ import 'package:github_search/bloc/github_search_bloc.dart';
 import 'package:github_search/models/models.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
-final _githubSearchBlocId = ProviderId<GithubSearchBloc>();
-
 class SearchPage extends StatelessWidget {
   const SearchPage({super.key});
 
@@ -14,10 +12,7 @@ class SearchPage extends StatelessWidget {
     return ProviderScope(
       providers: [
         // Provide the [GithubSearchBloc] to descendants
-        _githubSearchBlocId.createProvider(
-          () => GithubSearchBloc(),
-          dispose: (bloc) => bloc.dispose(),
-        ),
+        GithubSearchBloc.provider,
       ],
       child: const SearchPageBody(),
     );
@@ -57,7 +52,7 @@ class _SearchBar extends StatefulWidget {
 class __SearchBarState extends State<_SearchBar> {
   final textController = TextEditingController();
   // retrieve the ancestor [GithubSearchBloc]
-  late final bloc = _githubSearchBlocId.get(context);
+  late final bloc = GithubSearchBloc.provider.get(context);
 
   @override
   void dispose() {
@@ -100,7 +95,7 @@ class _SearchBody extends StatelessWidget {
           SignalBuilder(
         builder: (context, searchResultState) {
           final searchResultState =
-              _githubSearchBlocId.get(context).searchResult.state;
+              GithubSearchBloc.provider.get(context).searchResult.state;
           return Stack(
             children: [
               searchResultState.on(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _themeModeId = ProviderId<Signal<ThemeMode>>();
+final _themeModeId = Provider<Signal<ThemeMode>>(() => Signal(ThemeMode.light));
 
 void main() {
   runApp(const MyApp());
@@ -15,9 +15,7 @@ class MyApp extends StatelessWidget {
     // Provide the theme mode signal to descendats
     return ProviderScope.builder(
       providers: [
-        _themeModeId.createProvider(
-          () => Signal(ThemeMode.light),
-        ),
+        _themeModeId,
       ],
       // using the builder method to immediately access the signal
       builder: (context) {

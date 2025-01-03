@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _firstNameId = ProviderId<Signal<String>>();
-final _lastNameId = ProviderId<Signal<String>>();
+final _firstNameId = Provider<Signal<String>>(
+  () => Signal("James"),
+  lazy: false,
+);
+final _lastNameId = Provider<Signal<String>>(
+  () => Signal("Smith"),
+);
 
 // Uses identifiers to retrieve different signals of the same type
 class MultipleSignalsPage extends StatelessWidget {
@@ -17,15 +22,10 @@ class MultipleSignalsPage extends StatelessWidget {
       body: ProviderScope(
         providers: [
           // provide the firstName signal to descendants
-          _firstNameId.createProvider(
-            init: () => Signal("James"),
-            lazy: false,
-          ),
+          _firstNameId,
 
           // provide the lastName signal to descendants
-          _lastNameId.createProvider(
-            init: () => Signal("Smith"),
-          ),
+          _lastNameId,
         ],
         child: const SomeChild(),
       ),
