@@ -9,8 +9,8 @@ void main() {
 
 final myClassProvider = Provider(() => MyClass());
 final counterProvider = Provider(() => Signal(0));
-final doubleCounterProvider = ArgProvider<Signal<int>, Computed<int>>(
-  (counter) => Computed(() => counter() * 2),
+final doubleCounterProvider = Provider.withArg(
+  (Signal<int> counter) => Computed(() => counter() * 2),
 );
 
 class MyClass {}

@@ -11,7 +11,7 @@ typedef CreateProviderFnWithArg<A, T> = T Function(A arg);
 // ignore: must_be_immutable
 class ArgProvider<A, T> extends Provider<T> {
   /// {@macro arg-provider}
-  ArgProvider(
+  ArgProvider._(
     CreateProviderFnWithArg<A, T> create, {
     super.dispose,
     super.lazy,

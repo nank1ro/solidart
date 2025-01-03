@@ -20,8 +20,6 @@ typedef DisposeProviderFn<T> = void Function(T value);
 /// tree.
 /// This behavior can be disabled by passing [lazy] false.
 ///
-/// You can pass an optional [id] to have multiple providers of the same type.
-///
 /// The [_dispose] method will not be called if the provider is a `SignalBase`,
 /// because they are disposed automatically when there aren't any subscribers.
 ///
@@ -44,8 +42,8 @@ class Provider<T> {
         _debugName = debugName;
 
   /// This constructor purposely leaves out [_create]. This way
-  /// [ArgProvider.new] can leverage the [ArgProvider._arg] member
-  /// when setting [_create].
+  /// [ArgProvider._] can leverage the [ArgProvider._arg] member
+  /// when instantiating [_create].
   // ignore: prefer_const_constructors_in_immutables
   Provider._withArg({
     DisposeProviderFn<T>? dispose,
@@ -53,6 +51,15 @@ class Provider<T> {
     String? debugName,
   })  : _dispose = dispose,
         _debugName = debugName;
+
+  /// {@macro arg-provider}
+  static ArgProvider<A, T> withArg<A, T>(
+    CreateProviderFnWithArg<A, T> create, {
+    DisposeProviderFn<T>? dispose,
+    bool lazy = true,
+    String? debugName,
+  }) =>
+      ArgProvider._(create, dispose: dispose, debugName: debugName, lazy: lazy);
 
   /// Make the provider creation lazy, defaults to true.
   ///

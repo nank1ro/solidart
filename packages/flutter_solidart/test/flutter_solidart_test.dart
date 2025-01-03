@@ -985,7 +985,7 @@ void main() {
 
   testWidgets('Test ProviderScope.update method with ArgProvider',
       (tester) async {
-    final counterProvider = ArgProvider<int, Signal<int>>(Signal.new);
+    final counterProvider = Provider.withArg(Signal<int>.new);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
