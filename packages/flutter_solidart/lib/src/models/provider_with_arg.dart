@@ -25,13 +25,15 @@ class ProviderWithArg<A, T> extends Provider<T> {
     };
   }
 
-  /// Does not necessarily have to be placed inside the ProviderScope widget.
-  /// The initial arg can be set above or below it, as long as it is
+  /// Does not necessarily have to be used inside the [ProviderScope.providers].
+  /// The initial argument can be set above or below it. The only requirement is
+  /// that it is set before being consumed.
+  ///
+  /// The initial argument can be overridden. However, only the value present
+  /// during creation of the provider will be used. Successive overrides will
+  /// not have any meaningful effect as long as the provider is within
+  /// [ProviderScope].
   void setInitialArg(A arg) {
-    assert(
-      _argWasSet == false,
-      'Initial argument of this ProviderWithArg was already set.',
-    );
     _arg = arg;
     _argWasSet = true;
   }
