@@ -538,7 +538,7 @@ class ProviderScopeState extends State<ProviderScope> {
       // create non lazy providers.
       if (!provider.lazy) {
         // create and store the provider
-        _createdProviders[key] = provider._create();
+        _createdProviders[key] = provider._create(context);
       }
     }
   }
@@ -590,7 +590,7 @@ class ProviderScopeState extends State<ProviderScope> {
     // find the provider in the list
     final provider = _getProvider<T>(id)!;
     // create and return it
-    final value = provider._create();
+    final value = provider._create(context);
     if (provider._isSignal) {
       _initializeSignal<SignalBase<dynamic>>(
         value as SignalBase,

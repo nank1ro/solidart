@@ -1,7 +1,7 @@
 part of '../widgets/provider_scope.dart';
 
 // ignore: public_member_api_docs
-typedef CreateProviderFnWithArg<A, T> = T Function(A arg);
+typedef CreateProviderFnWithArg<A, T> = T Function(BuildContext context, A arg);
 
 /// {@template arg-provider}
 /// A [Provider] that needs to be given an initial argument before
@@ -20,11 +20,11 @@ class ArgProvider<A, T> extends Provider<T> {
         super._withArg() {
     // set the _create member now (can't be done in the initializer list
     // since _arg cannot be accessed from there yet).
-    super._create = () {
+    super._create = (BuildContext context) {
       if (!_argWasSet) {
         throw MissingProviderInitialArgument<T>(this);
       }
-      return _createInternal(_arg as A);
+      return _createInternal(context, _arg as A);
     };
   }
 

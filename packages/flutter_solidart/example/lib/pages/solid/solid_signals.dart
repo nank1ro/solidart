@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
 final _counterProvider = Provider.withArg(
-  (Signal<int> count) => count,
+  (_, Signal<int> count) => count,
 );
 
 final _doubleCounterProvider = Provider.withArg(
-  (Signal<int> count) => Computed(() => count() * 2),
+  (_, Signal<int> count) => Computed(() => count() * 2),
 );
 
 class SolidSignalsPage extends StatefulWidget {

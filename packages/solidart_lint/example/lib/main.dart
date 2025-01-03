@@ -7,10 +7,10 @@ void main() {
   runApp(MyApp());
 }
 
-final myClassProvider = Provider(() => MyClass());
-final counterProvider = Provider(() => Signal(0));
+final myClassProvider = Provider((_) => MyClass());
+final counterProvider = Provider((_) => Signal(0));
 final doubleCounterProvider = Provider.withArg(
-  (Signal<int> counter) => Computed(() => counter() * 2),
+  (_, Signal<int> counter) => Computed(() => counter() * 2),
 );
 
 class MyClass {}

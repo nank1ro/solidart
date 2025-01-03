@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _themeModeId = Provider<Signal<ThemeMode>>(() => Signal(ThemeMode.light));
+final _themeModeId = Provider<Signal<ThemeMode>>((_) => Signal(ThemeMode.light));
 
 void main() {
   runApp(const MyApp());

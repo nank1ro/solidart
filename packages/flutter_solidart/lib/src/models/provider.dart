@@ -1,7 +1,7 @@
 part of '../widgets/provider_scope.dart';
 
 /// A function that creates an object of type [T].
-typedef CreateProviderFn<T> = T Function();
+typedef CreateProviderFn<T> = T Function(BuildContext);
 
 /// A function that disposes an object of type [T].
 typedef DisposeProviderFn<T> = void Function(T value);

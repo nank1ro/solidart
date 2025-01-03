@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _firstCounterProvider = Provider<Signal<int>>(() => Signal(0));
-final _secondCounterProvider = Provider<Signal<int>>(() => Signal(0));
+final _firstCounterProvider = Provider((_) => Signal(0));
+final _secondCounterProvider = Provider((_) => Signal(0));
 
 class SolidReactivityPage extends StatefulWidget {
   const SolidReactivityPage({super.key});

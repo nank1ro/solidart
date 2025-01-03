@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _firstNameId = Provider<Signal<String>>(
-  () => Signal("James"),
-  lazy: false,
-);
-final _lastNameId = Provider<Signal<String>>(
-  () => Signal("Smith"),
-);
+final _firstNameId = Provider((_) => Signal("James"), lazy: false);
+final _lastNameId = Provider((_) => Signal("Smith"));
 
 // Uses identifiers to retrieve different signals of the same type
 class MultipleSignalsPage extends StatelessWidget {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _countProvider = Provider(() => Signal(0));
+final _countProvider = Provider((_) => Signal(0));
 
 class ObserveSignalPage extends StatelessWidget {
   const ObserveSignalPage({super.key});

@@ -16,7 +16,7 @@ class GithubSearchBloc {
             );
 
   static final provider = Provider(
-    () => GithubSearchBloc(),
+    (_) => GithubSearchBloc(),
     dispose: (bloc) => bloc.dispose(),
   );
 

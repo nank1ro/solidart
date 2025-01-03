@@ -305,8 +305,8 @@ void main() {
     testWidgets('Observe signals ids', (tester) async {
       final s = Signal(0);
 
-      final counterProvider = Provider(() => s);
-      final doubleCounterProvider = Provider(() => Computed(() => s() * 2));
+      final counterProvider = Provider((_) => s);
+      final doubleCounterProvider = Provider((_) => Computed(() => s() * 2));
 
       await tester.pumpWidget(
         MaterialApp(
@@ -338,8 +338,7 @@ void main() {
     testWidgets('Observe Computed', (tester) async {
       final s = Signal(0);
 
-      final doubleCounterProvider =
-          Provider<Computed<int>>(() => Computed(() => s() * 2));
+      final doubleCounterProvider = Provider((_) => Computed(() => s() * 2));
 
       await tester.pumpWidget(
         MaterialApp(
@@ -368,7 +367,7 @@ void main() {
     testWidgets('Observe ReadSignal', (tester) async {
       final s = Signal(0);
 
-      final counterProvider = Provider<ReadSignal<int>>(s.toReadSignal);
+      final counterProvider = Provider((_) => s.toReadSignal());
 
       await tester.pumpWidget(
         MaterialApp(
@@ -396,7 +395,7 @@ void main() {
     testWidgets('Observe ReadSignal with id', (tester) async {
       final s = Signal(0);
 
-      final counterProvider = Provider<ReadSignal<int>>(s.toReadSignal);
+      final counterProvider = Provider((_) => s.toReadSignal());
 
       await tester.pumpWidget(
         MaterialApp(
@@ -426,8 +425,8 @@ void main() {
     final s = Signal(0);
     final s2 = Computed(() => s() * 2);
 
-    final counterProvider = Provider<Signal<int>>(() => s);
-    final doubleCounterProvider = Provider<ReadSignal<int>>(() => s2);
+    final counterProvider = Provider((_) => s);
+    final doubleCounterProvider = Provider((_) => s2);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -461,8 +460,8 @@ void main() {
 
   testWidgets('Test ProviderScope throws an error for a not found signal',
       (tester) async {
-    final counterProvider = Provider<Signal<int>>(() => Signal(0));
-    final invalidCounterProvider = Provider<Signal<int>>(() => Signal(0));
+    final counterProvider = Provider((_) => Signal(0));
+    final invalidCounterProvider = Provider((_) => Signal(0));
 
     await tester.pumpWidget(
       MaterialApp(
@@ -496,7 +495,7 @@ void main() {
   group('Test ProviderScope.value', () {
     testWidgets('Test ProviderScope.value with observe', (tester) async {
       final s = Signal(0);
-      final counterProvider = Provider(() => s);
+      final counterProvider = Provider((_) => s);
 
       Future<void> showCounterDialog({required BuildContext context}) {
         return showDialog(
@@ -552,9 +551,8 @@ void main() {
     testWidgets('Test ProviderScope.value for signals with get',
         (tester) async {
       final s = Signal(0);
-      final counterProvider = Provider<Signal<int>>(() => s);
-      final doubleCounterProvider =
-          Provider<Computed<int>>(() => Computed(() => s() * 2));
+      final counterProvider = Provider((_) => s);
+      final doubleCounterProvider = Provider((_) => Computed(() => s() * 2));
 
       Future<void> showCounterDialog({required BuildContext context}) {
         return showDialog(
@@ -620,7 +618,7 @@ void main() {
     });
 
     testWidgets('Test ProviderScope.value for providers', (tester) async {
-      final numberContainerProvider = Provider(() => const NumberContainer(1));
+      final numberContainerProvider = Provider((_) => const NumberContainer(1));
 
       Future<void> showNumberDialog({required BuildContext context}) {
         return showDialog(
@@ -673,9 +671,9 @@ void main() {
     testWidgets(
         'Test ProviderScope.value throws an error for a not found provider',
         (tester) async {
-      final numberContainerProvider = Provider(() => const NumberContainer(0));
+      final numberContainerProvider = Provider((_) => const NumberContainer(0));
       final nameContainerProvider =
-          Provider<NameContainer>(() => MockNameContainer('name'));
+          Provider<NameContainer>((_) => MockNameContainer('name'));
 
       Future<void> showNumberDialog({required BuildContext context}) {
         return showDialog(
@@ -726,9 +724,9 @@ void main() {
   testWidgets(
       'Test ProviderScope.maybeGet returns null for a not found provider',
       (tester) async {
-    final numberContainerProvider = Provider(() => const NumberContainer(0));
+    final numberContainerProvider = Provider((_) => const NumberContainer(0));
     final nameContainerProvider = Provider<NameContainer>(
-      () => MockNameContainer('name'),
+      (_) => MockNameContainer('name'),
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -826,15 +824,15 @@ void main() {
     final NameContainer nameContainer = MockNameContainer('Ale');
 
     final numberContainer1Provider = Provider(
-      () => const NumberContainer(1),
+      (_) => const NumberContainer(1),
       lazy: false,
     );
     final numberContainer2Provider = Provider(
-      () => const NumberContainer(100),
+      (_) => const NumberContainer(100),
       lazy: false,
     );
     final nameContainerProvider = Provider(
-      () => nameContainer,
+      (_) => nameContainer,
       dispose: (provider) => provider.dispose(),
     );
 
@@ -874,8 +872,8 @@ void main() {
 
   testWidgets('Test ProviderScope throws an error for a not found provider',
       (tester) async {
-    final numberContainerProvider = Provider(() => const NumberContainer(1));
-    final nameContainerProvider = Provider(() => MockNameContainer('An'));
+    final numberContainerProvider = Provider((_) => const NumberContainer(1));
+    final nameContainerProvider = Provider((_) => MockNameContainer('An'));
 
     await tester.pumpWidget(
       MaterialApp(
@@ -906,7 +904,7 @@ void main() {
   testWidgets('Test ProviderScope throws an error for a Provider<dynamic>',
       (tester) async {
     final numberContainerProvider =
-        Provider<dynamic>(() => const NumberContainer(1));
+        Provider<dynamic>((_) => const NumberContainer(1));
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -928,7 +926,7 @@ void main() {
   testWidgets(
       'Test ProviderScope throws an error for multiple providers of the same type',
       (tester) async {
-    final numberContainerProvider = Provider(() => const NumberContainer(1));
+    final numberContainerProvider = Provider((_) => const NumberContainer(1));
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -949,7 +947,7 @@ void main() {
   });
 
   testWidgets('Test ProviderScope.update method', (tester) async {
-    final counterProvider = Provider<Signal<int>>(() => Signal(0));
+    final counterProvider = Provider((_) => Signal(0));
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -985,7 +983,7 @@ void main() {
 
   testWidgets('Test ProviderScope.update method with ArgProvider',
       (tester) async {
-    final counterProvider = Provider.withArg(Signal<int>.new);
+    final counterProvider = Provider.withArg((_, int n) => Signal(n));
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -1047,8 +1045,9 @@ void main() {
 
   testWidgets('Test ProviderScope multiple ancestor providers of the same Type',
       (tester) async {
-    final numberContainer1Provider = Provider(() => const NumberContainer(1));
-    final numberContainer2Provider = Provider(() => const NumberContainer(100));
+    final numberContainer1Provider = Provider((_) => const NumberContainer(1));
+    final numberContainer2Provider =
+        Provider((_) => const NumberContainer(100));
 
     await tester.pumpWidget(
       MaterialApp(

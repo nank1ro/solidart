@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _nameProvider = Provider<NameContainer>(
-  () => const NameContainer('Ale'),
+final _nameProvider = Provider(
+  (_) => const NameContainer('Ale'),
   // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
   dispose: (provider) => provider.dispose(),
 );
-final _firstNumberProvider = Provider<NumberContainer>(
-  () => const NumberContainer(1),
+final _firstNumberProvider = Provider(
+  (_) => const NumberContainer(1),
   // Do not create the provider lazily, but immediately
   lazy: false,
 );
-final _secondNumberProvider = Provider<NumberContainer>(
-  () => const NumberContainer(100),
+final _secondNumberProvider = Provider(
+  (_) => const NumberContainer(100),
   // Do not create the provider lazily, but immediately
   lazy: false,
 );
