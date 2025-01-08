@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:todos/controllers/controller.dart';
 import 'package:todos/models/todo.dart';
+import 'package:todos/providers.dart';
 import 'package:todos/widgets/todos_list.dart';
 import 'package:todos/widgets/toolbar.dart';
 
@@ -25,13 +26,13 @@ class _TodosBodyState extends State<TodosBody> {
   Widget build(BuildContext context) {
     // retrieve the [TodosController], you're safe to `get` a Signal or Provider
     // in both the `initState` and `build` methods.
-    final todosController = context.get<TodosController>();
+    final todosController = TodosController.provider.get(context);
 
-    return Solid(
+    return ProviderScope(
       providers: [
         // make the active filter signal visible only to descendants.
         // created here because this is where it starts to be necessary.
-        Provider<Signal<TodosFilter>>(create: () => Signal(TodosFilter.all)),
+        todosFilterProvider,
       ],
       child: Column(
         children: [

@@ -14,6 +14,11 @@ class TodosController {
     List<Todo> initialTodos = const [],
   }) : todos = ListSignal(initialTodos);
 
+  static final provider = Provider(
+    (_) => TodosController(initialTodos: Todo.sample),
+    dispose: (controller) => controller.dispose(),
+  );
+
   // The list of todos
   final ListSignal<Todo> todos;
 

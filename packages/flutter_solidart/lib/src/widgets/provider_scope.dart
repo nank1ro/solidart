@@ -2,12 +2,13 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/src/widgets/solid_override.dart';
+import 'package:flutter_solidart/src/widgets/provider_scope_override.dart';
 import 'package:solidart/solidart.dart';
 
-part '../models/solid_element.dart';
+part '../models/provider.dart';
+part '../models/arg_provider.dart';
 
-/// {@template solid}
+/// {@template provider-scope}
 /// Provides [providers] to descendants.
 ///
 /// The Flutter framework works like a Tree. There are ancestors and there are
@@ -35,7 +36,7 @@ part '../models/solid_element.dart';
 ///   @override
 ///   Widget build(BuildContext context) {
 ///     // Provide the theme mode signal to descendats
-///     return Solid(
+///     return ProviderScope(
 ///       providers: [
 ///         Provider<Signal<ThemeMode>>(
 ///           create: () => Signal(ThemeMode.light),
@@ -151,7 +152,7 @@ part '../models/solid_element.dart';
 ///       appBar: AppBar(
 ///         title: const Text('Providers'),
 ///       ),
-///       body: Solid(
+///       body: ProviderScope(
 ///         providers: [
 ///           Provider<NameProvider>(
 ///             create: () => const NameProvider('Ale'),
@@ -216,7 +217,7 @@ part '../models/solid_element.dart';
 ///      context: context,
 ///      builder: (_) =>
 ///       // using `Solid.value` we provide the existing provider(s) to the dialog
-///       Solid.value(
+///       ProviderScope.value(
 ///        elements: [
 ///          context.getElement<NameProvider>(),
 ///          context.getElement<NumberProvider>(ProviderId.firstNumber),
@@ -247,25 +248,26 @@ part '../models/solid_element.dart';
 /// ```
 /// {@endtemplate}
 @immutable
-class Solid extends StatefulWidget {
-  /// {@macro solid}
-  const Solid({
+class ProviderScope extends StatefulWidget {
+  /// {@macro provider-scope}
+  const ProviderScope({super.key, required this.child, required this.providers})
+      : builder = null,
+        _canAutoDisposeProviders = true;
+
+  /// {@macro provider-scope}
+  const ProviderScope.builder({
     super.key,
-    this.child,
-    this.builder,
-    this.providers = const [],
-  })  : assert(
-          (child != null) ^ (builder != null),
-          'Provide either a child or a builder',
-        ),
+    required this.builder,
+    required this.providers,
+  })  : child = null,
         _canAutoDisposeProviders = true;
 
   /// Private constructor used internally to hide the `autoDispose` field
-  const Solid._internal({
-    super.key,
-    this.providers = const [],
-    this.child,
-    this.builder,
+  const ProviderScope._valueInternal({
+    required super.key,
+    required this.providers,
+    required this.child,
+    required this.builder,
     required bool autoDispose,
   })  : assert(
           (child != null) ^ (builder != null),
@@ -273,24 +275,42 @@ class Solid extends StatefulWidget {
         ),
         _canAutoDisposeProviders = autoDispose;
 
-  /// Provide a single or multiple [SolidElement]s to a new route.
+  /// Provide a single [Provider] to a new route.
   ///
   /// This is useful for passing multiple providers to modals, because are
   /// spawned in a new tree.
-  factory Solid.value({
+  factory ProviderScope.value({
     Key? key,
-    SolidElement<dynamic>? element,
-    List<SolidElement<dynamic>>? elements,
+    required BuildContext mainTreeContext,
+    required Provider<dynamic> provider,
     required Widget child,
   }) {
-    assert(
-      (element != null) ^ (elements != null),
-      'Provide either a single element or multiple elements',
-    );
-    return Solid._internal(
+    return ProviderScope._valueInternal(
       key: key,
-      providers: elements ?? [element!],
+      providers: [provider._getProvider(mainTreeContext)],
       autoDispose: false,
+      builder: null,
+      child: child,
+    );
+  }
+
+  /// Provide multiple [Provider]s to a new route.
+  ///
+  /// This is useful for passing multiple providers to modals, because are
+  /// spawned in a new tree.
+  factory ProviderScope.values({
+    Key? key,
+    required BuildContext mainTreeContext,
+    required List<Provider<dynamic>> providers,
+    required Widget child,
+  }) {
+    return ProviderScope._valueInternal(
+      key: key,
+      providers: providers
+          .map((provider) => provider._getProvider(mainTreeContext))
+          .toList(),
+      autoDispose: false,
+      builder: null,
       child: child,
     );
   }
@@ -301,8 +321,8 @@ class Solid extends StatefulWidget {
   /// The widget builder that gets access to the [providers].
   final WidgetBuilder? builder;
 
-  /// All the providers provided to all the descendants of [Solid].
-  final List<SolidElement<dynamic>> providers;
+  /// All the providers provided to all the descendants of [ProviderScope].
+  final List<Provider<dynamic>> providers;
 
   /// By default signals and providers are going to be auto-disposed when the
   ///  Solid widget disposes.
@@ -311,37 +331,37 @@ class Solid extends StatefulWidget {
   final bool _canAutoDisposeProviders;
 
   @override
-  State<Solid> createState() => SolidState();
+  State<ProviderScope> createState() => ProviderScopeState();
 
-  /// Finds the first SolidState ancestor that satifies the given [id].
+  /// Finds the first SolidState ancestor that satisfies the given [id].
   ///
   /// If [listen] is true, the [context] gets subscribed to the given value.
-  static SolidState _findState<T>(
+  static ProviderScopeState _findState<T>(
     BuildContext context, {
-    Identifier? id,
+    required Provider<T> id,
     bool listen = false,
   }) {
     // try finding the solid override first
-    final solidOverride = SolidOverride.maybeOf(context);
+    final solidOverride = ProviderScopeOverride.maybeOf(context);
     if (solidOverride != null) {
       final state = solidOverride.solidState;
       if (state.isProviderInScope<T>(id)) return state;
     }
 
-    final state = _InheritedSolid.inheritFromNearest<T>(
+    final state = _InheritedProvider.inheritFromNearest<T>(
       context,
-      id: id,
+      id,
       listen: listen,
     )?.state;
     if (state == null) throw ProviderError<T>(id);
     return state;
   }
 
-  /// {@template solid.get}
+  /// {@template provider-scope.get}
   /// Obtains the Provider of the given type T and [id] corresponding to the
-  /// nearest [Solid] widget.
+  /// nearest [ProviderScope] widget.
   ///
-  /// Throws if no such element or [Solid] widget is found.
+  /// Throws if no such element or [ProviderScope] widget is found.
   ///
   /// This method should not be called from State.dispose because the element
   /// tree is no longer stable at that time.
@@ -350,15 +370,15 @@ class Solid extends StatefulWidget {
   ///
   /// You may call this method inside the `initState` or `build` methods.
   /// {@endtemplate}
-  static T get<T>(BuildContext context, [Identifier? id]) {
+  static T get<T>(BuildContext context, Provider<T> id) {
     return _getOrCreateProvider<T>(context, id: id);
   }
 
-  /// {@template solid.maybeGet}
+  /// {@template provider-scope.maybeGet}
   /// Tries to obtain the Provider of the given type T and [id] corresponding to
-  /// the nearest [Solid] widget.
+  /// the nearest [ProviderScope] widget.
   ///
-  /// Throws if no such element or [Solid] widget is found.
+  /// Throws if no such element or [ProviderScope] widget is found.
   ///
   /// This method should not be called from State.dispose because the element
   /// tree is no longer stable at that time.
@@ -367,7 +387,7 @@ class Solid extends StatefulWidget {
   ///
   /// You may call this method inside the `initState` or `build` methods.
   /// {@endtemplate}
-  static T? maybeGet<T>(BuildContext context, [Identifier? id]) {
+  static T? maybeGet<T>(BuildContext context, Provider<T> id) {
     try {
       return _getOrCreateProvider<T>(context, id: id);
     } catch (e) {
@@ -378,11 +398,11 @@ class Solid extends StatefulWidget {
     }
   }
 
-  /// {@template solid.getElement}
+  /// {@template provider-scope.getElement}
   /// Obtains the SolidElement of a Provider of the given type T and [id]
-  /// corresponding to the nearest [Solid] widget.
+  /// corresponding to the nearest [ProviderScope] widget.
   ///
-  /// Throws if no such element or [Solid] widget is found.
+  /// Throws if no such element or [ProviderScope] widget is found.
   ///
   /// This method should not be called from State.dispose because the element
   /// tree is no longer stable at that time.
@@ -391,18 +411,20 @@ class Solid extends StatefulWidget {
   ///
   /// You may call this method inside the `initState` or `build` methods.
   /// {@endtemplate}
-  static SolidElement<T> getElement<T>(BuildContext context, [Identifier? id]) {
+  static Provider<T> _getProvider<T>(
+    BuildContext context,
+    Provider<T> id,
+  ) {
     final state = _findState<T>(context, id: id);
-    final element = state._getProvider<T>(id)!;
-    return element as SolidElement<T>;
+    return state._getProvider<T>(id)!;
   }
 
-  /// {@template solid.observe}
+  /// {@template provider-scope.observe}
   /// Subscribe to the [Signal] of the given value type and [id] corresponding
-  /// to the nearest [Solid] widget rebuilding the widget when the value exposed
-  /// by the [Signal] changes.
+  /// to the nearest [ProviderScope] widget rebuilding the widget when the value
+  /// exposed by the [Signal] changes.
   ///
-  /// Throws if no such element or [Solid] widget is found.
+  /// Throws if no such element or [ProviderScope] widget is found.
   ///
   /// This method should not be called from State.dispose because the element
   /// tree is no longer stable at that time.
@@ -414,23 +436,28 @@ class Solid extends StatefulWidget {
   /// WARNING: Doesn't support observing a Resource.
   /// {@endtemplate}
   static T observe<T extends SignalBase<dynamic>>(
-    BuildContext context, [
-    Identifier? id,
-  ]) {
+    BuildContext context,
+    Provider<T> id,
+  ) {
     return _getOrCreateProvider<T>(context, id: id, listen: true);
   }
 
-  /// {@template solid.update}
+  /// {@template provider-scope.update}
   /// Convenience method to update a `Signal` value.
   ///
   /// You can use it to update a signal value, e.g:
   /// ```dart
-  /// context.update<int>('counter', (value) => value * 2);
+  /// const myCounter = ProviderId<Signal<int>>();
+  ///
+  /// // some function inside some widget
+  /// someFn(BuildContext context) {
+  ///   context.update(myCounter, (value) => value * 2);
+  /// }
   /// ```
   /// This is equal to:
   /// ```dart
   /// // retrieve the signal
-  /// final signal = context.get<Signal<int>>('counter');
+  /// final signal = context.get(myCounter);
   /// // update the signal
   /// signal.update((value) => value * 2);
   /// ```
@@ -440,9 +467,9 @@ class Solid extends StatefulWidget {
   /// {@endtemplate}
   static void update<T>(
     BuildContext context,
-    T Function(T value) callback, [
-    Identifier? id,
-  ]) {
+    T Function(T value) callback,
+    Provider<Signal<T>> id,
+  ) {
     // retrieve the signal and update its value
     get<Signal<T>>(context, id).updateValue(callback);
   }
@@ -453,7 +480,7 @@ class Solid extends StatefulWidget {
   /// The provider is created in case the find fails.
   static T _getOrCreateProvider<T>(
     BuildContext context, {
-    Identifier? id,
+    required Provider<T> id,
     bool listen = false,
   }) {
     final state = _findState<T>(context, id: id, listen: listen);
@@ -464,52 +491,54 @@ class Solid extends StatefulWidget {
   }
 }
 
-/// The state of the [Solid] widget
-class SolidState extends State<Solid> {
+/// The state of the [ProviderScope] widget
+class ProviderScopeState extends State<ProviderScope> {
   /// Stores all the providers in the current scope
   final _allProvidersInScope =
-      HashMap<({Type type, Object? id}), SolidElement<dynamic>>();
+      HashMap<({Type type, Provider<dynamic> id}), Provider<dynamic>>();
 
   // Stores all the created providers.
   // The key is the provider, while the value is its value.
-  final _createdProviders = HashMap<({Type type, Object? id}), Object?>();
+  final _createdProviders =
+      HashMap<({Type type, Provider<dynamic> id}), Object?>();
 
   // Stores all the disposeFn for each signal
   final _signalDisposeCallbacks = <DisposeEffect>[];
-  Identifier? _changedDependency;
+  Provider<dynamic>? _changedDependency;
   int _dependenciesVersion = 0;
 
   @override
   void initState() {
     super.initState();
+
     assert(
       () {
         // check if the provider type is not dynamic
         // check if there are multiple providers of the same type
-        final types = <Type>[];
+        final ids = <Provider<dynamic>>[];
         for (final provider in widget.providers) {
-          final type = provider._valueType;
-          if (type == dynamic) throw ProviderDynamicError();
+          final id = provider; // the instance of the provider
+          if (id._valueType == dynamic) throw ProviderDynamicError();
 
-          if (types.contains(type) && provider.id == null) {
-            throw ProviderMultipleProviderOfSameTypeError(
-              providerType: type,
-            );
+          if (ids.contains(id)) {
+            throw MultipleProviderOfSameInstance(id);
           }
-          types.add(type);
+          ids.add(id);
         }
         return true;
       }(),
       '',
     );
+
     for (final provider in widget.providers) {
-      final key = (id: provider.id, type: provider._valueType);
+      final key = (id: provider, type: provider._valueType);
       _allProvidersInScope[key] = provider;
 
+      // todo: check if injected providers with ProviderScope.value/values get initialized again...
       // create non lazy providers.
-      if (provider is Provider && !provider.lazy) {
+      if (!provider.lazy) {
         // create and store the provider
-        _createdProviders[key] = provider.create();
+        _createdProviders[key] = provider._create(context);
       }
     }
   }
@@ -535,7 +564,10 @@ class SolidState extends State<Solid> {
   }
 
   /// -- Signals logic
-  void _initializeSignal(SignalBase<dynamic> signal, {required Identifier id}) {
+  void _initializeSignal<S extends SignalBase<dynamic>>(
+    S signal, {
+    required Provider<S> id,
+  }) {
     final unobserve = signal.observe((_, value) {
       setState(() {
         _changedDependency = id;
@@ -549,20 +581,21 @@ class SolidState extends State<Solid> {
   /// -- Providers logic
 
   /// Try to find a [Provider] of type <T> or [id] and returns it
-  SolidElement<dynamic>? _getProvider<T>(
-    Identifier? id,
-  ) {
-    return _allProvidersInScope[(type: T, id: id)];
+  Provider<T>? _getProvider<T>(Provider<T> id) {
+    return _allProvidersInScope[(type: T, id: id)] as Provider<T>?;
   }
 
   /// Creates a provider of type T and stores it
-  T createProvider<T>(Identifier? id) {
+  T createProvider<T>(Provider<T> id) {
     // find the provider in the list
     final provider = _getProvider<T>(id)!;
     // create and return it
-    final value = provider.create() as T;
-    if (provider._isSignal && value is SignalBase) {
-      _initializeSignal(value, id: id ?? T);
+    final value = provider._create(context);
+    if (provider._isSignal) {
+      _initializeSignal<SignalBase<dynamic>>(
+        value as SignalBase,
+        id: id as Provider<SignalBase<dynamic>>,
+      );
     }
 
     // store the created provider
@@ -572,14 +605,14 @@ class SolidState extends State<Solid> {
 
   /// Used to determine if the requested provider is present in the current
   /// scope
-  bool isProviderInScope<T>(Identifier? id) {
+  bool isProviderInScope<T>(Provider<T> id) {
     // Find the provider by type
     return _getProvider<T>(id) != null;
   }
 
   @override
   Widget build(BuildContext context) {
-    return _InheritedSolid(
+    return _InheritedProvider(
       state: this,
       dependenciesVersion: _dependenciesVersion,
       changedDependency: _changedDependency,
@@ -594,42 +627,40 @@ class SolidState extends State<Solid> {
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     properties.add(
-      IterableProperty(
-        'createdProviders',
-        _createdProviders.values,
-      ),
+      IterableProperty('createdProviders', _createdProviders.values),
     );
   }
+
   // coverage:ignore-end
 }
 
 @immutable
-class _InheritedSolid extends InheritedModel<Object> {
-  const _InheritedSolid({
+class _InheritedProvider extends InheritedModel<Object> {
+  const _InheritedProvider({
     required this.state,
     required this.changedDependency,
     required this.dependenciesVersion,
     required super.child,
   });
 
-  final SolidState state;
-  final Identifier? changedDependency;
+  final ProviderScopeState state;
+  final Provider<dynamic>? changedDependency;
   final int dependenciesVersion;
 
   @override
-  bool updateShouldNotify(covariant _InheritedSolid oldWidget) {
+  bool updateShouldNotify(covariant _InheritedProvider oldWidget) {
     return oldWidget.dependenciesVersion != dependenciesVersion;
   }
 
-  bool isSupportedAspectWithType<T>(Identifier? id) {
+  bool isSupportedAspectWithType<T>(Provider<T> id) {
     return state.isProviderInScope<T>(id);
   }
 
   /// Fine-grained rebuilding of signals that changed value
   @override
   bool updateShouldNotifyDependent(
-    covariant _InheritedSolid oldWidget,
-    Set<Object> dependencies,
+    covariant _InheritedProvider oldWidget,
+    Set<dynamic> dependencies,
   ) {
     return dependencies.contains(changedDependency);
   }
@@ -642,21 +673,21 @@ class _InheritedSolid extends InheritedModel<Object> {
   // The [result] will be a single _InheritedSolid of context's type T ancestor
   // that supports the specified model [aspect].
   static InheritedElement? _findNearestModel<T>(
-    BuildContext context, {
-    Identifier? id,
-  }) {
+    BuildContext context,
+    Provider<T> id,
+  ) {
     final model =
-        context.getElementForInheritedWidgetOfExactType<_InheritedSolid>();
+        context.getElementForInheritedWidgetOfExactType<_InheritedProvider>();
     // No ancestors of type T found, exit.
     if (model == null) {
       return null;
     }
 
     assert(
-      model.widget is _InheritedSolid,
-      'The widget must be of type _InheritedSolid',
+      model.widget is _InheritedProvider,
+      'The widget must be of type _InheritedProvider',
     );
-    final modelWidget = model.widget as _InheritedSolid;
+    final modelWidget = model.widget as _InheritedProvider;
 
     // The model contains the aspect, the ancestor has been found, return it.
     if (modelWidget.isSupportedAspectWithType<T>(id)) {
@@ -675,20 +706,17 @@ class _InheritedSolid extends InheritedModel<Object> {
       return null;
     }
 
-    return _findNearestModel<T>(
-      modelParent!,
-      id: id,
-    );
+    return _findNearestModel<T>(modelParent!, id);
   }
 
   /// Makes [context] dependent on the specified [id] of an
-  /// [_InheritedSolid]
+  /// [_InheritedProvider]
   ///
   /// When the given [id] of the model changes, the [context] will be
   /// rebuilt if [listen] is set to true.
   ///
   /// The dependencies created by this method target the nearest
-  /// [_InheritedSolid] ancestor which [isSupportedAspect]  returns true.
+  /// [_InheritedProvider] ancestor which [isSupportedAspect]  returns true.
   ///
   /// If [id] is null this method is the same as
   /// `context.dependOnInheritedWidgetOfExactType<T>()` if [listen] is true,
@@ -696,29 +724,25 @@ class _InheritedSolid extends InheritedModel<Object> {
   /// `context.getElementForInheritedWidgetOfExactType<T>()`.
   ///
   /// If no ancestor of type T exists, null is returned.
-  static _InheritedSolid? inheritFromNearest<T>(
-    BuildContext context, {
-    Identifier? id,
+  static _InheritedProvider? inheritFromNearest<T>(
+    BuildContext context,
+    Provider<T> id, {
     // Whether to listen to the [InheritedModel], defaults to false.
     bool listen = false,
   }) {
     // Try finding a model in the ancestors for which isSupportedAspect(aspect)
     // is true.
-    final model = _findNearestModel<T>(
-      context,
-      id: id,
-    );
+    final model = _findNearestModel<T>(context, id);
     if (model == null) {
       return null;
     }
 
     // depend on the inherited element if [listen] is true
     if (listen) {
-      context.dependOnInheritedElement(model, aspect: id ?? T)
-          as _InheritedSolid;
+      context.dependOnInheritedElement(model, aspect: id) as _InheritedProvider;
     }
 
-    return model.widget as _InheritedSolid;
+    return model.widget as _InheritedProvider;
   }
 }
 
@@ -730,30 +754,32 @@ class ProviderError<T> extends Error {
   ProviderError(this.id);
 
   /// The id of the provider
-  final Identifier? id;
+  final Provider<T> id;
 
   @override
   String toString() {
     return '''
-Error could not fint a Solid containing the given Provider type $T and id $id
+Error: could not find a ProviderScope containing the given Provider type $T and id $id.
 To fix, please:
           
-  * Be sure to have a Solid ancestor, the context used must be a descendant.
-  * Provide types to context.get<ProviderType>() 
-  * Create providers providing types: 
+  * Be sure to have a ProviderScope ancestor, the context used must be a descendant.
+  * Ensure you provided the right ProviderId<T> to context.get(ProviderId<T> id) 
+  * Create providers providing types:
     ```
-    Solid(
+    ProviderScope(
       providers: [
-          Provider<NameProvider>(
-            create: () => const NameProvider('Ale'),
+          nameProviderId.createProvider(
+            init: () => const NameProvider('Ale'),
           ),
-          Provider<Signal<int>>(
-            create: () => Signal(0),
+          counterProviderId.createProvider(
+            init: () => Signal(0),
           ),
       ],
     )
     ```
-  * The type `NameProvider` and `Signal<int>` are the provider's types.
+  * The types `NameProvider` and `Signal<int>` are the providers' types. They
+  only have to be provided when declaring the Ids.
+  E.g. `final nameProviderId = ProviderId<NameProvider>();`.
   
 If none of these solutions work, please file a bug at:
 https://github.com/nank1ro/solidart/issues/new
@@ -773,20 +799,21 @@ class ProviderDynamicError extends Error {
 }
 
 /// {@template Providermultipleproviderofsametypeerror}
-/// Error thrown when there are multiple providers of the same [providerType]
-/// Type in the same [Solid] widget
+/// Error thrown when multiple providers of the same [provider] are created together.
 /// {@endtemplate}
-class ProviderMultipleProviderOfSameTypeError extends Error {
+class MultipleProviderOfSameInstance extends Error {
   /// {@macro Providermultipleproviderofsametypeerror}
-  ProviderMultipleProviderOfSameTypeError({required this.providerType});
+  MultipleProviderOfSameInstance(this.provider);
 
-  /// The type of the provider
-  final Type providerType;
+  // ignore: public_member_api_docs
+  final Provider<dynamic> provider;
+
   @override
   String toString() {
     return '''
-      You cannot have multiple providers of the same type without specifing a different `id`entifier to each one.
-      Seems like you declared the type $providerType multiple times in the list of providers.
+      You cannot create or inject multiple providers with the same Provider instance together.
+      Provider type: ${provider._valueType}
+      Provider debug name: ${provider._debugName == null ? "not assigned" : provider._debugName!}
       ''';
   }
 }

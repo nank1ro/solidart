@@ -3,6 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
+final _firstCounterProvider = Provider((_) => Signal(0));
+final _secondCounterProvider = Provider((_) => Signal(0));
+
 class SolidReactivityPage extends StatefulWidget {
   const SolidReactivityPage({super.key});
 
@@ -13,10 +16,10 @@ class SolidReactivityPage extends StatefulWidget {
 class _SolidReactivityPageState extends State<SolidReactivityPage> {
   @override
   Widget build(BuildContext context) {
-    return Solid(
+    return ProviderScope(
       providers: [
-        Provider<Signal<int>>(create: () => Signal(0), id: #firstCounter),
-        Provider<Signal<int>>(create: () => Signal(0), id: #secondCounter),
+        _firstCounterProvider,
+        _secondCounterProvider,
       ],
       child: Scaffold(
         appBar: AppBar(
@@ -52,13 +55,15 @@ class _SolidReactivityPageState extends State<SolidReactivityPage> {
               children: [
                 TextButton(
                   onPressed: () {
-                    context.update<int>((value) => value += 1, #firstCounter);
+                    _firstCounterProvider.update(
+                        context, (value) => value += 1);
                   },
                   child: const Text('+1 counter1'),
                 ),
                 TextButton(
                   onPressed: () {
-                    context.update<int>((value) => value += 1, #secondCounter);
+                    _secondCounterProvider.update(
+                        context, (value) => value += 1);
                   },
                   child: const Text('+1 counter2'),
                 ),
@@ -76,7 +81,7 @@ class _Counter1 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter1 = context.observe<Signal<int>>(#firstCounter).value;
+    final counter1 = _firstCounterProvider.observe(context).value;
     print('build counter1');
     return Text('Counter1: $counter1');
   }
@@ -87,7 +92,7 @@ class _Counter2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter2 = context.observe<Signal<int>>(#secondCounter).value;
+    final counter2 = _secondCounterProvider.observe(context).value;
     print('build counter2');
     return Text('Counter2: $counter2');
   }

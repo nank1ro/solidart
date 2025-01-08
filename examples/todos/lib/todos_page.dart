@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:todos/controllers/controller.dart';
-import 'package:todos/models/todo.dart';
 import 'package:todos/widgets/todos_body.dart';
 
 class TodosPage extends StatelessWidget {
@@ -10,12 +9,9 @@ class TodosPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Using Provider here to provide the [TodosController] to descendants.
-    return Solid(
+    return ProviderScope(
       providers: [
-        Provider<TodosController>(
-          create: () => TodosController(initialTodos: Todo.sample),
-          dispose: (controller) => controller.dispose(),
-        ),
+        TodosController.provider,
       ],
       child: const TodosPageView(),
     );
