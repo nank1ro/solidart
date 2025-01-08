@@ -6,14 +6,16 @@ import 'package:flutter_solidart/flutter_solidart.dart';
 final _firstCounterProvider = Provider((_) => Signal(0));
 final _secondCounterProvider = Provider((_) => Signal(0));
 
-class SolidReactivityPage extends StatefulWidget {
-  const SolidReactivityPage({super.key});
+class ProviderScopeReactivityPage extends StatefulWidget {
+  const ProviderScopeReactivityPage({super.key});
 
   @override
-  State<SolidReactivityPage> createState() => _SolidReactivityPageState();
+  State<ProviderScopeReactivityPage> createState() =>
+      _ProviderScopeReactivityPageState();
 }
 
-class _SolidReactivityPageState extends State<SolidReactivityPage> {
+class _ProviderScopeReactivityPageState
+    extends State<ProviderScopeReactivityPage> {
   @override
   Widget build(BuildContext context) {
     return ProviderScope(

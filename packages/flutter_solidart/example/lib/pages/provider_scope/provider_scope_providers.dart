@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _nameProvider = Provider(
+final nameProvider = Provider(
   (_) => const NameContainer('Ale'),
   // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
   dispose: (provider) => provider.dispose(),
 );
-final _firstNumberProvider = Provider(
+final firstNumberProvider = Provider(
   (_) => const NumberContainer(1),
   // Do not create the provider lazily, but immediately
   lazy: false,
 );
-final _secondNumberProvider = Provider(
+final secondNumberProvider = Provider(
   (_) => const NumberContainer(100),
   // Do not create the provider lazily, but immediately
   lazy: false,
@@ -44,9 +44,9 @@ class ProvidersPage extends StatelessWidget {
       ),
       body: ProviderScope(
         providers: [
-          _nameProvider,
-          _firstNumberProvider,
-          _secondNumberProvider,
+          nameProvider,
+          firstNumberProvider,
+          secondNumberProvider,
         ],
         child: const SomeChild(),
       ),
@@ -63,15 +63,15 @@ class SomeChild extends StatelessWidget {
       builder: (_) => ProviderScope.values(
         mainTreeContext: context,
         providers: [
-          _nameProvider,
-          _firstNumberProvider,
-          _secondNumberProvider,
+          nameProvider,
+          firstNumberProvider,
+          secondNumberProvider,
         ],
         child: Dialog(
           child: Builder(builder: (innerContext) {
-            final nameContainer = _nameProvider.get(innerContext);
-            final numberContainer1 = _firstNumberProvider.get(innerContext);
-            final numberContainer2 = _secondNumberProvider.get(innerContext);
+            final nameContainer = nameProvider.get(innerContext);
+            final numberContainer1 = firstNumberProvider.get(innerContext);
+            final numberContainer2 = secondNumberProvider.get(innerContext);
             return SizedBox.square(
               dimension: 100,
               child: Center(
@@ -90,9 +90,9 @@ number2: ${numberContainer2.number}
 
   @override
   Widget build(BuildContext context) {
-    final nameContainer = _nameProvider.get(context);
-    final numberContainer1 = _firstNumberProvider.get(context);
-    final numberContainer2 = _secondNumberProvider.get(context);
+    final nameContainer = nameProvider.get(context);
+    final numberContainer1 = firstNumberProvider.get(context);
+    final numberContainer2 = secondNumberProvider.get(context);
 
     return Center(
       child: Column(
