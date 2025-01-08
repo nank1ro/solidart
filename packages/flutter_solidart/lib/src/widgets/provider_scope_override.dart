@@ -19,15 +19,9 @@ class ProviderScopeOverride extends StatefulWidget {
   const ProviderScopeOverride({
     super.key,
     required this.providers,
-    required this.child,
-  }) : builder = null;
-
-  /// {@macro solid_override}
-  const ProviderScopeOverride.builder({
-    super.key,
-    required this.providers,
-    required this.builder,
-  }) : child = null;
+    this.child,
+    this.builder,
+  });
 
   /// The widget child that gets access to the [providers].
   final Widget? child;
@@ -81,17 +75,12 @@ class ProviderScopeOverrideState extends State<ProviderScopeOverride> {
     }
     return _InheritedSolidOverride(
       state: this,
-      child: widget.builder == null
-          ? ProviderScope(
-              key: _solidStateKey,
-              providers: widget.providers,
-              child: widget.child,
-            )
-          : ProviderScope.builder(
-              key: _solidStateKey,
-              providers: widget.providers,
-              builder: widget.builder,
-            ),
+      child: ProviderScope(
+        key: _solidStateKey,
+        providers: widget.providers,
+        builder: widget.builder,
+        child: widget.child,
+      ),
     );
   }
 }

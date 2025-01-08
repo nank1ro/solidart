@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _countProvider = Provider((_) => Signal(0));
+final countProvider = Provider((_) => Signal(0));
 
 class ObserveSignalPage extends StatelessWidget {
   const ObserveSignalPage({super.key});
@@ -12,11 +12,9 @@ class ObserveSignalPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Observe Signal'),
       ),
+      // provide the count signal to descendants
       body: ProviderScope(
-        providers: [
-          // provide the count signal to descendants
-          _countProvider,
-        ],
+        providers: [countProvider],
         child: const SomeChild(),
       ),
     );
@@ -28,8 +26,8 @@ class SomeChild extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // retrieve the count signal
-    final count = _countProvider.observe(context);
+    // react to the count signal
+    final count = countProvider.observe(context);
 
     return Center(
       child: Column(

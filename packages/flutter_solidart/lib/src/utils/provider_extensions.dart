@@ -14,6 +14,23 @@ extension InjectExtensionProviderId<T> on Provider<T> {
   }
 }
 
+/// Get the value of a provider.
+extension InjectExtensionArgProvider<T, A> on ArgProvider<T, A> {
+  /// {@macro provider-scope.get}
+  T get(BuildContext context) {
+    final instance = instances[A];
+    assert(instance != null, 'Provider has not been initialized');
+    return ProviderScope.get(context, instance!);
+  }
+
+  /// {@macro provider-scope.maybeGet}
+  T? maybeGet(BuildContext context) {
+    final instance = instances[A];
+    assert(instance != null, 'Provider has not been initialized');
+    return ProviderScope.maybeGet(context, instance!);
+  }
+}
+
 /// Observe the value of a [SignalBase] that is in a provider.
 extension ObserveExtensionProviderId<T extends SignalBase<dynamic>>
     on Provider<T> {

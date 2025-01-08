@@ -250,30 +250,24 @@ part '../models/arg_provider.dart';
 @immutable
 class ProviderScope extends StatefulWidget {
   /// {@macro provider-scope}
-  const ProviderScope({super.key, required this.child, required this.providers})
-      : builder = null,
-        _canAutoDisposeProviders = true;
-
-  /// {@macro provider-scope}
-  const ProviderScope.builder({
+  const ProviderScope({
     super.key,
-    required this.builder,
+    this.child,
     required this.providers,
-  })  : child = null,
-        _canAutoDisposeProviders = true;
+    this.builder,
+  }) : _canAutoDisposeProviders = true;
 
   /// Private constructor used internally to hide the `autoDispose` field
   const ProviderScope._valueInternal({
-    required super.key,
+    super.key,
     required this.providers,
-    required this.child,
-    required this.builder,
-    required bool autoDispose,
+    this.child,
+    this.builder,
   })  : assert(
           (child != null) ^ (builder != null),
           'Provide either a child or a builder',
         ),
-        _canAutoDisposeProviders = autoDispose;
+        _canAutoDisposeProviders = false;
 
   /// Provide a single [Provider] to a new route.
   ///
@@ -288,8 +282,6 @@ class ProviderScope extends StatefulWidget {
     return ProviderScope._valueInternal(
       key: key,
       providers: [provider._getProvider(mainTreeContext)],
-      autoDispose: false,
-      builder: null,
       child: child,
     );
   }
@@ -309,8 +301,6 @@ class ProviderScope extends StatefulWidget {
       providers: providers
           .map((provider) => provider._getProvider(mainTreeContext))
           .toList(),
-      autoDispose: false,
-      builder: null,
       child: child,
     );
   }

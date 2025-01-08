@@ -33,47 +33,57 @@ class Provider<T> {
   /// {@macro provider}
   // ignore: prefer_const_constructors_in_immutables
   Provider(
+    /// @macro Provider.create}
     CreateProviderFn<T> create, {
+    /// {@macro Provider.dispose}
     DisposeProviderFn<T>? dispose,
+
+    /// {@macro Provider.lazy}
     this.lazy = true,
     String? debugName,
   })  : _create = create,
         _dispose = dispose,
         _debugName = debugName;
 
-  /// This constructor purposely leaves out [_create]. This way
-  /// [ArgProvider._] can leverage the [ArgProvider._arg] member
-  /// when instantiating [_create].
-  // ignore: prefer_const_constructors_in_immutables
-  Provider._withArg({
-    DisposeProviderFn<T>? dispose,
-    this.lazy = true,
-    String? debugName,
-  })  : _dispose = dispose,
-        _debugName = debugName;
+  /// /// This constructor purposely leaves out [_create]. This way
+  /// /// [ArgProvider._] can leverage the [ArgProvider._arg] member
+  /// /// when instantiating [_create].
+  /// // ignore: prefer_const_constructors_in_immutables
+  /// Provider._withArg({
+  ///   DisposeProviderFn<T>? dispose,
+  ///   this.lazy = true,
+  ///   String? debugName,
+  /// })  : _dispose = dispose,
+  ///       _debugName = debugName;
 
   /// {@macro arg-provider}
-  static ArgProvider<A, T> withArg<A, T>(
-    CreateProviderFnWithArg<A, T> create, {
+  static ArgProvider<T, A> withArgument<T, A>(
+    CreateProviderFnWithArg<T, A> create, {
     DisposeProviderFn<T>? dispose,
     bool lazy = true,
     String? debugName,
   }) =>
-      ArgProvider._(create, dispose: dispose, debugName: debugName, lazy: lazy);
+      ArgProvider._(create, dispose: dispose, lazy: lazy);
 
+  /// {@template Provider.lazy}
   /// Make the provider creation lazy, defaults to true.
   ///
   /// If this value is true the provider will be [_create]d only
   /// when retrieved from descendants.
+  /// {@endtemplate}
   final bool lazy;
 
   bool get _isSignal => this is Provider<SignalBase>;
 
+  /// {@template Provider.create}
   /// The function called to create the element.
+  /// {@endtemplate}
   late final CreateProviderFn<T> _create;
 
+  /// {@template Provider.dispose}
   /// An optional dispose function called when the Solid that created this
   /// provider gets disposed.
+  /// {@endtemplate}
   final DisposeProviderFn<T>? _dispose;
 
   /// Function internally used by [ProviderScopeState] that calls [_dispose].

@@ -1,30 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _counterProvider = Provider.withArg(
-  (_, Signal<int> count) => count,
-);
+final counterProvider = Provider((context) => Signal(0));
 
-final _doubleCounterProvider = Provider.withArg(
+final doubleCounterProvider = Provider.withArgument(
   (_, Signal<int> count) => Computed(() => count() * 2),
 );
 
-class SolidSignalsPage extends StatefulWidget {
-  const SolidSignalsPage({super.key});
+class ProviderScopeSignalsPage extends StatefulWidget {
+  const ProviderScopeSignalsPage({super.key});
 
   @override
-  State<SolidSignalsPage> createState() => _SolidSignalsPageState();
+  State<ProviderScopeSignalsPage> createState() =>
+      _ProviderScopeSignalsPageState();
 }
 
-class _SolidSignalsPageState extends State<SolidSignalsPage> {
-  final count = Signal(0);
-
-  @override
-  void dispose() {
-    count.dispose();
-    super.dispose();
-  }
-
+class _ProviderScopeSignalsPageState extends State<ProviderScopeSignalsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -34,12 +25,18 @@ class _SolidSignalsPageState extends State<SolidSignalsPage> {
       body: ProviderScope(
         providers: [
           // provide the count signal to descendants
-          _counterProvider..setInitialArg(count),
-
-          // provide the doubleCount signal to descendants
-          _doubleCounterProvider..setInitialArg(count),
+          counterProvider,
         ],
-        child: const SomeChild(),
+        builder: (context) {
+          final count = counterProvider.get(context);
+          return ProviderScope(
+            providers: [
+              // provide the doubleCount signal to descendants
+              doubleCounterProvider(count),
+            ],
+            child: const SomeChild(),
+          );
+        },
       ),
     );
   }
@@ -51,9 +48,10 @@ class SomeChild extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // retrieve the count signal
-    final count = _counterProvider.get(context);
+    final count = counterProvider.get(context);
     // retrieve the doubleCount signal
-    final doubleCount = _doubleCounterProvider.get(context);
+    final doubleCount = doubleCounterProvider.get(context);
+    print('doubleCount $doubleCount');
 
     return Center(
       child: Column(
@@ -62,6 +60,7 @@ class SomeChild extends StatelessWidget {
           // render the count value
           SignalBuilder(
             builder: (context, child) {
+              print('count.value ${count.value}');
               return Text('count: ${count.value}');
             },
           ),
@@ -69,6 +68,7 @@ class SomeChild extends StatelessWidget {
           // render the double count value
           SignalBuilder(
             builder: (context, child) {
+              print('doubleCount.value ${doubleCount.value}');
               return Text('doubleCount: ${doubleCount.value}');
             },
           ),
@@ -76,7 +76,7 @@ class SomeChild extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               // update the count signal value
-              _counterProvider.update(context, (value) => value += 1);
+              counterProvider.update(context, (value) => value += 1);
             },
             child: const Text('Increment'),
           ),
