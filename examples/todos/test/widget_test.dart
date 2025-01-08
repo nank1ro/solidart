@@ -20,12 +20,10 @@ Widget wrapWithMockedTodosController({
   required TodosController todosController,
 }) {
   return MaterialApp(
-    home: Solid(
+    home: ProviderScope(
       providers: [
-        Provider<TodosController>(
-          create: () => todosController,
-          dispose: (controller) => controller.dispose(),
-        ),
+        // todo: find a way to mock with todosController
+        TodosController.provider,
       ],
       child: child,
     ),

@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
+final _counterProvider = Provider.withArg(
+  (_, Signal<int> count) => count,
+);
+
+final _doubleCounterProvider = Provider.withArg(
+  (_, Signal<int> count) => Computed(() => count() * 2),
+);
+
 class SolidSignalsPage extends StatefulWidget {
   const SolidSignalsPage({super.key});
 
@@ -23,17 +31,13 @@ class _SolidSignalsPageState extends State<SolidSignalsPage> {
       appBar: AppBar(
         title: const Text('Solid Signals'),
       ),
-      body: Solid(
+      body: ProviderScope(
         providers: [
           // provide the count signal to descendants
-          Provider<Signal<int>>(
-            create: () => count,
-          ),
+          _counterProvider..setInitialArg(count),
 
           // provide the doubleCount signal to descendants
-          Provider<Computed<int>>(
-            create: () => Computed(() => count() * 2),
-          ),
+          _doubleCounterProvider..setInitialArg(count),
         ],
         child: const SomeChild(),
       ),
@@ -47,9 +51,9 @@ class SomeChild extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // retrieve the count signal
-    final count = context.get<Signal<int>>();
+    final count = _counterProvider.get(context);
     // retrieve the doubleCount signal
-    final doubleCount = context.get<Computed<int>>();
+    final doubleCount = _doubleCounterProvider.get(context);
 
     return Center(
       child: Column(
@@ -72,7 +76,7 @@ class SomeChild extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               // update the count signal value
-              context.update<int>((value) => value += 1);
+              _counterProvider.update(context, (value) => value += 1);
             },
             child: const Text('Increment'),
           ),
