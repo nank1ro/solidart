@@ -316,7 +316,7 @@ void main() {
                 counterProvider,
                 doubleCounterProvider,
               ],
-              builder: (context) {
+              builder: (context, child) {
                 final counter = counterProvider.observe(context).value;
                 final doubleCounter =
                     doubleCounterProvider.observe(context).value;
@@ -347,7 +347,7 @@ void main() {
               providers: [
                 doubleCounterProvider,
               ],
-              builder: (context) {
+              builder: (context, child) {
                 final doubleCounter =
                     doubleCounterProvider.observe(context).value;
                 return Text('$doubleCounter');
@@ -376,7 +376,7 @@ void main() {
               providers: [
                 counterProvider,
               ],
-              builder: (context) {
+              builder: (context, child) {
                 final counter = counterProvider.observe(context).value;
                 return Text('$counter');
               },
@@ -404,7 +404,7 @@ void main() {
               providers: [
                 counterProvider,
               ],
-              builder: (context) {
+              builder: (context, child) {
                 final counter = counterProvider.observe(context).value;
                 return Text('$counter');
               },
@@ -436,7 +436,7 @@ void main() {
               counterProvider,
               doubleCounterProvider,
             ],
-            builder: (context) {
+            builder: (context, child) {
               final counter = counterProvider.get(context);
               final doubleCounter = doubleCounterProvider.get(context);
               return SignalBuilder(
@@ -470,7 +470,7 @@ void main() {
             providers: [
               counterProvider,
             ],
-            builder: (context) {
+            builder: (context, child) {
               final counter = invalidCounterProvider.get(context);
               return SignalBuilder(
                 builder: (context, _) {
@@ -522,7 +522,7 @@ void main() {
               providers: [
                 counterProvider,
               ],
-              builder: (context) {
+              builder: (context, child) {
                 return ElevatedButton(
                   onPressed: () {
                     showCounterDialog(context: context);
@@ -590,7 +590,7 @@ void main() {
                 counterProvider,
                 doubleCounterProvider,
               ],
-              builder: (context) {
+              builder: (context, child) {
                 return ElevatedButton(
                   onPressed: () {
                     showCounterDialog(context: context);
@@ -646,7 +646,7 @@ void main() {
               providers: [
                 numberContainerProvider,
               ],
-              builder: (context) {
+              builder: (context, child) {
                 return ElevatedButton(
                   onPressed: () {
                     showNumberDialog(context: context);
@@ -699,7 +699,7 @@ void main() {
           home: Scaffold(
             body: ProviderScope(
               providers: [nameContainerProvider],
-              builder: (context) {
+              builder: (context, child) {
                 return ElevatedButton(
                   onPressed: () {
                     showNumberDialog(context: context);
@@ -735,7 +735,7 @@ void main() {
             providers: [
               nameContainerProvider,
             ],
-            builder: (context) {
+            builder: (context, child) {
               final numberContainer = numberContainerProvider.maybeGet(context);
               return Text(numberContainer.toString());
             },
@@ -845,7 +845,7 @@ void main() {
               numberContainer1Provider,
               numberContainer2Provider,
             ],
-            builder: (context) {
+            builder: (context, child) {
               final nameContainer = nameContainerProvider.get(context);
               final numberContainer1 = numberContainer1Provider.get(context);
               final numberContainer2 = numberContainer2Provider.get(context);
@@ -882,7 +882,7 @@ void main() {
             providers: [
               numberContainerProvider,
             ],
-            builder: (context) {
+            builder: (context, child) {
               // NameProvider is not present
               final nameContainer = nameContainerProvider.get(context);
               return Text(nameContainer.name);
@@ -955,7 +955,7 @@ void main() {
             providers: [
               counterProvider,
             ],
-            builder: (context) {
+            builder: (context, child) {
               final counter = counterProvider.observe(context).value;
               return Column(
                 children: [
@@ -991,7 +991,7 @@ void main() {
             providers: [
               counterProvider(0),
             ],
-            builder: (context) {
+            builder: (context, child) {
               final counter = counterProvider.observe(context).value;
               return Column(
                 children: [
@@ -1059,7 +1059,7 @@ void main() {
               providers: [
                 numberContainer2Provider,
               ],
-              builder: (context) {
+              builder: (context, child) {
                 final numberProvider1 = numberContainer1Provider.get(context);
                 final numberProvider2 = numberContainer2Provider.get(context);
                 return Text(

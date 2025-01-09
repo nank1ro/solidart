@@ -264,11 +264,7 @@ class ProviderScope extends StatefulWidget {
     required this.providers,
     this.child,
     this.builder,
-  })  : assert(
-          (child != null) ^ (builder != null),
-          'Provide either a child or a builder',
-        ),
-        _canAutoDisposeProviders = false;
+  }) : _canAutoDisposeProviders = false;
 
   /// Provide multiple [Provider]s to a new route.
   ///
@@ -278,22 +274,27 @@ class ProviderScope extends StatefulWidget {
     Key? key,
     required BuildContext mainTreeContext,
     required List<Provider<dynamic>> providers,
-    required Widget child,
+    Widget? child,
+    TransitionBuilder? builder,
   }) {
     return ProviderScope._valueInternal(
       key: key,
       providers: providers
           .map((provider) => provider._getProvider(mainTreeContext))
           .toList(),
+      builder: builder,
       child: child,
     );
   }
 
   /// The widget child that gets access to the [providers].
+  ///
+  /// NOTE: If you also provide a [builder], the [child] will be passed to the
+  /// builder to optimize rebuilds, but won't have access to the providers.
   final Widget? child;
 
   /// The widget builder that gets access to the [providers].
-  final WidgetBuilder? builder;
+  final TransitionBuilder? builder;
 
   /// All the providers provided to all the descendants of [ProviderScope].
   final List<Provider<dynamic>> providers;
@@ -567,9 +568,10 @@ class ProviderScopeState extends State<ProviderScope> {
       state: this,
       dependenciesVersion: _dependenciesVersion,
       changedDependency: _changedDependency,
-      child: widget.builder != null
-          ? Builder(builder: (context) => widget.builder!(context))
-          : widget.child!,
+      child: _ProviderWidgetBuilder(
+        builder: widget.builder,
+        child: widget.child,
+      ),
     );
   }
 
@@ -782,5 +784,26 @@ class ProviderWithoutScopeError extends Error {
     return '''
     Seems like that you forgot to provide the provider ${provider._valueType} and argument ${provider._argumentType} to a ProviderScope.
       ''';
+  }
+}
+
+class _ProviderWidgetBuilder extends StatelessWidget {
+  const _ProviderWidgetBuilder({
+    this.child,
+    this.builder,
+  }) : assert(
+          (builder != null) || (child != null),
+          'Provide a child or a builder',
+        );
+
+  final TransitionBuilder? builder;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (child != null && builder == null) {
+      return child!;
+    }
+    return builder!(context, child);
   }
 }
