@@ -501,9 +501,9 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return ProviderScope.value(
+            return ProviderScope.values(
               mainTreeContext: context,
-              provider: counterProvider,
+              providers: [counterProvider],
               child: Builder(
                 builder: (innerContext) {
                   final counter = counterProvider.observe(innerContext).value;
@@ -624,8 +624,8 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return ProviderScope.value(
-              provider: numberContainerProvider,
+            return ProviderScope.values(
+              providers: [numberContainerProvider],
               mainTreeContext: context,
               child: Builder(
                 builder: (innerContext) {
@@ -679,8 +679,8 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return ProviderScope.value(
-              provider: numberContainerProvider,
+            return ProviderScope.values(
+              providers: [numberContainerProvider],
               mainTreeContext: context,
               child: Builder(
                 builder: (innerContext) {
