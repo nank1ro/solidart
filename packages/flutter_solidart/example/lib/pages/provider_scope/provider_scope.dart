@@ -2,6 +2,7 @@ import 'package:example/pages/provider_scope/multiple_signals_page.dart';
 import 'package:example/pages/provider_scope/provider_scope_providers.dart';
 import 'package:example/pages/provider_scope/provider_scope_reactivity.dart';
 import 'package:example/pages/provider_scope/provider_scope_signals.dart';
+import 'package:example/pages/provider_scope/same_type.dart';
 import 'package:flutter/material.dart';
 
 import 'observe_signal_page.dart';
@@ -12,6 +13,7 @@ final _pages = {
   'Observe Signal': () => const ObserveSignalPage(),
   'Multiple Signals': () => const MultipleSignalsPage(),
   'Reactivity': () => const ProviderScopeReactivityPage(),
+  'SameType': () => const SameTypePage(),
 };
 
 class ProviderScopePage extends StatelessWidget {
