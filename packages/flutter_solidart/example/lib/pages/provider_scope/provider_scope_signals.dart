@@ -24,14 +24,14 @@ class _ProviderScopeSignalsPageState extends State<ProviderScopeSignalsPage> {
       ),
       body: ProviderScope(
         providers: [
-          // provide the count signal to descendants
+          // provide the count provider to descendants
           counterProvider,
         ],
         builder: (context) {
           final count = counterProvider.get(context);
           return ProviderScope(
             providers: [
-              // provide the doubleCount signal to descendants
+              // provide the doubleCount provider to descendants
               doubleCounterProvider(count),
             ],
             child: const SomeChild(),
@@ -51,7 +51,6 @@ class SomeChild extends StatelessWidget {
     final count = counterProvider.get(context);
     // retrieve the doubleCount signal
     final doubleCount = doubleCounterProvider.get(context);
-    print('doubleCount $doubleCount');
 
     return Center(
       child: Column(
@@ -60,7 +59,6 @@ class SomeChild extends StatelessWidget {
           // render the count value
           SignalBuilder(
             builder: (context, child) {
-              print('count.value ${count.value}');
               return Text('count: ${count.value}');
             },
           ),
@@ -68,7 +66,6 @@ class SomeChild extends StatelessWidget {
           // render the double count value
           SignalBuilder(
             builder: (context, child) {
-              print('doubleCount.value ${doubleCount.value}');
               return Text('doubleCount: ${doubleCount.value}');
             },
           ),

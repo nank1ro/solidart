@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final firstNameId = Provider((_) => Signal("James"), lazy: false);
-final lastNameId = Provider((_) => Signal("Smith"));
+final firstNameProvider = Provider((context) => Signal("James"), lazy: false);
+final lastNameProvider = Provider((context) => Signal("Smith"));
 
 // Uses identifiers to retrieve different signals of the same type
 class MultipleSignalsPage extends StatelessWidget {
@@ -17,10 +17,10 @@ class MultipleSignalsPage extends StatelessWidget {
       body: ProviderScope(
         providers: [
           // provide the firstName signal to descendants
-          firstNameId,
+          firstNameProvider,
 
           // provide the lastName signal to descendants
-          lastNameId,
+          lastNameProvider,
         ],
         child: const SomeChild(),
       ),
@@ -33,8 +33,8 @@ class SomeChild extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = firstNameId.get(context);
-    final lastName = lastNameId.get(context);
+    final firstName = firstNameProvider.get(context);
+    final lastName = lastNameProvider.get(context);
 
     return Center(
       child: Column(
@@ -44,14 +44,14 @@ class SomeChild extends StatelessWidget {
           TextFormField(
             initialValue: firstName.value,
             onChanged: (value) {
-              firstNameId.update(context, (_) => value);
+              firstNameProvider.update(context, (currentValue) => value);
             },
           ),
           const SizedBox(height: 8),
           TextFormField(
             initialValue: lastName.value,
             onChanged: (value) {
-              lastNameId.update(context, (_) => value);
+              lastNameProvider.update(context, (currentValue) => value);
             },
           ),
           const SizedBox(height: 8),
@@ -67,8 +67,8 @@ class FullName extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = firstNameId.observe(context).value;
-    final lastName = lastNameId.observe(context).value;
+    final firstName = firstNameProvider.observe(context).value;
+    final lastName = lastNameProvider.observe(context).value;
     return ListTile(
       title: Text('First Name: $firstName'),
       subtitle: Text('LastName: $lastName'),

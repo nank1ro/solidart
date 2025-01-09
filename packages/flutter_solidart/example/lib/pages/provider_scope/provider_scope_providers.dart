@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
 final nameProvider = Provider(
-  (_) => const NameContainer('Ale'),
-  // the dispose method is fired when the [Solid] widget above is removed from the widget tree.
+  (context) => const NameContainer('Ale'),
+  // the dispose method is fired when the [ProviderScope] widget who provided it is removed from the widget tree.
   dispose: (provider) => provider.dispose(),
 );
 final firstNumberProvider = Provider(
-  (_) => const NumberContainer(1),
+  (context) => const NumberContainer(1),
   // Do not create the provider lazily, but immediately
   lazy: false,
 );
 final secondNumberProvider = Provider(
-  (_) => const NumberContainer(100),
+  (context) => const NumberContainer(100),
   // Do not create the provider lazily, but immediately
   lazy: false,
 );

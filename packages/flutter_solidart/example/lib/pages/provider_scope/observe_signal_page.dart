@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final countProvider = Provider((_) => Signal(0));
+final countProvider = Provider((context) => Signal(0));
 
 class ObserveSignalPage extends StatelessWidget {
   const ObserveSignalPage({super.key});
@@ -34,7 +34,6 @@ class SomeChild extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // render the count value
-          Text('count: ${count.value}'),
           const SizedBox(height: 8),
           ElevatedButton(
             onPressed: () {

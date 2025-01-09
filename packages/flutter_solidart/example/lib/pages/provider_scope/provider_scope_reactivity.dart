@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _firstCounterProvider = Provider((_) => Signal(0));
-final _secondCounterProvider = Provider((_) => Signal(0));
+final firstCounterProvider = Provider((context) => Signal(0));
+final secondCounterProvider = Provider((context) => Signal(0));
 
 class ProviderScopeReactivityPage extends StatefulWidget {
   const ProviderScopeReactivityPage({super.key});
@@ -20,8 +20,8 @@ class _ProviderScopeReactivityPageState
   Widget build(BuildContext context) {
     return ProviderScope(
       providers: [
-        _firstCounterProvider,
-        _secondCounterProvider,
+        firstCounterProvider,
+        secondCounterProvider,
       ],
       child: Scaffold(
         appBar: AppBar(
@@ -57,14 +57,13 @@ class _ProviderScopeReactivityPageState
               children: [
                 TextButton(
                   onPressed: () {
-                    _firstCounterProvider.update(
-                        context, (value) => value += 1);
+                    firstCounterProvider.update(context, (value) => value += 1);
                   },
                   child: const Text('+1 counter1'),
                 ),
                 TextButton(
                   onPressed: () {
-                    _secondCounterProvider.update(
+                    secondCounterProvider.update(
                         context, (value) => value += 1);
                   },
                   child: const Text('+1 counter2'),
@@ -83,7 +82,7 @@ class _Counter1 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter1 = _firstCounterProvider.observe(context).value;
+    final counter1 = firstCounterProvider.observe(context).value;
     print('build counter1');
     return Text('Counter1: $counter1');
   }
@@ -94,7 +93,7 @@ class _Counter2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter2 = _secondCounterProvider.observe(context).value;
+    final counter2 = secondCounterProvider.observe(context).value;
     print('build counter2');
     return Text('Counter2: $counter2');
   }
