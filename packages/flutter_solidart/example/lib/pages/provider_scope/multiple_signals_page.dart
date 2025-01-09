@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final firstNameProvider = Provider((context) => Signal("James"), lazy: false);
+final firstNameProvider = Provider((context) => Signal("James"));
 final lastNameProvider = Provider((context) => Signal("Smith"));
 
 // Uses identifiers to retrieve different signals of the same type
