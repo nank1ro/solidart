@@ -91,19 +91,4 @@ class Provider<T> {
   /// Returns the type of the value
 
   Type get _valueType => T;
-
-  // @override
-  // int get hashCode {
-  //   return _create.hashCode ^ _dispose.hashCode ^ lazy.hashCode;
-  // }
-  //
-  // @override
-  // // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  // bool operator ==(Object other) {
-  //   if (identical(other, this)) return true;
-  //
-  //   return other.runtimeType == runtimeType &&
-  //       other is Provider<T> &&
-  //       other._create == _create;
-  // }
 }

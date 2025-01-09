@@ -330,23 +330,6 @@ class ProviderScope extends StatefulWidget {
     )?.state;
   }
 
-  /// {@template provider-scope.maybeGet}
-  /// Tries to obtain the Provider of the given type T and [id] corresponding to
-  /// the nearest [ProviderScope] widget.
-  ///
-  /// Throws if no such element or [ProviderScope] widget is found.
-  ///
-  /// This method should not be called from State.dispose because the element
-  /// tree is no longer stable at that time.
-  ///
-  /// Doesn't listen to the provider so it won't cause the widget to rebuild.
-  ///
-  /// You may call this method inside the `initState` or `build` methods.
-  /// {@endtemplate}
-  // static T? maybeGet<T>(BuildContext context, Provider<T> id) {
-  //   return _getOrCreateProvider<T>(context, id: id);
-  // }
-
   /// {@template provider-scope.getElement}
   /// Obtains the SolidElement of a Provider of the given type T and [id]
   /// corresponding to the nearest [ProviderScope] widget.
@@ -368,61 +351,6 @@ class ProviderScope extends StatefulWidget {
     if (state == null) throw ProviderError<T>(id);
     return state._getProvider<T>(id)!;
   }
-  //
-  /// {@template provider-scope.observe}
-  /// Subscribe to the [Signal] of the given value type and [id] corresponding
-  /// to the nearest [ProviderScope] widget rebuilding the widget when the value
-  /// exposed by the [Signal] changes.
-  ///
-  /// Throws if no such element or [ProviderScope] widget is found.
-  ///
-  /// This method should not be called from State.dispose because the element
-  /// tree is no longer stable at that time.
-  ///
-  /// Listens to the signal so it causes the widget to rebuild.
-  ///
-  /// You must call this method only from the `build` method.
-  ///
-  /// WARNING: Doesn't support observing a Resource.
-  /// {@endtemplate}
-  // static T observe<T extends SignalBase<dynamic>>(
-  //   BuildContext context,
-  //   Provider<T> id,
-  // ) {
-  //   return _getOrCreateProvider<T>(context, id: id, listen: true);
-  // }
-
-  /// {@template provider-scope.update}
-  /// Convenience method to update a `Signal` value.
-  ///
-  /// You can use it to update a signal value, e.g:
-  /// ```dart
-  /// const myCounter = ProviderId<Signal<int>>();
-  ///
-  /// // some function inside some widget
-  /// someFn(BuildContext context) {
-  ///   context.update(myCounter, (value) => value * 2);
-  /// }
-  /// ```
-  /// This is equal to:
-  /// ```dart
-  /// // retrieve the signal
-  /// final signal = context.get(myCounter);
-  /// // update the signal
-  /// signal.update((value) => value * 2);
-  /// ```
-  /// but shorter when you don't need the signal for anything else.
-  ///
-  /// WARNING: Supports only the `Signal` type
-  /// {@endtemplate}
-  // static void update<T>(
-  //   BuildContext context,
-  //   T Function(T value) callback,
-  //   Provider<Signal<T>> id,
-  // ) {
-  //   // retrieve the signal and update its value
-  //   get<Signal<T>>(context, id).updateValue(callback);
-  // }
 
   /// Tries to find a provider of type T from the created providers and returns
   /// it.
