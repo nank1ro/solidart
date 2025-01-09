@@ -24,7 +24,7 @@ class _SameTypePageState extends State<SameTypePage> {
         ],
         builder: (context) {
           final a = aProvider.get(context);
-          final b = aProvider.get(context);
+          final b = bProvider.get(context);
           return Text('a: $a, b: $b');
         },
       ),

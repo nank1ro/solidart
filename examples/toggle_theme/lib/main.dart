@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Provide the theme mode signal to descendats
-    return ProviderScope.builder(
+    return ProviderScope(
       providers: [
         _themeModeId,
       ],

@@ -311,7 +311,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProviderScope.builder(
+            body: ProviderScope(
               providers: [
                 counterProvider,
                 doubleCounterProvider,
@@ -343,7 +343,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProviderScope.builder(
+            body: ProviderScope(
               providers: [
                 doubleCounterProvider,
               ],
@@ -372,7 +372,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProviderScope.builder(
+            body: ProviderScope(
               providers: [
                 counterProvider,
               ],
@@ -400,7 +400,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProviderScope.builder(
+            body: ProviderScope(
               providers: [
                 counterProvider,
               ],
@@ -431,7 +431,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ProviderScope.builder(
+          body: ProviderScope(
             providers: [
               counterProvider,
               doubleCounterProvider,
@@ -466,7 +466,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ProviderScope.builder(
+          body: ProviderScope(
             providers: [
               counterProvider,
             ],
@@ -518,7 +518,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProviderScope.builder(
+            body: ProviderScope(
               providers: [
                 counterProvider,
               ],
@@ -585,7 +585,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProviderScope.builder(
+            body: ProviderScope(
               providers: [
                 counterProvider,
                 doubleCounterProvider,
@@ -642,7 +642,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProviderScope.builder(
+            body: ProviderScope(
               providers: [
                 numberContainerProvider,
               ],
@@ -697,7 +697,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProviderScope.builder(
+            body: ProviderScope(
               providers: [nameContainerProvider],
               builder: (context) {
                 return ElevatedButton(
@@ -731,7 +731,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ProviderScope.builder(
+          body: ProviderScope(
             providers: [
               nameContainerProvider,
             ],
@@ -839,7 +839,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ProviderScope.builder(
+          body: ProviderScope(
             providers: [
               nameContainerProvider,
               numberContainer1Provider,
@@ -878,7 +878,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ProviderScope.builder(
+          body: ProviderScope(
             providers: [
               numberContainerProvider,
             ],
@@ -951,7 +951,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ProviderScope.builder(
+          body: ProviderScope(
             providers: [
               counterProvider,
             ],
@@ -987,12 +987,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ProviderScope.builder(
+          body: ProviderScope(
             providers: [
-              counterProvider,
+              counterProvider(0),
             ],
             builder: (context) {
-              counterProvider.setInitialArg(0);
               final counter = counterProvider.observe(context).value;
               return Column(
                 children: [
@@ -1056,7 +1055,7 @@ void main() {
             providers: [
               numberContainer1Provider,
             ],
-            child: ProviderScope.builder(
+            child: ProviderScope(
               providers: [
                 numberContainer2Provider,
               ],
@@ -1240,7 +1239,7 @@ void main() {
   //         counterId, // todo: somehow override with 100
   //       ],
   //       child: MaterialApp(
-  //         home: ProviderScope.builder(
+  //         home: ProviderScope(
   //           providers: [
   //             counterId,
   //           ],
