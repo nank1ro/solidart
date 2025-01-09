@@ -12,9 +12,14 @@ class ArgProvider<T, A> {
   /// {@macro arg-provider}
   ArgProvider._(
     this.create, {
-    this.dispose,
+    DisposeProviderFn<T>? dispose,
     this.lazy = true,
-  });
+  }) {
+    this.dispose = (provider) {
+      dispose?.call(provider);
+      _instance = null;
+    };
+  }
 
   /// {@macro Provider.lazy}
   final bool lazy;
