@@ -40,10 +40,8 @@ class Provider<T> {
 
     /// {@macro Provider.lazy}
     this.lazy = true,
-    String? debugName,
   })  : _create = create,
-        _dispose = dispose,
-        _debugName = debugName;
+        _dispose = dispose;
 
   /// /// This constructor purposely leaves out [_create]. This way
   /// /// [ArgProvider._] can leverage the [ArgProvider._arg] member
@@ -61,7 +59,6 @@ class Provider<T> {
     CreateProviderFnWithArg<T, A> create, {
     DisposeProviderFn<T>? dispose,
     bool lazy = true,
-    String? debugName,
   }) =>
       ArgProvider._(create, dispose: dispose, lazy: lazy);
 
@@ -104,8 +101,4 @@ class Provider<T> {
 
   /// Returns the type of the value
   Type get _valueType => T;
-
-  /// Acts as an identifier. If set, it simplifies tracking down the provider
-  /// causing an exception.
-  final String? _debugName;
 }

@@ -17,7 +17,7 @@ class ArgProvider<T, A> {
   }) {
     this.dispose = (provider) {
       dispose?.call(provider);
-      instances.clear();
+      _instances.clear();
     };
   }
 
@@ -30,18 +30,24 @@ class ArgProvider<T, A> {
   /// {@macro Provider.dispose}
   DisposeProviderFn<T>? dispose;
 
-  final instances = <Type, Provider<T>>{};
+  final _instances = <Type, Provider<T>>{};
 
   Provider<T> call(A arg) {
-    if (instances.containsKey(A)) {
-      return instances[A]!;
+    if (_instances.containsKey(A)) {
+      return _instances[A]!;
     }
     final instance = Provider<T>(
       (context) => create(context, arg),
       dispose: dispose,
       lazy: lazy,
     );
-    instances[A] = instance;
+    _instances[A] = instance;
     return instance;
   }
+
+  /// Returns the type of the value
+  Type get _valueType => T;
+
+  /// Returns the type of the arg
+  Type get _argumentType => A;
 }
