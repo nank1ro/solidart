@@ -12,7 +12,7 @@ class ObserveSignalPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Observe Signal'),
       ),
-      // provide the count signal to descendants
+      // provide the count provider to descendants
       body: ProviderScope(
         providers: [countProvider],
         child: const SomeChild(),
@@ -34,6 +34,7 @@ class SomeChild extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // render the count value
+          Text('count: ${count.value}'),
           const SizedBox(height: 8),
           ElevatedButton(
             onPressed: () {
