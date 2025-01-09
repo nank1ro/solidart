@@ -27,7 +27,7 @@ class ProviderScopeOverride extends StatefulWidget {
   final Widget? child;
 
   /// The widget builder that gets access to the [providers].
-  final WidgetBuilder? builder;
+  final TransitionBuilder? builder;
 
   /// All the overriden providers provided to all the descendants of
   /// [ProviderScope].
