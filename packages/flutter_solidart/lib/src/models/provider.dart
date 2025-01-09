@@ -43,17 +43,6 @@ class Provider<T> {
   })  : _create = create,
         _dispose = dispose;
 
-  /// /// This constructor purposely leaves out [_create]. This way
-  /// /// [ArgProvider._] can leverage the [ArgProvider._arg] member
-  /// /// when instantiating [_create].
-  /// // ignore: prefer_const_constructors_in_immutables
-  /// Provider._withArg({
-  ///   DisposeProviderFn<T>? dispose,
-  ///   this.lazy = true,
-  ///   String? debugName,
-  /// })  : _dispose = dispose,
-  ///       _debugName = debugName;
-
   /// {@macro arg-provider}
   static ArgProvider<T, A> withArgument<T, A>(
     CreateProviderFnWithArg<T, A> create, {
