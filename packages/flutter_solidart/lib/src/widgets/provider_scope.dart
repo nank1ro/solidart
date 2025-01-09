@@ -6,7 +6,8 @@ import 'package:flutter_solidart/src/widgets/provider_scope_override.dart';
 import 'package:solidart/solidart.dart';
 
 part '../models/provider.dart';
-part '../models/arg_provider.dart';
+part '../models/provider_with_argument.dart';
+part '../models/provider_extensions.dart';
 
 /// {@template provider-scope}
 /// Provides [providers] to descendants.
@@ -326,7 +327,7 @@ class ProviderScope extends StatefulWidget {
   /// Finds the first SolidState ancestor that satisfies the given [id].
   ///
   /// If [listen] is true, the [context] gets subscribed to the given value.
-  static ProviderScopeState _findState<T>(
+  static ProviderScopeState? _findState<T>(
     BuildContext context, {
     required Provider<T> id,
     bool listen = false,
@@ -338,30 +339,11 @@ class ProviderScope extends StatefulWidget {
       if (state.isProviderInScope<T>(id)) return state;
     }
 
-    final state = _InheritedProvider.inheritFromNearest<T>(
+    return _InheritedProvider.inheritFromNearest<T>(
       context,
       id,
       listen: listen,
     )?.state;
-    if (state == null) throw ProviderError<T>(id);
-    return state;
-  }
-
-  /// {@template provider-scope.get}
-  /// Obtains the Provider of the given type T and [id] corresponding to the
-  /// nearest [ProviderScope] widget.
-  ///
-  /// Throws if no such element or [ProviderScope] widget is found.
-  ///
-  /// This method should not be called from State.dispose because the element
-  /// tree is no longer stable at that time.
-  ///
-  /// Doesn't listen to the provider so it won't cause the widget to rebuild.
-  ///
-  /// You may call this method inside the `initState` or `build` methods.
-  /// {@endtemplate}
-  static T get<T>(BuildContext context, Provider<T> id) {
-    return _getOrCreateProvider<T>(context, id: id);
   }
 
   /// {@template provider-scope.maybeGet}
@@ -377,16 +359,9 @@ class ProviderScope extends StatefulWidget {
   ///
   /// You may call this method inside the `initState` or `build` methods.
   /// {@endtemplate}
-  static T? maybeGet<T>(BuildContext context, Provider<T> id) {
-    try {
-      return _getOrCreateProvider<T>(context, id: id);
-    } catch (e) {
-      if (e is ProviderError<T>) {
-        return null;
-      }
-      rethrow;
-    }
-  }
+  // static T? maybeGet<T>(BuildContext context, Provider<T> id) {
+  //   return _getOrCreateProvider<T>(context, id: id);
+  // }
 
   /// {@template provider-scope.getElement}
   /// Obtains the SolidElement of a Provider of the given type T and [id]
@@ -406,9 +381,10 @@ class ProviderScope extends StatefulWidget {
     Provider<T> id,
   ) {
     final state = _findState<T>(context, id: id);
+    if (state == null) throw ProviderError<T>(id);
     return state._getProvider<T>(id)!;
   }
-
+  //
   /// {@template provider-scope.observe}
   /// Subscribe to the [Signal] of the given value type and [id] corresponding
   /// to the nearest [ProviderScope] widget rebuilding the widget when the value
@@ -425,12 +401,12 @@ class ProviderScope extends StatefulWidget {
   ///
   /// WARNING: Doesn't support observing a Resource.
   /// {@endtemplate}
-  static T observe<T extends SignalBase<dynamic>>(
-    BuildContext context,
-    Provider<T> id,
-  ) {
-    return _getOrCreateProvider<T>(context, id: id, listen: true);
-  }
+  // static T observe<T extends SignalBase<dynamic>>(
+  //   BuildContext context,
+  //   Provider<T> id,
+  // ) {
+  //   return _getOrCreateProvider<T>(context, id: id, listen: true);
+  // }
 
   /// {@template provider-scope.update}
   /// Convenience method to update a `Signal` value.
@@ -455,25 +431,27 @@ class ProviderScope extends StatefulWidget {
   ///
   /// WARNING: Supports only the `Signal` type
   /// {@endtemplate}
-  static void update<T>(
-    BuildContext context,
-    T Function(T value) callback,
-    Provider<Signal<T>> id,
-  ) {
-    // retrieve the signal and update its value
-    get<Signal<T>>(context, id).updateValue(callback);
-  }
+  // static void update<T>(
+  //   BuildContext context,
+  //   T Function(T value) callback,
+  //   Provider<Signal<T>> id,
+  // ) {
+  //   // retrieve the signal and update its value
+  //   get<Signal<T>>(context, id).updateValue(callback);
+  // }
 
   /// Tries to find a provider of type T from the created providers and returns
   /// it.
   ///
   /// The provider is created in case the find fails.
-  static T _getOrCreateProvider<T>(
+  /// If the provider is not found in any ProviderScope, it returns null.
+  static T? _getOrCreateProvider<T>(
     BuildContext context, {
     required Provider<T> id,
     bool listen = false,
   }) {
     final state = _findState<T>(context, id: id, listen: listen);
+    if (state == null) return null;
     final createdProvider = state._createdProviders[(id: id, type: T)];
     if (createdProvider != null) return createdProvider as T;
     // if the provider is not already present, create it lazily
@@ -803,7 +781,22 @@ class MultipleProviderOfSameInstance extends Error {
     return '''
       You cannot create or inject multiple providers with the same Provider instance together.
       Provider type: ${provider._valueType}
-      Provider debug name: ${provider._debugName == null ? "not assigned" : provider._debugName!}
+      ''';
+  }
+}
+
+/// Error thrown when the [Provider] was never attached to a [ProviderScope].
+class ProviderWithoutScopeError extends Error {
+  /// {@macro Providermultipleproviderofsametypeerror}
+  ProviderWithoutScopeError(this.provider);
+
+  // ignore: public_member_api_docs
+  final ArgProvider<dynamic, dynamic> provider;
+
+  @override
+  String toString() {
+    return '''
+    Seems like that you forgot to provide the provider ${provider._valueType} and argument ${provider._argumentType} to a ProviderScope.
       ''';
   }
 }
