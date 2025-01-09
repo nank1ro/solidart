@@ -270,23 +270,6 @@ class ProviderScope extends StatefulWidget {
         ),
         _canAutoDisposeProviders = false;
 
-  /// Provide a single [Provider] to a new route.
-  ///
-  /// This is useful for passing multiple providers to modals, because are
-  /// spawned in a new tree.
-  factory ProviderScope.value({
-    Key? key,
-    required BuildContext mainTreeContext,
-    required Provider<dynamic> provider,
-    required Widget child,
-  }) {
-    return ProviderScope._valueInternal(
-      key: key,
-      providers: [provider._getProvider(mainTreeContext)],
-      child: child,
-    );
-  }
-
   /// Provide multiple [Provider]s to a new route.
   ///
   /// This is useful for passing multiple providers to modals, because are
