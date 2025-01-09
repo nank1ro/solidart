@@ -1,7 +1,11 @@
 part of '../widgets/provider_scope.dart';
 
+/// -------------------------------
+/// Provider extensions
+/// -------------------------------
+
 /// Get the value of a provider.
-extension InjectExtensionProviderId<T> on Provider<T> {
+extension GetProviderExtension<T> on Provider<T> {
   /// {@macro provider-scope.get}
   T get(BuildContext context) {
     final provider = maybeGet(context);
@@ -15,28 +19,8 @@ extension InjectExtensionProviderId<T> on Provider<T> {
   }
 }
 
-/// Get the value of a provider.
-extension InjectExtensionArgProvider<T, A> on ArgProvider<T, A> {
-  /// {@macro provider-scope.get}
-  T get(BuildContext context) {
-    final provider = maybeGet(context);
-    if (provider == null) {
-      throw ProviderWithoutScopeError(this);
-    }
-    return provider;
-  }
-
-  /// {@macro provider-scope.maybeGet}
-  T? maybeGet(BuildContext context) {
-    final instance = _instances[A];
-    if (instance == null) return null;
-
-    return ProviderScope._getOrCreateProvider(context, id: instance);
-  }
-}
-
 /// Observe the value of a [SignalBase] that is in a provider.
-extension ObserveExtensionProviderId<T extends SignalBase<dynamic>>
+extension ObserveSignalInProviderExtension<T extends SignalBase<dynamic>>
     on Provider<T> {
   /// {@macro provider-scope.observe}
   T observe(BuildContext context) {
@@ -55,8 +39,8 @@ extension ObserveExtensionProviderId<T extends SignalBase<dynamic>>
   }
 }
 
-/// Observe the value of a [Signal] that is in a provider.
-extension UpdateExtensionProviderId<T> on Provider<Signal<T>> {
+/// Update the value of a [Signal] that is in a provider.
+extension UpdateSignalInProviderExtension<T> on Provider<Signal<T>> {
   /// {@macro provider-scope.update}
   void update(BuildContext context, T Function(T value) callback) {
     get(context).updateValue(callback);
@@ -64,8 +48,69 @@ extension UpdateExtensionProviderId<T> on Provider<Signal<T>> {
 
   /// {@macro provider-scope.maybeUpdate}
   void maybeUpdate(BuildContext context, T Function(T value) callback) {
+    maybeGet(context)?.updateValue(callback);
+  }
+}
+
+/// -------------------------------
+/// ProviderWithArgument extensions
+/// -------------------------------
+
+/// Get the value of a provider.
+extension GetProviderWithArgumentExtension<T, A> on ArgProvider<T, A> {
+  /// {@macro provider-scope.get}
+  T get(BuildContext context) {
     final provider = maybeGet(context);
-    if (provider == null) return;
-    provider.updateValue(callback);
+    if (provider == null) {
+      throw ProviderWithoutScopeError(this);
+    }
+    return provider;
+  }
+
+  /// {@macro provider-scope.maybeGet}
+  T? maybeGet(BuildContext context) {
+    if (_instance == null) return null;
+
+    return ProviderScope._getOrCreateProvider(context, id: _instance!);
+  }
+}
+
+/// Observe the value of a [SignalBase] that is in a provider with arguments.
+extension ObserveSignalInProviderWithArgumentExtension<
+    T extends SignalBase<dynamic>, A> on ArgProvider<T, A> {
+  /// {@macro provider-scope.observe}
+  T observe(BuildContext context) {
+    final provider = maybeObserve(context);
+    if (provider == null) {
+      throw ProviderWithoutScopeError(this);
+    }
+    return provider;
+  }
+
+  /// {@macro provider-scope.maybeObserve}
+  T? maybeObserve(BuildContext context) {
+    if (_instance == null) return null;
+    return ProviderScope._getOrCreateProvider<T>(
+      context,
+      id: _instance!,
+      listen: true,
+    );
+  }
+}
+
+/// Update the value of a [SignalBase] that is in a provider with arguments.
+///
+extension UpdateSignalInProviderWithArgumentExtension<T, A>
+    on ArgProvider<Signal<T>, A> {
+  /// Update the value of a [Signal<T>] that is in this arg provider with an
+  /// argument.
+  void update(BuildContext context, T Function(T value) callback) {
+    get(context).updateValue(callback);
+  }
+
+  /// Safely attempt to update the value of the [Signal<T>] that is in this arg
+  /// provider with an argument.
+  void maybeUpdate(BuildContext context, T Function(T value) callback) {
+    maybeGet(context)?.updateValue(callback);
   }
 }

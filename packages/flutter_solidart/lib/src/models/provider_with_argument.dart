@@ -1,6 +1,6 @@
 part of '../widgets/provider_scope.dart';
 
-// ignore: public_member_api_docs
+/// A function that creates an object of type [T] with an argument of type [A].
 typedef CreateProviderFnWithArg<T, A> = T Function(BuildContext context, A arg);
 
 /// {@template arg-provider}
@@ -12,14 +12,9 @@ class ArgProvider<T, A> {
   /// {@macro arg-provider}
   ArgProvider._(
     this.create, {
-    DisposeProviderFn<T>? dispose,
+    this.dispose,
     this.lazy = true,
-  }) {
-    this.dispose = (provider) {
-      dispose?.call(provider);
-      _instances.clear();
-    };
-  }
+  });
 
   /// {@macro Provider.lazy}
   final bool lazy;
@@ -30,19 +25,16 @@ class ArgProvider<T, A> {
   /// {@macro Provider.dispose}
   DisposeProviderFn<T>? dispose;
 
-  final _instances = <Type, Provider<T>>{};
+  Provider<T>? _instance;
 
+  /// Given an argument, creates a [Provider] with that argument.
   Provider<T> call(A arg) {
-    if (_instances.containsKey(A)) {
-      return _instances[A]!;
-    }
-    final instance = Provider<T>(
+    _instance ??= Provider<T>(
       (context) => create(context, arg),
       dispose: dispose,
       lazy: lazy,
     );
-    _instances[A] = instance;
-    return instance;
+    return _instance!;
   }
 
   /// Returns the type of the value

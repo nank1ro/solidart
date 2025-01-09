@@ -767,7 +767,8 @@ class ProviderDynamicError extends Error {
 }
 
 /// {@template Providermultipleproviderofsametypeerror}
-/// Error thrown when multiple providers of the same [provider] are created together.
+/// Error thrown when multiple providers of the same [provider] are created
+/// together.
 /// {@endtemplate}
 class MultipleProviderOfSameInstance extends Error {
   /// {@macro Providermultipleproviderofsametypeerror}
