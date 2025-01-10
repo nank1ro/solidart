@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/src/widgets/provider_scope_override.dart';
+import 'package:flutter_solidart/src/widgets/provider_scope_value.dart';
 import 'package:solidart/solidart.dart';
 
 part '../models/provider.dart';
@@ -256,41 +257,31 @@ class ProviderScope extends StatefulWidget {
     this.child,
     required this.providers,
     this.builder,
-  }) : _canAutoDisposeProviders = true;
+  });
 
-  /// Private constructor used internally to hide the `autoDispose` field
-  const ProviderScope._valueInternal({
-    super.key,
-    required this.providers,
-    this.child,
-    this.builder,
-  }) : _canAutoDisposeProviders = false;
-
-  /// Provide multiple [Provider]s to a new route.
-  ///
-  /// This is useful for passing multiple providers to modals, because are
-  /// spawned in a new tree.
-  factory ProviderScope.values({
+  /// {@macro ProviderScopeValue}
+  static ProviderScopeValue value({
     Key? key,
-    required BuildContext mainTreeContext,
-    required List<Provider<dynamic>> providers,
+    required BuildContext mainContext,
     Widget? child,
     TransitionBuilder? builder,
   }) {
-    return ProviderScope._valueInternal(
+    return ProviderScopeValue(
       key: key,
-      providers: providers
-          .map((provider) => provider._getProvider(mainTreeContext))
-          .toList(),
-      builder: builder,
-      child: child,
+      mainContext: mainContext,
+      child: _ProviderWidgetBuilder(
+        builder: builder,
+        child: child,
+      ),
     );
   }
 
+  /// {@template ProviderScope.child}
   /// The widget child that gets access to the [providers].
   ///
   /// NOTE: If you also provide a [builder], the [child] will be passed to the
   /// builder to optimize rebuilds, but won't have access to the providers.
+  /// {@endtemplate}
   final Widget? child;
 
   /// The widget builder that gets access to the [providers].
@@ -298,12 +289,6 @@ class ProviderScope extends StatefulWidget {
 
   /// All the providers provided to all the descendants of [ProviderScope].
   final List<Provider<dynamic>> providers;
-
-  /// By default signals and providers are going to be auto-disposed when the
-  ///  Solid widget disposes.
-  /// When using Solid.value this is not wanted because the signals and
-  /// providers are already managed by another Solid widget.
-  final bool _canAutoDisposeProviders;
 
   @override
   State<ProviderScope> createState() => ProviderScopeState();
@@ -330,28 +315,6 @@ class ProviderScope extends StatefulWidget {
     )?.state;
   }
 
-  /// {@template provider-scope.getElement}
-  /// Obtains the SolidElement of a Provider of the given type T and [id]
-  /// corresponding to the nearest [ProviderScope] widget.
-  ///
-  /// Throws if no such element or [ProviderScope] widget is found.
-  ///
-  /// This method should not be called from State.dispose because the element
-  /// tree is no longer stable at that time.
-  ///
-  /// Doesn't listen to the provider so it won't cause the widget to rebuild.
-  ///
-  /// You may call this method inside the `initState` or `build` methods.
-  /// {@endtemplate}
-  static Provider<T> _getProvider<T>(
-    BuildContext context,
-    Provider<T> id,
-  ) {
-    final state = _findState<T>(context, id: id);
-    if (state == null) throw ProviderError<T>(id);
-    return state._getProvider<T>(id)!;
-  }
-
   /// Tries to find a provider of type T from the created providers and returns
   /// it.
   ///
@@ -362,7 +325,14 @@ class ProviderScope extends StatefulWidget {
     required Provider<T> id,
     bool listen = false,
   }) {
-    final state = _findState<T>(context, id: id, listen: listen);
+    // If there is a ProviderValue ancestor, use it as the context
+    final providerScopeValueContext = ProviderScopeValue.maybeOf(context);
+    final effectiveContext = providerScopeValueContext ?? context;
+    final state = _findState<T>(
+      effectiveContext,
+      id: id,
+      listen: listen,
+    );
     if (state == null) return null;
     final createdProvider = state._createdProviders[(id: id, type: T)];
     if (createdProvider != null) return createdProvider as T;
@@ -414,7 +384,6 @@ class ProviderScopeState extends State<ProviderScope> {
       final key = (id: provider, type: provider._valueType);
       _allProvidersInScope[key] = provider;
 
-      // todo: check if injected providers with ProviderScope.value/values get initialized again...
       // create non lazy providers.
       if (!provider.lazy) {
         // create and store the provider
@@ -431,11 +400,9 @@ class ProviderScopeState extends State<ProviderScope> {
     }
 
     // dispose all the created providers
-    if (widget._canAutoDisposeProviders) {
-      _createdProviders.forEach((key, value) {
-        _allProvidersInScope[key]!._disposeFn(context, value);
-      });
-    }
+    _createdProviders.forEach((key, value) {
+      _allProvidersInScope[key]!._disposeFn(context, value);
+    });
 
     _signalDisposeCallbacks.clear();
     _allProvidersInScope.clear();

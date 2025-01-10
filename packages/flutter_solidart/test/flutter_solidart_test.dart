@@ -501,12 +501,12 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return ProviderScope.values(
-              mainTreeContext: context,
-              providers: [counterProvider],
+            return ProviderScope.value(
+              mainContext: context,
               child: Builder(
                 builder: (innerContext) {
                   final counter = counterProvider.observe(innerContext).value;
+                  print('Dialog counter: $counter');
                   return Text('Dialog counter: $counter');
                 },
               ),
@@ -523,6 +523,8 @@ void main() {
                 counterProvider,
               ],
               builder: (context, child) {
+                final counter = counterProvider.observe(context).value;
+                print('main context counter: $counter');
                 return ElevatedButton(
                   onPressed: () {
                     showCounterDialog(context: context);
@@ -558,12 +560,8 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return ProviderScope.values(
-              mainTreeContext: context,
-              providers: [
-                counterProvider,
-                doubleCounterProvider,
-              ],
+            return ProviderScope.value(
+              mainContext: context,
               child: Builder(
                 builder: (innerContext) {
                   final counter = counterProvider.get(innerContext);
@@ -624,9 +622,8 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return ProviderScope.values(
-              providers: [numberContainerProvider],
-              mainTreeContext: context,
+            return ProviderScope.value(
+              mainContext: context,
               child: Builder(
                 builder: (innerContext) {
                   final numberContainer =
@@ -679,9 +676,8 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return ProviderScope.values(
-              providers: [numberContainerProvider],
-              mainTreeContext: context,
+            return ProviderScope.value(
+              mainContext: context,
               child: Builder(
                 builder: (innerContext) {
                   final numberContainer =
@@ -1235,9 +1231,9 @@ void main() {
   //   final counterId = Provider<Signal<int>>(() => Signal(0));
   //   await tester.pumpWidget(
   //     ProviderScopeOverride(
-  //       providers: [
+  //       providers: `
   //         counterId, // todo: somehow override with 100
-  //       ],
+  //       `,
   //       child: MaterialApp(
   //         home: ProviderScope(
   //           providers: [
