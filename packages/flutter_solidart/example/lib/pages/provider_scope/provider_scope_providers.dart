@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
@@ -16,6 +18,15 @@ final secondNumberProvider = Provider(
   // Do not create the provider lazily, but immediately
   lazy: false,
 );
+final autoIncrementNumberProvider = Provider((context) {
+  final count = Signal(0);
+  final timer = Timer.periodic(
+    const Duration(seconds: 1),
+    (_) => count.value++,
+  );
+  count.onDispose(timer.cancel);
+  return count;
+});
 
 class NameContainer {
   const NameContainer(this.name);
@@ -47,6 +58,7 @@ class ProvidersPage extends StatelessWidget {
           nameProvider,
           firstNumberProvider,
           secondNumberProvider,
+          autoIncrementNumberProvider,
         ],
         child: const SomeChild(),
       ),
@@ -60,18 +72,15 @@ class SomeChild extends StatelessWidget {
   Future<void> openDialog(BuildContext context) {
     return showDialog(
       context: context,
-      builder: (_) => ProviderScope.values(
-        mainTreeContext: context,
-        providers: [
-          nameProvider,
-          firstNumberProvider,
-          secondNumberProvider,
-        ],
+      builder: (_) => ProviderScope.value(
+        mainContext: context,
         child: Dialog(
           child: Builder(builder: (innerContext) {
             final nameContainer = nameProvider.get(innerContext);
             final numberContainer1 = firstNumberProvider.get(innerContext);
             final numberContainer2 = secondNumberProvider.get(innerContext);
+            final autoIncrementNumber =
+                autoIncrementNumberProvider.observe(context);
             return SizedBox.square(
               dimension: 100,
               child: Center(
@@ -79,6 +88,7 @@ class SomeChild extends StatelessWidget {
 name: ${nameContainer.name}
 number1: ${numberContainer1.number}
 number2: ${numberContainer2.number}
+autoIncrementNumber: ${autoIncrementNumber.value}
 '''),
               ),
             );
@@ -93,6 +103,7 @@ number2: ${numberContainer2.number}
     final nameContainer = nameProvider.get(context);
     final numberContainer1 = firstNumberProvider.get(context);
     final numberContainer2 = secondNumberProvider.get(context);
+    final autoIncrementNumber = autoIncrementNumberProvider.observe(context);
 
     return Center(
       child: Column(
@@ -103,6 +114,8 @@ number2: ${numberContainer2.number}
           Text('number1: ${numberContainer1.number}'),
           const SizedBox(height: 8),
           Text('number2: ${numberContainer2.number}'),
+          const SizedBox(height: 8),
+          Text('autoIncrementNumber: ${autoIncrementNumber.value}'),
           const SizedBox(height: 8),
           ElevatedButton(
             onPressed: () => openDialog(context),
