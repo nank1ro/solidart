@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/src/widgets/provider_scope.dart';
 
 class _InheritedProviderScopeValue extends InheritedWidget {
   const _InheritedProviderScopeValue({

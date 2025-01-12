@@ -7,14 +7,7 @@ part of '../widgets/provider_scope.dart';
 /// Get the value of a provider.
 extension GetProviderExtension<T> on Provider<T> {
   /// {@macro provider-scope.get}
-  T get(BuildContext context) {
-    final provider = maybeGet(context);
-    if (provider == null) throw ProviderError<T>(this);
-    return provider;
-  }
-
-  /// {@macro provider-scope.maybeGet}
-  T? maybeGet(BuildContext context) {
+  MaybeProvidedValue<T> get(BuildContext context) {
     return ProviderScope._getOrCreateProvider(context, id: this);
   }
 }
@@ -23,14 +16,7 @@ extension GetProviderExtension<T> on Provider<T> {
 extension ObserveSignalInProviderExtension<T extends SignalBase<dynamic>>
     on Provider<T> {
   /// {@macro provider-scope.observe}
-  T observe(BuildContext context) {
-    final provider = maybeObserve(context);
-    if (provider == null) throw ProviderError<T>(this);
-    return provider;
-  }
-
-  /// {@macro provider-scope.maybeObserve}
-  T? maybeObserve(BuildContext context) {
+  MaybeProvidedValue<T> observe(BuildContext context) {
     return ProviderScope._getOrCreateProvider<T>(
       context,
       id: this,
@@ -43,12 +29,9 @@ extension ObserveSignalInProviderExtension<T extends SignalBase<dynamic>>
 extension UpdateSignalInProviderExtension<T> on Provider<Signal<T>> {
   /// {@macro provider-scope.update}
   void update(BuildContext context, T Function(T value) callback) {
-    get(context).updateValue(callback);
-  }
-
-  /// {@macro provider-scope.maybeUpdate}
-  void maybeUpdate(BuildContext context, T Function(T value) callback) {
-    maybeGet(context)?.updateValue(callback);
+    if (get(context) case ProvidedValue(value: final signal)) {
+      signal.updateValue(callback);
+    }
   }
 }
 
@@ -59,18 +42,8 @@ extension UpdateSignalInProviderExtension<T> on Provider<Signal<T>> {
 /// Get the value of a provider.
 extension GetProviderWithArgumentExtension<T, A> on ArgProvider<T, A> {
   /// {@macro provider-scope.get}
-  T get(BuildContext context) {
-    final provider = maybeGet(context);
-    if (provider == null) {
-      throw ProviderWithoutScopeError(this);
-    }
-    return provider;
-  }
-
-  /// {@macro provider-scope.maybeGet}
-  T? maybeGet(BuildContext context) {
-    if (_instance == null) return null;
-
+  MaybeProvidedValue<T> get(BuildContext context) {
+    if (_instance == null) return ProviderNotFound._();
     return ProviderScope._getOrCreateProvider(context, id: _instance!);
   }
 }
@@ -79,17 +52,8 @@ extension GetProviderWithArgumentExtension<T, A> on ArgProvider<T, A> {
 extension ObserveSignalInProviderWithArgumentExtension<
     T extends SignalBase<dynamic>, A> on ArgProvider<T, A> {
   /// {@macro provider-scope.observe}
-  T observe(BuildContext context) {
-    final provider = maybeObserve(context);
-    if (provider == null) {
-      throw ProviderWithoutScopeError(this);
-    }
-    return provider;
-  }
-
-  /// {@macro provider-scope.maybeObserve}
-  T? maybeObserve(BuildContext context) {
-    if (_instance == null) return null;
+  MaybeProvidedValue<T> observe(BuildContext context) {
+    if (_instance == null) return ProviderNotFound._();
     return ProviderScope._getOrCreateProvider<T>(
       context,
       id: _instance!,
@@ -102,15 +66,11 @@ extension ObserveSignalInProviderWithArgumentExtension<
 ///
 extension UpdateSignalInProviderWithArgumentExtension<T, A>
     on ArgProvider<Signal<T>, A> {
-  /// Update the value of a [Signal<T>] that is in this arg provider with an
-  /// argument.
-  void update(BuildContext context, T Function(T value) callback) {
-    get(context).updateValue(callback);
-  }
-
   /// Safely attempt to update the value of the [Signal<T>] that is in this arg
   /// provider with an argument.
-  void maybeUpdate(BuildContext context, T Function(T value) callback) {
-    maybeGet(context)?.updateValue(callback);
+  void update(BuildContext context, T Function(T value) callback) {
+    if (get(context) case ProvidedValue(value: final signal)) {
+      signal.updateValue(callback);
+    }
   }
 }

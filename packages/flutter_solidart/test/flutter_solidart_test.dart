@@ -317,9 +317,9 @@ void main() {
                 doubleCounterProvider,
               ],
               builder: (context, child) {
-                final counter = counterProvider.observe(context).value;
+                final counter = counterProvider.observe(context).unwrap().value;
                 final doubleCounter =
-                    doubleCounterProvider.observe(context).value;
+                    doubleCounterProvider.observe(context).unwrap().value;
                 return Text('$counter $doubleCounter');
               },
             ),

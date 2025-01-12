@@ -10,7 +10,10 @@ typedef VoidCallback = void Function();
 typedef ErrorCallback = void Function(Object error);
 
 /// The callback fired by the observer
-typedef ObserveCallback<T> = void Function(T? previousValue, T value);
+typedef ObserveCallback<T> = void Function(
+  MaybePreviousValue<T> previousValue,
+  T value,
+);
 
 /// {@template solidartexception}
 /// An Exception class to capture Solidart specific exceptions
@@ -62,3 +65,23 @@ Timer Function(void Function()) createDelayedScheduler(Duration duration) =>
     (fn) => Timer(duration, fn);
 
 /// coverage:ignore-end
+
+sealed class MaybePreviousValue<T> {
+  MaybePreviousValue();
+
+  T unwrap() => switch (this) {
+        Present<T>(:final T value) => value,
+        Absent<T>() => throw UnwrapAbsentPreviousValueError(),
+      };
+}
+
+final class Present<T> extends MaybePreviousValue<T> {
+  final T value;
+  Present(this.value);
+}
+
+final class Absent<T> extends MaybePreviousValue<T> {
+  Absent();
+}
+
+final class UnwrapAbsentPreviousValueError extends Error {}

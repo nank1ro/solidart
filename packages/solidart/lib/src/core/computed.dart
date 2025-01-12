@@ -159,17 +159,10 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   }
 
   @override
-  T? get previousValue {
+  MaybePreviousValue<T> get previousValue {
     // cause observation
     value;
     return super.previousValue;
-  }
-
-  @override
-  bool get hasPreviousValue {
-    // cause observation
-    value;
-    return super._hasPreviousValue;
   }
 
   @override

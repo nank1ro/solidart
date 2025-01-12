@@ -199,7 +199,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   @Deprecated('Use previousState instead')
   @override
-  ResourceState<T>? get previousValue => previousState;
+  MaybePreviousValue<ResourceState<T>> get previousValue => previousState;
 
   @Deprecated('Use update instead')
   @override
@@ -210,9 +210,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
   // coverage:ignore-end
 
   /// The previous resource state
-  ResourceState<T>? get previousState {
+  MaybePreviousValue<ResourceState<T>> get previousState {
     _resolveIfNeeded();
-    if (!_resolved) return null;
+    if (!_resolved) return Absent();
     return super.previousValue;
   }
 

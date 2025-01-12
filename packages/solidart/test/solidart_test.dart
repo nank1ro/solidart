@@ -353,30 +353,19 @@ void main() {
         final signal = Signal(0);
         final derived = Computed(() => signal() * 2);
         await pumpEventQueue();
-        expect(derived.hasPreviousValue, false);
-        expect(derived.previousValue, null);
+        expect(derived.previousValue, Absent<int>());
 
         signal.set(1);
         await pumpEventQueue();
-        expect(derived.hasPreviousValue, true);
-        expect(derived.previousValue, 0);
+        expect(derived.previousValue, Present(0));
 
         signal.set(2);
         await pumpEventQueue();
-        expect(derived.hasPreviousValue, true);
-        expect(derived.previousValue, 2);
+        expect(derived.previousValue, Present(2));
 
         signal.set(1);
         await pumpEventQueue();
-        expect(derived.hasPreviousValue, true);
-        expect(derived.previousValue, 4);
-      });
-
-      test('signal has previous value', () {
-        final s = Signal(0);
-        expect(s.hasPreviousValue, false);
-        s.set(1);
-        expect(s.hasPreviousValue, true);
+        expect(derived.previousValue, Present(4));
       });
 
       test('nullable derived signal', () async {
