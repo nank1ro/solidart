@@ -43,7 +43,7 @@ void _notifyDevToolsAboutSignal(
   var previousValue = signal._previousValue;
   if (signal is Resource) {
     value = signal._value.asReady?.value;
-    previousValue = signal._previousValue?.asReady?.value;
+    previousValue = signal._previousValue;
   }
   final jsonValue = _toJson(value);
   final jsonPreviousValue = _toJson(previousValue);
@@ -52,7 +52,6 @@ void _notifyDevToolsAboutSignal(
     'name': signal.name,
     'value': jsonValue,
     'previousValue': jsonPreviousValue,
-    'hasPreviousValue': signal._hasPreviousValue,
     'type': switch (signal) {
       Resource() => 'Resource',
       ListSignal() => 'ListSignal',
@@ -63,8 +62,7 @@ void _notifyDevToolsAboutSignal(
       ReadSignal() => 'ReadSignal',
     },
     'valueType': value.runtimeType.toString(),
-    if (signal._hasPreviousValue)
-      'previousValueType': previousValue.runtimeType.toString(),
+    'previousValueType': previousValue.runtimeType.toString(),
     'disposed': signal._disposed,
     'autoDispose': signal.autoDispose,
     'listenerCount': signal.listenerCount,

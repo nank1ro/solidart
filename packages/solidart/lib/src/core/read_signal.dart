@@ -90,10 +90,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   bool _hasValue = false;
 
   // Tracks the internal previous value
-  T? _previousValue;
-
-  // Whether or not there is a previous value
-  bool _hasPreviousValue = false;
+  MaybePreviousValue<T> _previousValue = const Absent();
 
   /// All the observers
   final List<ObserveCallback<T>> _listeners = [];
@@ -163,23 +160,16 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   @override
   T call() => value;
 
-  @override
-  bool get hasPreviousValue {
-    _reportObserved();
-    return _hasPreviousValue;
-  }
-
   /// The previous value, if any.
   @override
-  T? get previousValue {
+  MaybePreviousValue<T> get previousValue {
     _reportObserved();
     return _previousValue;
   }
 
   /// Sets the previous signal value to [value].
   void _setPreviousValue(T value) {
-    _previousValue = value;
-    _hasPreviousValue = true;
+    _previousValue = Present(value);
   }
 
   bool _disposed = false;

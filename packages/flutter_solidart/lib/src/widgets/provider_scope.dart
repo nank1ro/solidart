@@ -9,6 +9,7 @@ import 'package:solidart/solidart.dart';
 part '../models/provider.dart';
 part '../models/provider_with_argument.dart';
 part '../models/provider_extensions.dart';
+part '../utils/maybe_provider.dart';
 
 /// {@template provider-scope}
 /// Provides [providers] to descendants.
@@ -320,7 +321,7 @@ class ProviderScope extends StatefulWidget {
   ///
   /// The provider is created in case the find fails.
   /// If the provider is not found in any ProviderScope, it returns null.
-  static T? _getOrCreateProvider<T>(
+  static MaybeProvidedValue<T> _getOrCreateProvider<T>(
     BuildContext context, {
     required Provider<T> id,
     bool listen = false,
@@ -333,11 +334,13 @@ class ProviderScope extends StatefulWidget {
       id: id,
       listen: listen,
     );
-    if (state == null) return null;
+    if (state == null) return ProviderNotFound<T>._();
     final createdProvider = state._createdProviders[(id: id, type: T)];
-    if (createdProvider != null) return createdProvider as T;
+    if (createdProvider != null) {
+      return ProvidedValue._(createdProvider as T);
+    }
     // if the provider is not already present, create it lazily
-    return state.createProvider<T>(id);
+    return ProvidedValue._(state.createProvider<T>(id));
   }
 }
 
@@ -595,39 +598,21 @@ class _InheritedProvider extends InheritedModel<Object> {
 }
 
 /// {@template providererror}
-/// Error thrown when the [Provider] of type [id] cannot be found
+/// Error thrown when a [Provider] cannot be found.
 /// {@endtemplate}
-class ProviderError<T> extends Error {
+class ProviderError extends Error {
   /// {@macro providererror}
-  ProviderError(this.id);
-
-  /// The id of the provider
-  final Provider<T> id;
+  ProviderError();
 
   @override
   String toString() {
     return '''
-Error: could not find a ProviderScope containing the given Provider type $T and id $id.
+Error: could not find a ProviderScope containing the injected provider.
 To fix, please:
           
-  * Be sure to have a ProviderScope ancestor, the context used must be a descendant.
-  * Ensure you provided the right ProviderId<T> to context.get(ProviderId<T> id) 
-  * Create providers providing types:
-    ```
-    ProviderScope(
-      providers: [
-          nameProviderId.createProvider(
-            init: () => const NameProvider('Ale'),
-          ),
-          counterProviderId.createProvider(
-            init: () => Signal(0),
-          ),
-      ],
-    )
-    ```
-  * The types `NameProvider` and `Signal<int>` are the providers' types. They
-  only have to be provided when declaring the Ids.
-  E.g. `final nameProviderId = ProviderId<NameProvider>();`.
+  * Be sure to have a ProviderScope ancestor specifying the correct provider.
+    * The context used must be a descendant.
+  * Ensure you injected the right provider.
   
 If none of these solutions work, please file a bug at:
 https://github.com/nank1ro/solidart/issues/new
