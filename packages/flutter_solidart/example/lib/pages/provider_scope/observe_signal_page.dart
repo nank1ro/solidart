@@ -27,19 +27,23 @@ class SomeChild extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // react to the count signal
-    final count = countProvider.observe(context);
 
     return Center(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // render the count value
-          Text('count: ${count.value}'),
+          SignalBuilder(
+            builder: (context, child) {
+              final count = countProvider.get(context);
+              return Text('count: ${count.value}');
+            },
+          ),
           const SizedBox(height: 8),
           ElevatedButton(
             onPressed: () {
               // update the count signal value
-              count.updateValue((value) => value += 1);
+              countProvider.update(context, (value) => value + 1);
             },
             child: const Text('Increment'),
           ),

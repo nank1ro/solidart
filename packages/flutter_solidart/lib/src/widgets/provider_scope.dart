@@ -8,7 +8,7 @@ import 'package:solidart/solidart.dart';
 
 part '../models/provider.dart';
 part '../models/provider_with_argument.dart';
-part '../models/provider_extensions.dart';
+part '../utils/provider_extensions.dart';
 
 /// {@template provider-scope}
 /// Provides [providers] to descendants.
@@ -106,11 +106,6 @@ part '../models/provider_extensions.dart';
 /// you never access the signal it never gets created.
 /// In the `Provider` you can also specify an identifier for having multiple
 /// objects of the same type.
-///
-/// The `context.observe()` method listen to the signal value and rebuilds the
-/// widget when the value changes. It takes an optional `id` that is the signal
-/// identifier that you want to use. This method must be called only inside the
-/// `build` method.
 ///
 /// The `context.get()` method doesn't listen to the signal value. You may use
 /// this method inside the `initState` and `build` methods.
@@ -294,12 +289,9 @@ class ProviderScope extends StatefulWidget {
   State<ProviderScope> createState() => ProviderScopeState();
 
   /// Finds the first SolidState ancestor that satisfies the given [id].
-  ///
-  /// If [listen] is true, the [context] gets subscribed to the given value.
   static ProviderScopeState? _findState<T>(
     BuildContext context, {
     required Provider<T> id,
-    bool listen = false,
   }) {
     // try finding the solid override first
     final solidOverride = ProviderScopeOverride.maybeOf(context);
@@ -311,7 +303,6 @@ class ProviderScope extends StatefulWidget {
     return _InheritedProvider.inheritFromNearest<T>(
       context,
       id,
-      listen: listen,
     )?.state;
   }
 
@@ -323,16 +314,11 @@ class ProviderScope extends StatefulWidget {
   static T? _getOrCreateProvider<T>(
     BuildContext context, {
     required Provider<T> id,
-    bool listen = false,
   }) {
     // If there is a ProviderValue ancestor, use it as the context
     final providerScopeValueContext = ProviderScopeValue.maybeOf(context);
     final effectiveContext = providerScopeValueContext ?? context;
-    final state = _findState<T>(
-      effectiveContext,
-      id: id,
-      listen: listen,
-    );
+    final state = _findState<T>(effectiveContext, id: id);
     if (state == null) return null;
     final createdProvider = state._providers[id];
     if (createdProvider != null) return createdProvider as T;
@@ -349,8 +335,6 @@ class ProviderScopeState extends State<ProviderScope> {
 
   // Stores all the disposeFn for each signal
   final _signalDisposeCallbacks = <DisposeEffect>[];
-  Provider<dynamic>? _changedDependency;
-  int _dependenciesVersion = 0;
 
   @override
   void initState() {
@@ -403,21 +387,6 @@ class ProviderScopeState extends State<ProviderScope> {
     super.dispose();
   }
 
-  /// -- Signals logic
-  void _initializeSignal<S extends SignalBase<dynamic>>(
-    S signal, {
-    required Provider<S> id,
-  }) {
-    final unobserve = signal.observe((_, value) {
-      setState(() {
-        _changedDependency = id;
-        _dependenciesVersion++;
-      });
-    });
-    signal.onDispose(unobserve);
-    _signalDisposeCallbacks.add(unobserve);
-  }
-
   /// -- Providers logic
 
   /// Try to find a [Provider] of type <T> and [id] and returns it
@@ -432,13 +401,6 @@ class ProviderScopeState extends State<ProviderScope> {
     final provider = _getProvider<T>(id)!;
     // create and return it
     final value = provider._create(context);
-    if (provider._isSignal) {
-      _initializeSignal<SignalBase<dynamic>>(
-        value as SignalBase,
-        id: id as Provider<SignalBase<dynamic>>,
-      );
-    }
-
     // store the created provider
     _providers[id] = value;
     return value;
@@ -455,8 +417,6 @@ class ProviderScopeState extends State<ProviderScope> {
   Widget build(BuildContext context) {
     return _InheritedProvider(
       state: this,
-      dependenciesVersion: _dependenciesVersion,
-      changedDependency: _changedDependency,
       child: _ProviderWidgetBuilder(
         builder: widget.builder,
         child: widget.child,
@@ -480,31 +440,26 @@ class ProviderScopeState extends State<ProviderScope> {
 class _InheritedProvider extends InheritedModel<Object> {
   const _InheritedProvider({
     required this.state,
-    required this.changedDependency,
-    required this.dependenciesVersion,
     required super.child,
   });
 
   final ProviderScopeState state;
-  final Provider<dynamic>? changedDependency;
-  final int dependenciesVersion;
 
   @override
   bool updateShouldNotify(covariant _InheritedProvider oldWidget) {
-    return oldWidget.dependenciesVersion != dependenciesVersion;
+    return false;
   }
 
   bool isSupportedAspectWithType<T>(Provider<T> id) {
     return state.isProviderInScope<T>(id);
   }
 
-  /// Fine-grained rebuilding of signals that changed value
   @override
   bool updateShouldNotifyDependent(
     covariant _InheritedProvider oldWidget,
     Set<dynamic> dependencies,
   ) {
-    return dependencies.contains(changedDependency);
+    return false;
   }
 
   // The following two methods are taken from [InheritedModel] and modified
@@ -554,34 +509,19 @@ class _InheritedProvider extends InheritedModel<Object> {
   /// Makes [context] dependent on the specified [id] of an
   /// [_InheritedProvider]
   ///
-  /// When the given [id] of the model changes, the [context] will be
-  /// rebuilt if [listen] is set to true.
-  ///
   /// The dependencies created by this method target the nearest
   /// [_InheritedProvider] ancestor which [isSupportedAspect]  returns true.
-  ///
-  /// If [id] is null this method is the same as
-  /// `context.dependOnInheritedWidgetOfExactType<T>()` if [listen] is true,
-  /// otherwise it's a simple
-  /// `context.getElementForInheritedWidgetOfExactType<T>()`.
   ///
   /// If no ancestor of type T exists, null is returned.
   static _InheritedProvider? inheritFromNearest<T>(
     BuildContext context,
-    Provider<T> id, {
-    // Whether to listen to the [InheritedModel], defaults to false.
-    bool listen = false,
-  }) {
+    Provider<T> id,
+  ) {
     // Try finding a model in the ancestors for which isSupportedAspect(aspect)
     // is true.
     final model = _findNearestModel<T>(context, id);
     if (model == null) {
       return null;
-    }
-
-    // depend on the inherited element if [listen] is true
-    if (listen) {
-      context.dependOnInheritedElement(model, aspect: id) as _InheritedProvider;
     }
 
     return model.widget as _InheritedProvider;

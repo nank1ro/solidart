@@ -316,12 +316,14 @@ void main() {
                 counterProvider,
                 doubleCounterProvider,
               ],
-              builder: (context, child) {
-                final counter = counterProvider.observe(context).value;
-                final doubleCounter =
-                    doubleCounterProvider.observe(context).value;
-                return Text('$counter $doubleCounter');
-              },
+              child: SignalBuilder(
+                builder: (context, child) {
+                  final counter = counterProvider.get(context).value;
+                  final doubleCounter =
+                      doubleCounterProvider.get(context).value;
+                  return Text('$counter $doubleCounter');
+                },
+              ),
             ),
           ),
         ),
@@ -347,11 +349,13 @@ void main() {
               providers: [
                 doubleCounterProvider,
               ],
-              builder: (context, child) {
-                final doubleCounter =
-                    doubleCounterProvider.observe(context).value;
-                return Text('$doubleCounter');
-              },
+              child: SignalBuilder(
+                builder: (context, child) {
+                  final doubleCounter =
+                      doubleCounterProvider.get(context).value;
+                  return Text('$doubleCounter');
+                },
+              ),
             ),
           ),
         ),
@@ -376,10 +380,12 @@ void main() {
               providers: [
                 counterProvider,
               ],
-              builder: (context, child) {
-                final counter = counterProvider.observe(context).value;
-                return Text('$counter');
-              },
+              child: SignalBuilder(
+                builder: (context, child) {
+                  final counter = counterProvider.get(context).value;
+                  return Text('$counter');
+                },
+              ),
             ),
           ),
         ),
@@ -404,10 +410,12 @@ void main() {
               providers: [
                 counterProvider,
               ],
-              builder: (context, child) {
-                final counter = counterProvider.observe(context).value;
-                return Text('$counter');
-              },
+              child: SignalBuilder(
+                builder: (context, child) {
+                  final counter = counterProvider.get(context).value;
+                  return Text('$counter');
+                },
+              ),
             ),
           ),
         ),
@@ -470,22 +478,20 @@ void main() {
             providers: [
               counterProvider,
             ],
-            builder: (context, child) {
-              final counter = invalidCounterProvider.get(context);
-              return SignalBuilder(
-                builder: (context, _) {
-                  return Text(counter().toString());
-                },
-              );
-            },
+            child: SignalBuilder(
+              builder: (context, _) {
+                final counter = invalidCounterProvider.get(context);
+                return Text(counter().toString());
+              },
+            ),
           ),
         ),
       ),
     );
     expect(
       tester.takeException(),
-      const TypeMatcher<ProviderError<Signal<int>>>().having(
-        (pe) => pe.id,
+      const TypeMatcher<SolidartCaughtException>().having(
+        (error) => (error.exception as ProviderError).id,
         'Matching the wrong ID should result in a ProviderError.',
         equals(invalidCounterProvider),
       ),
@@ -500,12 +506,12 @@ void main() {
       Future<void> showCounterDialog({required BuildContext context}) {
         return showDialog(
           context: context,
-          builder: (dialogContext) {
+          builder: (_) {
             return ProviderScope.value(
               mainContext: context,
-              child: Builder(
-                builder: (innerContext) {
-                  final counter = counterProvider.observe(innerContext).value;
+              child: SignalBuilder(
+                builder: (innerContext, child) {
+                  final counter = counterProvider.get(innerContext).value;
                   print('Dialog counter: $counter');
                   return Text('Dialog counter: $counter');
                 },
@@ -519,17 +525,19 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ProviderScope(
-              providers: [
-                counterProvider,
-              ],
+              providers: [counterProvider],
               builder: (context, child) {
-                final counter = counterProvider.observe(context).value;
-                print('main context counter: $counter');
-                return ElevatedButton(
-                  onPressed: () {
-                    showCounterDialog(context: context);
+                return SignalBuilder(
+                  builder: (context, child) {
+                    final counter = counterProvider.get(context).value;
+                    print('main context counter: $counter');
+                    return ElevatedButton(
+                      onPressed: () {
+                        showCounterDialog(context: context);
+                      },
+                      child: const Text('show dialog'),
+                    );
                   },
-                  child: const Text('show dialog'),
                 );
               },
             ),
@@ -564,10 +572,11 @@ void main() {
               mainContext: context,
               child: Builder(
                 builder: (innerContext) {
-                  final counter = counterProvider.get(innerContext);
-                  final doubleCounter = doubleCounterProvider.get(innerContext);
                   return SignalBuilder(
                     builder: (_, __) {
+                      final counter = counterProvider.get(innerContext);
+                      final doubleCounter =
+                          doubleCounterProvider.get(innerContext);
                       return Text(
                         '''Dialog counter: ${counter()} doubleCounter: ${doubleCounter()}''',
                       );
@@ -920,7 +929,7 @@ void main() {
   });
 
   testWidgets(
-      'Test ProviderScope throws an error for multiple providers of the same type',
+      '''Test ProviderScope throws an error for multiple providers of the same type''',
       (tester) async {
     final numberContainerProvider = Provider((_) => const NumberContainer(1));
     await tester.pumpWidget(
@@ -951,20 +960,22 @@ void main() {
             providers: [
               counterProvider,
             ],
-            builder: (context, child) {
-              final counter = counterProvider.observe(context).value;
-              return Column(
-                children: [
-                  Text('$counter'),
-                  ElevatedButton(
-                    onPressed: () {
-                      counterProvider.update(context, (value) => value + 1);
-                    },
-                    child: const Text('add'),
-                  ),
-                ],
-              );
-            },
+            child: SignalBuilder(
+              builder: (context, child) {
+                final counter = counterProvider.get(context).value;
+                return Column(
+                  children: [
+                    Text('$counter'),
+                    ElevatedButton(
+                      onPressed: () {
+                        counterProvider.update(context, (value) => value + 1);
+                      },
+                      child: const Text('add'),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -988,10 +999,14 @@ void main() {
               counterProvider(0),
             ],
             builder: (context, child) {
-              final counter = counterProvider.observe(context).value;
               return Column(
                 children: [
-                  Text('$counter'),
+                  SignalBuilder(
+                    builder: (context, child) {
+                      final counter = counterProvider.get(context).value;
+                      return Text('$counter');
+                    },
+                  ),
                   ElevatedButton(
                     onPressed: () {
                       counterProvider.update(context, (value) => value + 1);

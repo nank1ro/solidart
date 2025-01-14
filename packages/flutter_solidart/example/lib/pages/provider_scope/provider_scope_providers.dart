@@ -19,7 +19,7 @@ final secondNumberProvider = Provider(
   lazy: false,
 );
 final autoIncrementNumberProvider = Provider((context) {
-  final count = Signal(0);
+  final count = Signal(0, autoDispose: false);
   final timer = Timer.periodic(
     const Duration(seconds: 1),
     (_) => count.value++,
@@ -75,12 +75,12 @@ class SomeChild extends StatelessWidget {
       builder: (_) => ProviderScope.value(
         mainContext: context,
         child: Dialog(
-          child: Builder(builder: (innerContext) {
+          child: SignalBuilder(builder: (innerContext, child) {
             final nameContainer = nameProvider.get(innerContext);
             final numberContainer1 = firstNumberProvider.get(innerContext);
             final numberContainer2 = secondNumberProvider.get(innerContext);
             final autoIncrementNumber =
-                autoIncrementNumberProvider.observe(context);
+                autoIncrementNumberProvider.get(context);
             return SizedBox.square(
               dimension: 100,
               child: Center(
@@ -100,29 +100,30 @@ autoIncrementNumber: ${autoIncrementNumber.value}
 
   @override
   Widget build(BuildContext context) {
-    final nameContainer = nameProvider.get(context);
-    final numberContainer1 = firstNumberProvider.get(context);
-    final numberContainer2 = secondNumberProvider.get(context);
-    final autoIncrementNumber = autoIncrementNumberProvider.observe(context);
-
-    return Center(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text('name: ${nameContainer.name}'),
-          const SizedBox(height: 8),
-          Text('number1: ${numberContainer1.number}'),
-          const SizedBox(height: 8),
-          Text('number2: ${numberContainer2.number}'),
-          const SizedBox(height: 8),
-          Text('autoIncrementNumber: ${autoIncrementNumber.value}'),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: () => openDialog(context),
-            child: const Text('Open dialog'),
-          ),
-        ],
-      ),
-    );
+    return SignalBuilder(builder: (context, child) {
+      final nameContainer = nameProvider.get(context);
+      final numberContainer1 = firstNumberProvider.get(context);
+      final numberContainer2 = secondNumberProvider.get(context);
+      final autoIncrementNumber = autoIncrementNumberProvider.get(context);
+      return Center(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text('name: ${nameContainer.name}'),
+            const SizedBox(height: 8),
+            Text('number1: ${numberContainer1.number}'),
+            const SizedBox(height: 8),
+            Text('number2: ${numberContainer2.number}'),
+            const SizedBox(height: 8),
+            Text('autoIncrementNumber: ${autoIncrementNumber.value}'),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () => openDialog(context),
+              child: const Text('Open dialog'),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }

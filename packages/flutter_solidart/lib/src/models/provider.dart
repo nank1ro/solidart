@@ -59,8 +59,6 @@ class Provider<T> {
   /// {@endtemplate}
   final bool lazy;
 
-  bool get _isSignal => this is Provider<SignalBase>;
-
   /// {@template Provider.create}
   /// The function called to create the element.
   /// {@endtemplate}

@@ -67,11 +67,15 @@ class FullName extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = firstNameProvider.observe(context).value;
-    final lastName = lastNameProvider.observe(context).value;
-    return ListTile(
-      title: Text('First Name: $firstName'),
-      subtitle: Text('LastName: $lastName'),
+    return SignalBuilder(
+      builder: (context, child) {
+        final firstName = firstNameProvider.get(context).value;
+        final lastName = lastNameProvider.get(context).value;
+        return ListTile(
+          title: Text('First Name: $firstName'),
+          subtitle: Text('LastName: $lastName'),
+        );
+      },
     );
   }
 }

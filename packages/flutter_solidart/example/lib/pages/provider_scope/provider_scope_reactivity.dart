@@ -82,9 +82,13 @@ class _Counter1 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter1 = firstCounterProvider.observe(context).value;
-    print('build counter1');
-    return Text('Counter1: $counter1');
+    return SignalBuilder(
+      builder: (context, child) {
+        final counter1 = firstCounterProvider.get(context).value;
+        print('build counter1');
+        return Text('Counter1: $counter1');
+      },
+    );
   }
 }
 
@@ -93,8 +97,12 @@ class _Counter2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counter2 = secondCounterProvider.observe(context).value;
-    print('build counter2');
-    return Text('Counter2: $counter2');
+    return SignalBuilder(
+      builder: (context, child) {
+        final counter2 = secondCounterProvider.get(context).value;
+        print('build counter2');
+        return Text('Counter2: $counter2');
+      },
+    );
   }
 }
