@@ -334,7 +334,7 @@ class ProviderScope extends StatefulWidget {
       listen: listen,
     );
     if (state == null) return null;
-    final createdProvider = state._createdProviders[(id: id, type: T)];
+    final createdProvider = state._providers[id];
     if (createdProvider != null) return createdProvider as T;
     // if the provider is not already present, create it lazily
     return state.createProvider<T>(id);
@@ -343,14 +343,9 @@ class ProviderScope extends StatefulWidget {
 
 /// The state of the [ProviderScope] widget
 class ProviderScopeState extends State<ProviderScope> {
-  /// Stores all the providers in the current scope
-  final _allProvidersInScope =
-      HashMap<({Type type, Provider<dynamic> id}), Provider<dynamic>>();
-
-  // Stores all the created providers.
+  // Stores all the providers.
   // The key is the provider, while the value is its value.
-  final _createdProviders =
-      HashMap<({Type type, Provider<dynamic> id}), Object?>();
+  final _providers = HashMap<Provider<dynamic>, Object?>();
 
   // Stores all the disposeFn for each signal
   final _signalDisposeCallbacks = <DisposeEffect>[];
@@ -381,13 +376,12 @@ class ProviderScopeState extends State<ProviderScope> {
     );
 
     for (final provider in widget.providers) {
-      final key = (id: provider, type: provider._valueType);
-      _allProvidersInScope[key] = provider;
-
       // create non lazy providers.
       if (!provider.lazy) {
         // create and store the provider
-        _createdProviders[key] = provider._create(context);
+        _providers[provider] = provider._create(context);
+      } else {
+        _providers[provider] = null;
       }
     }
   }
@@ -400,13 +394,12 @@ class ProviderScopeState extends State<ProviderScope> {
     }
 
     // dispose all the created providers
-    _createdProviders.forEach((key, value) {
-      _allProvidersInScope[key]!._disposeFn(context, value);
-    });
+    for (final key in _providers.keys) {
+      key._disposeFn(context, _providers[key]);
+    }
 
     _signalDisposeCallbacks.clear();
-    _allProvidersInScope.clear();
-    _createdProviders.clear();
+    _providers.clear();
     super.dispose();
   }
 
@@ -427,9 +420,10 @@ class ProviderScopeState extends State<ProviderScope> {
 
   /// -- Providers logic
 
-  /// Try to find a [Provider] of type <T> or [id] and returns it
+  /// Try to find a [Provider] of type <T> and [id] and returns it
   Provider<T>? _getProvider<T>(Provider<T> id) {
-    return _allProvidersInScope[(type: T, id: id)] as Provider<T>?;
+    if (_providers.containsKey(id)) return id;
+    return null;
   }
 
   /// Creates a provider of type T and stores it
@@ -446,7 +440,7 @@ class ProviderScopeState extends State<ProviderScope> {
     }
 
     // store the created provider
-    _createdProviders[(type: T, id: id)] = value;
+    _providers[id] = value;
     return value;
   }
 
@@ -475,7 +469,7 @@ class ProviderScopeState extends State<ProviderScope> {
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     properties.add(
-      IterableProperty('createdProviders', _createdProviders.values),
+      IterableProperty('createdProviders', _providers.values),
     );
   }
 
