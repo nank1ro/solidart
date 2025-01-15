@@ -425,7 +425,7 @@ void main() {
           body: Solid(
             providers: [
               Provider<Signal<int>>(create: () => s, id: 'counter'),
-              Provider<ReadSignal<int>>(
+              Provider<Computed<int>>(
                 create: () => s2,
                 id: 'double-counter',
               ),
