@@ -16,8 +16,9 @@ class ArgProvider<T, A> {
     this.lazy = true,
   }) {
     this.dispose = (provider) {
-      dispose?.call(provider);
+      print('dispose $provider and set instance to null');
       _instance = null;
+      dispose?.call(provider);
     };
   }
 
@@ -34,6 +35,7 @@ class ArgProvider<T, A> {
 
   /// Given an argument, creates a [Provider] with that argument.
   Provider<T> call(A arg) {
+    print('call with $arg and _instance is $_instance');
     _instance ??= Provider<T>(
       (context) => create(context, arg),
       dispose: dispose,

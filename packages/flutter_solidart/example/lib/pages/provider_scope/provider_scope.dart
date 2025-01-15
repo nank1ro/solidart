@@ -1,3 +1,4 @@
+import 'package:example/pages/provider_scope/changing_key.dart';
 import 'package:example/pages/provider_scope/multiple_signals_page.dart';
 import 'package:example/pages/provider_scope/provider_scope_providers.dart';
 import 'package:example/pages/provider_scope/provider_scope_reactivity.dart';
@@ -12,6 +13,7 @@ final _pages = {
   'Observe Signal': () => const ObserveSignalPage(),
   'Multiple Signals': () => const MultipleSignalsPage(),
   'Reactivity': () => const ProviderScopeReactivityPage(),
+  'ChangingKey': () => const ChangingKeyPage(),
 };
 
 class ProviderScopePage extends StatelessWidget {
