@@ -1,3 +1,5 @@
+// ignore_for_file: lines_longer_than_80_chars
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -1196,8 +1198,6 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
-
-  // todo: ProviderScopeOverride needs to override the value in a different way
 
   // testWidgets(
   //     'SolidOverride should override providers regardless of the hierarchy',

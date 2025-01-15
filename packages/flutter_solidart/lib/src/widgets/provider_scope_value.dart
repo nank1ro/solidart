@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/src/widgets/provider_scope.dart';
 
 class _InheritedProviderScopeValue extends InheritedWidget {
   const _InheritedProviderScopeValue({
@@ -37,6 +36,8 @@ class ProviderScopeValue extends StatelessWidget {
   /// {@macro ProviderScope.child}
   final Widget child;
 
+  /// Retrieve the ProviderScopeValue from the closest ancestor.
+  /// Returns the BuildContext, if the widget is found.
   static BuildContext? maybeOf(BuildContext context) {
     final provider = context
         .getElementForInheritedWidgetOfExactType<_InheritedProviderScopeValue>()
