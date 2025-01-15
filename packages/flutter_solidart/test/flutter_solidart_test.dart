@@ -466,41 +466,9 @@ void main() {
     expect(counterFinder(1, 2), findsOneWidget);
   });
 
-  testWidgets('Test ProviderScope throws an error for a not found signal',
-      (tester) async {
-    final counterProvider = Provider((_) => Signal(0));
-    final invalidCounterProvider = Provider((_) => Signal(0));
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ProviderScope(
-            providers: [
-              counterProvider,
-            ],
-            child: SignalBuilder(
-              builder: (context, _) {
-                final counter = invalidCounterProvider.get(context);
-                return Text(counter().toString());
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-    expect(
-      tester.takeException(),
-      const TypeMatcher<SolidartCaughtException>().having(
-        (error) => (error.exception as ProviderError).id,
-        'Matching the wrong ID should result in a ProviderError.',
-        equals(invalidCounterProvider),
-      ),
-    );
-  });
-
   group('Test ProviderScope.value', () {
     testWidgets('Test ProviderScope.value with observe', (tester) async {
-      final s = Signal(0);
+      final s = Signal(0, autoDispose: false);
       final counterProvider = Provider((_) => s);
 
       Future<void> showCounterDialog({required BuildContext context}) {
@@ -512,7 +480,6 @@ void main() {
               child: SignalBuilder(
                 builder: (innerContext, child) {
                   final counter = counterProvider.get(innerContext).value;
-                  print('Dialog counter: $counter');
                   return Text('Dialog counter: $counter');
                 },
               ),
@@ -526,20 +493,12 @@ void main() {
           home: Scaffold(
             body: ProviderScope(
               providers: [counterProvider],
-              builder: (context, child) {
-                return SignalBuilder(
-                  builder: (context, child) {
-                    final counter = counterProvider.get(context).value;
-                    print('main context counter: $counter');
-                    return ElevatedButton(
-                      onPressed: () {
-                        showCounterDialog(context: context);
-                      },
-                      child: const Text('show dialog'),
-                    );
-                  },
-                );
-              },
+              builder: (context, child) => ElevatedButton(
+                onPressed: () {
+                  showCounterDialog(context: context);
+                },
+                child: const Text('show dialog'),
+              ),
             ),
           ),
         ),
@@ -1312,4 +1271,36 @@ void main() {
   //     const TypeMatcher<FlutterError>(),
   //   );
   // });
+
+  testWidgets('Test ProviderScope throws an error for a not found signal',
+      (tester) async {
+    final counterProvider = Provider((_) => Signal(0));
+    final invalidCounterProvider = Provider((_) => Signal(0));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProviderScope(
+            providers: [
+              counterProvider,
+            ],
+            child: SignalBuilder(
+              builder: (context, _) {
+                final counter = invalidCounterProvider.get(context);
+                return Text(counter().toString());
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.takeException(),
+      const TypeMatcher<SolidartCaughtException>().having(
+        (error) => (error.exception as ProviderError).id,
+        'Matching the wrong ID should result in a ProviderError.',
+        equals(invalidCounterProvider),
+      ),
+    );
+  });
 }
