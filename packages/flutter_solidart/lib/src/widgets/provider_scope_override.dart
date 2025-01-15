@@ -33,10 +33,9 @@ class ProviderScopeOverride extends StatefulWidget {
   /// [ProviderScope].
   final List<Provider<dynamic>> providers;
 
-  /// Returns the [ProviderScopeOverrideState] of the [ProviderScopeOverride]
-  /// widget.
-  /// Throws an [AssertionError] if the [ProviderScopeOverride] widget is not
-  /// found in the ancestor widget tree.
+  /// Returns the [ProviderScopeOverrideState] of the [ProviderScopeOverride] widget.
+  /// Throws an [AssertionError] if the [ProviderScopeOverride] widget is not found in
+  /// the ancestor widget tree.
   static ProviderScopeOverrideState of(BuildContext context) {
     final inherited = maybeOf(context);
     if (inherited == null) {
@@ -47,10 +46,9 @@ class ProviderScopeOverride extends StatefulWidget {
     return inherited;
   }
 
-  /// Returns the [ProviderScopeOverrideState] of the [ProviderScopeOverride]
-  /// widget.
-  /// Returns null if the [ProviderScopeOverride] widget is not found in the
-  /// ancestor widget tree.
+  /// Returns the [ProviderScopeOverrideState] of the [ProviderScopeOverride] widget.
+  /// Returns null if the [ProviderScopeOverride] widget is not found in the ancestor
+  /// widget tree.
   static ProviderScopeOverrideState? maybeOf(BuildContext context) {
     final provider = context
         .getElementForInheritedWidgetOfExactType<_InheritedSolidOverride>()
