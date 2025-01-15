@@ -1,5 +1,14 @@
 import 'dart:async';
 
+// ignore: depend_on_referenced_packages
+import 'package:alien_signals/alien_signals.dart'
+    // ignore: combinators_ordering
+    show
+        activeSub,
+        activeTrackId,
+        setActiveSub,
+        nextTrackId;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:solidart/solidart.dart';
@@ -104,7 +113,6 @@ class SignalBuilderElement extends ComponentElement {
   final void Function(Object error)? onError;
 
   Element? _parent;
-  Widget? _built;
   Effect? _effect;
 
   SignalBuilder get _widget => widget as SignalBuilder;
@@ -153,14 +161,15 @@ class SignalBuilderElement extends ComponentElement {
 
   @override
   Widget build() {
+    final prevSub = activeSub;
+    final prevTrackId = activeTrackId;
     // ignore: invalid_use_of_protected_member
-    _effect!.track(
-      () {
-        _built = _widget.build(_parent!);
-      },
-      preventDisposal: true,
-    );
+    setActiveSub(_effect?.subscriber, nextTrackId());
 
-    return _built!;
+    try {
+      return _widget.build(_parent!);
+    } finally {
+      setActiveSub(prevSub, prevTrackId);
+    }
   }
 }

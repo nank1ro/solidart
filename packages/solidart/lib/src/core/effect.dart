@@ -188,6 +188,10 @@ class Effect implements ReactionInterface {
 
   late final alien.Effect<void> _internalEffect;
 
+  /// The subscriber of the effect, do not use it directly.
+  @protected
+  alien.Subscriber get subscriber => _internalEffect;
+
   @override
   bool get disposed => _disposed;
 
