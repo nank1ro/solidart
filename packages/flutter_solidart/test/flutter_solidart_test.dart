@@ -923,13 +923,13 @@ void main() {
             ],
             child: SignalBuilder(
               builder: (context, child) {
-                final counter = counterProvider.get(context).value;
+                final counter = counterProvider.get(context);
                 return Column(
                   children: [
-                    Text('$counter'),
+                    Text('${counter.value}'),
                     ElevatedButton(
                       onPressed: () {
-                        counterProvider.update(context, (value) => value + 1);
+                        counter.updateValue((value) => value + 1);
                       },
                       child: const Text('add'),
                     ),
@@ -960,17 +960,17 @@ void main() {
               counterProvider(0),
             ],
             builder: (context, child) {
+              final counter = counterProvider.get(context);
               return Column(
                 children: [
                   SignalBuilder(
                     builder: (context, child) {
-                      final counter = counterProvider.get(context).value;
-                      return Text('$counter');
+                      return Text('${counter.value}');
                     },
                   ),
                   ElevatedButton(
                     onPressed: () {
-                      counterProvider.update(context, (value) => value + 1);
+                      counter.updateValue((value) => value + 1);
                     },
                     child: const Text('add'),
                   ),

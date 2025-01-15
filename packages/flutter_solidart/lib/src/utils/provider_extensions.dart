@@ -19,19 +19,6 @@ extension GetProviderExtension<T> on Provider<T> {
   }
 }
 
-/// Update the value of a [Signal] that is in a provider.
-extension UpdateSignalInProviderExtension<T> on Provider<Signal<T>> {
-  /// {@macro provider-scope.update}
-  void update(BuildContext context, T Function(T value) callback) {
-    get(context).updateValue(callback);
-  }
-
-  /// {@macro provider-scope.maybeUpdate}
-  void maybeUpdate(BuildContext context, T Function(T value) callback) {
-    maybeGet(context)?.updateValue(callback);
-  }
-}
-
 /// -------------------------------
 /// ProviderWithArgument extensions
 /// -------------------------------
@@ -52,22 +39,5 @@ extension GetProviderWithArgumentExtension<T, A> on ArgProvider<T, A> {
     if (_instance == null) return null;
 
     return ProviderScope._getOrCreateProvider(context, id: _instance!);
-  }
-}
-
-/// Update the value of a [SignalBase] that is in a provider with arguments.
-///
-extension UpdateSignalInProviderWithArgumentExtension<T, A>
-    on ArgProvider<Signal<T>, A> {
-  /// Update the value of a [Signal<T>] that is in this arg provider with an
-  /// argument.
-  void update(BuildContext context, T Function(T value) callback) {
-    get(context).updateValue(callback);
-  }
-
-  /// Safely attempt to update the value of the [Signal<T>] that is in this arg
-  /// provider with an argument.
-  void maybeUpdate(BuildContext context, T Function(T value) callback) {
-    maybeGet(context)?.updateValue(callback);
   }
 }

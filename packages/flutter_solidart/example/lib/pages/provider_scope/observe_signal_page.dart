@@ -26,16 +26,16 @@ class SomeChild extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // react to the count signal
+    // retrieve the count signal
+    final count = countProvider.get(context);
 
     return Center(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // render the count value
+          // react to the count value
           SignalBuilder(
             builder: (context, child) {
-              final count = countProvider.get(context);
               return Text('count: ${count.value}');
             },
           ),
@@ -43,7 +43,7 @@ class SomeChild extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               // update the count signal value
-              countProvider.update(context, (value) => value + 1);
+              count.updateValue((value) => value + 1);
             },
             child: const Text('Increment'),
           ),
