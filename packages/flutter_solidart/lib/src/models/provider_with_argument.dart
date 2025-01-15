@@ -11,33 +11,34 @@ typedef CreateProviderFnWithArg<T, A> = T Function(BuildContext context, A arg);
 class ArgProvider<T, A> {
   /// {@macro arg-provider}
   ArgProvider._(
-    this.create, {
+    CreateProviderFnWithArg<T, A> create, {
     DisposeProviderFn<T>? dispose,
-    this.lazy = true,
-  }) {
-    this.dispose = (provider) {
+    bool lazy = true,
+  })  : _create = create,
+        _lazy = lazy {
+    this._dispose = (provider) {
       dispose?.call(provider);
       _instance = null;
     };
   }
 
   /// {@macro Provider.lazy}
-  final bool lazy;
+  final bool _lazy;
 
   /// {@macro Provider.create}
-  late final CreateProviderFnWithArg<T, A> create;
+  final CreateProviderFnWithArg<T, A> _create;
 
   /// {@macro Provider.dispose}
-  DisposeProviderFn<T>? dispose;
+  DisposeProviderFn<T>? _dispose;
 
   Provider<T>? _instance;
 
   /// Given an argument, creates a [Provider] with that argument.
   Provider<T> call(A arg) {
     _instance ??= Provider<T>(
-      (context) => create(context, arg),
-      dispose: dispose,
-      lazy: lazy,
+      (context) => _create(context, arg),
+      dispose: _dispose,
+      lazy: _lazy,
     );
     return _instance!;
   }
@@ -47,4 +48,18 @@ class ArgProvider<T, A> {
 
   /// Returns the type of the arg
   Type get _argumentType => A;
+
+  ArgProviderOverride<T, A> overrideWith({
+    CreateProviderFnWithArg<T, A>? create,
+    A? initialArgument,
+    DisposeProviderFn<T>? dispose,
+    bool? lazy,
+  }) =>
+      ArgProviderOverride._(
+        this,
+        create: create,
+        dispose: dispose,
+        initialArgument: initialArgument,
+        lazy: lazy,
+      );
 }

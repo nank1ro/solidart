@@ -1,7 +1,7 @@
 part of '../widgets/provider_scope.dart';
 
 /// A function that creates an object of type [T].
-typedef CreateProviderFn<T> = T Function(BuildContext);
+typedef CreateProviderFn<T> = T Function(BuildContext context);
 
 /// A function that disposes an object of type [T].
 typedef DisposeProviderFn<T> = void Function(T value);
@@ -18,7 +18,7 @@ typedef DisposeProviderFn<T> = void Function(T value);
 /// The `create` callback is lazily called. It is called the first time the
 /// value is read, instead of the first time Provider is inserted in the widget
 /// tree.
-/// This behavior can be disabled by passing [lazy] false.
+/// This behavior can be disabled by passing [_lazy] false.
 ///
 /// The [_dispose] method will not be called if the provider is a `SignalBase`,
 /// because they are disposed automatically when there aren't any subscribers.
@@ -39,9 +39,10 @@ class Provider<T> {
     DisposeProviderFn<T>? dispose,
 
     /// {@macro Provider.lazy}
-    this.lazy = true,
+    bool lazy = true,
   })  : _create = create,
-        _dispose = dispose;
+        _dispose = dispose,
+        _lazy = lazy;
 
   /// {@macro arg-provider}
   static ArgProvider<T, A> withArgument<T, A>(
@@ -57,12 +58,12 @@ class Provider<T> {
   /// If this value is true the provider will be [_create]d only
   /// when retrieved from descendants.
   /// {@endtemplate}
-  final bool lazy;
+  final bool _lazy;
 
   /// {@template Provider.create}
   /// The function called to create the element.
   /// {@endtemplate}
-  late final CreateProviderFn<T> _create;
+  final CreateProviderFn<T> _create;
 
   /// {@template Provider.dispose}
   /// An optional dispose function called when the Solid that created this
@@ -78,4 +79,16 @@ class Provider<T> {
   /// Returns the type of the value
 
   Type get _valueType => T;
+
+  ProviderOverride<T> overrideWith({
+    CreateProviderFn<T>? create,
+    DisposeProviderFn<T>? dispose,
+    bool? lazy,
+  }) =>
+      ProviderOverride._(
+        this,
+        create: create,
+        dispose: dispose,
+        lazy: lazy,
+      );
 }

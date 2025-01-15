@@ -7,6 +7,7 @@ import 'package:flutter_solidart/src/widgets/provider_scope_value.dart';
 import 'package:solidart/solidart.dart';
 
 part '../models/provider.dart';
+part '../models/provider_override.dart';
 part '../models/provider_with_argument.dart';
 part '../utils/provider_extensions.dart';
 
@@ -361,7 +362,7 @@ class ProviderScopeState extends State<ProviderScope> {
 
     for (final provider in widget.providers) {
       // create non lazy providers.
-      if (!provider.lazy) {
+      if (!provider._lazy) {
         // create and store the provider
         _providers[provider] = provider._create(context);
       } else {
