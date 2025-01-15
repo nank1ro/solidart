@@ -56,7 +56,7 @@ class ReadSignal<T> implements SignalBase<T> {
     required this.comparator,
     required this.trackPreviousValue,
   }) : _hasValue = true {
-    _internalSignal = alien.Signal(initialValue);
+    _internalSignal = alien.Signal(Some(initialValue));
     _notifySignalCreation();
   }
 
@@ -67,7 +67,9 @@ class ReadSignal<T> implements SignalBase<T> {
     required this.trackInDevTools,
     required this.comparator,
     required this.trackPreviousValue,
-  }) : _hasValue = false;
+  }) : _hasValue = false {
+    _internalSignal = alien.Signal(None<T>());
+  }
 
   /// {@macro SignalBase.name}
   @override
@@ -94,14 +96,12 @@ class ReadSignal<T> implements SignalBase<T> {
   final ValueComparator<T?> comparator;
 
   /// Tracks the internal value
-  late final alien.Signal<T> _internalSignal;
+  late final alien.Signal<Option<T>> _internalSignal;
 
   @override
   bool get hasValue {
-    // TODO: this is bad
-    if (!_hasValue) return false;
-    // cause obersevation
-    value;
+    // cause observation
+    _internalSignal.get();
     return _hasValue;
   }
 
@@ -115,9 +115,9 @@ class ReadSignal<T> implements SignalBase<T> {
 
   T get _value {
     if (_disposed) {
-      return alien.untrack(() => _internalSignal.get());
+      return alien.untrack(() => _internalSignal.get().unwrap());
     }
-    return _internalSignal.get();
+    return _internalSignal.get().unwrap();
   }
 
   late T _untrackedValue;
@@ -135,7 +135,7 @@ class ReadSignal<T> implements SignalBase<T> {
 
   set _value(T newValue) {
     _untrackedValue = newValue;
-    _internalSignal.currentValue = newValue;
+    _internalSignal.currentValue = Some(newValue);
     final subs = _internalSignal.subs;
     if (subs != null) {
       alien.propagate(subs);
@@ -165,7 +165,7 @@ class ReadSignal<T> implements SignalBase<T> {
   void _setValue(T newValue) {
     final firstValue = !_hasValue;
 
-    if (firstValue) _internalSignal = alien.Signal(newValue);
+    if (firstValue) _internalSignal.currentValue = Some(newValue);
     _hasValue = true;
 
     // // skip if the value are equal
