@@ -63,7 +63,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
       return;
     }
     _setPreviousValue(List<E>.of(_value));
-    _value = newValue;
+    _untrackedValue = value = newValue;
     _notifyChanged();
   }
 
@@ -934,7 +934,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
       '''ListSignal<$E>(value: $_value, previousValue: $_previousValue)''';
 
   void _notifyChanged() {
-    // _reportChanged();
+    _reportChanged();
     _notifyListeners();
     _notifySignalUpdate();
   }

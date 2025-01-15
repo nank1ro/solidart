@@ -63,7 +63,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
       return;
     }
     _setPreviousValue(Set<E>.of(_value));
-    _value = newValue;
+    _untrackedValue = _value = newValue;
     _notifyChanged();
   }
 
@@ -484,7 +484,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
       '''SetSignal<$E>(value: $_value, previousValue: $_previousValue)''';
 
   void _notifyChanged() {
-    // _reportChanged();
+    _reportChanged();
     _notifyListeners();
     _notifySignalUpdate();
   }

@@ -63,7 +63,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
       return;
     }
     _setPreviousValue(Map<K, V>.of(_value));
-    _value = newValue;
+    _untrackedValue = _value = newValue;
     _notifyChanged();
   }
 
@@ -442,7 +442,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
       '''MapSignal<$K, $V>(value: $_value, previousValue: $_previousValue)''';
 
   void _notifyChanged() {
-    // _reportChanged();
+    _reportChanged();
     _notifyListeners();
     _notifySignalUpdate();
   }

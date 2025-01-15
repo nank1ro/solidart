@@ -57,6 +57,7 @@ class ReadSignal<T> implements SignalBase<T> {
     required this.trackPreviousValue,
   }) : _hasValue = true {
     _internalSignal = alien.Signal(Some(initialValue));
+    _untrackedValue = initialValue;
     _notifySignalCreation();
   }
 
@@ -136,6 +137,10 @@ class ReadSignal<T> implements SignalBase<T> {
   set _value(T newValue) {
     _untrackedValue = newValue;
     _internalSignal.currentValue = Some(newValue);
+    _reportChanged();
+  }
+
+  void _reportChanged() {
     final subs = _internalSignal.subs;
     if (subs != null) {
       alien.propagate(subs);
