@@ -14,7 +14,7 @@ resolution: workspace
 
 dependencies:
   # we depend on the alien signals reactivity implementation because it's the fastest available right now (30/12/2024)
-  alien_signals: ^0.0.14
+  alien_signals: ^0.1.0
   collection: ^1.18.0
   meta: ^1.11.0
 

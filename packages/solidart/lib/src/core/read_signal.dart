@@ -123,6 +123,13 @@ class ReadSignal<T> implements SignalBase<T> {
 
   late T _untrackedValue;
 
+  T? _untrackedPreviousValue;
+
+  /// Returns the untracked previous value of the signal.
+  T? get untrackedPreviousValue {
+    return _untrackedPreviousValue;
+  }
+
   /// Returns the value without triggering the reactive system.
   T get untrackedValue {
     if (!_hasValue) {
@@ -135,6 +142,7 @@ class ReadSignal<T> implements SignalBase<T> {
   }
 
   set _value(T newValue) {
+    _untrackedPreviousValue = _untrackedValue;
     _untrackedValue = newValue;
     _internalSignal.currentValue = Some(newValue);
     _reportChanged();
@@ -144,6 +152,9 @@ class ReadSignal<T> implements SignalBase<T> {
     final subs = _internalSignal.subs;
     if (subs != null) {
       alien.propagate(subs);
+      if (alien.batchDepth == 0) {
+        alien.drainQueuedEffects();
+      }
     }
   }
 
@@ -170,10 +181,10 @@ class ReadSignal<T> implements SignalBase<T> {
   void _setValue(T newValue) {
     final firstValue = !_hasValue;
 
-    if (firstValue) _internalSignal.currentValue = Some(newValue);
+    if (firstValue) _untrackedValue = newValue;
     _hasValue = true;
 
-    // // skip if the value are equal
+    // // skip if the values are equal
     if (!firstValue && _compare(_value, newValue)) {
       return;
     }

@@ -174,7 +174,7 @@ void main() {
         );
       });
 
-      test('test firstWhere()', () async {
+      test('test until()', () async {
         final count = Signal(0);
 
         unawaited(
