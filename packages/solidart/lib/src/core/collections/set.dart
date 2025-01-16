@@ -58,13 +58,14 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   }) : super._internal();
 
   @override
-  void _setValue(Set<E> newValue) {
+  Set<E> _setValue(Set<E> newValue) {
     if (_compare(_value, newValue)) {
-      return;
+      return newValue;
     }
     _setPreviousValue(Set<E>.of(_value));
     _untrackedValue = _value = newValue;
     _notifyChanged();
+    return newValue;
   }
 
   @override

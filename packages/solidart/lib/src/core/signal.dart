@@ -198,7 +198,7 @@ class Signal<T> extends ReadSignal<T> {
   /// This operation may be skipped if the value is equal to the previous one,
   /// check [equals] and [comparator].
   /// {@endtemplate}
-  void set(T newValue) => _setValue(newValue);
+  T set(T newValue) => _setValue(newValue);
 
   /// Calls a function with the current value and assigns the result as the
   /// new value.

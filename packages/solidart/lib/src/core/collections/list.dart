@@ -58,18 +58,20 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   }) : super._internal();
 
   @override
-  void _setValue(List<E> newValue) {
-    if (_compare(_value, newValue)) {
-      return;
+  List<E> _setValue(List<E> newValue) {
+    if (_compare(_untrackedValue, newValue)) {
+      return newValue;
     }
     _setPreviousValue(List<E>.of(_untrackedValue));
-    _untrackedValue = value = newValue;
+    _untrackedValue = _value = newValue;
     _notifyChanged();
+    return newValue;
   }
 
   @override
-  List<E> updateValue(List<E> Function(List<E> value) callback) =>
-      value = callback(List<E>.of(_untrackedValue));
+  List<E> updateValue(List<E> Function(List<E> value) callback) {
+    return _setValue(callback(_untrackedValue));
+  }
 
   @override
   bool _compare(List<E>? oldValue, List<E>? newValue) {

@@ -178,19 +178,21 @@ class ReadSignal<T> implements SignalBase<T> {
   /// This operation may be skipped if the value is equal to the previous one,
   /// check [equals] and [comparator].
   /// {@endtemplate}
-  void _setValue(T newValue) {
+  T _setValue(T newValue) {
     final firstValue = !_hasValue;
 
-    if (firstValue) _untrackedValue = newValue;
-    _hasValue = true;
+    if (firstValue) {
+      _untrackedValue = newValue;
+      _hasValue = true;
+    }
 
     // // skip if the values are equal
-    if (!firstValue && _compare(_value, newValue)) {
-      return;
+    if (!firstValue && _compare(_untrackedValue, newValue)) {
+      return newValue;
     }
 
     // store the previous value
-    if (!firstValue) _setPreviousValue(_value);
+    if (!firstValue) _setPreviousValue(_untrackedValue);
 
     // notify with the new value
     _value = newValue;
@@ -202,6 +204,7 @@ class ReadSignal<T> implements SignalBase<T> {
     } else {
       _notifySignalUpdate();
     }
+    return newValue;
   }
 
   void _notifyListeners() {

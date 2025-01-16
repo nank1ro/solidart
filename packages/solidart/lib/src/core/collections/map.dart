@@ -58,13 +58,14 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   }) : super._internal();
 
   @override
-  void _setValue(Map<K, V> newValue) {
+  Map<K, V> _setValue(Map<K, V> newValue) {
     if (_compare(_value, newValue)) {
-      return;
+      return newValue;
     }
     _setPreviousValue(Map<K, V>.of(_value));
     _untrackedValue = _value = newValue;
     _notifyChanged();
+    return newValue;
   }
 
   @override
