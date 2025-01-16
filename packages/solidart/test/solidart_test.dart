@@ -1146,6 +1146,15 @@ void main() {
         list.updateValue((v) => v..add(3));
         expect(list, [1, 2, 3]);
       });
+
+      test('check value and previousValue', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        expect(list.previousValue, null);
+        list.updateValue((v) => v..add(3));
+        expect(list, [1, 2, 3]);
+        expect(list.previousValue, [1, 2]);
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
@@ -1325,6 +1334,15 @@ void main() {
         set.updateValue((v) => v..add(3));
         expect(set, {1, 2, 3});
       });
+
+      test('check value and previousValue', () {
+        final set = SetSignal({1, 2});
+        expect(set, {1, 2});
+        expect(set.previousValue, null);
+        set.updateValue((v) => v..add(3));
+        expect(set, {1, 2, 3});
+        expect(set.previousValue, {1, 2});
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
@@ -1498,6 +1516,17 @@ void main() {
           return v;
         });
         expect(map, {'a': 1, 'b': 2, 'c': 3});
+      });
+
+      test('check value and previousValue', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.updateValue((v) {
+          v['c'] = 3;
+          return v;
+        });
+        expect(map, {'a': 1, 'b': 2, 'c': 3});
+        expect(map.previousValue, {'a': 1, 'b': 2});
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),
