@@ -4,7 +4,8 @@ part of 'core.dart';
 /// The global configuration of the reactive system.
 /// {@endtemplate}
 abstract class SolidartConfig {
-  /// {@macro SignalBase.equals}
+  /// Whether to use the equality operator when updating the signal, defaults to
+  /// false
   static bool equals = false;
 
   /// Whether to enable the auto disposal of the reactive system, defaults to
