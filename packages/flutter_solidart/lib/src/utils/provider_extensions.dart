@@ -5,11 +5,11 @@ part of '../widgets/provider_scope.dart';
 /// -------------------------------
 
 /// Get the value of a provider.
-extension GetProviderExtension<T> on Provider<T> {
+extension GetProviderExtension<T extends Object> on Provider<T> {
   /// {@macro provider-scope.get}
   T get(BuildContext context) {
     final provider = maybeGet(context);
-    if (provider == null) throw ProviderError<T>(this);
+    if (provider == null) throw ProviderWithoutScopeError(this);
     return provider;
   }
 
@@ -19,55 +19,24 @@ extension GetProviderExtension<T> on Provider<T> {
   }
 }
 
-/// Update the value of a [Signal] that is in a provider.
-extension UpdateSignalInProviderExtension<T> on Provider<Signal<T>> {
-  /// {@macro provider-scope.update}
-  void update(BuildContext context, T Function(T value) callback) {
-    get(context).updateValue(callback);
-  }
-
-  /// {@macro provider-scope.maybeUpdate}
-  void maybeUpdate(BuildContext context, T Function(T value) callback) {
-    maybeGet(context)?.updateValue(callback);
-  }
-}
-
 /// -------------------------------
 /// ProviderWithArgument extensions
 /// -------------------------------
 
 /// Get the value of a provider.
-extension GetProviderWithArgumentExtension<T, A> on ArgProvider<T, A> {
+extension GetProviderWithArgumentExtension<T extends Object, A>
+    on ArgProvider<T, A> {
   /// {@macro provider-scope.get}
   T get(BuildContext context) {
     final provider = maybeGet(context);
     if (provider == null) {
-      throw ProviderWithoutScopeError(this);
+      throw ArgProviderWithoutScopeError(this);
     }
     return provider;
   }
 
   /// {@macro provider-scope.maybeGet}
   T? maybeGet(BuildContext context) {
-    if (_instance == null) return null;
-
-    return ProviderScope._getOrCreateProvider(context, id: _instance!);
-  }
-}
-
-/// Update the value of a [SignalBase] that is in a provider with arguments.
-///
-extension UpdateSignalInProviderWithArgumentExtension<T, A>
-    on ArgProvider<Signal<T>, A> {
-  /// Update the value of a [Signal<T>] that is in this arg provider with an
-  /// argument.
-  void update(BuildContext context, T Function(T value) callback) {
-    get(context).updateValue(callback);
-  }
-
-  /// Safely attempt to update the value of the [Signal<T>] that is in this arg
-  /// provider with an argument.
-  void maybeUpdate(BuildContext context, T Function(T value) callback) {
-    maybeGet(context)?.updateValue(callback);
+    return ProviderScope._getOrCreateArgProvider(context, id: this);
   }
 }

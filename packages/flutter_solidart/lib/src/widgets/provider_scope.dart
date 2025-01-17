@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_solidart/src/models/instantiable_provider.dart';
 import 'package:flutter_solidart/src/widgets/provider_scope_override.dart';
 import 'package:flutter_solidart/src/widgets/provider_scope_value.dart';
 import 'package:solidart/solidart.dart';
@@ -265,10 +266,7 @@ class ProviderScope extends StatefulWidget {
     return ProviderScopeValue(
       key: key,
       mainContext: mainContext,
-      child: _ProviderWidgetBuilder(
-        builder: builder,
-        child: child,
-      ),
+      child: _ProviderWidgetBuilder(builder: builder, child: child),
     );
   }
 
@@ -284,13 +282,13 @@ class ProviderScope extends StatefulWidget {
   final TransitionBuilder? builder;
 
   /// All the providers provided to all the descendants of [ProviderScope].
-  final List<Provider<dynamic>> providers;
+  final List<InstantiableProvider> providers;
 
   @override
   State<ProviderScope> createState() => ProviderScopeState();
 
   /// Finds the first SolidState ancestor that satisfies the given [id].
-  static ProviderScopeState? _findState<T>(
+  static ProviderScopeState? _findState<T extends Object>(
     BuildContext context, {
     required Provider<T> id,
   }) {
@@ -301,10 +299,7 @@ class ProviderScope extends StatefulWidget {
       if (state.isProviderInScope<T>(id)) return state;
     }
 
-    return _InheritedProvider.inheritFromNearest<T>(
-      context,
-      id,
-    )?.state;
+    return _InheritedProvider.inheritFromNearest<T>(context, id, null)?.state;
   }
 
   /// Tries to find a provider of type T from the created providers and returns
@@ -312,7 +307,7 @@ class ProviderScope extends StatefulWidget {
   ///
   /// The provider is created in case the find fails.
   /// If the provider is not found in any ProviderScope, it returns null.
-  static T? _getOrCreateProvider<T>(
+  static T? _getOrCreateProvider<T extends Object>(
     BuildContext context, {
     required Provider<T> id,
   }) {
@@ -321,18 +316,66 @@ class ProviderScope extends StatefulWidget {
     final effectiveContext = providerScopeValueContext ?? context;
     final state = _findState<T>(effectiveContext, id: id);
     if (state == null) return null;
-    final createdProvider = state._providers[id];
+    final createdProvider = state._createdProviders[(id: id, type: T)];
     if (createdProvider != null) return createdProvider as T;
     // if the provider is not already present, create it lazily
     return state.createProvider<T>(id);
+  }
+
+  /// Finds the first SolidState ancestor that satisfies the given [id].
+  static ProviderScopeState? _findStateArgProvider<T extends Object, A>(
+    BuildContext context, {
+    required ArgProvider<T, A> id,
+  }) {
+    // try finding the solid override first
+    final solidOverride = ProviderScopeOverride.maybeOf(context);
+    if (solidOverride != null) {
+      final state = solidOverride.solidState;
+      if (state.isArgProviderInScope<T, A>(id)) return state;
+    }
+
+    return _InheritedProvider.inheritFromNearest<T>(context, null, id)?.state;
+  }
+
+  /// Tries to find a provider of type T from the created providers and returns
+  /// it.
+  ///
+  /// The provider is created in case the find fails.
+  /// If the provider is not found in any ProviderScope, it returns null.
+  static T? _getOrCreateArgProvider<T extends Object, A>(
+    BuildContext context, {
+    required ArgProvider<T, A> id,
+  }) {
+    // If there is a ProviderValue ancestor, use it as the context
+    final providerScopeValueContext = ProviderScopeValue.maybeOf(context);
+    final effectiveContext = providerScopeValueContext ?? context;
+    final state = _findStateArgProvider<T, A>(effectiveContext, id: id);
+    if (state == null) return null;
+    final providerAsId = state._allArgProvidersInScope[(type: T, id: id)];
+    final createdProvider =
+        state._createdProviders[(type: T, id: providerAsId)];
+    if (createdProvider != null) return createdProvider as T;
+    // if the provider is not already present, create it lazily
+    return state.createProviderForArgProvider<T, A>(id);
   }
 }
 
 /// The state of the [ProviderScope] widget
 class ProviderScopeState extends State<ProviderScope> {
-  // Stores all the providers.
+  /// Stores all the argument providers in the current scope. The values are
+  /// used as internal IDs by [_createdProviders].
+  final _allArgProvidersInScope = HashMap<
+      ({Type type, ArgProvider<dynamic, dynamic> id}), Provider<dynamic>>();
+
+  /// Stores all the providers in the current scope. The values are
+  /// used as internal IDs by [_createdProviders].
+  final _allProvidersInScope =
+      HashMap<({Type type, Provider<dynamic> id}), Provider<dynamic>>();
+
+  // Stores all the created providers.
   // The key is the provider, while the value is its value.
-  final _providers = HashMap<Provider<dynamic>, Object?>();
+  final _createdProviders =
+      HashMap<({Type type, Provider<dynamic> id}), Object?>();
 
   // Stores all the disposeFn for each signal
   final _signalDisposeCallbacks = <DisposeEffect>[];
@@ -341,17 +384,17 @@ class ProviderScopeState extends State<ProviderScope> {
   void initState() {
     super.initState();
 
+    final providers = widget.providers.whereType<Provider<Object>>().toList();
+
     assert(
       () {
         // check if the provider type is not dynamic
         // check if there are multiple providers of the same type
-        final ids = <Provider<dynamic>>[];
-        for (final provider in widget.providers) {
+        final ids = <Provider<Object>>[];
+        for (final provider in providers) {
           final id = provider; // the instance of the provider
-          if (id._valueType == dynamic) throw ProviderDynamicError();
-
           if (ids.contains(id)) {
-            throw MultipleProviderOfSameInstance(id);
+            throw MultipleProviderOfSameInstance();
           }
           ids.add(id);
         }
@@ -360,13 +403,54 @@ class ProviderScopeState extends State<ProviderScope> {
       '',
     );
 
-    for (final provider in widget.providers) {
+    for (final provider in providers) {
+      final key = (type: provider._valueType, id: provider);
+      _allProvidersInScope[key] = provider;
+
       // create non lazy providers.
       if (!provider._lazy) {
         // create and store the provider
-        _providers[provider] = provider._create(context);
-      } else {
-        _providers[provider] = null;
+        _createdProviders[key] = provider._create(context);
+      }
+    }
+
+    final argProviderInits =
+        widget.providers.whereType<ArgProviderInit<Object, dynamic>>().toList();
+
+    assert(
+      () {
+        // check if the provider type is not dynamic
+        // check if there are multiple providers of the same type
+        final ids = <ArgProvider<Object, dynamic>>[];
+        for (final provider in argProviderInits) {
+          final id = provider._argProvider; // the instance of the provider
+          if (ids.contains(id)) {
+            throw MultipleProviderOfSameInstance();
+          }
+          ids.add(id);
+        }
+        return true;
+      }(),
+      '',
+    );
+
+    for (final argProviderInit in argProviderInits) {
+      final key = (
+        type: argProviderInit._argProvider._valueType,
+        id: argProviderInit._argProvider,
+      );
+      _allArgProvidersInScope[key] =
+          argProviderInit._argProvider._generateProvider(argProviderInit._arg);
+
+      // create non lazy providers.
+      if (!argProviderInit._argProvider._lazy) {
+        // create and store the provider
+        final complexKey = (
+          type: argProviderInit._argProvider._valueType,
+          id: _allArgProvidersInScope[key]!,
+        );
+        _createdProviders[complexKey] =
+            _allArgProvidersInScope[key]!._create(context);
       }
     }
   }
@@ -379,39 +463,69 @@ class ProviderScopeState extends State<ProviderScope> {
     }
 
     // dispose all the created providers
-    for (final key in _providers.keys) {
-      key._disposeFn(context, _providers[key]);
-    }
+    _createdProviders.forEach((key, value) {
+      _allProvidersInScope[key]?._disposeFn(context, value);
+    });
 
     _signalDisposeCallbacks.clear();
-    _providers.clear();
+    _allArgProvidersInScope.clear();
+    _allProvidersInScope.clear();
+    _createdProviders.clear();
     super.dispose();
   }
 
   /// -- Providers logic
 
-  /// Try to find a [Provider] of type <T> and [id] and returns it
-  Provider<T>? _getProvider<T>(Provider<T> id) {
-    if (_providers.containsKey(id)) return id;
-    return null;
+  /// Try to find a [Provider] of type <T> or [id] and returns it
+  Provider<T>? _getProvider<T extends Object>(Provider<T> id) {
+    return _allProvidersInScope[(type: T, id: id)] as Provider<T>?;
   }
 
   /// Creates a provider of type T and stores it
-  T createProvider<T>(Provider<T> id) {
+  T createProvider<T extends Object>(Provider<T> id) {
     // find the provider in the list
     final provider = _getProvider<T>(id)!;
     // create and return it
     final value = provider._create(context);
     // store the created provider
-    _providers[id] = value;
+    _createdProviders[(type: T, id: id)] = value;
     return value;
   }
 
   /// Used to determine if the requested provider is present in the current
   /// scope
-  bool isProviderInScope<T>(Provider<T> id) {
+  bool isProviderInScope<T extends Object>(Provider<T> id) {
     // Find the provider by type
     return _getProvider<T>(id) != null;
+  }
+
+  /// -- ArgProviders logic
+
+  /// Try to find a [Provider] of type <T> or [id] and returns it
+  Provider<T>? _getProviderForArgProvider<T extends Object, A>(
+    ArgProvider<T, A> id,
+  ) {
+    return _allArgProvidersInScope[(type: T, id: id)] as Provider<T>?;
+  }
+
+  /// Creates a provider of type T and stores it.
+  T createProviderForArgProvider<T extends Object, A>(ArgProvider<T, A> id) {
+    // find the provider in the list
+    final provider = _getProviderForArgProvider<T, A>(id)!;
+    // create and return it
+    final value = provider._create(context);
+    // store the created provider
+    _createdProviders[(
+      type: T,
+      id: _allArgProvidersInScope[(type: T, id: id)]!,
+    )] = value;
+    return value;
+  }
+
+  /// Used to determine if the requested provider is present in the current
+  /// scope
+  bool isArgProviderInScope<T extends Object, A>(ArgProvider<T, A> id) {
+    return _getProviderForArgProvider<T, A>(id) != null;
   }
 
   @override
@@ -430,7 +544,7 @@ class ProviderScopeState extends State<ProviderScope> {
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     properties.add(
-      IterableProperty('createdProviders', _providers.values),
+      IterableProperty('createdProviders', _createdProviders.values),
     );
   }
 
@@ -439,10 +553,7 @@ class ProviderScopeState extends State<ProviderScope> {
 
 @immutable
 class _InheritedProvider extends InheritedModel<Object> {
-  const _InheritedProvider({
-    required this.state,
-    required super.child,
-  });
+  const _InheritedProvider({required this.state, required super.child});
 
   final ProviderScopeState state;
 
@@ -451,8 +562,24 @@ class _InheritedProvider extends InheritedModel<Object> {
     return false;
   }
 
-  bool isSupportedAspectWithType<T>(Provider<T> id) {
-    return state.isProviderInScope<T>(id);
+  bool isSupportedAspectWithType<T extends Object>(
+    Provider<T>? providerId,
+    ArgProvider<T, dynamic>? argProviderId,
+  ) {
+    assert(
+      (providerId != null) ^ (argProviderId != null),
+      'Either a Provider or an ArgProvider must be used as ID.',
+    );
+    if (providerId != null) {
+      return state.isProviderInScope<T>(providerId);
+    }
+    return state.isArgProviderInScope<T, dynamic>(argProviderId!);
+  }
+
+  bool isSupportedAspectWithTypeArg<T extends Object>(
+    ArgProvider<T, dynamic> id,
+  ) {
+    return state.isArgProviderInScope<T, dynamic>(id);
   }
 
   @override
@@ -470,10 +597,15 @@ class _InheritedProvider extends InheritedModel<Object> {
   // ancestors.
   // The [result] will be a single _InheritedSolid of context's type T ancestor
   // that supports the specified model [aspect].
-  static InheritedElement? _findNearestModel<T>(
+  static InheritedElement? _findNearestModel<T extends Object>(
     BuildContext context,
-    Provider<T> id,
+    Provider<T>? providerId,
+    ArgProvider<T, dynamic>? argProviderId,
   ) {
+    assert(
+      (providerId != null) ^ (argProviderId != null),
+      'Either a Provider or an ArgProvider must be used as ID.',
+    );
     final model =
         context.getElementForInheritedWidgetOfExactType<_InheritedProvider>();
     // No ancestors of type T found, exit.
@@ -488,7 +620,7 @@ class _InheritedProvider extends InheritedModel<Object> {
     final modelWidget = model.widget as _InheritedProvider;
 
     // The model contains the aspect, the ancestor has been found, return it.
-    if (modelWidget.isSupportedAspectWithType<T>(id)) {
+    if (modelWidget.isSupportedAspectWithType<T>(providerId, argProviderId)) {
       return model;
     }
 
@@ -504,23 +636,29 @@ class _InheritedProvider extends InheritedModel<Object> {
       return null;
     }
 
-    return _findNearestModel<T>(modelParent!, id);
+    return _findNearestModel<T>(modelParent!, providerId, argProviderId);
   }
 
-  /// Makes [context] dependent on the specified [id] of an
+  /// Makes [context] dependent on the specified [providerId] of an
   /// [_InheritedProvider]
   ///
   /// The dependencies created by this method target the nearest
   /// [_InheritedProvider] ancestor which [isSupportedAspect]  returns true.
   ///
   /// If no ancestor of type T exists, null is returned.
-  static _InheritedProvider? inheritFromNearest<T>(
+  static _InheritedProvider? inheritFromNearest<T extends Object>(
     BuildContext context,
-    Provider<T> id,
+    Provider<T>? providerId,
+    ArgProvider<T, dynamic>? argProviderId,
   ) {
-    // Try finding a model in the ancestors for which isSupportedAspect(aspect)
+    assert(
+      (providerId != null) ^ (argProviderId != null),
+      'Either a Provider or an ArgProvider must be used as ID.',
+    );
+
+    // Try and find a model in the ancestors for which isSupportedAspect(aspect)
     // is true.
-    final model = _findNearestModel<T>(context, id);
+    final model = _findNearestModel<T>(context, providerId, argProviderId);
     if (model == null) {
       return null;
     }
@@ -529,91 +667,54 @@ class _InheritedProvider extends InheritedModel<Object> {
   }
 }
 
-/// {@template providererror}
-/// Error thrown when the [Provider] of type [id] cannot be found
+/// {@template ArgProviderWithoutScopeError}
+/// Error thrown when the [Provider] was never attached to a [ProviderScope].
 /// {@endtemplate}
-class ProviderError<T> extends Error {
-  /// {@macro providererror}
-  ProviderError(this.id);
-
-  /// The id of the provider
-  final Provider<T> id;
-
-  @override
-  String toString() {
-    return '''
-Error: could not find a ProviderScope containing the given Provider type $T and id $id.
-To fix, please:
-          
-  * Be sure to have a ProviderScope ancestor, the context used must be a descendant.
-  * Ensure you provided the right ProviderId<T> to context.get(ProviderId<T> id) 
-  * Create providers providing types:
-    ```
-    ProviderScope(
-      providers: [
-          nameProviderId.createProvider(
-            init: () => const NameProvider('Ale'),
-          ),
-          counterProviderId.createProvider(
-            init: () => Signal(0),
-          ),
-      ],
-    )
-    ```
-  * The types `NameProvider` and `Signal<int>` are the providers' types. They
-  only have to be provided when declaring the Ids.
-  E.g. `final nameProviderId = ProviderId<NameProvider>();`.
-  
-If none of these solutions work, please file a bug at:
-https://github.com/nank1ro/solidart/issues/new
-      ''';
-  }
-}
-
-/// Error thrown when the [Provider] has a `dynamic` Type.
-class ProviderDynamicError extends Error {
-  @override
-  String toString() {
-    return '''
-    Seems like that you forgot to declare the provider type.
-    You have `Provider()` but it should be `Provider<ProviderType>()`.
-      ''';
-  }
-}
-
-/// {@template Providermultipleproviderofsametypeerror}
-/// Error thrown when multiple providers of the same [provider] are created
-/// together.
-/// {@endtemplate}
-class MultipleProviderOfSameInstance extends Error {
-  /// {@macro Providermultipleproviderofsametypeerror}
-  MultipleProviderOfSameInstance(this.provider);
+class ProviderWithoutScopeError extends Error {
+  /// {@macro ArgProviderWithoutScopeError}
+  ProviderWithoutScopeError(this.provider);
 
   // ignore: public_member_api_docs
   final Provider<dynamic> provider;
 
   @override
   String toString() {
-    return '''
-      You cannot create or inject multiple providers with the same Provider instance together.
-      Provider type: ${provider._valueType}
-      ''';
+    return 'Seems like that you forgot to provide the argument-less provider '
+        'of type ${provider._valueType} to a ProviderScope.';
   }
 }
 
-/// Error thrown when the [Provider] was never attached to a [ProviderScope].
-class ProviderWithoutScopeError extends Error {
+/// {@template Providermultipleproviderofsametypeerror}
+/// Error thrown when multiple providers of the same instance are created
+/// together.
+/// {@endtemplate}
+class MultipleProviderOfSameInstance extends Error {
   /// {@macro Providermultipleproviderofsametypeerror}
-  ProviderWithoutScopeError(this.provider);
-
-  // ignore: public_member_api_docs
-  final ArgProvider<dynamic, dynamic> provider;
+  MultipleProviderOfSameInstance();
 
   @override
   String toString() {
     return '''
-    Seems like that you forgot to provide the provider ${provider._valueType} and argument ${provider._argumentType} to a ProviderScope.
+      You cannot create or inject multiple providers of the same instance together.
       ''';
+  }
+}
+
+/// {@template ArgProviderWithoutScopeError}
+/// Error thrown when the [ArgProvider] was never attached to a [ProviderScope].
+/// {@endtemplate}
+class ArgProviderWithoutScopeError extends Error {
+  /// {@macro ArgProviderWithoutScopeError}
+  ArgProviderWithoutScopeError(this.argProvider);
+
+  // ignore: public_member_api_docs
+  final ArgProvider<dynamic, dynamic> argProvider;
+
+  @override
+  String toString() {
+    return 'Seems like that you forgot to provide the provider of type'
+        '${argProvider._valueType} and argument type '
+        '${argProvider._argumentType} to a ProviderScope.';
   }
 }
 
@@ -621,10 +722,7 @@ class _ProviderWidgetBuilder extends StatelessWidget {
   const _ProviderWidgetBuilder({
     this.child,
     this.builder,
-  }) : assert(
-          (builder != null) || (child != null),
-          'Provide a child or a builder',
-        );
+  });
 
   final TransitionBuilder? builder;
   final Widget? child;

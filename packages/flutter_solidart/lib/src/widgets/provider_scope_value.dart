@@ -36,6 +36,8 @@ class ProviderScopeValue extends StatelessWidget {
   /// {@macro ProviderScope.child}
   final Widget child;
 
+  /// Retrieve the ProviderScopeValue from the closest ancestor.
+  /// Returns the BuildContext, if the widget is found.
   static BuildContext? maybeOf(BuildContext context) {
     final provider = context
         .getElementForInheritedWidgetOfExactType<_InheritedProviderScopeValue>()

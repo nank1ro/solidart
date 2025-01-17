@@ -57,14 +57,17 @@ class _ProviderScopeReactivityPageState
               children: [
                 TextButton(
                   onPressed: () {
-                    firstCounterProvider.update(context, (value) => value += 1);
+                    firstCounterProvider
+                        .get(context)
+                        .updateValue((value) => value += 1);
                   },
                   child: const Text('+1 counter1'),
                 ),
                 TextButton(
                   onPressed: () {
-                    secondCounterProvider.update(
-                        context, (value) => value += 1);
+                    secondCounterProvider
+                        .get(context)
+                        .updateValue((value) => value += 1);
                   },
                   child: const Text('+1 counter2'),
                 ),

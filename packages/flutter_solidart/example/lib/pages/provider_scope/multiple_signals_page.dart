@@ -44,14 +44,18 @@ class SomeChild extends StatelessWidget {
           TextFormField(
             initialValue: firstName.value,
             onChanged: (value) {
-              firstNameProvider.update(context, (currentValue) => value);
+              firstNameProvider
+                  .get(context)
+                  .updateValue((currentValue) => value);
             },
           ),
           const SizedBox(height: 8),
           TextFormField(
             initialValue: lastName.value,
             onChanged: (value) {
-              lastNameProvider.update(context, (currentValue) => value);
+              lastNameProvider
+                  .get(context)
+                  .updateValue((currentValue) => value);
             },
           ),
           const SizedBox(height: 8),

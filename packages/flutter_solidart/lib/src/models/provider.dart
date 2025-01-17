@@ -25,7 +25,7 @@ typedef DisposeProviderFn<T> = void Function(T value);
 ///
 /// {@endtemplate}
 @immutable
-class Provider<T> {
+class Provider<T extends Object> implements InstantiableProvider {
   //! NB: do not make the constructor `const`, since that would give the same
   //! hash code to different instances of `Provider` with the same generic
   //! type.
@@ -45,7 +45,7 @@ class Provider<T> {
         _lazy = lazy;
 
   /// {@macro arg-provider}
-  static ArgProvider<T, A> withArgument<T, A>(
+  static ArgProvider<T, A> withArgument<T extends Object, A>(
     CreateProviderFnWithArg<T, A> create, {
     DisposeProviderFn<T>? dispose,
     bool lazy = true,
