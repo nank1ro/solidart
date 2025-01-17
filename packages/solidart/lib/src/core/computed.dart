@@ -71,6 +71,9 @@ class Computed<T> extends SignalBase<T> implements Derivation {
 
     /// {@macro SignalBase.trackPreviousValue}
     bool? trackPreviousValue,
+
+    /// {@macro Computed.fireImmediately}
+    bool? fireImmediately,
   }) {
     return Computed._internal(
       selector: selector,
@@ -81,6 +84,8 @@ class Computed<T> extends SignalBase<T> implements Derivation {
       trackPreviousValue:
           trackPreviousValue ?? SolidartConfig.trackPreviousValue,
       comparator: comparator,
+      fireImmediately:
+          fireImmediately ?? SolidartConfig.fireComputedImmediately,
     );
   }
 
@@ -92,6 +97,7 @@ class Computed<T> extends SignalBase<T> implements Derivation {
     required super.trackInDevTools,
     required super.comparator,
     required super.trackPreviousValue,
+    required this.fireImmediately,
   }) {
     _internalComputed = alien.Computed((previousValue) {
       if (trackPreviousValue && previousValue is T) {
@@ -104,8 +110,9 @@ class Computed<T> extends SignalBase<T> implements Derivation {
         throw SolidartCaughtException(e, stackTrace: s);
       }
     });
-    // start it immediately so the initial value is set
-    _internalComputed.get();
+    if (fireImmediately) {
+      _internalComputed.get();
+    }
   }
 
   /// The selector applied
@@ -127,6 +134,14 @@ class Computed<T> extends SignalBase<T> implements Derivation {
   // Keeps track of all the callbacks passed to [onDispose].
   // Used later to fire each callback when this signal is disposed.
   final _onDisposeCallbacks = <VoidCallback>[];
+
+  /// {@template Computed.fireImmediately}
+  /// {@macro fire-computed-immediately}
+  ///
+  /// If a value is not provided, defaults to
+  /// [SolidartConfig.fireComputedImmediately].
+  /// {@endtemplate}
+  final bool fireImmediately;
 
   // A computed signal is always initialized
   @override
@@ -150,6 +165,7 @@ class Computed<T> extends SignalBase<T> implements Derivation {
   /// Returns the previous value of the computed.
   @override
   T? get previousValue {
+    if (!trackPreviousValue) return null;
     // cause observation
     if (!disposed) value;
     return _previousValue;
@@ -210,6 +226,7 @@ class Computed<T> extends SignalBase<T> implements Derivation {
 
   @override
   String toString() {
+    value;
     return '''Computed<$T>(value: $untrackedValue, previousValue: $untrackedPreviousValue)''';
   }
 }

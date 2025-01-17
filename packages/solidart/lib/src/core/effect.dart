@@ -115,12 +115,18 @@ class Effect implements ReactionInterface {
     void Function(DisposeEffect dispose) callback, {
     ErrorCallback? onError,
     EffectOptions? options,
+
+    /// {@macro Effect.fireImmediately}
+    bool? fireImmediately,
   }) {
     late Effect effect;
     final name = options?.name ?? ReactiveContext.main.nameFor('Effect');
+    final effectiveFireImmediately =
+        fireImmediately ?? SolidartConfig.fireEffectImmediately;
     final effectiveOptions = (options ?? EffectOptions()).copyWith(name: name);
     if (effectiveOptions.delay == null) {
       effect = Effect._internal(
+        fireImmediately: effectiveFireImmediately,
         callback: () => callback(effect.dispose),
         onError: onError,
         options: effectiveOptions,
@@ -131,6 +137,7 @@ class Effect implements ReactionInterface {
       Timer? timer;
 
       effect = Effect._internal(
+        fireImmediately: effectiveFireImmediately,
         callback: () {
           if (!isScheduled) {
             isScheduled = true;
@@ -157,7 +164,9 @@ class Effect implements ReactionInterface {
       );
     }
     // ignore: cascade_invocations
-    effect._schedule();
+    if (effectiveFireImmediately) {
+      effect._schedule();
+    }
     return effect;
   }
 
@@ -165,6 +174,9 @@ class Effect implements ReactionInterface {
   Effect._internal({
     required VoidCallback callback,
     required this.options,
+
+    /// {@macro Effect.fireImmediately}
+    required this.fireImmediately,
     ErrorCallback? onError,
   })  : _onError = onError,
         name = options.name!,
@@ -182,6 +194,14 @@ class Effect implements ReactionInterface {
 
   /// {@macro effect-options}
   final EffectOptions options;
+
+  /// {@template Effect.fireImmediately}
+  /// {@macro fire-effect-immediately}
+  ///
+  /// If a value is not provided, defaults to
+  /// [SolidartConfig.fireEffectImmediately].
+  /// {@endtemplate}
+  final bool fireImmediately;
 
   bool _disposed = false;
   bool _isRunning = false;
