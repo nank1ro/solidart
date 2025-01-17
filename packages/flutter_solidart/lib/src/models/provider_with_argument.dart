@@ -7,7 +7,7 @@ typedef CreateProviderFnWithArg<T, A> = T Function(BuildContext context, A arg);
 /// A [Provider] that needs to be given an initial argument before
 /// it can be used.
 /// {@endtemplate}
-class ArgProvider<T, A> {
+class ArgProvider<T extends Object, A> {
   /// {@macro arg-provider}
   ArgProvider._(
     CreateProviderFnWithArg<T, A> create, {
@@ -49,7 +49,7 @@ class ArgProvider<T, A> {
 /// {@template arg-provider}
 ///
 /// {@endtemplate}
-class ArgProviderInit<T, A> implements InstantiableProvider {
+class ArgProviderInit<T extends Object, A> implements InstantiableProvider {
   /// {@macro arg-provider}
   ArgProviderInit._(this._argProvider, this._arg);
   final ArgProvider<T, A> _argProvider;

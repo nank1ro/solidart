@@ -867,28 +867,6 @@ void main() {
     );
   });
 
-  testWidgets('Test ProviderScope throws an error for a Provider<dynamic>',
-      (tester) async {
-    final numberContainerProvider =
-        Provider<dynamic>((_) => const NumberContainer(1));
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ProviderScope(
-            providers: [
-              numberContainerProvider,
-            ],
-            child: const SizedBox(),
-          ),
-        ),
-      ),
-    );
-    expect(
-      tester.takeException(),
-      const TypeMatcher<ProviderDynamicError>(),
-    );
-  });
-
   testWidgets(
       '''Test ProviderScope throws an error for multiple providers of the same type''',
       (tester) async {

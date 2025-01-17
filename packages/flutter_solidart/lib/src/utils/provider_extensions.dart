@@ -5,7 +5,7 @@ part of '../widgets/provider_scope.dart';
 /// -------------------------------
 
 /// Get the value of a provider.
-extension GetProviderExtension<T> on Provider<T> {
+extension GetProviderExtension<T extends Object> on Provider<T> {
   /// {@macro provider-scope.get}
   T get(BuildContext context) {
     final provider = maybeGet(context);
@@ -24,7 +24,8 @@ extension GetProviderExtension<T> on Provider<T> {
 /// -------------------------------
 
 /// Get the value of a provider.
-extension GetProviderWithArgumentExtension<T, A> on ArgProvider<T, A> {
+extension GetProviderWithArgumentExtension<T extends Object, A>
+    on ArgProvider<T, A> {
   /// {@macro provider-scope.get}
   T get(BuildContext context) {
     final provider = maybeGet(context);
