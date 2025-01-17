@@ -182,8 +182,9 @@ class Effect implements ReactionInterface {
     required this.fireImmediately,
     ErrorCallback? onError,
   })  : _onError = onError,
-        name = options.name!,
-        _internalEffect = alien.Effect(callback);
+        name = options.name! {
+    _internalEffect = _AlienEffect(callback, parent: this);
+  }
 
   /// The name of the effect, useful for logging purposes.
   final String name;
@@ -206,6 +207,8 @@ class Effect implements ReactionInterface {
 
   late final alien.Effect<void> _internalEffect;
 
+  final _deps = <alien.Dependency>{};
+
   /// The subscriber of the effect, do not use it directly.
   @protected
   alien.Subscriber get subscriber => _internalEffect;
@@ -218,6 +221,8 @@ class Effect implements ReactionInterface {
       _internalEffect.run();
     } catch (e, s) {
       _onError?.call(SolidartCaughtException(e, stackTrace: s));
+    } finally {
+      Future.microtask(_mayDispose);
     }
   }
 
@@ -231,25 +236,39 @@ class Effect implements ReactionInterface {
   /// After this operation the effect is useless.
   @override
   void dispose() {
+    print('dispose Effect');
     if (_disposed) return;
     _disposed = true;
 
-    alien.endTrack(_internalEffect);
+    _internalEffect.stop();
 
-    // coverage:ignore-start
-    // for (final ob in _observablesDisposePrevented) {
-    //   ob
-    //     .._disposable = true
-    //     .._mayDispose();
-    // }
-    // // coverage:ignore-end
-    // __observables.clear();
+    for (final dep in _deps) {
+      print('call dispose on dep $dep');
+      print('dep runtimeType ${dep.runtimeType}');
+      if (dep is _AlienSignal) dep.parent._mayDispose();
+      if (dep is _AlienComputed) dep.parent._mayDispose();
+    }
+
+    _deps.clear();
   }
 
   @override
   void _mayDispose() {
-    if (options.autoDispose) {
+    if (!options.autoDispose || _disposed) return;
+    print('effect deps ${_internalEffect.deps}');
+    print('dep ${_internalEffect.deps?.dep}');
+    if (_internalEffect.deps == null) {
       dispose();
+    } else if (_internalEffect.deps?.dep != null) {
+      _deps.clear();
+
+      var link = _internalEffect.deps;
+      for (; link != null; link = link.nextDep) {
+        final dep = link.dep;
+        if (dep == null) break;
+        _deps.add(dep);
+      }
+      print('effects deps $_deps');
     }
   }
 }

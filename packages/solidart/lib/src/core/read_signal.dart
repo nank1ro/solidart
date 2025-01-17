@@ -56,7 +56,7 @@ class ReadSignal<T> implements SignalBase<T> {
     required this.comparator,
     required this.trackPreviousValue,
   }) : _hasValue = true {
-    _internalSignal = alien.Signal(Some(initialValue));
+    _internalSignal = _AlienSignal(Some(initialValue), parent: this);
     _untrackedValue = initialValue;
     _notifySignalCreation();
   }
@@ -69,7 +69,7 @@ class ReadSignal<T> implements SignalBase<T> {
     required this.comparator,
     required this.trackPreviousValue,
   }) : _hasValue = false {
-    _internalSignal = alien.Signal(None<T>());
+    _internalSignal = _AlienSignal(None<T>(), parent: this);
   }
 
   /// {@macro SignalBase.name}
@@ -118,7 +118,19 @@ class ReadSignal<T> implements SignalBase<T> {
     if (_disposed) {
       return alien.untrack(() => _internalSignal.get().unwrap());
     }
-    return _internalSignal.get().unwrap();
+    final value = _internalSignal.get().unwrap();
+
+    if (autoDispose) {
+      _subs.clear();
+
+      var link = _internalSignal.subs;
+      for (; link != null; link = link.nextSub) {
+        final sub = link.sub;
+        if (sub == null) break;
+        _subs.add(sub);
+      }
+    }
+    return value;
   }
 
   late T _untrackedValue;
@@ -263,13 +275,26 @@ class ReadSignal<T> implements SignalBase<T> {
   @override
   int get listenerCount => _listeners.length;
 
+  final _subs = <alien.Subscriber>{};
+
   @override
   void dispose() {
+    print('dispose read signal $name');
     // ignore if already disposed
     if (_disposed) return;
     _disposed = true;
 
+    alien.untrack(() => _internalSignal.get());
+
     _listeners.clear();
+
+    for (final sub in _subs) {
+      print('computed call dispose on dep $sub');
+      print('computed dep runtimeType ${sub.runtimeType}');
+      if (sub is _AlienEffect) sub.parent._mayDispose();
+      if (sub is _AlienComputed) sub.parent._mayDispose();
+    }
+    _subs.clear();
 
     for (final cb in _onDisposeCallbacks) {
       cb();
@@ -304,7 +329,10 @@ class ReadSignal<T> implements SignalBase<T> {
 
   @override
   void _mayDispose() {
-    if (!autoDispose) return;
+    if (!autoDispose || _disposed) return;
+
+    final hasSubs = _internalSignal.subs == null;
+    print('ReadSignal subs ${_internalSignal.subs}');
 
     bool mayDispose() =>
         _listeners.isEmpty; //&& _observers.isEmpty && _disposable;
@@ -330,36 +358,6 @@ class ReadSignal<T> implements SignalBase<T> {
       }
     });
     return completer.future;
-  }
-
-  void _notifySignalCreation() {
-    for (final obs in SolidartConfig.observers) {
-      obs.didCreateSignal(this);
-    }
-    // coverage:ignore-start
-    if (!trackInDevTools) return;
-    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.created);
-    // coverage:ignore-end
-  }
-
-  void _notifySignalUpdate() {
-    for (final obs in SolidartConfig.observers) {
-      obs.didUpdateSignal(this);
-    }
-    // coverage:ignore-start
-    if (!trackInDevTools) return;
-    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
-    // coverage:ignore-end
-  }
-
-  void _notifySignalDisposal() {
-    for (final obs in SolidartConfig.observers) {
-      obs.didDisposeSignal(this);
-    }
-    // coverage:ignore-start
-    if (!trackInDevTools) return;
-    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.disposed);
-    // coverage:ignore-end
   }
 
   @override

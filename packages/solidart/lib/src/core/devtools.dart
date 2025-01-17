@@ -33,14 +33,47 @@ dynamic _toJson(Object? obj) {
   }
 }
 
+/// Extension for the devtools
+extension DevToolsExt<T> on SignalBase<T> {
+  void _notifySignalCreation() {
+    for (final obs in SolidartConfig.observers) {
+      obs.didCreateSignal(this);
+    }
+    // coverage:ignore-start
+    if (!trackInDevTools) return;
+    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.created);
+    // coverage:ignore-end
+  }
+
+  void _notifySignalUpdate() {
+    for (final obs in SolidartConfig.observers) {
+      obs.didUpdateSignal(this);
+    }
+    // coverage:ignore-start
+    if (!trackInDevTools) return;
+    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
+    // coverage:ignore-end
+  }
+
+  void _notifySignalDisposal() {
+    for (final obs in SolidartConfig.observers) {
+      obs.didDisposeSignal(this);
+    }
+    // coverage:ignore-start
+    if (!trackInDevTools) return;
+    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.disposed);
+    // coverage:ignore-end
+  }
+}
+
 void _notifyDevToolsAboutSignal(
-  ReadSignal<Object?> signal, {
+  SignalBase<dynamic> signal, {
   required DevToolsEventType eventType,
 }) {
   if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
   final eventName = 'solidart.signal.${eventType.name}';
-  var value = signal._value;
-  var previousValue = signal._previousValue;
+  var value = signal.value;
+  var previousValue = signal.previousValue;
   if (signal is Resource) {
     value = signal._value.asReady?.value;
     previousValue = signal._previousValue?.asReady?.value;
@@ -52,7 +85,7 @@ void _notifyDevToolsAboutSignal(
     'name': signal.name,
     'value': jsonValue,
     'previousValue': jsonPreviousValue,
-    'hasPreviousValue': signal._hasPreviousValue,
+    'hasPreviousValue': signal.hasPreviousValue,
     'type': switch (signal) {
       Resource() => 'Resource',
       ListSignal() => 'ListSignal',
@@ -61,11 +94,12 @@ void _notifyDevToolsAboutSignal(
       Signal() => 'Signal',
       Computed() => 'Computed',
       ReadSignal() => 'ReadSignal',
+      _ => 'Unknown',
     },
     'valueType': value.runtimeType.toString(),
-    if (signal._hasPreviousValue)
+    if (signal.hasPreviousValue)
       'previousValueType': previousValue.runtimeType.toString(),
-    'disposed': signal._disposed,
+    'disposed': signal.disposed,
     'autoDispose': signal.autoDispose,
     'listenerCount': signal.listenerCount,
     'lastUpdate': DateTime.now().toIso8601String(),

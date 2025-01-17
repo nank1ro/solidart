@@ -99,20 +99,34 @@ class Computed<T> extends SignalBase<T> {
     required super.trackPreviousValue,
     required this.fireImmediately,
   }) {
-    _internalComputed = alien.Computed((previousValue) {
-      if (trackPreviousValue && previousValue is T) {
-        _hasPreviousValue = true;
-        _untrackedPreviousValue = _previousValue = previousValue;
-      }
-      try {
-        return _untrackedValue = selector();
-      } catch (e, s) {
-        throw SolidartCaughtException(e, stackTrace: s);
-      }
-    });
+    var runnedOnce = false;
+    _internalComputed = _AlienComputed(
+      (previousValue) {
+        if (trackPreviousValue && previousValue is T) {
+          _hasPreviousValue = true;
+          _untrackedPreviousValue = _previousValue = previousValue;
+        }
+
+        try {
+          _untrackedValue = selector();
+
+          if (runnedOnce) {
+            _notifySignalUpdate();
+          } else {
+            runnedOnce = true;
+          }
+          return _untrackedValue;
+        } catch (e, s) {
+          throw SolidartCaughtException(e, stackTrace: s);
+        }
+      },
+      parent: this,
+    );
     if (fireImmediately) {
       _internalComputed.get();
     }
+
+    _notifySignalCreation();
   }
 
   /// The selector applied
@@ -147,11 +161,28 @@ class Computed<T> extends SignalBase<T> {
   @override
   bool get hasValue => true;
 
+  var _deps = <alien.Dependency>{};
+
   @override
   void dispose() {
     if (_disposed) return;
+    print('dispose computed $name');
 
     _disposed = true;
+    for (final dep in _deps) {
+      print('computed call dispose on dep $dep');
+      print('computed dep runtimeType ${dep.runtimeType}');
+      if (dep is _AlienSignal) dep.parent._mayDispose();
+      if (dep is _AlienComputed) dep.parent._mayDispose();
+    }
+
+    _deps.clear();
+
+    for (final cb in _onDisposeCallbacks) {
+      cb();
+    }
+    _onDisposeCallbacks.clear();
+    _notifySignalDisposal();
   }
 
   @override
@@ -159,7 +190,9 @@ class Computed<T> extends SignalBase<T> {
     if (_disposed) {
       return alien.untrack(() => _internalComputed.get());
     }
-    return _internalComputed.get();
+    final value = _internalComputed.get();
+    Future.microtask(_mayDispose);
+    return value;
   }
 
   /// Returns the previous value of the computed.
@@ -199,7 +232,22 @@ class Computed<T> extends SignalBase<T> {
 
   @override
   void _mayDispose() {
-    // TODO: implement _mayDispose
+    if (!autoDispose || _disposed) return;
+    print('call mayDispose on computed $name');
+    print(
+        'computed deps ${_internalComputed.deps != null} subs ${_internalComputed.subs != null}');
+    if (_internalComputed.deps == null && _internalComputed.subs == null) {
+      dispose();
+    } else {
+      _deps.clear();
+
+      var link = _internalComputed.deps;
+      for (; link != null; link = link.nextDep) {
+        final dep = link.dep;
+        if (dep == null) break;
+        _deps.add(dep);
+      }
+    }
   }
 
   @override

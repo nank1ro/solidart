@@ -22,3 +22,4 @@ part 'read_signal.dart';
 part 'resource.dart';
 part 'signal.dart';
 part 'signal_base.dart';
+part 'alien.dart';
