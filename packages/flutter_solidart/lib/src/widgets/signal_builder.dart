@@ -5,9 +5,7 @@ import 'package:alien_signals/alien_signals.dart'
     // ignore: combinators_ordering
     show
         activeSub,
-        activeTrackId,
-        setActiveSub,
-        nextTrackId;
+        setActiveSub;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -162,14 +160,13 @@ class SignalBuilderElement extends ComponentElement {
   @override
   Widget build() {
     final prevSub = activeSub;
-    final prevTrackId = activeTrackId;
     // ignore: invalid_use_of_protected_member
-    setActiveSub(_effect?.subscriber, nextTrackId());
+    setActiveSub(_effect?.subscriber);
 
     try {
       return _widget.build(_parent!);
     } finally {
-      setActiveSub(prevSub, prevTrackId);
+      setActiveSub(prevSub);
     }
   }
 }
