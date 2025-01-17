@@ -36,8 +36,6 @@ extension GetProviderWithArgumentExtension<T, A> on ArgProvider<T, A> {
 
   /// {@macro provider-scope.maybeGet}
   T? maybeGet(BuildContext context) {
-    if (_instance == null) return null;
-
-    return ProviderScope._getOrCreateProvider(context, id: _instance!);
+    return ProviderScope._getOrCreateArgProvider(context, id: this);
   }
 }
