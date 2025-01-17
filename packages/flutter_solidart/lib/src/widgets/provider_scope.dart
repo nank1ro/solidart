@@ -666,44 +666,20 @@ class _InheritedProvider extends InheritedModel<Object> {
   }
 }
 
-/// {@template providererror}
-/// Error thrown when the [Provider] of type [id] cannot be found
+/// {@template ArgProviderWithoutScopeError}
+/// Error thrown when the [Provider] was never attached to a [ProviderScope].
 /// {@endtemplate}
-class ProviderError<T extends Object> extends Error {
-  /// {@macro providererror}
-  ProviderError(this.id);
+class ProviderWithoutScopeError extends Error {
+  /// {@macro ArgProviderWithoutScopeError}
+  ProviderWithoutScopeError(this.provider);
 
-  /// The id of the provider
-  final Provider<T> id;
+  // ignore: public_member_api_docs
+  final Provider<dynamic> provider;
 
   @override
   String toString() {
-    return '''
-Error: could not find a ProviderScope containing the given Provider type $T and id $id.
-To fix, please:
-          
-  * Be sure to have a ProviderScope ancestor, the context used must be a descendant.
-  * Ensure you provided the right ProviderId<T> to context.get(ProviderId<T> id) 
-  * Create providers providing types:
-    ```
-    ProviderScope(
-      providers: [
-          nameProviderId.createProvider(
-            init: () => const NameProvider('Ale'),
-          ),
-          counterProviderId.createProvider(
-            init: () => Signal(0),
-          ),
-      ],
-    )
-    ```
-  * The types `NameProvider` and `Signal<int>` are the providers' types. They
-  only have to be provided when declaring the Ids.
-  E.g. `final nameProviderId = ProviderId<NameProvider>();`.
-  
-If none of these solutions work, please file a bug at:
-https://github.com/nank1ro/solidart/issues/new
-      ''';
+    return 'Seems like that you forgot to provide the argument-less provider '
+        'of type ${provider._valueType} to a ProviderScope.';
   }
 }
 
@@ -723,19 +699,21 @@ class MultipleProviderOfSameInstance extends Error {
   }
 }
 
-/// Error thrown when the [Provider] was never attached to a [ProviderScope].
-class ProviderWithoutScopeError extends Error {
-  /// {@macro Providermultipleproviderofsametypeerror}
-  ProviderWithoutScopeError(this.provider);
+/// {@template ArgProviderWithoutScopeError}
+/// Error thrown when the [ArgProvider] was never attached to a [ProviderScope].
+/// {@endtemplate}
+class ArgProviderWithoutScopeError extends Error {
+  /// {@macro ArgProviderWithoutScopeError}
+  ArgProviderWithoutScopeError(this.argProvider);
 
   // ignore: public_member_api_docs
-  final ArgProvider<dynamic, dynamic> provider;
+  final ArgProvider<dynamic, dynamic> argProvider;
 
   @override
   String toString() {
-    return '''
-    Seems like that you forgot to provide the provider ${provider._valueType} and argument ${provider._argumentType} to a ProviderScope.
-      ''';
+    return 'Seems like that you forgot to provide the provider of type'
+        '${argProvider._valueType} and argument type '
+        '${argProvider._argumentType} to a ProviderScope.';
   }
 }
 

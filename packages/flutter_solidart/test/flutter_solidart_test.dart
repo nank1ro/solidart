@@ -682,7 +682,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester.takeException(),
-        const TypeMatcher<ProviderError<NumberContainer>>(),
+        const TypeMatcher<ProviderWithoutScopeError>(),
       );
     });
   });
@@ -859,8 +859,8 @@ void main() {
     );
     expect(
       tester.takeException(),
-      const TypeMatcher<ProviderError<NameContainer>>().having(
-        (pe) => pe.id,
+      const TypeMatcher<ProviderWithoutScopeError>().having(
+        (pe) => pe.provider,
         'The wrong ID is used.',
         nameContainerProvider,
       ),
@@ -1275,7 +1275,7 @@ void main() {
     expect(
       tester.takeException(),
       const TypeMatcher<SolidartCaughtException>().having(
-        (error) => (error.exception as ProviderError).id,
+        (error) => (error.exception as ProviderWithoutScopeError).provider,
         'Matching the wrong ID should result in a ProviderError.',
         equals(invalidCounterProvider),
       ),

@@ -9,7 +9,7 @@ extension GetProviderExtension<T extends Object> on Provider<T> {
   /// {@macro provider-scope.get}
   T get(BuildContext context) {
     final provider = maybeGet(context);
-    if (provider == null) throw ProviderError<T>(this);
+    if (provider == null) throw ProviderWithoutScopeError(this);
     return provider;
   }
 
@@ -30,7 +30,7 @@ extension GetProviderWithArgumentExtension<T extends Object, A>
   T get(BuildContext context) {
     final provider = maybeGet(context);
     if (provider == null) {
-      throw ProviderWithoutScopeError(this);
+      throw ArgProviderWithoutScopeError(this);
     }
     return provider;
   }
