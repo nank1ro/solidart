@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations
+
 import 'dart:async';
 import 'dart:math';
 
@@ -1612,7 +1614,7 @@ void main() {
         expect(c3.value, equals(1));
       });
       test('should clear subscriptions when untracked by all subscribers', () {
-        int bRunTimes = 0;
+        var bRunTimes = 0;
 
         final a = Signal(1);
         final b = Computed(() {

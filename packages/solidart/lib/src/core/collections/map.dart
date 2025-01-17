@@ -37,7 +37,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   }) {
     return MapSignal._internal(
       initialValue: Map<K, V>.of(initialValue),
-      name: name ?? ReactiveContext.main.nameFor('MapSignal'),
+      name: name ?? ReactiveName.nameFor('MapSignal'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,

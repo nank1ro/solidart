@@ -37,7 +37,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   }) {
     return ListSignal._internal(
       initialValue: initialValue.toList(),
-      name: name ?? ReactiveContext.main.nameFor('ListSignal'),
+      name: name ?? ReactiveName.nameFor('ListSignal'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,

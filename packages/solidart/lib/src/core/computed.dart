@@ -50,7 +50,7 @@ part of 'core.dart';
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-class Computed<T> extends SignalBase<T> implements Derivation {
+class Computed<T> extends SignalBase<T> {
   /// {@macro computed}
   factory Computed(
     T Function() selector, {
@@ -77,7 +77,7 @@ class Computed<T> extends SignalBase<T> implements Derivation {
   }) {
     return Computed._internal(
       selector: selector,
-      name: name ?? ReactiveContext.main.nameFor('Computed'),
+      name: name ?? ReactiveName.nameFor('Computed'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,

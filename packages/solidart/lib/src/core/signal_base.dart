@@ -96,6 +96,9 @@ abstract class SignalBase<T> {
     bool fireImmediately = false,
   });
 
+  /// Tries to dispose the signal, if no observers are present
+  void _mayDispose();
+
   /// Diposes the signal
   void dispose();
 }

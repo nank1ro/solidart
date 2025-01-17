@@ -37,7 +37,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   }) {
     return SetSignal._internal(
       initialValue: initialValue.toSet(),
-      name: name ?? ReactiveContext.main.nameFor('SetSignal'),
+      name: name ?? ReactiveName.nameFor('SetSignal'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,

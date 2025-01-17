@@ -37,7 +37,7 @@ class ReadSignal<T> implements SignalBase<T> {
   }) {
     return ReadSignal._internal(
       initialValue: initialValue,
-      name: name ?? ReactiveContext.main.nameFor('ReadSignal'),
+      name: name ?? ReactiveName.nameFor('ReadSignal'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,

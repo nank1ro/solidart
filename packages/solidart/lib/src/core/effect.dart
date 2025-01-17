@@ -46,9 +46,12 @@ class EffectOptions {
 }
 
 /// The reaction interface
-abstract class ReactionInterface implements Derivation {
+abstract class ReactionInterface {
   /// Indicate if the reaction is dispose
   bool get disposed;
+
+  /// Tries to dispose the effects, if no listeners are present
+  void _mayDispose();
 
   /// Disposes the reaction
   void dispose();
@@ -105,7 +108,7 @@ abstract class ReactionInterface implements Derivation {
 ///
 ///
 /// Any effect runs at least once immediately when is created with the current
-/// signals values
+/// signals values, unless you specify otherwise with the `fireImmediately`
 ///
 /// > An effect is useless after it is disposed, you must not use it anymore.
 /// {@endtemplate}
@@ -120,7 +123,7 @@ class Effect implements ReactionInterface {
     bool? fireImmediately,
   }) {
     late Effect effect;
-    final name = options?.name ?? ReactiveContext.main.nameFor('Effect');
+    final name = options?.name ?? ReactiveName.nameFor('Effect');
     final effectiveFireImmediately =
         fireImmediately ?? SolidartConfig.fireEffectImmediately;
     final effectiveOptions = (options ?? EffectOptions()).copyWith(name: name);
@@ -180,14 +183,10 @@ class Effect implements ReactionInterface {
     ErrorCallback? onError,
   })  : _onError = onError,
         name = options.name!,
-        _callback = callback,
         _internalEffect = alien.Effect(callback);
 
   /// The name of the effect, useful for logging purposes.
   final String name;
-
-  /// The callback that is fired each time a signal updates.
-  final VoidCallback _callback;
 
   /// Optionally handle the error case
   final ErrorCallback? _onError;
@@ -204,7 +203,6 @@ class Effect implements ReactionInterface {
   final bool fireImmediately;
 
   bool _disposed = false;
-  bool _isRunning = false;
 
   late final alien.Effect<void> _internalEffect;
 
@@ -215,37 +213,12 @@ class Effect implements ReactionInterface {
   @override
   bool get disposed => _disposed;
 
-  final Set __observables = {};
-
-  // The list of dependencies which the dispose has been prevented.
-  final Set _observablesDisposePrevented = {};
-
   void _schedule() {
     try {
       _internalEffect.run();
     } catch (e, s) {
       _onError?.call(SolidartCaughtException(e, stackTrace: s));
     }
-  }
-
-  /// Tracks the observables present in the given [fn] function
-  ///
-  /// This method must not be used directly.
-  @protected
-  void track(void Function() fn, {bool preventDisposal = false}) {
-    _isRunning = true;
-    _internalEffect.run();
-    _isRunning = false;
-
-    // coverage:ignore-start
-    if (preventDisposal) {
-      for (final ob in __observables) {
-        ob._disposable = false;
-        _observablesDisposePrevented.add(ob);
-      }
-    }
-    // coverage:ignore-end
-    // _context.endBatch();
   }
 
   /// Invalidates the effect.
@@ -264,13 +237,13 @@ class Effect implements ReactionInterface {
     alien.endTrack(_internalEffect);
 
     // coverage:ignore-start
-    for (final ob in _observablesDisposePrevented) {
-      ob
-        .._disposable = true
-        .._mayDispose();
-    }
-    // coverage:ignore-end
-    __observables.clear();
+    // for (final ob in _observablesDisposePrevented) {
+    //   ob
+    //     .._disposable = true
+    //     .._mayDispose();
+    // }
+    // // coverage:ignore-end
+    // __observables.clear();
   }
 
   @override

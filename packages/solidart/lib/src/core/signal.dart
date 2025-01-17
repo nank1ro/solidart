@@ -125,7 +125,7 @@ class Signal<T> extends ReadSignal<T> {
   }) {
     return Signal._internal(
       initialValue: initialValue,
-      name: name ?? ReactiveContext.main.nameFor('Signal'),
+      name: name ?? ReactiveName.nameFor('Signal'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
@@ -160,7 +160,7 @@ class Signal<T> extends ReadSignal<T> {
     bool? trackPreviousValue,
   }) {
     return Signal._internalLazy(
-      name: name ?? ReactiveContext.main.nameFor('Signal'),
+      name: name ?? ReactiveName.nameFor('Signal'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,

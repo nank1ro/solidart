@@ -97,7 +97,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     return Resource._internal(
       fetcher: fetcher,
       source: source,
-      name: name ?? ReactiveContext.main.nameFor('Resource'),
+      name: name ?? ReactiveName.nameFor('Resource'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
@@ -129,7 +129,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     return Resource._internal(
       stream: stream,
       source: source,
-      name: name ?? ReactiveContext.main.nameFor('Resource'),
+      name: name ?? ReactiveName.nameFor('Resource'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
@@ -385,7 +385,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     return ResourceSelector<T, Selected>(
       resource: this,
       selector: selector,
-      name: name ?? ReactiveContext.main.nameFor('ResourceSelector'),
+      name: name ?? ReactiveName.nameFor('ResourceSelector'),
     );
   }
 
