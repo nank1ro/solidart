@@ -721,10 +721,7 @@ class _ProviderWidgetBuilder extends StatelessWidget {
   const _ProviderWidgetBuilder({
     this.child,
     this.builder,
-  }) : assert(
-          (builder != null) || (child != null),
-          'Provide a child or a builder',
-        );
+  });
 
   final TransitionBuilder? builder;
   final Widget? child;
