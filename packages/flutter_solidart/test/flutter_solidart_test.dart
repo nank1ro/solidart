@@ -1208,6 +1208,37 @@ void main() {
     expect(find.text('100'), findsOneWidget);
   });
 
+  testWidgets(
+      'SolidOverride should override argument providers regardless of the hierarchy',
+      (tester) async {
+    final counterProvider =
+        Provider.withArgument((_, int init) => Signal(init));
+    await tester.pumpWidget(
+      ProviderScopeOverride(
+        overrides: [
+          counterProvider.overrideWith(
+            argument: 8,
+            create: (_, int init) => Signal(init * 2),
+          ),
+        ],
+        child: MaterialApp(
+          home: ProviderScope(
+            providers: [
+              counterProvider(1),
+            ],
+            builder: (context, _) {
+              final counter = counterProvider.get(context);
+              return SignalBuilder(
+                builder: (context, _) => Text(counter.value.toString()),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    expect(find.text('16'), findsOneWidget);
+  });
+
   testWidgets('Only one SolidOverride must be present in the widget tree',
       (tester) async {
     final counterProvider = Provider<Signal<int>>((_) => Signal(0));

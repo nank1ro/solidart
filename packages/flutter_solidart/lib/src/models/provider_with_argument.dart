@@ -44,6 +44,20 @@ class ArgProvider<T extends Object, A> {
         dispose: _dispose,
         lazy: _lazy,
       );
+
+  ArgProviderOverride<T, A> overrideWith({
+    required A argument,
+    CreateProviderFnWithArg<T, A>? create,
+    DisposeProviderFn<T>? dispose,
+    bool? lazy,
+  }) =>
+      ArgProviderOverride._(
+        this,
+        argument: argument,
+        create: create,
+        dispose: dispose,
+        lazy: lazy,
+      );
 }
 
 /// {@template arg-provider}
