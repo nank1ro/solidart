@@ -13,7 +13,7 @@ typedef ReadableSignal<T> = ReadSignal<T>;
 /// All derived-signals are [ReadSignal]s because they depend
 /// on the value of a [Signal].
 /// {@endtemplate}
-class ReadSignal<T> implements SignalBase<T> {
+class ReadSignal<T> with alien.Dependency implements SignalBase<T> {
   /// {@macro readsignal}
   factory ReadSignal(
     T initialValue, {
@@ -56,7 +56,6 @@ class ReadSignal<T> implements SignalBase<T> {
     required this.comparator,
     required this.trackPreviousValue,
   }) : _hasValue = true {
-    _internalSignal = _AlienSignal(Some(initialValue), parent: this);
     _untrackedValue = initialValue;
     _notifySignalCreation();
   }
@@ -68,9 +67,7 @@ class ReadSignal<T> implements SignalBase<T> {
     required this.trackInDevTools,
     required this.comparator,
     required this.trackPreviousValue,
-  }) : _hasValue = false {
-    _internalSignal = _AlienSignal(None<T>(), parent: this);
-  }
+  }) : _hasValue = false;
 
   /// {@macro SignalBase.name}
   @override
@@ -96,13 +93,9 @@ class ReadSignal<T> implements SignalBase<T> {
   @override
   final ValueComparator<T?> comparator;
 
-  /// Tracks the internal value
-  late final alien.Signal<Option<T>> _internalSignal;
-
   @override
   bool get hasValue {
-    // cause observation
-    _internalSignal.get();
+    system.linkDep(this);
     return _hasValue;
   }
 
@@ -115,21 +108,19 @@ class ReadSignal<T> implements SignalBase<T> {
   bool _hasPreviousValue = false;
 
   T get _value {
+    final value = _untrackedValue;
     if (_disposed) {
-      return alien.untrack(() => _internalSignal.get().unwrap());
+      return value;
     }
-    final value = _internalSignal.get().unwrap();
 
+    system.linkDep(this);
     if (autoDispose) {
       _subs.clear();
-
-      var link = _internalSignal.subs;
-      for (; link != null; link = link.nextSub) {
-        final sub = link.sub;
-        if (sub == null) break;
-        _subs.add(sub);
+      for (var link = subs; link != null; link = link.nextSub) {
+        _subs.add(link.sub);
       }
     }
+
     return value;
   }
 
@@ -156,16 +147,14 @@ class ReadSignal<T> implements SignalBase<T> {
   set _value(T newValue) {
     _untrackedPreviousValue = _untrackedValue;
     _untrackedValue = newValue;
-    _internalSignal.currentValue = Some(newValue);
     _reportChanged();
   }
 
   void _reportChanged() {
-    final subs = _internalSignal.subs;
     if (subs != null) {
-      alien.propagate(subs);
-      if (alien.batchDepth == 0) {
-        alien.drainQueuedEffects();
+      system.propagate(subs);
+      if (system.batchDepth == 0) {
+        system.processEffectNotifications();
       }
     }
   }
@@ -279,20 +268,19 @@ class ReadSignal<T> implements SignalBase<T> {
 
   @override
   void dispose() {
-    print('dispose read signal $name');
+    // print('dispose read signal $name');
     // ignore if already disposed
     if (_disposed) return;
     _disposed = true;
 
-    alien.untrack(() => _internalSignal.get());
-
+    system.linkDep(this);
     _listeners.clear();
 
     for (final sub in _subs) {
-      print('computed call dispose on dep $sub');
-      print('computed dep runtimeType ${sub.runtimeType}');
-      if (sub is _AlienEffect) sub.parent._mayDispose();
-      if (sub is _AlienComputed) sub.parent._mayDispose();
+      // print('computed call dispose on dep $sub');
+      // print('computed dep runtimeType ${sub.runtimeType}');
+      if (sub is Computed) sub._mayDispose();
+      if (sub is Effect) sub._mayDispose();
     }
     _subs.clear();
 
@@ -331,8 +319,8 @@ class ReadSignal<T> implements SignalBase<T> {
   void _mayDispose() {
     if (!autoDispose || _disposed) return;
 
-    final hasSubs = _internalSignal.subs == null;
-    print('ReadSignal subs ${_internalSignal.subs}');
+    final hasSubs = subs == null;
+    // print('ReadSignal subs $subs');
 
     bool mayDispose() =>
         _listeners.isEmpty; //&& _observers.isEmpty && _disposable;

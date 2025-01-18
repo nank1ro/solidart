@@ -9,7 +9,7 @@ typedef DisposeObservation = void Function();
 typedef ValueComparator<T> = bool Function(T a, T b);
 
 /// The base of a signal.
-abstract class SignalBase<T> {
+abstract class SignalBase<T> with alien.Dependency {
   /// The base of a signal.
   SignalBase({
     required this.name,

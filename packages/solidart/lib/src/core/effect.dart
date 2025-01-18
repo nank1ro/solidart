@@ -74,7 +74,7 @@ abstract class ReactionInterface {
 ///
 /// // effect creation
 /// Effect((_) {
-///     print("The count is now ${counter.value}");
+///     // print("The count is now ${counter.value}");
 /// });
 /// // The effect prints `The count is now 0`;
 ///
@@ -88,7 +88,7 @@ abstract class ReactionInterface {
 /// advanced usage:
 /// ```dart
 /// final dispose = Effect((_) {
-///     print("The count is now ${counter.value}");
+///     // print("The count is now ${counter.value}");
 /// });
 /// ```
 ///
@@ -98,7 +98,7 @@ abstract class ReactionInterface {
 /// You can also dispose an effect inside the callback
 /// ```dart
 /// Effect((dispose) {
-///     print("The count is now ${counter.value}");
+///     // print("The count is now ${counter.value}");
 ///     if (counter.value == 1) dispose();
 /// });
 /// ```
@@ -112,7 +112,7 @@ abstract class ReactionInterface {
 ///
 /// > An effect is useless after it is disposed, you must not use it anymore.
 /// {@endtemplate}
-class Effect implements ReactionInterface {
+class Effect with alien.Subscriber implements ReactionInterface {
   /// {@macro effect}
   factory Effect(
     void Function(DisposeEffect dispose) callback, {
@@ -168,7 +168,7 @@ class Effect implements ReactionInterface {
     }
     // ignore: cascade_invocations
     if (effectiveFireImmediately) {
-      effect._schedule();
+      effect._run();
     }
     return effect;
   }
@@ -182,9 +182,10 @@ class Effect implements ReactionInterface {
     required this.fireImmediately,
     ErrorCallback? onError,
   })  : _onError = onError,
-        name = options.name! {
-    _internalEffect = _AlienEffect(callback, parent: this);
-  }
+        name = options.name!,
+        _callback = callback;
+
+  final VoidCallback _callback;
 
   /// The name of the effect, useful for logging purposes.
   final String name;
@@ -205,20 +206,30 @@ class Effect implements ReactionInterface {
 
   bool _disposed = false;
 
-  late final alien.Effect<void> _internalEffect;
-
   final _deps = <alien.Dependency>{};
-
-  /// The subscriber of the effect, do not use it directly.
-  @protected
-  alien.Subscriber get subscriber => _internalEffect;
 
   @override
   bool get disposed => _disposed;
 
+  void _run() {
+    final prevSub = system.activeSub;
+    system.activeSub = this;
+    system.startTracking(this);
+    try {
+      _callback();
+    } finally {
+      system.activeSub = prevSub;
+      system.endTracking(this);
+    }
+  }
+
   void _schedule() {
     try {
-      _internalEffect.run();
+      if ((flags & alien.SubscriberFlags.dirty) != 0 ||
+          ((flags & alien.SubscriberFlags.pendingComputed) != 0 &&
+              system.updateDirtyFlag(this, flags))) {
+        _run();
+      }
     } catch (e, s) {
       _onError?.call(SolidartCaughtException(e, stackTrace: s));
     } finally {
@@ -236,17 +247,16 @@ class Effect implements ReactionInterface {
   /// After this operation the effect is useless.
   @override
   void dispose() {
-    print('dispose Effect');
+    // print('dispose Effect');
     if (_disposed) return;
     _disposed = true;
-
-    _internalEffect.stop();
+    system.disposeSub(this);
 
     for (final dep in _deps) {
-      print('call dispose on dep $dep');
-      print('dep runtimeType ${dep.runtimeType}');
-      if (dep is _AlienSignal) dep.parent._mayDispose();
-      if (dep is _AlienComputed) dep.parent._mayDispose();
+      // print('call dispose on dep $dep');
+      // print('dep runtimeType ${dep.runtimeType}');
+      if (dep is Signal) dep._mayDispose();
+      if (dep is Computed) dep._mayDispose();
     }
 
     _deps.clear();
@@ -255,20 +265,21 @@ class Effect implements ReactionInterface {
   @override
   void _mayDispose() {
     if (!options.autoDispose || _disposed) return;
-    print('effect deps ${_internalEffect.deps}');
-    print('dep ${_internalEffect.deps?.dep}');
-    if (_internalEffect.deps == null) {
+    // print('effect deps $deps');
+    // print('dep ${deps?.dep}');
+    if (deps == null) {
       dispose();
-    } else if (_internalEffect.deps?.dep != null) {
+    } else if (deps?.dep != null) {
       _deps.clear();
 
-      var link = _internalEffect.deps;
-      for (; link != null; link = link.nextDep) {
+      for (var link = deps; link != null; link = link.nextDep) {
         final dep = link.dep;
-        if (dep == null) break;
         _deps.add(dep);
       }
-      print('effects deps $_deps');
+      // print('effects deps $_deps');
     }
   }
+
+  @override
+  int flags = alien.SubscriberFlags.effect;
 }

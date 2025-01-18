@@ -16,7 +16,7 @@ part of 'core.dart';
 /// // derived signal, updates automatically when firstName or lastName change
 /// final fullName = Computed(() => '${firstName()} ${lastName()}');
 ///
-/// print(fullName()); // prints Josh Brown
+/// // print(fullName()); // prints Josh Brown
 ///
 /// // just update the name, the effect above doesn't run because the age has not changed
 /// user.update((value) => value.copyWith(name: 'new-name'));
@@ -50,7 +50,7 @@ part of 'core.dart';
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-class Computed<T> extends SignalBase<T> {
+class Computed<T> extends SignalBase<T> with alien.Subscriber {
   /// {@macro computed}
   factory Computed(
     T Function() selector, {
@@ -99,31 +99,8 @@ class Computed<T> extends SignalBase<T> {
     required super.trackPreviousValue,
     required this.fireImmediately,
   }) {
-    var runnedOnce = false;
-    _internalComputed = _AlienComputed(
-      (previousValue) {
-        if (trackPreviousValue && previousValue is T) {
-          _hasPreviousValue = true;
-          _untrackedPreviousValue = _previousValue = previousValue;
-        }
-
-        try {
-          _untrackedValue = selector();
-
-          if (runnedOnce) {
-            _notifySignalUpdate();
-          } else {
-            runnedOnce = true;
-          }
-          return _untrackedValue;
-        } catch (e, s) {
-          throw SolidartCaughtException(e, stackTrace: s);
-        }
-      },
-      parent: this,
-    );
     if (fireImmediately) {
-      _internalComputed.get();
+      _get();
     }
 
     _notifySignalCreation();
@@ -131,8 +108,6 @@ class Computed<T> extends SignalBase<T> {
 
   /// The selector applied
   final T Function() selector;
-
-  late final alien.Computed<T> _internalComputed;
 
   bool _disposed = false;
 
@@ -161,19 +136,52 @@ class Computed<T> extends SignalBase<T> {
   @override
   bool get hasValue => true;
 
-  var _deps = <alien.Dependency>{};
+  final _deps = <alien.Dependency>{};
+
+  bool _runnedOnce = false;
+  T _getter() {
+    // Why?
+    // if (trackPreviousValue && previousValue is T) {
+    //   _hasPreviousValue = true;
+    //   _untrackedPreviousValue = _previousValue = previousValue;
+    // }
+
+    try {
+      _untrackedValue = selector();
+      if (_runnedOnce) {
+        _notifySignalUpdate();
+      } else {
+        _runnedOnce = true;
+      }
+
+      return _untrackedValue;
+    } catch (e, s) {
+      throw SolidartCaughtException(e, stackTrace: s);
+    }
+  }
+
+  T _get() {
+    if ((flags &
+            (alien.SubscriberFlags.pendingComputed |
+                alien.SubscriberFlags.dirty)) !=
+        0) {
+      system.processComputedUpdate(this, flags);
+    }
+    system.linkDep(this);
+    return _getter();
+  }
 
   @override
   void dispose() {
     if (_disposed) return;
-    print('dispose computed $name');
+    // print('dispose computed $name');
 
     _disposed = true;
     for (final dep in _deps) {
-      print('computed call dispose on dep $dep');
-      print('computed dep runtimeType ${dep.runtimeType}');
-      if (dep is _AlienSignal) dep.parent._mayDispose();
-      if (dep is _AlienComputed) dep.parent._mayDispose();
+      // print('computed call dispose on dep $dep');
+      // print('computed dep runtimeType ${dep.runtimeType}');
+      if (dep is Signal) dep._mayDispose();
+      if (dep is Computed) dep._mayDispose();
     }
 
     _deps.clear();
@@ -188,9 +196,10 @@ class Computed<T> extends SignalBase<T> {
   @override
   T get value {
     if (_disposed) {
-      return alien.untrack(() => _internalComputed.get());
+      return _untrackedValue;
     }
-    final value = _internalComputed.get();
+
+    final value = _get();
     Future.microtask(_mayDispose);
     return value;
   }
@@ -233,18 +242,14 @@ class Computed<T> extends SignalBase<T> {
   @override
   void _mayDispose() {
     if (!autoDispose || _disposed) return;
-    print('call mayDispose on computed $name');
-    print(
-        'computed deps ${_internalComputed.deps != null} subs ${_internalComputed.subs != null}');
-    if (_internalComputed.deps == null && _internalComputed.subs == null) {
+    // print('call mayDispose on computed $name');
+    // print('computed deps ${deps != null} subs ${subs != null}');
+    if (deps == null && subs == null) {
       dispose();
     } else {
       _deps.clear();
-
-      var link = _internalComputed.deps;
-      for (; link != null; link = link.nextDep) {
+      for (var link = deps; link != null; link = link.nextDep) {
         final dep = link.dep;
-        if (dep == null) break;
         _deps.add(dep);
       }
     }
@@ -276,5 +281,35 @@ class Computed<T> extends SignalBase<T> {
   String toString() {
     value;
     return '''Computed<$T>(value: $untrackedValue, previousValue: $untrackedPreviousValue)''';
+  }
+
+  @override
+  int flags = alien.SubscriberFlags.computed | alien.SubscriberFlags.dirty;
+
+  bool _update() {
+    final prevSub = system.activeSub;
+    system.activeSub = this;
+    system.startTracking(this);
+    try {
+      final oldValue = _oldValue;
+      final newValue = _getter();
+      if (oldValue != newValue) {
+        _untrackedValue = newValue;
+        return true;
+      }
+
+      return false;
+    } finally {
+      system.activeSub = prevSub;
+      system.endTracking(this);
+    }
+  }
+
+  T? get _oldValue {
+    try {
+      return _untrackedValue;
+    } catch (_) {
+      return null;
+    }
   }
 }
