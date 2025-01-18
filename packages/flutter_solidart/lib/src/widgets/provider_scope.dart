@@ -2,13 +2,13 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/src/models/instantiable_provider.dart';
 import 'package:flutter_solidart/src/widgets/provider_scope_value.dart';
 import 'package:solidart/solidart.dart';
 
+part '../models/instantiable_provider.dart';
 part '../models/provider.dart';
-part '../models/override.dart';
 part '../models/provider_with_argument.dart';
+part '../models/override.dart';
 part '../utils/provider_extensions.dart';
 part 'provider_scope_override.dart';
 

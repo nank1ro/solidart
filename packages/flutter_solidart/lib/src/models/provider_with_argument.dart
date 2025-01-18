@@ -67,9 +67,9 @@ class ArgProvider<T extends Object, A> {
 ///
 /// {@endtemplate}
 @immutable
-class ArgProviderInit<T extends Object, A> implements InstantiableProvider {
+class ArgProviderInit<T extends Object, A> extends InstantiableProvider {
   /// {@macro arg-provider}
-  ArgProviderInit._(this._argProvider, this._arg);
+  ArgProviderInit._(this._argProvider, this._arg) : super._();
   final ArgProvider<T, A> _argProvider;
   final A _arg;
 }

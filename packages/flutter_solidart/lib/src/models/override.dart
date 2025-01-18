@@ -3,12 +3,12 @@
 part of '../widgets/provider_scope.dart';
 
 @immutable
-interface class Override {
+sealed class Override {
   Override._();
 }
 
 @immutable
-final class ProviderOverride<T extends Object> implements Override {
+class ProviderOverride<T extends Object> extends Override {
   ProviderOverride._(
     this._provider, {
     CreateProviderFn<T>? create,
@@ -16,7 +16,8 @@ final class ProviderOverride<T extends Object> implements Override {
     bool? lazy,
   })  : _create = create,
         _dispose = dispose,
-        _lazy = lazy;
+        _lazy = lazy,
+        super._();
 
   /// The reference of the provider to override.
   final Provider<T> _provider;
@@ -37,7 +38,7 @@ final class ProviderOverride<T extends Object> implements Override {
 }
 
 @immutable
-final class ArgProviderOverride<T extends Object, A> implements Override {
+class ArgProviderOverride<T extends Object, A> extends Override {
   ArgProviderOverride._(
     this._argProvider, {
     required A argument,
@@ -47,7 +48,8 @@ final class ArgProviderOverride<T extends Object, A> implements Override {
   })  : _create = create,
         _argument = argument,
         _dispose = dispose,
-        _lazy = lazy;
+        _lazy = lazy,
+        super._();
 
   /// The reference of the argument provider to override.
   final ArgProvider<T, A> _argProvider;
