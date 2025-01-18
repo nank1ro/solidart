@@ -5,7 +5,7 @@ import 'package:reactivity_benchmark/utils/create_signal.dart';
 import 'package:solidart/solidart.dart' as solidart;
 
 final class SolidartReactiveFramework extends ReactiveFramework {
-  const SolidartReactiveFramework() : super('alien-signals');
+  const SolidartReactiveFramework() : super('solidart');
 
   @override
   Computed<T> computed<T>(T Function() fn) {
