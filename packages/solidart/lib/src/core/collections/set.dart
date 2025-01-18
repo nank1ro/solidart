@@ -19,7 +19,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
     Iterable<E> initialValue, {
     SignalOptions<Set<E>>? options,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('SetSignal');
+    final name = options?.name ?? 'SetSignal';
     final effectiveOptions =
         (options ?? SignalOptions<Set<E>>(name: name)).copyWith(name: name);
     return SetSignal._internal(
@@ -101,7 +101,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   bool contains(Object? element) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.contains(element);
   }
 
@@ -111,7 +111,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// but must be consistent between changes to the set.
   @override
   Iterator<E> get iterator {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.iterator;
   }
 
@@ -121,7 +121,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// the elements.
   @override
   int get length {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.length;
   }
 
@@ -142,7 +142,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   E elementAt(int index) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.elementAt(index);
   }
 
@@ -167,7 +167,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   E? lookup(Object? object) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.lookup(object);
   }
 
@@ -241,7 +241,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// the returned set will have the same order.
   @override
   Set<E> toSet() {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.toSet();
   }
 
@@ -339,7 +339,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   List<E> toList({bool growable = true}) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.toList(growable: growable);
   }
 
@@ -366,7 +366,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// If [orElse] is omitted, it defaults to throwing a [StateError].
   @override
   E lastWhere(bool Function(E value) test, {E Function()? orElse}) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.lastWhere(test, orElse: orElse);
   }
 
@@ -389,7 +389,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// Stops iterating on the first matching element.
   @override
   E firstWhere(bool Function(E value) test, {E Function()? orElse}) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.firstWhere(test, orElse: orElse);
   }
 
@@ -399,7 +399,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// This operation will not iterate past the second element.
   @override
   E get single {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.single;
   }
 
@@ -428,7 +428,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   E singleWhere(bool Function(E value) test, {E Function()? orElse}) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.singleWhere(test, orElse: orElse);
   }
 
@@ -439,7 +439,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// equivalent to `this.elementAt(0)`.
   @override
   E get first {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.first;
   }
 
@@ -453,7 +453,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// without iterating through the previous ones).
   @override
   E get last {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.last;
   }
 
@@ -462,7 +462,12 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
       '''SetSignal<$E>(value: $_value, previousValue: $_previousValue, options; $options)''';
 
   void _notifyChanged() {
-    _reportChanged();
+    if (subs != null) {
+      system.propagate(subs);
+      if (system.batchDepth == 0) {
+        system.processEffectNotifications();
+      }
+    }
     _notifyListeners();
     _notifySignalUpdate();
   }

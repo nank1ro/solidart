@@ -7,59 +7,17 @@ part of 'core.dart';
 //// becomes active and inactive in a reaction.
 /// {@endtemplate}
 @internal
-class Atom {
+class Atom with alien.Dependency {
   /// {@macro atom}
   Atom({required this.name});
 
-  final ReactiveContext _context = ReactiveContext.main;
-
   final String name;
-
-  // ignore this lint, is a false statement, because the values is changed by
-  // reactive context.
-  // ignore: prefer_final_fields
-  bool _isPendingUnobservation = false;
-  DerivationState _lowestObserverState = DerivationState.notTracking;
-
-  // ignore: prefer_final_fields
-  bool _isBeingObserved = false;
 
   bool disposed = false;
 
-  final Set<Derivation> _observers = {};
-
-  bool get hasObservers => _observers.isNotEmpty;
-
-  void _reportObserved() {
-    _context.reportObserved(this);
-  }
-
-  void _reportChanged() {
-    _context
-      ..startBatch()
-      ..propagateChanged(this)
-      ..endBatch();
-  }
-
-  void _addObserver(Derivation d) {
-    _observers.add(d);
-
-    if (_lowestObserverState.index > d._dependenciesState.index) {
-      _lowestObserverState = d._dependenciesState;
-    }
-  }
-
-  void _removeObserver(Derivation d) {
-    _observers.remove(d);
-    if (_observers.isEmpty) {
-      _context.enqueueForUnobservation(this);
-      _mayDispose();
-    }
-  }
+  bool get hasObservers => subs != null;
 
   // coverage:ignore-start
   void dispose() {}
-
-  void _mayDispose() {}
   // coverage:ignore-end
 }

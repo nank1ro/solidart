@@ -104,7 +104,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     ResourceOptions? options,
     SignalBase<dynamic>? source,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('Resource');
+    final name = options?.name ?? 'Resource<$T>';
     final resourceOptions =
         (options ?? ResourceOptions(name: name)).copyWith(name: name);
     final signalOptions = resourceOptions.toSignalOptions<T>();
@@ -359,7 +359,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     return ResourceSelector<T, Selected>(
       resource: this,
       selector: selector,
-      name: name ?? ReactiveContext.main.nameFor('ResourceSelector'),
+      name: name ?? 'ResourceSelector',
     );
   }
 

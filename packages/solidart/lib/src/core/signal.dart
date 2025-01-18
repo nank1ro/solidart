@@ -115,7 +115,7 @@ class Signal<T> extends ReadSignal<T> {
     T initialValue, {
     SignalOptions<T>? options,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('Signal');
+    final name = options?.name ?? 'Signal<$T>';
     final effectiveOptions =
         (options ?? SignalOptions<T>(name: name)).copyWith(name: name);
     return Signal._internal(

@@ -6,7 +6,7 @@ part of 'core.dart';
 typedef DisposeObservation = void Function();
 
 /// The base of a signal.
-abstract class SignalBase<T> {
+abstract class SignalBase<T> with alien.Dependency {
   /// The current signal value
   T get value;
 

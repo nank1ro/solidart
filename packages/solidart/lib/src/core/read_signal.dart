@@ -16,13 +16,15 @@ typedef ReadableSignal<T> = ReadSignal<T>;
 /// All derived-signals are [ReadSignal]s because they depend
 /// on the value of a [Signal].
 /// {@endtemplate}
-class ReadSignal<T> extends Atom implements SignalBase<T> {
+class ReadSignal<T> extends Atom
+    with alien.Dependency
+    implements SignalBase<T> {
   /// {@macro readsignal}
   factory ReadSignal(
     T initialValue, {
     SignalOptions<T>? options,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('ReadSignal');
+    final name = options?.name ?? 'ReadSignal<$T>';
     final effectiveOptions =
         (options ?? SignalOptions<T>(name: name)).copyWith(name: name);
     return ReadSignal._internal(
@@ -54,8 +56,15 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   @override
   T get value {
-    _reportObserved();
+    if (!_disposed) _linkDep();
+    _notifyListeners();
     return _value;
+  }
+
+  void _linkDep() {
+    if (system.activeSub != null) {
+      system.link(this, system.activeSub!);
+    }
   }
 
   /// {@template set-signal-value}
@@ -72,21 +81,12 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
     // store the previous value
     _setPreviousValue(_value);
-
-    // notify with the new value
     _value = newValue;
-    _reportChanged();
-    _notifyListeners();
-    _notifySignalUpdate();
-  }
-
-  void _notifyListeners() {
-    if (_listeners.isNotEmpty) {
-      _context.untracked(() {
-        for (final listener in _listeners.toList(growable: false)) {
-          listener(_previousValue, _value);
-        }
-      });
+    if (subs != null) {
+      system.propagate(subs);
+      if (system.batchDepth == 0) {
+        system.processEffectNotifications();
+      }
     }
   }
 
@@ -101,19 +101,27 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     return options.comparator!(oldValue, newValue);
   }
 
+  void _notifyListeners() {
+    if (_listeners.isNotEmpty) {
+      for (final listener in _listeners) {
+        listener(_previousValue, _value);
+      }
+    }
+  }
+
   @override
   T call() => value;
 
   @override
   bool get hasPreviousValue {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _hasPreviousValue;
   }
 
   /// The previous value, if any.
   @override
   T? get previousValue {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _previousValue;
   }
 
@@ -134,14 +142,13 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   /// Returns the number of listeners listening to this signal.
   @override
-  int get listenerCount => _observers.length + _listeners.length;
+  int listenerCount = 0;
 
   @override
   void dispose() {
     // ignore if already disposed
     if (_disposed) return;
     _disposed = true;
-
     _listeners.clear();
 
     for (final cb in _onDisposeCallbacks) {
@@ -149,9 +156,6 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     }
     _onDisposeCallbacks.clear();
     _notifySignalDisposal();
-    for (final o in _observers.toList()) {
-      o._mayDispose();
-    }
   }
 
   @override
@@ -171,16 +175,7 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
     return () {
       _listeners.remove(listener);
-      _mayDispose();
     };
-  }
-
-  @override
-  void _mayDispose() {
-    if (!options.autoDispose) return;
-    if (_listeners.isEmpty && _observers.isEmpty) {
-      dispose();
-    }
   }
 
   @override

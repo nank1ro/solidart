@@ -59,7 +59,7 @@ DisposeEffect createEffect(
 // coverage:ignore-end
 
 /// The reaction interface
-abstract class ReactionInterface implements Derivation {
+abstract class ReactionInterface {
   /// Indicate if the reaction is dispose
   bool get disposed;
 
@@ -125,7 +125,9 @@ abstract class ReactionInterface implements Derivation {
 ///
 /// > An effect is useless after it is disposed, you must not use it anymore.
 /// {@endtemplate}
-class Effect implements ReactionInterface {
+class Effect
+    with alien.Dependency, alien.Subscriber
+    implements ReactionInterface {
   /// {@macro effect}
   factory Effect(
     void Function(DisposeEffect dispose) callback, {
@@ -133,11 +135,11 @@ class Effect implements ReactionInterface {
     EffectOptions? options,
   }) {
     late Effect effect;
-    final name = options?.name ?? ReactiveContext.main.nameFor('Effect');
+    final name = options?.name ?? 'Effect';
     final effectiveOptions = (options ?? EffectOptions()).copyWith(name: name);
     if (effectiveOptions.delay == null) {
       effect = Effect._internal(
-        callback: () => effect._track(() => callback(effect.dispose)),
+        callback: () => callback(effect.dispose),
         onError: onError,
         options: effectiveOptions,
       );
@@ -159,7 +161,7 @@ class Effect implements ReactionInterface {
             timer = scheduler(() {
               isScheduled = false;
               if (!effect.disposed) {
-                effect._track(() => callback(effect.dispose));
+                callback(effect.dispose);
               } else {
                 // coverage:ignore-start
                 timer?.cancel();
@@ -172,8 +174,14 @@ class Effect implements ReactionInterface {
         onError: onError,
       );
     }
-    // ignore: cascade_invocations
-    effect._schedule();
+
+    if (system.activeSub != null) {
+      system.link(effect, system.activeSub!);
+    } else if (system.activeScope != null) {
+      system.link(effect, system.activeScope!);
+    }
+    effect._run();
+
     return effect;
   }
 
@@ -195,106 +203,38 @@ class Effect implements ReactionInterface {
   /// Optionally handle the error case
   final ErrorCallback? _onError;
 
+  @override
+  SolidartCaughtException? _errorValue;
+
   /// {@macro effect-options}
   final EffectOptions options;
 
-  final _context = ReactiveContext.main;
-  bool _isScheduled = false;
   bool _disposed = false;
   bool _isRunning = false;
 
   @override
-  // ignore: prefer_final_fields
-  DerivationState _dependenciesState = DerivationState.notTracking;
-
-  @override
-  SolidartCaughtException? _errorValue;
-
-  @override
-  Set<Atom>? _newObservables;
-
-  @override
   bool get disposed => _disposed;
-
-  final Set<Atom> __observables = {};
-
-  @override
-  // ignore: prefer_final_fields
-  Set<Atom> get _observables => __observables;
-
-  @override
-  set _observables(Set<Atom> newObservables) {
-    __observables
-      ..clear()
-      ..addAll(newObservables);
-  }
-
-  @override
-  void _onBecomeStale() {
-    _schedule();
-  }
-
-  void _schedule() {
-    if (_isScheduled) {
-      return;
-    }
-
-    _isScheduled = true;
-    _context
-      ..addPendingReaction(this)
-      ..runReactions();
-  }
-
-  void _track(void Function() fn) {
-    _context.startBatch();
-
-    _isRunning = true;
-    _context.trackDerivation(this, fn);
-    _isRunning = false;
-
-    if (_disposed) {
-      _context.clearObservables(this);
-    }
-
-    if (_context.hasCaughtException(this)) {
-      if (_onError != null) {
-        _onError!.call(_errorValue!);
-      }
-      // coverage:ignore-start
-      else {
-        throw _errorValue!;
-      }
-      // coverage:ignore-end
-    }
-
-    _context.endBatch();
-  }
 
   @override
   void _run() {
-    if (_disposed) return;
-
-    _context.startBatch();
-
-    _isScheduled = false;
-
-    if (_context.shouldCompute(this)) {
-      try {
-        _callback();
-      } on Object catch (e, s) {
-        // coverage:ignore-start
-        // Note: "on Object" accounts for both Error and Exception
-        _errorValue = SolidartCaughtException(e, stackTrace: s);
-        if (_onError != null) {
-          _onError!.call(_errorValue!);
-        } else {
-          throw _errorValue!;
-        }
-        // coverage:ignore-end
+    _isRunning = true;
+    final prevSub = system.activeSub;
+    system.activeSub = this;
+    system.startTracking(this);
+    try {
+      _callback();
+    } on Object catch (e, s) {
+      _errorValue = SolidartCaughtException(e, stackTrace: s);
+      if (_onError != null) {
+        _onError!.call(e);
+      } else {
+        rethrow;
       }
+    } finally {
+      system.activeSub = prevSub;
+      system.endTracking(this);
+      _isRunning = false;
     }
-
-    _context.endBatch();
   }
 
   /// Invalidates the effect.
@@ -313,17 +253,9 @@ class Effect implements ReactionInterface {
     if (_isRunning) return;
 
     // ignore: cascade_invocations
-    _context
-      ..startBatch()
-      ..clearObservables(this)
-      ..endBatch();
+    system.disposeSub(this);
   }
 
   @override
-  void _mayDispose() {
-    if (options.autoDispose &&
-        (_observables.isEmpty || _observables.every((ob) => ob.disposed))) {
-      dispose();
-    }
-  }
+  int flags = alien.SubscriberFlags.effect;
 }

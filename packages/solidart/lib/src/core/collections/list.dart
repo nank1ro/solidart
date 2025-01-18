@@ -19,7 +19,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
     Iterable<E> initialValue, {
     SignalOptions<List<E>>? options,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('ListSignal');
+    final name = options?.name ?? 'ListSignal';
     final effectiveOptions =
         (options ?? SignalOptions<List<E>>(name: name)).copyWith(name: name);
     return ListSignal._internal(
@@ -69,7 +69,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   int get length {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.length;
   }
 
@@ -117,7 +117,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   E elementAt(int index) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.elementAt(index);
   }
 
@@ -131,7 +131,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// (see Uint8List.+);
   @override
   List<E> operator +(List<E> other) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value + other;
   }
 
@@ -142,7 +142,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// less than [length].
   @override
   E operator [](int index) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value[index];
   }
 
@@ -225,7 +225,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// break iteration.
   @override
   Iterator<E> get iterator {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.iterator;
   }
 
@@ -251,7 +251,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   int lastIndexWhere(bool Function(E element) test, [int? start]) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.lastIndexWhere(test, start);
   }
 
@@ -278,7 +278,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// If [orElse] is omitted, it defaults to throwing a [StateError].
   @override
   E lastWhere(bool Function(E element) test, {E Function()? orElse}) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.lastWhere(test, orElse: orElse);
   }
 
@@ -301,7 +301,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// Stops iterating on the first matching element.
   @override
   E firstWhere(bool Function(E element) test, {E Function()? orElse}) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.firstWhere(test, orElse: orElse);
   }
 
@@ -330,7 +330,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   E singleWhere(bool Function(E element) test, {E Function()? orElse}) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.singleWhere(test, orElse: orElse);
   }
 
@@ -340,7 +340,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// This operation will not iterate past the second element.
   @override
   E get single {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.single;
   }
 
@@ -351,7 +351,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// equivalent to `this.elementAt(0)`.
   @override
   E get first {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.first;
   }
 
@@ -365,7 +365,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// without iterating through the previous ones).
   @override
   E get last {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.last;
   }
 
@@ -392,7 +392,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// If `end` is equal to `start`, then the returned list is empty.
   @override
   List<E> sublist(int start, [int? end]) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.sublist(start, end);
   }
 
@@ -431,7 +431,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   List<E> toList({bool growable = true}) {
-    _reportObserved();
+    if (!_disposed) _linkDep();
     return _value.toList(growable: growable);
   }
 
@@ -912,7 +912,13 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
       '''ListSignal<$E>(value: $_value, previousValue: $_previousValue, options; $options)''';
 
   void _notifyChanged() {
-    _reportChanged();
+    if (subs != null) {
+      system.propagate(subs);
+      if (system.batchDepth == 0) {
+        system.processEffectNotifications();
+      }
+    }
+
     _notifyListeners();
     _notifySignalUpdate();
   }

@@ -62,13 +62,13 @@ Computed<T> createComputed<T>(
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-class Computed<T> extends ReadSignal<T> implements Derivation {
+class Computed<T> extends ReadSignal<T> with alien.Subscriber {
   /// {@macro computed}
   factory Computed(
     T Function() selector, {
     SignalOptions<T>? options,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('Computed');
+    final name = options?.name ?? 'Computed<$T>';
     final effectiveOptions =
         (options ?? SignalOptions<T>(name: name)).copyWith(name: name);
     return Computed._internal(
@@ -88,69 +88,25 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   final T Function() selector;
 
   @override
-  SolidartCaughtException? _errorValue;
-
-  final Set<Atom> __observables = {};
-
-  @override
-  Set<Atom> get _observables => __observables;
-
-  @override
-  set _observables(Set<Atom> value) {
-    __observables
-      ..clear()
-      ..addAll(value);
-  }
-
-  @override
-  Set<Atom>? _newObservables;
-
-  @override
-  // ignore: prefer_final_fields
-  DerivationState _dependenciesState = DerivationState.notTracking;
-
-  bool _isComputing = false;
-
-  @override
   void dispose() {
-    _context.clearObservables(this);
+    system.disposeSub(this);
     super.dispose();
   }
 
   @override
-  void _onBecomeStale() {
-    _context.propagatePossiblyChanged(this);
-  }
-
-  @override
   T get value {
-    if (_isComputing) {
-      // coverage:ignore-start
-      throw SolidartReactionException(
-        'Cycle detected in computation $name: $selector',
-      );
-      // coverage:ignore-end
+    if ((flags &
+            (alien.SubscriberFlags.dirty |
+                alien.SubscriberFlags.pendingComputed)) !=
+        0) {
+      system.processComputedUpdate(this, flags);
+    }
+    if (system.activeSub != null) {
+      system.link(this, system.activeSub!);
+    } else if (system.activeScope != null) {
+      system.link(this, system.activeScope!);
     }
 
-    if (!_context.isWithinBatch && _observers.isEmpty) {
-      if (_context.shouldCompute(this)) {
-        _context.startBatch();
-        final newValue = _computeValue(track: false);
-        if (newValue is T) _setValue(newValue);
-        _context.endBatch();
-      }
-    } else {
-      _reportObserved();
-      if (_context.shouldCompute(this)) {
-        if (_trackAndCompute()) {
-          _context.propagateChangeConfirmed(this);
-        }
-      }
-    }
-
-    if (_context.hasCaughtException(this)) {
-      throw _errorValue!;
-    }
     return _value;
   }
 
@@ -188,42 +144,13 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
     };
   }
 
-  T? _computeValue({required bool track}) {
-    _isComputing = true;
-    _context.pushComputation();
-
-    T? computedValue;
-    if (track) {
-      computedValue = _context.trackDerivation(this, selector);
-    } else {
-      try {
-        computedValue = selector();
-        _errorValue = null;
-      } on Object catch (e, s) {
-        _errorValue = SolidartCaughtException(e, stackTrace: s);
-      }
-    }
-
-    _context.popComputation();
-    _isComputing = false;
-
-    return computedValue;
-  }
-
-  bool _trackAndCompute() {
+  bool _compute() {
     final oldValue = _value;
-    final wasSuspended = _dependenciesState == DerivationState.notTracking;
-    final hadCaughtException = _context.hasCaughtException(this);
+    final newValue = selector();
+    final changed = !_areEqual(oldValue, newValue);
 
-    final newValue = _computeValue(track: true);
-
-    final changedException =
-        hadCaughtException != _context.hasCaughtException(this);
-    final changed =
-        wasSuspended || changedException || !_areEqual(oldValue, newValue);
-
-    if (changed && newValue is T) {
-      _setValue(newValue);
+    if (changed) {
+      _value = newValue;
     }
 
     return changed;
@@ -232,4 +159,7 @@ class Computed<T> extends ReadSignal<T> implements Derivation {
   @override
   String toString() =>
       '''Computed<$T>(value: $_value, previousValue: $_previousValue, options; $options)''';
+
+  @override
+  int flags = alien.SubscriberFlags.computed | alien.SubscriberFlags.dirty;
 }
