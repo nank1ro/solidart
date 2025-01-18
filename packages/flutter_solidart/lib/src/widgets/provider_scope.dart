@@ -252,14 +252,14 @@ class ProviderScope extends StatefulWidget {
   const ProviderScope({
     super.key,
     this.child,
-    required this.providers,
+    required List<InstantiableProvider> this.providers,
     this.builder,
   }) : overrides = null;
 
   const ProviderScope._fromOverrides({
     super.key,
     this.child,
-    required this.overrides,
+    required List<Override> this.overrides,
     this.builder,
   }) : providers = null;
 
