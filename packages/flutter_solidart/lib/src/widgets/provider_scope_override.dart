@@ -31,7 +31,7 @@ class ProviderScopeOverride extends StatefulWidget {
 
   /// All the overriden providers provided to all the descendants of
   /// [ProviderScope].
-  final List<Override<Object>> overrides;
+  final List<Override> overrides;
 
   /// Returns the [ProviderScopeOverrideState] of the [ProviderScopeOverride]
   /// widget.

@@ -7,7 +7,7 @@ import 'package:flutter_solidart/src/widgets/provider_scope_value.dart';
 import 'package:solidart/solidart.dart';
 
 part '../models/provider.dart';
-part '../models/provider_override.dart';
+part '../models/override.dart';
 part '../models/provider_with_argument.dart';
 part '../utils/provider_extensions.dart';
 part 'provider_scope_override.dart';

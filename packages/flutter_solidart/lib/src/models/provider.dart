@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors_in_immutables
+
 part of '../widgets/provider_scope.dart';
 
 /// A function that creates an object of type [T].
@@ -31,7 +33,6 @@ class Provider<T extends Object> implements InstantiableProvider {
   //! type.
 
   /// {@macro provider}
-  // ignore: prefer_const_constructors_in_immutables
   Provider(
     /// @macro Provider.create}
     CreateProviderFn<T> create, {

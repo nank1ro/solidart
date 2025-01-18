@@ -1,30 +1,31 @@
+// ignore_for_file: prefer_const_constructors_in_immutables
+
 part of '../widgets/provider_scope.dart';
 
-sealed class Override<T extends Object> {
-  Override._({
-    required DisposeProviderFn<T>? dispose,
-    required bool? lazy,
-  })  : _lazy = lazy,
-        _dispose = dispose;
-
-  final DisposeProviderFn<T>? _dispose;
-
-  final bool? _lazy;
+@immutable
+interface class Override {
+  Override._();
 }
 
-final class ProviderOverride<T extends Object> extends Override<T> {
+@immutable
+final class ProviderOverride<T extends Object> implements Override {
   ProviderOverride._(
     this._provider, {
     CreateProviderFn<T>? create,
-    super.dispose,
-    super.lazy,
+    DisposeProviderFn<T>? dispose,
+    bool? lazy,
   })  : _create = create,
-        super._();
+        _dispose = dispose,
+        _lazy = lazy;
 
   /// The reference of the provider to override.
   final Provider<T> _provider;
 
   final CreateProviderFn<T>? _create;
+
+  final DisposeProviderFn<T>? _dispose;
+
+  final bool? _lazy;
 
   /// Creates a [Provider].
   /// This method is used internally by [ProviderScope].
@@ -35,16 +36,18 @@ final class ProviderOverride<T extends Object> extends Override<T> {
       );
 }
 
-final class ArgProviderOverride<T extends Object, A> extends Override<T> {
+@immutable
+final class ArgProviderOverride<T extends Object, A> implements Override {
   ArgProviderOverride._(
     this._argProvider, {
     required A argument,
     CreateProviderFnWithArg<T, A>? create,
-    super.dispose,
-    super.lazy,
+    DisposeProviderFn<T>? dispose,
+    bool? lazy,
   })  : _create = create,
         _argument = argument,
-        super._();
+        _dispose = dispose,
+        _lazy = lazy;
 
   /// The reference of the argument provider to override.
   final ArgProvider<T, A> _argProvider;
@@ -53,6 +56,10 @@ final class ArgProviderOverride<T extends Object, A> extends Override<T> {
   final CreateProviderFnWithArg<T, A>? _create;
 
   final A? _argument;
+
+  final DisposeProviderFn<T>? _dispose;
+
+  final bool? _lazy;
 
   /// Given an argument, creates a [Provider] with that argument.
   /// This method is used internally by [ProviderScope].
