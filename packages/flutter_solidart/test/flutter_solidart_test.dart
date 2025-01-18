@@ -468,6 +468,45 @@ void main() {
     expect(counterFinder(1, 2), findsOneWidget);
   });
 
+  testWidgets('Test Provider.get within Provider create fn', (tester) async {
+    final s = Signal(0);
+    final counterProvider = Provider((_) => s);
+
+    final doubleCounterProvider = Provider((context) {
+      final counter = counterProvider.get(context);
+      return Computed(() => counter() * 2);
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProviderScope(
+            providers: [counterProvider],
+            child: ProviderScope(
+              providers: [doubleCounterProvider],
+              builder: (context, child) {
+                final counter = counterProvider.get(context);
+                final doubleCounter = doubleCounterProvider.get(context);
+                return SignalBuilder(
+                  builder: (context, _) {
+                    return Text('${counter()} ${doubleCounter()}');
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    Finder counterFinder(int value1, int value2) =>
+        find.text('$value1 $value2');
+    expect(counterFinder(0, 0), findsOneWidget);
+
+    s.value = 1;
+    await tester.pumpAndSettle();
+    expect(counterFinder(1, 2), findsOneWidget);
+  });
+
   group('Test ProviderScope.value', () {
     testWidgets('Test ProviderScope.value with observe', (tester) async {
       final s = Signal(0, autoDispose: false);
