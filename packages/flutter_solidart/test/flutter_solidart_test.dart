@@ -1177,78 +1177,117 @@ void main() {
     timeout: const Timeout(Duration(seconds: 1)),
   );
 
-  // testWidgets(
-  //     'SolidOverride should override providers regardless of the hierarchy',
-  //     (tester) async {
-  //   final counterId = Provider<Signal<int>>(() => Signal(0));
-  //   await tester.pumpWidget(
-  //     ProviderScopeOverride(
-  //       providers: `
-  //         counterId, // todo: somehow override with 100
-  //       `,
-  //       child: MaterialApp(
-  //         home: ProviderScope(
-  //           providers: [
-  //             counterId,
-  //           ],
-  //           builder: (context) {
-  //             final counter = counterId.observe(context).value;
-  //             return Text(counter.toString());
-  //           },
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  //   expect(find.text('100'), findsOneWidget);
-  // });
+  // todo: ProviderScopeOverride needs to override the value in a different way
 
-  // testWidgets('Only one SolidOverride must be present in the widget tree',
-  //     (tester) async {
-  //   final counterId = Provider<Signal<int>>(() => Signal(0));
-  //   await tester.pumpWidget(
-  //     ProviderScopeOverride(
-  //       providers: [
-  //         counterId, // todo: somehow override with 100
-  //       ],
-  //       child: MaterialApp(
-  //         home: ProviderScopeOverride.builder(
-  //           providers: [
-  //             counterId,
-  //           ],
-  //           builder: (context) {
-  //             final counter = counterId.observe(context).value;
-  //             return Text(counter.toString());
-  //           },
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  //   expect(
-  //     tester.takeException(),
-  //     const TypeMatcher<MultipleSolidOverrideError>(),
-  //   );
-  // });
+  testWidgets(
+      'SolidOverride should override providers regardless of the hierarchy',
+      (tester) async {
+    final counterProvider = Provider<Signal<int>>((_) => Signal(0));
+    await tester.pumpWidget(
+      ProviderScopeOverride(
+        overrides: [
+          counterProvider.overrideWith(
+            create: (context) => Signal(100),
+          ),
+        ],
+        child: MaterialApp(
+          home: ProviderScope(
+            providers: [
+              counterProvider,
+            ],
+            builder: (context, _) {
+              final counter = counterProvider.get(context);
+              return SignalBuilder(
+                builder: (context, _) => Text(counter.value.toString()),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    expect(find.text('100'), findsOneWidget);
+  });
 
-  // testWidgets(
-  //     '''SolidOverride.of(context) throws an error if no SolidOverride is found in the widget tree''',
-  //     (tester) async {
-  //   await tester.pumpWidget(
-  //     MaterialApp(
-  //       home: Scaffold(
-  //         body: Builder(
-  //           builder: (context) {
-  //             ProviderScopeOverride.of(context);
-  //             return const SizedBox();
-  //           },
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  //   expect(
-  //     tester.takeException(),
-  //     const TypeMatcher<FlutterError>(),
-  //   );
-  // });
+  testWidgets(
+      'SolidOverride should override argument providers regardless of the hierarchy',
+      (tester) async {
+    final counterProvider =
+        Provider.withArgument((_, int init) => Signal(init));
+    await tester.pumpWidget(
+      ProviderScopeOverride(
+        overrides: [
+          counterProvider.overrideWith(
+            argument: 8,
+            create: (_, int init) => Signal(init * 2),
+          ),
+        ],
+        child: MaterialApp(
+          home: ProviderScope(
+            providers: [
+              counterProvider(1),
+            ],
+            builder: (context, _) {
+              final counter = counterProvider.get(context);
+              return SignalBuilder(
+                builder: (context, _) => Text(counter.value.toString()),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    expect(find.text('16'), findsOneWidget);
+  });
+
+  testWidgets('Only one SolidOverride must be present in the widget tree',
+      (tester) async {
+    final counterProvider = Provider<Signal<int>>((_) => Signal(0));
+    await tester.pumpWidget(
+      ProviderScopeOverride(
+        overrides: [
+          counterProvider.overrideWith(create: (_) => Signal(100)),
+        ],
+        child: MaterialApp(
+          home: ProviderScopeOverride(
+            overrides: [
+              counterProvider.overrideWith(create: (_) => Signal(200)),
+            ],
+            builder: (context, _) {
+              final counter = counterProvider.get(context);
+              return SignalBuilder(
+                builder: (context, _) => Text(counter.value.toString()),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.takeException(),
+      const TypeMatcher<MultipleProviderScopeOverrideError>(),
+    );
+  });
+
+  testWidgets(
+      '''SolidOverride.of(context) throws an error if no SolidOverride is found in the widget tree''',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              ProviderScopeOverride.of(context);
+              return const SizedBox();
+            },
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.takeException(),
+      const TypeMatcher<FlutterError>(),
+    );
+  });
 
   testWidgets('Test ProviderScope throws an error for a not found signal',
       (tester) async {

@@ -3,13 +3,14 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/src/models/instantiable_provider.dart';
-import 'package:flutter_solidart/src/widgets/provider_scope_override.dart';
 import 'package:flutter_solidart/src/widgets/provider_scope_value.dart';
 import 'package:solidart/solidart.dart';
 
 part '../models/provider.dart';
+part '../models/override.dart';
 part '../models/provider_with_argument.dart';
 part '../utils/provider_extensions.dart';
+part 'provider_scope_override.dart';
 
 /// {@template provider-scope}
 /// Provides [providers] to descendants.
@@ -253,7 +254,14 @@ class ProviderScope extends StatefulWidget {
     this.child,
     required this.providers,
     this.builder,
-  });
+  }) : overrides = null;
+
+  const ProviderScope._fromOverrides({
+    super.key,
+    this.child,
+    required this.overrides,
+    this.builder,
+  }) : providers = null;
 
   /// {@macro ProviderScopeValue}
   static ProviderScopeValue value({
@@ -281,7 +289,9 @@ class ProviderScope extends StatefulWidget {
   final TransitionBuilder? builder;
 
   /// All the providers provided to all the descendants of [ProviderScope].
-  final List<InstantiableProvider> providers;
+  final List<InstantiableProvider>? providers;
+
+  final List<Override>? overrides;
 
   @override
   State<ProviderScope> createState() => ProviderScopeState();
@@ -383,73 +393,158 @@ class ProviderScopeState extends State<ProviderScope> {
   void initState() {
     super.initState();
 
-    final providers = widget.providers.whereType<Provider<Object>>().toList();
+    // Providers and ArgProviders logic
 
-    assert(
-      () {
-        // check if the provider type is not dynamic
-        // check if there are multiple providers of the same type
-        final ids = <Provider<Object>>[];
-        for (final provider in providers) {
-          final id = provider; // the instance of the provider
-          if (ids.contains(id)) {
-            throw MultipleProviderOfSameInstance();
+    if (widget.providers != null) {
+      final providers =
+          widget.providers!.whereType<Provider<Object>>().toList();
+
+      assert(
+        () {
+          // check if the provider type is not dynamic
+          // check if there are multiple providers of the same type
+          final ids = <Provider<Object>>[];
+          for (final provider in providers) {
+            final id = provider; // the instance of the provider
+            if (ids.contains(id)) {
+              throw MultipleProviderOfSameInstance();
+            }
+            ids.add(id);
           }
-          ids.add(id);
-        }
-        return true;
-      }(),
-      '',
-    );
-
-    for (final provider in providers) {
-      final key = (type: provider._valueType, id: provider);
-      _allProvidersInScope[key] = provider;
-
-      // create non lazy providers.
-      if (!provider._lazy) {
-        // create and store the provider
-        _createdProviders[key] = provider._create(context);
-      }
-    }
-
-    final argProviderInits =
-        widget.providers.whereType<ArgProviderInit<Object, dynamic>>().toList();
-
-    assert(
-      () {
-        // check if the provider type is not dynamic
-        // check if there are multiple providers of the same type
-        final ids = <ArgProvider<Object, dynamic>>[];
-        for (final provider in argProviderInits) {
-          final id = provider._argProvider; // the instance of the provider
-          if (ids.contains(id)) {
-            throw MultipleProviderOfSameInstance();
-          }
-          ids.add(id);
-        }
-        return true;
-      }(),
-      '',
-    );
-
-    for (final argProviderInit in argProviderInits) {
-      final key = (
-        type: argProviderInit._argProvider._valueType,
-        id: argProviderInit._argProvider,
+          return true;
+        }(),
+        '',
       );
-      _allArgProvidersInScope[key] =
-          argProviderInit._argProvider._generateProvider(argProviderInit._arg);
 
-      // create non lazy providers.
-      if (!argProviderInit._argProvider._lazy) {
-        // create and store the provider
-        final complexKey = (
+      for (final provider in providers) {
+        final key = (type: provider._valueType, id: provider);
+        _allProvidersInScope[key] = provider;
+
+        // create non lazy providers.
+        if (!provider._lazy) {
+          // create and store the provider
+          _createdProviders[key] = provider._create(context);
+        }
+      }
+
+      final argProviderInits = widget.providers!
+          .whereType<ArgProviderInit<Object, dynamic>>()
+          .toList();
+
+      assert(
+        () {
+          // check if the provider type is not dynamic
+          // check if there are multiple providers of the same type
+          final ids = <ArgProvider<Object, dynamic>>[];
+          for (final provider in argProviderInits) {
+            final id = provider._argProvider; // the instance of the provider
+            if (ids.contains(id)) {
+              throw MultipleProviderOfSameInstance();
+            }
+            ids.add(id);
+          }
+          return true;
+        }(),
+        '',
+      );
+
+      for (final argProviderInit in argProviderInits) {
+        final key = (
           type: argProviderInit._argProvider._valueType,
-          id: _allArgProvidersInScope[key]!,
+          id: argProviderInit._argProvider,
         );
-        _createdProviders[complexKey] =
-            _allArgProvidersInScope[key]!._create(context);
+        _allArgProvidersInScope[key] = argProviderInit._argProvider
+            ._generateProvider(argProviderInit._arg);
+
+        // create non lazy providers.
+        if (!argProviderInit._argProvider._lazy) {
+          // create and store the provider
+          final complexKey = (
+            type: argProviderInit._argProvider._valueType,
+            id: _allArgProvidersInScope[key]!,
+          );
+          _createdProviders[complexKey] =
+              _allArgProvidersInScope[key]!._create(context);
+        }
+      }
+    } else if (widget.overrides != null) {
+      // ProviderOverride and ArgProvidersOverride logic (the ID needs to be the
+      // global provider instance, however the actual provider instance added to
+      // the tree can have custom create/dispose/lazy values).
+
+      final providerOverrides =
+          widget.overrides!.whereType<ProviderOverride<Object>>().toList();
+
+      assert(
+        () {
+          // check if the provider type is not dynamic
+          // check if there are multiple providers of the same type
+          final ids = <Provider<Object>>[];
+          for (final override in providerOverrides) {
+            final id = override._provider; // the instance of the provider
+            if (ids.contains(id)) {
+              throw MultipleProviderOverrideOfSameProviderInstance();
+            }
+            ids.add(id);
+          }
+          return true;
+        }(),
+        '',
+      );
+
+      for (final override in providerOverrides) {
+        final key =
+            (type: override._provider._valueType, id: override._provider);
+
+        _allProvidersInScope[key] = override._generateProvider();
+
+        // create non lazy providers.
+        if (!(override._lazy ?? override._provider._lazy)) {
+          // create and store the provider
+          _createdProviders[key] = _allProvidersInScope[key]!._create(context);
+        }
+      }
+
+      final argProviderOverrides = widget.overrides!
+          .whereType<ArgProviderOverride<Object, dynamic>>()
+          .toList();
+
+      assert(
+        () {
+          // check if the provider type is not dynamic
+          // check if there are multiple providers of the same type
+          final ids = <ArgProvider<Object, dynamic>>[];
+          for (final override in argProviderOverrides) {
+            final id = override._argProvider; // the instance of the provider
+            if (ids.contains(id)) {
+              throw MultipleProviderOfSameInstance();
+            }
+            ids.add(id);
+          }
+          return true;
+        }(),
+        '',
+      );
+
+      for (final override in argProviderOverrides) {
+        final key = (
+          type: override._argProvider._valueType,
+          id: override._argProvider,
+        );
+
+        _allArgProvidersInScope[key] =
+            override._generateProvider(override._argument);
+
+        // create non lazy providers.
+        if (!(override._lazy ?? override._argProvider._lazy)) {
+          // create and store the provider
+          final complexKey = (
+            type: override._argProvider._valueType,
+            id: _allArgProvidersInScope[key]!,
+          );
+          _createdProviders[complexKey] =
+              _allArgProvidersInScope[key]!._create(context);
+        }
       }
     }
   }
@@ -695,6 +790,22 @@ class MultipleProviderOfSameInstance extends Error {
   String toString() {
     return '''
       You cannot create or inject multiple providers of the same instance together.
+      ''';
+  }
+}
+
+/// {@template MultipleProviderOverrideOfSameProviderInstance}
+/// Error thrown when multiple provider overrides of the same provider instance
+/// are created together.
+/// {@endtemplate}
+class MultipleProviderOverrideOfSameProviderInstance extends Error {
+  /// {@macro MultipleProviderOverrideOfSameProviderInstance}
+  MultipleProviderOverrideOfSameProviderInstance();
+
+  @override
+  String toString() {
+    return '''
+      You cannot create or inject multiple provider overrides of the same provider instance together.
       ''';
   }
 }

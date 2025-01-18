@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors_in_immutables
+
 part of '../widgets/provider_scope.dart';
 
 /// A function that creates an object of type [T] with an argument of type [A].
@@ -7,6 +9,7 @@ typedef CreateProviderFnWithArg<T, A> = T Function(BuildContext context, A arg);
 /// A [Provider] that needs to be given an initial argument before
 /// it can be used.
 /// {@endtemplate}
+@immutable
 class ArgProvider<T extends Object, A> {
   /// {@macro arg-provider}
   ArgProvider._(
@@ -44,11 +47,26 @@ class ArgProvider<T extends Object, A> {
         dispose: _dispose,
         lazy: _lazy,
       );
+
+  ArgProviderOverride<T, A> overrideWith({
+    required A argument,
+    CreateProviderFnWithArg<T, A>? create,
+    DisposeProviderFn<T>? dispose,
+    bool? lazy,
+  }) =>
+      ArgProviderOverride._(
+        this,
+        argument: argument,
+        create: create,
+        dispose: dispose,
+        lazy: lazy,
+      );
 }
 
 /// {@template arg-provider}
 ///
 /// {@endtemplate}
+@immutable
 class ArgProviderInit<T extends Object, A> implements InstantiableProvider {
   /// {@macro arg-provider}
   ArgProviderInit._(this._argProvider, this._arg);
