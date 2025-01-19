@@ -3,7 +3,6 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/src/widgets/provider_scope_portal.dart';
-import 'package:solidart/solidart.dart';
 
 part '../models/instantiable_provider.dart';
 part '../models/provider.dart';
@@ -380,9 +379,6 @@ class ProviderScopeState extends State<ProviderScope> {
   final _createdProviders =
       HashMap<({Type type, Provider<dynamic> id}), Object?>();
 
-  // Stores all the disposeFn for each signal
-  final _signalDisposeCallbacks = <DisposeEffect>[];
-
   @override
   void initState() {
     super.initState();
@@ -545,17 +541,12 @@ class ProviderScopeState extends State<ProviderScope> {
 
   @override
   void dispose() {
-    // stop listening to signals and dispose all of them if needed
-    for (final disposeFn in _signalDisposeCallbacks) {
-      disposeFn();
-    }
 
     // dispose all the created providers
     _createdProviders.forEach((key, value) {
       _allProvidersInScope[key]?._disposeFn(context, value);
     });
 
-    _signalDisposeCallbacks.clear();
     _allArgProvidersInScope.clear();
     _allProvidersInScope.clear();
     _createdProviders.clear();
