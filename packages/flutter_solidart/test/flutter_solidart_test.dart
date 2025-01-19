@@ -512,7 +512,7 @@ void main() {
         return showDialog(
           context: context,
           builder: (_) {
-            return ProviderScope.value(
+            return ProviderScope.portal(
               mainContext: context,
               child: SignalBuilder(
                 builder: (innerContext, child) {
@@ -566,7 +566,7 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return ProviderScope.value(
+            return ProviderScope.portal(
               mainContext: context,
               child: Builder(
                 builder: (innerContext) {
@@ -629,7 +629,7 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return ProviderScope.value(
+            return ProviderScope.portal(
               mainContext: context,
               child: Builder(
                 builder: (innerContext) {
@@ -685,7 +685,7 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return ProviderScope.value(
+            return ProviderScope.portal(
               mainContext: context,
               child: Builder(
                 builder: (innerContext) {

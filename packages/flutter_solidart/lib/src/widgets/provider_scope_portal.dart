@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-class _InheritedProviderScopeValue extends InheritedWidget {
-  const _InheritedProviderScopeValue({
+class _InheritedProviderScopePortal extends InheritedWidget {
+  const _InheritedProviderScopePortal({
     required this.mainContext,
     required super.child,
   });
@@ -14,15 +14,15 @@ class _InheritedProviderScopeValue extends InheritedWidget {
   }
 }
 
-/// {@template ProviderScopeValue}
+/// {@template ProviderScopePortal}
 /// Makes the providers of the [mainContext] available in a new widget tree.
 ///
 /// This is useful for accessing providers in modals, because are
 /// spawned in a new widget tree.
 /// {@endtemplate}
-class ProviderScopeValue extends StatelessWidget {
-  /// {@macro ProviderScopeValue}
-  const ProviderScopeValue({
+class ProviderScopePortal extends StatelessWidget {
+  /// {@macro ProviderScopePortal}
+  const ProviderScopePortal({
     super.key,
     required this.mainContext,
     required this.child,
@@ -36,18 +36,19 @@ class ProviderScopeValue extends StatelessWidget {
   /// {@macro ProviderScope.child}
   final Widget child;
 
-  /// Retrieve the ProviderScopeValue from the closest ancestor.
+  /// Retrieve the ProviderScopePortal from the closest ancestor.
   /// Returns the BuildContext, if the widget is found.
   static BuildContext? maybeOf(BuildContext context) {
     final provider = context
-        .getElementForInheritedWidgetOfExactType<_InheritedProviderScopeValue>()
+        .getElementForInheritedWidgetOfExactType<
+            _InheritedProviderScopePortal>()
         ?.widget;
-    return (provider as _InheritedProviderScopeValue?)?.mainContext;
+    return (provider as _InheritedProviderScopePortal?)?.mainContext;
   }
 
   @override
   Widget build(BuildContext context) {
-    return _InheritedProviderScopeValue(
+    return _InheritedProviderScopePortal(
       mainContext: mainContext,
       child: child,
     );

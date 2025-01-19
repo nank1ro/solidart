@@ -2,7 +2,7 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/src/widgets/provider_scope_value.dart';
+import 'package:flutter_solidart/src/widgets/provider_scope_portal.dart';
 import 'package:solidart/solidart.dart';
 
 part '../models/instantiable_provider.dart';
@@ -261,13 +261,13 @@ class ProviderScope extends StatefulWidget {
     required List<Override> this.overrides,
   }) : providers = null;
 
-  /// {@macro ProviderScopeValue}
-  static ProviderScopeValue value({
+  /// {@macro ProviderScopePortal}
+  static ProviderScopePortal portal({
     Key? key,
     required BuildContext mainContext,
     required Widget child,
   }) {
-    return ProviderScopeValue(
+    return ProviderScopePortal(
       key: key,
       mainContext: mainContext,
       child: child,
@@ -315,8 +315,8 @@ class ProviderScope extends StatefulWidget {
     required Provider<T> id,
   }) {
     // If there is a ProviderValue ancestor, use it as the context
-    final providerScopeValueContext = ProviderScopeValue.maybeOf(context);
-    final effectiveContext = providerScopeValueContext ?? context;
+    final providerScopePortalContext = ProviderScopePortal.maybeOf(context);
+    final effectiveContext = providerScopePortalContext ?? context;
     final state = _findState<T>(effectiveContext, id: id);
     if (state == null) return null;
     final createdProvider = state._createdProviders[(id: id, type: T)];
@@ -350,8 +350,8 @@ class ProviderScope extends StatefulWidget {
     required ArgProvider<T, A> id,
   }) {
     // If there is a ProviderValue ancestor, use it as the context
-    final providerScopeValueContext = ProviderScopeValue.maybeOf(context);
-    final effectiveContext = providerScopeValueContext ?? context;
+    final providerScopePortalContext = ProviderScopePortal.maybeOf(context);
+    final effectiveContext = providerScopePortalContext ?? context;
     final state = _findStateArgProvider<T, A>(effectiveContext, id: id);
     if (state == null) return null;
     final providerAsId = state._allArgProvidersInScope[(type: T, id: id)];

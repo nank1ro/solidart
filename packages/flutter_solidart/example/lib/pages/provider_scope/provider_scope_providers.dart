@@ -72,7 +72,7 @@ class SomeChild extends StatelessWidget {
   Future<void> openDialog(BuildContext context) {
     return showDialog(
       context: context,
-      builder: (_) => ProviderScope.value(
+      builder: (_) => ProviderScope.portal(
         mainContext: context,
         child: Dialog(
           child: SignalBuilder(builder: (innerContext, child) {
