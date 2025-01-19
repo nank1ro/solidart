@@ -26,7 +26,7 @@ class _ChangingKeyPageState extends State<ChangingKeyPage> {
     return ProviderScope(
       key: providerKey,
       providers: [counterProvider(providerKey.toString())],
-      builder: (context, child) {
+      child: Builder(builder: (context) {
         return Scaffold(
           body: Center(
             child: SignalBuilder(
@@ -60,7 +60,7 @@ class _ChangingKeyPageState extends State<ChangingKeyPage> {
             ],
           ),
         );
-      },
+      }),
     );
   }
 }

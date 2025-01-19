@@ -251,29 +251,26 @@ class ProviderScope extends StatefulWidget {
   /// {@macro provider-scope}
   const ProviderScope({
     super.key,
-    this.child,
+    required this.child,
     required List<InstantiableProvider> this.providers,
-    this.builder,
   }) : overrides = null;
 
   const ProviderScope._fromOverrides({
     super.key,
-    this.child,
+    required this.child,
     required List<Override> this.overrides,
-    this.builder,
   }) : providers = null;
 
   /// {@macro ProviderScopeValue}
   static ProviderScopeValue value({
     Key? key,
     required BuildContext mainContext,
-    Widget? child,
-    TransitionBuilder? builder,
+    required Widget child,
   }) {
     return ProviderScopeValue(
       key: key,
       mainContext: mainContext,
-      child: _ProviderWidgetBuilder(builder: builder, child: child),
+      child: child,
     );
   }
 
@@ -283,10 +280,7 @@ class ProviderScope extends StatefulWidget {
   /// NOTE: If you also provide a [builder], the [child] will be passed to the
   /// builder to optimize rebuilds, but won't have access to the providers.
   /// {@endtemplate}
-  final Widget? child;
-
-  /// The widget builder that gets access to the [providers].
-  final TransitionBuilder? builder;
+  final Widget child;
 
   /// All the providers provided to all the descendants of [ProviderScope].
   final List<InstantiableProvider>? providers;
@@ -626,10 +620,7 @@ class ProviderScopeState extends State<ProviderScope> {
   Widget build(BuildContext context) {
     return _InheritedProvider(
       state: this,
-      child: _ProviderWidgetBuilder(
-        builder: widget.builder,
-        child: widget.child,
-      ),
+      child: widget.child,
     );
   }
 
@@ -825,23 +816,5 @@ class ArgProviderWithoutScopeError extends Error {
     return 'Seems like that you forgot to provide the provider of type'
         '${argProvider._valueType} and argument type '
         '${argProvider._argumentType} to a ProviderScope.';
-  }
-}
-
-class _ProviderWidgetBuilder extends StatelessWidget {
-  const _ProviderWidgetBuilder({
-    this.child,
-    this.builder,
-  });
-
-  final TransitionBuilder? builder;
-  final Widget? child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (child != null && builder == null) {
-      return child!;
-    }
-    return builder!(context, child);
   }
 }

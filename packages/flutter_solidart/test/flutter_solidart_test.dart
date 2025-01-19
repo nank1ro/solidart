@@ -446,15 +446,13 @@ void main() {
               counterProvider,
               doubleCounterProvider,
             ],
-            builder: (context, child) {
-              final counter = counterProvider.get(context);
-              final doubleCounter = doubleCounterProvider.get(context);
-              return SignalBuilder(
-                builder: (context, _) {
-                  return Text('${counter()} ${doubleCounter()}');
-                },
-              );
-            },
+            child: SignalBuilder(
+              builder: (context, _) {
+                final counter = counterProvider.get(context);
+                final doubleCounter = doubleCounterProvider.get(context);
+                return Text('${counter()} ${doubleCounter()}');
+              },
+            ),
           ),
         ),
       ),
@@ -484,15 +482,13 @@ void main() {
             providers: [counterProvider],
             child: ProviderScope(
               providers: [doubleCounterProvider],
-              builder: (context, child) {
-                final counter = counterProvider.get(context);
-                final doubleCounter = doubleCounterProvider.get(context);
-                return SignalBuilder(
-                  builder: (context, _) {
-                    return Text('${counter()} ${doubleCounter()}');
-                  },
-                );
-              },
+              child: SignalBuilder(
+                builder: (context, _) {
+                  final counter = counterProvider.get(context);
+                  final doubleCounter = doubleCounterProvider.get(context);
+                  return Text('${counter()} ${doubleCounter()}');
+                },
+              ),
             ),
           ),
         ),
@@ -534,11 +530,13 @@ void main() {
           home: Scaffold(
             body: ProviderScope(
               providers: [counterProvider],
-              builder: (context, child) => ElevatedButton(
-                onPressed: () {
-                  showCounterDialog(context: context);
-                },
-                child: const Text('show dialog'),
+              child: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () {
+                    showCounterDialog(context: context);
+                  },
+                  child: const Text('show dialog'),
+                ),
               ),
             ),
           ),
@@ -597,14 +595,14 @@ void main() {
                 counterProvider,
                 doubleCounterProvider,
               ],
-              builder: (context, child) {
-                return ElevatedButton(
+              child: Builder(
+                builder: (context) => ElevatedButton(
                   onPressed: () {
                     showCounterDialog(context: context);
                   },
                   child: const Text('show dialog'),
-                );
-              },
+                ),
+              ),
             ),
           ),
         ),
@@ -652,14 +650,16 @@ void main() {
               providers: [
                 numberContainerProvider,
               ],
-              builder: (context, child) {
-                return ElevatedButton(
-                  onPressed: () {
-                    showNumberDialog(context: context);
-                  },
-                  child: const Text('show dialog'),
-                );
-              },
+              child: Builder(
+                builder: (context) {
+                  return ElevatedButton(
+                    onPressed: () {
+                      showNumberDialog(context: context);
+                    },
+                    child: const Text('show dialog'),
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -704,14 +704,16 @@ void main() {
           home: Scaffold(
             body: ProviderScope(
               providers: [nameContainerProvider],
-              builder: (context, child) {
-                return ElevatedButton(
-                  onPressed: () {
-                    showNumberDialog(context: context);
-                  },
-                  child: const Text('show dialog'),
-                );
-              },
+              child: Builder(
+                builder: (context) {
+                  return ElevatedButton(
+                    onPressed: () {
+                      showNumberDialog(context: context);
+                    },
+                    child: const Text('show dialog'),
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -740,10 +742,13 @@ void main() {
             providers: [
               nameContainerProvider,
             ],
-            builder: (context, child) {
-              final numberContainer = numberContainerProvider.maybeGet(context);
-              return Text(numberContainer.toString());
-            },
+            child: Builder(
+              builder: (context) {
+                final numberContainer =
+                    numberContainerProvider.maybeGet(context);
+                return Text(numberContainer.toString());
+              },
+            ),
           ),
         ),
       ),
@@ -850,14 +855,16 @@ void main() {
               numberContainer1Provider,
               numberContainer2Provider,
             ],
-            builder: (context, child) {
-              final nameContainer = nameContainerProvider.get(context);
-              final numberContainer1 = numberContainer1Provider.get(context);
-              final numberContainer2 = numberContainer2Provider.get(context);
-              return Text(
-                '''${nameContainer.name} ${numberContainer1.number} ${numberContainer2.number}''',
-              );
-            },
+            child: Builder(
+              builder: (context) {
+                final nameContainer = nameContainerProvider.get(context);
+                final numberContainer1 = numberContainer1Provider.get(context);
+                final numberContainer2 = numberContainer2Provider.get(context);
+                return Text(
+                  '''${nameContainer.name} ${numberContainer1.number} ${numberContainer2.number}''',
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -887,11 +894,13 @@ void main() {
             providers: [
               numberContainerProvider,
             ],
-            builder: (context, child) {
-              // NameProvider is not present
-              final nameContainer = nameContainerProvider.get(context);
-              return Text(nameContainer.name);
-            },
+            child: Builder(
+              builder: (context) {
+                // NameProvider is not present
+                final nameContainer = nameContainerProvider.get(context);
+                return Text(nameContainer.name);
+              },
+            ),
           ),
         ),
       ),
@@ -976,24 +985,22 @@ void main() {
             providers: [
               counterProvider(0),
             ],
-            builder: (context, child) {
-              final counter = counterProvider.get(context);
-              return Column(
-                children: [
-                  SignalBuilder(
-                    builder: (context, child) {
-                      return Text('${counter.value}');
-                    },
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      counter.updateValue((value) => value + 1);
-                    },
-                    child: const Text('add'),
-                  ),
-                ],
-              );
-            },
+            child: SignalBuilder(
+              builder: (context, _) {
+                final counter = counterProvider.get(context);
+                return Column(
+                  children: [
+                    Text('${counter.value}'),
+                    ElevatedButton(
+                      onPressed: () {
+                        counter.updateValue((value) => value + 1);
+                      },
+                      child: const Text('add'),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -1048,13 +1055,15 @@ void main() {
               providers: [
                 numberContainer2Provider,
               ],
-              builder: (context, child) {
-                final numberProvider1 = numberContainer1Provider.get(context);
-                final numberProvider2 = numberContainer2Provider.get(context);
-                return Text(
-                  '''${numberProvider1.number} ${numberProvider2.number}''',
-                );
-              },
+              child: Builder(
+                builder: (context) {
+                  final numberProvider1 = numberContainer1Provider.get(context);
+                  final numberProvider2 = numberContainer2Provider.get(context);
+                  return Text(
+                    '''${numberProvider1.number} ${numberProvider2.number}''',
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -1234,12 +1243,12 @@ void main() {
             providers: [
               counterProvider,
             ],
-            builder: (context, _) {
-              final counter = counterProvider.get(context);
-              return SignalBuilder(
-                builder: (context, _) => Text(counter.value.toString()),
-              );
-            },
+            child: SignalBuilder(
+              builder: (context, _) {
+                final counter = counterProvider.get(context);
+                return Text(counter.value.toString());
+              },
+            ),
           ),
         ),
       ),
@@ -1265,12 +1274,12 @@ void main() {
             providers: [
               counterProvider(1),
             ],
-            builder: (context, _) {
-              final counter = counterProvider.get(context);
-              return SignalBuilder(
-                builder: (context, _) => Text(counter.value.toString()),
-              );
-            },
+            child: SignalBuilder(
+              builder: (context, _) {
+                final counter = counterProvider.get(context);
+                return Text(counter.value.toString());
+              },
+            ),
           ),
         ),
       ),
@@ -1278,7 +1287,7 @@ void main() {
     expect(find.text('16'), findsOneWidget);
   });
 
-  testWidgets('Only one SolidOverride must be present in the widget tree',
+  testWidgets('Only one SolidOverride can be present in the widget tree',
       (tester) async {
     final counterProvider = Provider<Signal<int>>((_) => Signal(0));
     await tester.pumpWidget(
@@ -1291,12 +1300,12 @@ void main() {
             overrides: [
               counterProvider.overrideWith(create: (_) => Signal(200)),
             ],
-            builder: (context, _) {
-              final counter = counterProvider.get(context);
-              return SignalBuilder(
-                builder: (context, _) => Text(counter.value.toString()),
-              );
-            },
+            child: SignalBuilder(
+              builder: (context, _) {
+                final counter = counterProvider.get(context);
+                return Text(counter.value.toString());
+              },
+            ),
           ),
         ),
       ),

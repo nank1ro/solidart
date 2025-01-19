@@ -19,15 +19,11 @@ class ProviderScopeOverride extends StatefulWidget {
   const ProviderScopeOverride({
     super.key,
     required this.overrides,
-    this.child,
-    this.builder,
+    required this.child,
   });
 
   /// The widget child that gets access to the [overrides].
-  final Widget? child;
-
-  /// The widget builder that gets access to the [overrides].
-  final TransitionBuilder? builder;
+  final Widget child;
 
   /// All the overriden providers provided to all the descendants of
   /// [ProviderScope].
@@ -81,7 +77,6 @@ class ProviderScopeOverrideState extends State<ProviderScopeOverride> {
       child: ProviderScope._fromOverrides(
         key: _solidStateKey,
         overrides: widget.overrides,
-        builder: widget.builder,
         child: widget.child,
       ),
     );

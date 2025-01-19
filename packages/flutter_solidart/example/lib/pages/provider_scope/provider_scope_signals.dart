@@ -27,7 +27,7 @@ class _ProviderScopeSignalsPageState extends State<ProviderScopeSignalsPage> {
           // provide the count provider to descendants
           counterProvider,
         ],
-        builder: (context, child) {
+        child: Builder(builder: (context) {
           final count = counterProvider.get(context);
           return ProviderScope(
             providers: [
@@ -36,7 +36,7 @@ class _ProviderScopeSignalsPageState extends State<ProviderScopeSignalsPage> {
             ],
             child: const SomeChild(),
           );
-        },
+        }),
       ),
     );
   }
