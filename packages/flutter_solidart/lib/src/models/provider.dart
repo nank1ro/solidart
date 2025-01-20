@@ -68,8 +68,8 @@ class Provider<T extends Object> extends InstantiableProvider {
   final CreateProviderFn<T> _create;
 
   /// {@template Provider.dispose}
-  /// An optional dispose function called when the Solid that created this
-  /// provider gets disposed.
+  /// An optional dispose function called when the ProviderScope that created
+  /// this provider gets disposed.
   /// {@endtemplate}
   final DisposeProviderFn<T>? _dispose;
 

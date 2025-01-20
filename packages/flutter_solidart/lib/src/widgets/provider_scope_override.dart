@@ -62,10 +62,11 @@ class ProviderScopeOverride extends StatefulWidget {
 /// The state of the [ProviderScopeOverride] widget.
 class ProviderScopeOverrideState extends State<ProviderScopeOverride> {
   /// The key of the [ProviderScopeState] of the [ProviderScopeOverride] widget.
-  final _solidStateKey = GlobalKey<ProviderScopeState>();
+  final _providerScopeStateKey = GlobalKey<ProviderScopeState>();
 
   /// The [ProviderScopeState] of the [ProviderScopeOverride] widget.
-  ProviderScopeState get solidState => _solidStateKey.currentState!;
+  ProviderScopeState get providerScopeState =>
+      _providerScopeStateKey.currentState!;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +76,7 @@ class ProviderScopeOverrideState extends State<ProviderScopeOverride> {
     return _InheritedProviderScopeOverride(
       state: this,
       child: ProviderScope._fromOverrides(
-        key: _solidStateKey,
+        key: _providerScopeStateKey,
         overrides: widget.overrides,
         child: widget.child,
       ),

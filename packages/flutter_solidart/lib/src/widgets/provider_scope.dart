@@ -295,9 +295,9 @@ class ProviderScope extends StatefulWidget {
     required Provider<T> id,
   }) {
     // try finding the solid override first
-    final solidOverride = ProviderScopeOverride.maybeOf(context);
-    if (solidOverride != null) {
-      final state = solidOverride.solidState;
+    final providerScopeOverride = ProviderScopeOverride.maybeOf(context);
+    if (providerScopeOverride != null) {
+      final state = providerScopeOverride.providerScopeState;
       if (state.isProviderInScope<T>(id)) return state;
     }
 
@@ -330,9 +330,9 @@ class ProviderScope extends StatefulWidget {
     required ArgProvider<T, A> id,
   }) {
     // try finding the solid override first
-    final solidOverride = ProviderScopeOverride.maybeOf(context);
-    if (solidOverride != null) {
-      final state = solidOverride.solidState;
+    final providerScopeOverride = ProviderScopeOverride.maybeOf(context);
+    if (providerScopeOverride != null) {
+      final state = providerScopeOverride.providerScopeState;
       if (state.isArgProviderInScope<T, A>(id)) return state;
     }
 
