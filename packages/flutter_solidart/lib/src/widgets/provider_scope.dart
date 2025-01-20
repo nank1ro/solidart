@@ -318,7 +318,7 @@ class ProviderScope extends StatefulWidget {
     final effectiveContext = providerScopePortalContext ?? context;
     final state = _findState<T>(effectiveContext, id: id);
     if (state == null) return null;
-    final createdProvider = state._createdProviders[(id: id, type: T)];
+    final createdProvider = state._createdProviders[id];
     if (createdProvider != null) return createdProvider as T;
     // if the provider is not already present, create it lazily
     return state.createProvider<T>(id);
@@ -353,9 +353,8 @@ class ProviderScope extends StatefulWidget {
     final effectiveContext = providerScopePortalContext ?? context;
     final state = _findStateArgProvider<T, A>(effectiveContext, id: id);
     if (state == null) return null;
-    final providerAsId = state._allArgProvidersInScope[(type: T, id: id)];
-    final createdProvider =
-        state._createdProviders[(type: T, id: providerAsId)];
+    final providerAsId = state._allArgProvidersInScope[id];
+    final createdProvider = state._createdProviders[providerAsId];
     if (createdProvider != null) return createdProvider as T;
     // if the provider is not already present, create it lazily
     return state.createProviderForArgProvider<T, A>(id);
@@ -366,18 +365,16 @@ class ProviderScope extends StatefulWidget {
 class ProviderScopeState extends State<ProviderScope> {
   /// Stores all the argument providers in the current scope. The values are
   /// used as internal IDs by [_createdProviders].
-  final _allArgProvidersInScope = HashMap<
-      ({Type type, ArgProvider<dynamic, dynamic> id}), Provider<dynamic>>();
+  final _allArgProvidersInScope =
+      HashMap<ArgProvider<dynamic, dynamic>, Provider<dynamic>>();
 
   /// Stores all the providers in the current scope. The values are
   /// used as internal IDs by [_createdProviders].
-  final _allProvidersInScope =
-      HashMap<({Type type, Provider<dynamic> id}), Provider<dynamic>>();
+  final _allProvidersInScope = HashMap<Provider<dynamic>, Provider<dynamic>>();
 
   // Stores all the created providers.
   // The key is the provider, while the value is its value.
-  final _createdProviders =
-      HashMap<({Type type, Provider<dynamic> id}), Object?>();
+  final _createdProviders = HashMap<Provider<dynamic>, Object?>();
 
   @override
   void initState() {
@@ -407,13 +404,18 @@ class ProviderScopeState extends State<ProviderScope> {
       );
 
       for (final provider in providers) {
-        final key = (type: provider._valueType, id: provider);
-        _allProvidersInScope[key] = provider;
+        // NB: even though `id` and `provider` point to the same reference,
+        // two different variables are used to simplify understanding how
+        // providers are saved.
+        final id = provider;
+
+        // In this case, the provider put in scope can be the ID itself.
+        _allProvidersInScope[id] = provider;
 
         // create non lazy providers.
         if (!provider._lazy) {
           // create and store the provider
-          _createdProviders[key] = provider._create(context);
+          _createdProviders[id] = provider._create(context);
         }
       }
 
@@ -439,22 +441,17 @@ class ProviderScopeState extends State<ProviderScope> {
       );
 
       for (final argProviderInit in argProviderInits) {
-        final key = (
-          type: argProviderInit._argProvider._valueType,
-          id: argProviderInit._argProvider,
-        );
-        _allArgProvidersInScope[key] = argProviderInit._argProvider
+        final id = argProviderInit._argProvider;
+        _allArgProvidersInScope[id] = argProviderInit._argProvider
             ._generateProvider(argProviderInit._arg);
 
         // create non lazy providers.
         if (!argProviderInit._argProvider._lazy) {
+          // the derived ID is a reference to the derived/generated provider
+          final derivedId = _allArgProvidersInScope[id]!;
           // create and store the provider
-          final complexKey = (
-            type: argProviderInit._argProvider._valueType,
-            id: _allArgProvidersInScope[key]!,
-          );
-          _createdProviders[complexKey] =
-              _allArgProvidersInScope[key]!._create(context);
+          _createdProviders[derivedId] =
+              _allArgProvidersInScope[id]!._create(context);
         }
       }
     } else if (widget.overrides != null) {
@@ -483,15 +480,14 @@ class ProviderScopeState extends State<ProviderScope> {
       );
 
       for (final override in providerOverrides) {
-        final key =
-            (type: override._provider._valueType, id: override._provider);
+        final id = override._provider;
 
-        _allProvidersInScope[key] = override._generateProvider();
+        _allProvidersInScope[id] = override._generateProvider();
 
         // create non lazy providers.
         if (!(override._lazy ?? override._provider._lazy)) {
           // create and store the provider
-          _createdProviders[key] = _allProvidersInScope[key]!._create(context);
+          _createdProviders[id] = _allProvidersInScope[id]!._create(context);
         }
       }
 
@@ -517,23 +513,18 @@ class ProviderScopeState extends State<ProviderScope> {
       );
 
       for (final override in argProviderOverrides) {
-        final key = (
-          type: override._argProvider._valueType,
-          id: override._argProvider,
-        );
+        final id = override._argProvider;
 
-        _allArgProvidersInScope[key] =
+        _allArgProvidersInScope[id] =
             override._generateProvider(override._argument);
 
         // create non lazy providers.
         if (!(override._lazy ?? override._argProvider._lazy)) {
+          // the derived ID is a reference to the derived/generated provider
+          final derivedId = _allArgProvidersInScope[id]!;
           // create and store the provider
-          final complexKey = (
-            type: override._argProvider._valueType,
-            id: _allArgProvidersInScope[key]!,
-          );
-          _createdProviders[complexKey] =
-              _allArgProvidersInScope[key]!._create(context);
+          _createdProviders[derivedId] =
+              _allArgProvidersInScope[id]!._create(context);
         }
       }
     }
@@ -541,7 +532,6 @@ class ProviderScopeState extends State<ProviderScope> {
 
   @override
   void dispose() {
-
     // dispose all the created providers
     _createdProviders.forEach((key, value) {
       _allProvidersInScope[key]?._disposeFn(context, value);
@@ -557,7 +547,7 @@ class ProviderScopeState extends State<ProviderScope> {
 
   /// Try to find a [Provider] of type <T> or [id] and returns it
   Provider<T>? _getProvider<T extends Object>(Provider<T> id) {
-    return _allProvidersInScope[(type: T, id: id)] as Provider<T>?;
+    return _allProvidersInScope[id] as Provider<T>?;
   }
 
   /// Creates a provider of type T and stores it
@@ -567,7 +557,7 @@ class ProviderScopeState extends State<ProviderScope> {
     // create and return it
     final value = provider._create(context);
     // store the created provider
-    _createdProviders[(type: T, id: id)] = value;
+    _createdProviders[id] = value;
     return value;
   }
 
@@ -584,7 +574,7 @@ class ProviderScopeState extends State<ProviderScope> {
   Provider<T>? _getProviderForArgProvider<T extends Object, A>(
     ArgProvider<T, A> id,
   ) {
-    return _allArgProvidersInScope[(type: T, id: id)] as Provider<T>?;
+    return _allArgProvidersInScope[id] as Provider<T>?;
   }
 
   /// Creates a provider of type T and stores it.
@@ -594,10 +584,7 @@ class ProviderScopeState extends State<ProviderScope> {
     // create and return it
     final value = provider._create(context);
     // store the created provider
-    _createdProviders[(
-      type: T,
-      id: _allArgProvidersInScope[(type: T, id: id)]!,
-    )] = value;
+    _createdProviders[_allArgProvidersInScope[id]!] = value;
     return value;
   }
 
