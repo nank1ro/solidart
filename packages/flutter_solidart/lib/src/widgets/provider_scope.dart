@@ -366,15 +366,15 @@ class ProviderScopeState extends State<ProviderScope> {
   /// Stores all the argument providers in the current scope. The values are
   /// used as internal IDs by [_createdProviders].
   final _allArgProvidersInScope =
-      HashMap<ArgProvider<dynamic, dynamic>, Provider<dynamic>>();
+      HashMap<ArgProvider<Object, dynamic>, Provider<Object>>();
 
   /// Stores all the providers in the current scope. The values are
   /// used as internal IDs by [_createdProviders].
-  final _allProvidersInScope = HashMap<Provider<dynamic>, Provider<dynamic>>();
+  final _allProvidersInScope = HashMap<Provider<Object>, Provider<Object>>();
 
   // Stores all the created providers.
   // The key is the provider, while the value is its value.
-  final _createdProviders = HashMap<Provider<dynamic>, Object?>();
+  final _createdProviders = HashMap<Provider<Object>, Object?>();
 
   @override
   void initState() {
@@ -738,7 +738,7 @@ class ProviderWithoutScopeError extends Error {
   ProviderWithoutScopeError(this.provider);
 
   // ignore: public_member_api_docs
-  final Provider<dynamic> provider;
+  final Provider<Object> provider;
 
   @override
   String toString() {
@@ -787,7 +787,7 @@ class ArgProviderWithoutScopeError extends Error {
   ArgProviderWithoutScopeError(this.argProvider);
 
   // ignore: public_member_api_docs
-  final ArgProvider<dynamic, dynamic> argProvider;
+  final ArgProvider<Object, dynamic> argProvider;
 
   @override
   String toString() {
