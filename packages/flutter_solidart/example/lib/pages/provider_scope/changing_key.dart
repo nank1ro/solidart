@@ -4,10 +4,12 @@ import 'package:flutter_solidart/flutter_solidart.dart';
 
 final counterProvider = Provider.withArgument<Signal<int>, String>(
   (context, arg) {
+    // ignore: avoid_print
     print('creating new signal instance with $arg');
     return Signal(0);
   },
   dispose: (s) {
+    // ignore: avoid_print
     print('dispose $s');
   },
 );
@@ -54,6 +56,7 @@ class _ChangingKeyPageState extends State<ChangingKeyPage> {
                   setState(() {
                     providerKey = UniqueKey();
                   });
+                  // ignore: avoid_print
                   print('new key: $providerKey');
                 },
                 child: const Icon(Icons.clear),

@@ -845,7 +845,7 @@ void main() {
     timeout: const Timeout(Duration(seconds: 1)),
   );
 
-  // todo: place this test as first and see if it still compromises all the rest (if so, investigate Effect)
+  // TODO(nank1ro): place this test as first and see if it still compromises all the rest (if so, investigate Effect) (NB: I added a similar test in disco and it does not cause the reactivity problem we have noticed here)
   testWidgets('(Provider) Not found signal throws an error', (tester) async {
     final counterProvider = Provider((_) => Signal(0));
     final invalidCounterProvider = Provider((_) => Signal(0));

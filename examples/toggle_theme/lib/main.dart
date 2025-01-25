@@ -1,7 +1,9 @@
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _themeModeId = Provider<Signal<ThemeMode>>((_) => Signal(ThemeMode.light));
+final themeModeProvider =
+    Provider<Signal<ThemeMode>>((_) => Signal(ThemeMode.light));
 
 void main() {
   runApp(const MyApp());
@@ -15,12 +17,12 @@ class MyApp extends StatelessWidget {
     // Provide the theme mode signal to descendats
     return ProviderScope(
       providers: [
-        _themeModeId,
+        themeModeProvider,
       ],
       // using the builder method to immediately access the signal
-      builder: (context) {
+      child: SignalBuilder(builder: (context, _) {
         // observe the theme mode value this will rebuild every time the themeMode signal changes.
-        final themeMode = _themeModeId.observe(context).value;
+        final themeMode = themeModeProvider.of(context).value;
         return MaterialApp(
           title: 'Toggle theme',
           themeMode: themeMode,
@@ -28,7 +30,7 @@ class MyApp extends StatelessWidget {
           darkTheme: ThemeData.dark(),
           home: const MyHomePage(),
         );
-      },
+      }),
     );
   }
 }
@@ -39,7 +41,7 @@ class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // retrieve the theme mode signal
-    final themeMode = _themeModeId.get(context);
+    final themeMode = themeModeProvider.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Toggle theme'),

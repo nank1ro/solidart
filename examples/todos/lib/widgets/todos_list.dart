@@ -19,7 +19,7 @@ class TodoList extends StatefulWidget {
 
 class _TodoListState extends State<TodoList> {
   // retrieve the [TodosController]
-  late final todosController = TodosController.provider.get(context);
+  late final todosController = TodosController.provider.of(context);
 
   // Given a [filter] return the correct list of todos
   ReadSignal<List<Todo>> mapFilterToTodosList(TodosFilter filter) {
@@ -36,7 +36,7 @@ class _TodoListState extends State<TodoList> {
   @override
   Widget build(BuildContext context) {
     // rebuilds this BuildContext every time the `activeFilter` value changes
-    final activeFilter = todosFilterProvider.observe(context).value;
+    final activeFilter = todosFilterProvider.of(context).value;
     return SignalBuilder(
       builder: (_, __) {
         // react to the correct list of todos list

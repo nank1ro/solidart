@@ -5,8 +5,8 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:todos/controllers/controller.dart';
 
@@ -22,7 +22,7 @@ Widget wrapWithMockedTodosController({
   return MaterialApp(
     home: ProviderScope(
       providers: [
-        // todo: find a way to mock with todosController
+        // TODO(nank1ro): find a way to mock with todosController
         TodosController.provider,
       ],
       child: child,
@@ -31,6 +31,7 @@ Widget wrapWithMockedTodosController({
 }
 
 void main() {
+  // TODO(nank1ro): tests fail, read the todo above
   testWidgets('Todos with initial value', (WidgetTester tester) async {
     // create controller with an initial value
     final initialTodos = List.generate(
