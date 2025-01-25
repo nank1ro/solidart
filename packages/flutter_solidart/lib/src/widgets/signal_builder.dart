@@ -1,11 +1,11 @@
 import 'dart:async';
 
-// ignore: depend_on_referenced_packages
-import 'package:alien_signals/alien_signals.dart'
-    // ignore: combinators_ordering
-    show
-        activeSub,
-        setActiveSub;
+// // ignore: depend_on_referenced_packages
+// import 'package:alien_signals/alien_signals.dart'
+//     // ignore: combinators_ordering
+//     show
+//         activeSub,
+//         setActiveSub;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -118,7 +118,8 @@ class SignalBuilderElement extends ComponentElement {
   @override
   void mount(Element? parent, Object? newSlot) {
     _parent = parent;
-    _effect = Effect((_) => _invalidate(), onError: onError);
+    _effect =
+        Effect((_) => _invalidate(), onError: onError, autoDispose: false);
     // mounting intentionally after effect is initialized and widget is built
     super.mount(parent, newSlot);
   }
@@ -139,14 +140,15 @@ class SignalBuilderElement extends ComponentElement {
 
   // coverage:ignore-start
   Future<void> _invalidate() async {
-    // if the element is already dirty, we don't need to ask another rebuild
-    if (dirty) return;
-
-    if (_shouldWaitScheduler) {
-      await SchedulerBinding.instance.endOfFrame;
-      // If the effect is disposed after this frame, avoid rebuilding
-      if (_effect!.disposed) return;
-    }
+    // // if the element is already dirty, we don't need to ask another rebuild
+    // if (dirty) return;
+    // _widget.build(_parent!);
+    //
+    // if (_shouldWaitScheduler) {
+    //   await SchedulerBinding.instance.endOfFrame;
+    //   // If the effect is disposed after this frame, avoid rebuilding
+    //   if (_effect!.disposed) return;
+    // }
     markNeedsBuild();
   }
 
@@ -159,14 +161,16 @@ class SignalBuilderElement extends ComponentElement {
 
   @override
   Widget build() {
-    final prevSub = activeSub;
+    final prevSub = reactiveSystem.activeSub;
     // ignore: invalid_use_of_protected_member
-    setActiveSub(_effect?.subscriber);
+    reactiveSystem.activeSub = _effect?.subscriber;
+    // setActiveSub(_effect?.subscriber);
 
     try {
       return _widget.build(_parent!);
     } finally {
-      setActiveSub(prevSub);
+      reactiveSystem.activeSub = prevSub;
+      // setActiveSub(prevSub);
     }
   }
 }

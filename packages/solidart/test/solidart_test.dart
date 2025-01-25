@@ -258,10 +258,12 @@ void main() {
 
       test('check effect reaction with delay', () async {
         final cb = MockCallbackFunction();
-        Effect(
+        final disposeEffect = Effect(
           (_) => cb(),
-          options: EffectOptions(delay: const Duration(milliseconds: 500)),
+          delay: const Duration(milliseconds: 500),
+          autoDispose: false,
         );
+        addTearDown(disposeEffect.dispose);
         verifyNever(cb());
         await Future<void>.delayed(const Duration(milliseconds: 501));
         verify(cb()).called(1);

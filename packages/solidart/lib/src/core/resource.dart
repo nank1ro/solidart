@@ -643,9 +643,9 @@ class ResourceSelector<Input, Output> extends Resource<Output> {
         ) {
     // set current state
     state = _mapInputState(resource.state);
-    // listen next states
+    // // listen next states
     _addListener();
-    // dispose the selector when the input resource is disposed
+    // // dispose the selector when the input resource is disposed
     resource.onDispose(dispose);
   }
 
@@ -672,6 +672,7 @@ class ResourceSelector<Input, Output> extends Resource<Output> {
   Future<void> refresh() => resource.refresh();
 
   ResourceState<Output> _mapInputState(ResourceState<Input> input) {
+    print('input: $input');
     return input.map(
       ready: (ready) {
         return ResourceState<Output>.ready(

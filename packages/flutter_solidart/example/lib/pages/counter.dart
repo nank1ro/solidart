@@ -23,10 +23,10 @@ class _CounterPageState extends State<CounterPage> {
       print('DoubleCounter disposed');
     });
 
-    Future.delayed(const Duration(seconds: 1), () {
-      counter.dispose();
-      doubleCounter;
-    });
+    // Future.delayed(const Duration(seconds: 1), () {
+    //   counter.dispose();
+    //   print('doubleCounter: ${doubleCounter()}');
+    // });
   }
 
   @override
@@ -34,12 +34,12 @@ class _CounterPageState extends State<CounterPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Counter')),
       body: Center(
-          // child: SignalBuilder(
-          //   builder: (_, __) {
-          //     return Text('Counter: ${counter()}\nDouble: ${doubleCounter()}');
-          //   },
-          // ),
-          ),
+        child: SignalBuilder(
+          builder: (_, __) {
+            return Text('Counter: ${counter()}\nDouble: ${doubleCounter()}');
+          },
+        ),
+      ),
       floatingActionButton: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

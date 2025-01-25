@@ -3,54 +3,13 @@ part of 'core.dart';
 /// Dispose function
 typedef DisposeEffect = void Function();
 
-/// {@template effect-options}
-/// The effect options
-///
-/// The [name] of the effect, useful for logging
-/// The [delay] is used to delay each effect reaction
-/// {@endtemplate}
-@immutable
-class EffectOptions {
-  /// {@macro effect-options}
-  EffectOptions({
-    this.name,
-    this.delay,
-    bool? autoDispose,
-  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose;
-
-  /// The name of the effect, useful for logging
-  final String? name;
-
-  /// Delay each effect reaction
-  final Duration? delay;
-
-  /// Whether to automatically dispose the effect (defaults to true).
-  ///
-  /// This happens automatically when all the tracked dependencies are disposed.
-  final bool autoDispose;
-
-  // coverage:ignore-start
-
-  /// Creates a copy of this [EffectOptions] with the given [name].
-  EffectOptions copyWith({
-    String? name,
-  }) {
-    return EffectOptions(
-      name: name ?? this.name,
-      delay: delay,
-      autoDispose: autoDispose,
-    );
-  }
-
-  // coverage:ignore-end
-}
-
 /// The reaction interface
 abstract class ReactionInterface {
   /// Indicate if the reaction is dispose
   bool get disposed;
 
   /// Tries to dispose the effects, if no listeners are present
+  // ignore: unused_element
   void _mayDispose();
 
   /// Disposes the reaction
@@ -117,25 +76,37 @@ class Effect implements ReactionInterface {
   factory Effect(
     void Function(DisposeEffect dispose) callback, {
     ErrorCallback? onError,
-    EffectOptions? options,
 
     /// {@macro Effect.fireImmediately}
     bool? fireImmediately,
+
+    /// The name of the effect, useful for logging
+    String? name,
+
+    /// Delay each effect reaction
+    Duration? delay,
+
+    /// Whether to automatically dispose the effect (defaults to true).
+    ///
+    /// This happens automatically when all the tracked dependencies are
+    /// disposed.
+    bool? autoDispose,
   }) {
     late Effect effect;
-    final name = options?.name ?? ReactiveName.nameFor('Effect');
+    final effectiveName = name ?? ReactiveName.nameFor('Effect');
     final effectiveFireImmediately =
         fireImmediately ?? SolidartConfig.fireEffectImmediately;
-    final effectiveOptions = (options ?? EffectOptions()).copyWith(name: name);
-    if (effectiveOptions.delay == null) {
+    final effectiveAutoDispose = autoDispose ?? SolidartConfig.autoDispose;
+    if (delay == null) {
       effect = Effect._internal(
         fireImmediately: effectiveFireImmediately,
         callback: () => callback(effect.dispose),
         onError: onError,
-        options: effectiveOptions,
+        name: effectiveName,
+        autoDispose: effectiveAutoDispose,
       );
     } else {
-      final scheduler = createDelayedScheduler(effectiveOptions.delay!);
+      final scheduler = createDelayedScheduler(delay);
       var isScheduled = false;
       Timer? timer;
 
@@ -162,8 +133,9 @@ class Effect implements ReactionInterface {
             });
           }
         },
-        options: effectiveOptions,
         onError: onError,
+        name: effectiveName,
+        autoDispose: effectiveAutoDispose,
       );
     }
     // ignore: cascade_invocations
@@ -176,24 +148,24 @@ class Effect implements ReactionInterface {
   /// {@macro effect}
   Effect._internal({
     required VoidCallback callback,
-    required this.options,
+    required this.name,
+    required this.autoDispose,
 
     /// {@macro Effect.fireImmediately}
     required this.fireImmediately,
     ErrorCallback? onError,
-  })  : _onError = onError,
-        name = options.name! {
+  }) : _onError = onError {
     _internalEffect = _AlienEffect(callback, parent: this);
   }
 
   /// The name of the effect, useful for logging purposes.
   final String name;
 
+  /// Whether to automatically dispose the effect (defaults to true).
+  final bool autoDispose;
+
   /// Optionally handle the error case
   final ErrorCallback? _onError;
-
-  /// {@macro effect-options}
-  final EffectOptions options;
 
   /// {@template Effect.fireImmediately}
   /// {@macro fire-effect-immediately}
@@ -205,7 +177,7 @@ class Effect implements ReactionInterface {
 
   bool _disposed = false;
 
-  late final alien.Effect<void> _internalEffect;
+  late final _AlienEffect _internalEffect;
 
   final _deps = <alien.Dependency>{};
 
@@ -236,15 +208,17 @@ class Effect implements ReactionInterface {
   /// After this operation the effect is useless.
   @override
   void dispose() {
-    print('dispose Effect');
     if (_disposed) return;
     _disposed = true;
 
-    _internalEffect.stop();
+    print('dispose effect ${_deps.length}');
+
+    _internalEffect.dispose();
 
     for (final dep in _deps) {
-      print('call dispose on dep $dep');
       print('dep runtimeType ${dep.runtimeType}');
+      // if (dep is Signal) dep._mayDispose();
+      // if (dep is Computed) dep._mayDispose();
       if (dep is _AlienSignal) dep.parent._mayDispose();
       if (dep is _AlienComputed) dep.parent._mayDispose();
     }
@@ -254,9 +228,7 @@ class Effect implements ReactionInterface {
 
   @override
   void _mayDispose() {
-    if (!options.autoDispose || _disposed) return;
-    print('effect deps ${_internalEffect.deps}');
-    print('dep ${_internalEffect.deps?.dep}');
+    if (!autoDispose || _disposed) return;
     if (_internalEffect.deps == null) {
       dispose();
     } else if (_internalEffect.deps?.dep != null) {
@@ -265,10 +237,9 @@ class Effect implements ReactionInterface {
       var link = _internalEffect.deps;
       for (; link != null; link = link.nextDep) {
         final dep = link.dep;
-        if (dep == null) break;
+        print('adding dep runtimeType ${dep.runtimeType}');
         _deps.add(dep);
       }
-      print('effects deps $_deps');
     }
   }
 }

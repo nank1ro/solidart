@@ -12,6 +12,14 @@ class _LazyCounterPageState extends State<LazyCounterPage> {
   final counter = Signal<int>.lazy(name: 'lazyCounter');
 
   @override
+  void initState() {
+    super.initState();
+    counter.onDispose(() {
+      print('lazy Counter disposed');
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Lazy Counter')),

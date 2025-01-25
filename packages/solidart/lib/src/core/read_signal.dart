@@ -97,12 +97,11 @@ class ReadSignal<T> implements SignalBase<T> {
   final ValueComparator<T?> comparator;
 
   /// Tracks the internal value
-  late final alien.Signal<Option<T>> _internalSignal;
+  late final _AlienSignal<Option<T>> _internalSignal;
 
   @override
   bool get hasValue {
-    // cause observation
-    _internalSignal.get();
+    _reportObserved();
     return _hasValue;
   }
 
@@ -115,10 +114,15 @@ class ReadSignal<T> implements SignalBase<T> {
   bool _hasPreviousValue = false;
 
   T get _value {
+    print('disposed $_disposed');
     if (_disposed) {
-      return alien.untrack(() => _internalSignal.get().unwrap());
+      reactiveSystem.pauseTracking();
+      final v = _internalSignal().unwrap();
+      reactiveSystem.resumeTracking();
+      return v;
     }
-    final value = _internalSignal.get().unwrap();
+    _reportObserved();
+    final value = _internalSignal().unwrap();
 
     if (autoDispose) {
       _subs.clear();
@@ -126,7 +130,6 @@ class ReadSignal<T> implements SignalBase<T> {
       var link = _internalSignal.subs;
       for (; link != null; link = link.nextSub) {
         final sub = link.sub;
-        if (sub == null) break;
         _subs.add(sub);
       }
     }
@@ -160,16 +163,6 @@ class ReadSignal<T> implements SignalBase<T> {
     _reportChanged();
   }
 
-  void _reportChanged() {
-    final subs = _internalSignal.subs;
-    if (subs != null) {
-      alien.propagate(subs);
-      if (alien.batchDepth == 0) {
-        alien.drainQueuedEffects();
-      }
-    }
-  }
-
   /// All the observers
   final List<ObserveCallback<T>> _listeners = [];
 
@@ -180,7 +173,6 @@ class ReadSignal<T> implements SignalBase<T> {
         '''The signal named "$name" is lazy and has not been initialized yet, cannot access its value''',
       );
     }
-    // _reportObserved();
     return _value;
   }
 
@@ -227,17 +219,6 @@ class ReadSignal<T> implements SignalBase<T> {
     }
   }
 
-  /// Indicates if the [oldValue] and the [newValue] are equal
-  bool _compare(T? oldValue, T? newValue) {
-    // skip if the value are equals
-    if (equals) {
-      return oldValue == newValue;
-    }
-
-    // return the [comparator] result
-    return comparator(oldValue, newValue);
-  }
-
   @override
   T call() => value;
 
@@ -279,31 +260,44 @@ class ReadSignal<T> implements SignalBase<T> {
 
   @override
   void dispose() {
-    print('dispose read signal $name');
     // ignore if already disposed
     if (_disposed) return;
     _disposed = true;
 
-    alien.untrack(() => _internalSignal.get());
-
-    _listeners.clear();
+    // This will dispose the signal to _disposed being true
+    _value;
 
     for (final sub in _subs) {
-      print('computed call dispose on dep $sub');
-      print('computed dep runtimeType ${sub.runtimeType}');
-      if (sub is _AlienEffect) sub.parent._mayDispose();
-      if (sub is _AlienComputed) sub.parent._mayDispose();
+      print('sub runtimeType ${sub.runtimeType}');
+      if (sub is _AlienEffect) {
+        if (sub.deps?.dep == _internalSignal) {
+          sub.deps = null;
+        }
+        if (sub.depsTail?.dep == _internalSignal) {
+          sub.depsTail = null;
+        }
+
+        sub.parent._mayDispose();
+      }
+      if (sub is _AlienComputed) {
+        if (sub.deps?.dep == _internalSignal) {
+          sub.deps = null;
+        }
+        if (sub.depsTail?.dep == _internalSignal) {
+          sub.depsTail = null;
+        }
+        sub.parent._mayDispose();
+      }
     }
     _subs.clear();
+
+    _listeners.clear();
 
     for (final cb in _onDisposeCallbacks) {
       cb();
     }
     _onDisposeCallbacks.clear();
     _notifySignalDisposal();
-    // for (final o in _observers.toList()) {
-    //   o._mayDispose();
-    // }
   }
 
   @override
@@ -329,15 +323,9 @@ class ReadSignal<T> implements SignalBase<T> {
 
   @override
   void _mayDispose() {
+    print('may dispose $name');
     if (!autoDispose || _disposed) return;
-
-    final hasSubs = _internalSignal.subs == null;
-    print('ReadSignal subs ${_internalSignal.subs}');
-
-    bool mayDispose() =>
-        _listeners.isEmpty; //&& _observers.isEmpty && _disposable;
-
-    if (mayDispose()) dispose();
+    if (_internalSignal.subs == null) dispose();
   }
 
   @override
@@ -360,7 +348,34 @@ class ReadSignal<T> implements SignalBase<T> {
     return completer.future;
   }
 
+  void _reportObserved() {
+    if (reactiveSystem.activeSub != null) {
+      reactiveSystem.link(_internalSignal, reactiveSystem.activeSub!);
+    }
+  }
+
+  void _reportChanged() {
+    if (_internalSignal.subs != null) {
+      reactiveSystem.propagate(_internalSignal.subs);
+      if (reactiveSystem.batchDepth == 0) {
+        reactiveSystem.processEffectNotifications();
+      }
+    }
+  }
+
   @override
   String toString() =>
       '''ReadSignal<$T>(value: $_value, previousValue: $_previousValue)''';
+
+  /// Indicates if the [oldValue] and the [newValue] are equal
+  @override
+  bool _compare(T? oldValue, T? newValue) {
+    // skip if the value are equals
+    if (equals) {
+      return oldValue == newValue;
+    }
+
+    // return the [comparator] result
+    return comparator(oldValue, newValue);
+  }
 }

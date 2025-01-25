@@ -123,7 +123,7 @@ class Computed<T> extends SignalBase<T> {
       parent: this,
     );
     if (fireImmediately) {
-      _internalComputed.get();
+      _internalComputed();
     }
 
     _notifySignalCreation();
@@ -132,7 +132,7 @@ class Computed<T> extends SignalBase<T> {
   /// The selector applied
   final T Function() selector;
 
-  late final alien.Computed<T> _internalComputed;
+  late final _AlienComputed<T> _internalComputed;
 
   bool _disposed = false;
 
@@ -161,17 +161,14 @@ class Computed<T> extends SignalBase<T> {
   @override
   bool get hasValue => true;
 
-  var _deps = <alien.Dependency>{};
+  final _deps = <alien.Dependency>{};
 
   @override
   void dispose() {
     if (_disposed) return;
-    print('dispose computed $name');
 
     _disposed = true;
     for (final dep in _deps) {
-      print('computed call dispose on dep $dep');
-      print('computed dep runtimeType ${dep.runtimeType}');
       if (dep is _AlienSignal) dep.parent._mayDispose();
       if (dep is _AlienComputed) dep.parent._mayDispose();
     }
@@ -188,9 +185,12 @@ class Computed<T> extends SignalBase<T> {
   @override
   T get value {
     if (_disposed) {
-      return alien.untrack(() => _internalComputed.get());
+      reactiveSystem.pauseTracking();
+      final value = _internalComputed();
+      reactiveSystem.resumeTracking();
+      return value;
     }
-    final value = _internalComputed.get();
+    final value = _internalComputed();
     Future.microtask(_mayDispose);
     return value;
   }
@@ -233,9 +233,8 @@ class Computed<T> extends SignalBase<T> {
   @override
   void _mayDispose() {
     if (!autoDispose || _disposed) return;
-    print('call mayDispose on computed $name');
     print(
-        'computed deps ${_internalComputed.deps != null} subs ${_internalComputed.subs != null}');
+        'may dispose computed ${_internalComputed.deps} | ${_internalComputed.subs}');
     if (_internalComputed.deps == null && _internalComputed.subs == null) {
       dispose();
     } else {
@@ -244,7 +243,6 @@ class Computed<T> extends SignalBase<T> {
       var link = _internalComputed.deps;
       for (; link != null; link = link.nextDep) {
         final dep = link.dep;
-        if (dep == null) break;
         _deps.add(dep);
       }
     }
@@ -270,6 +268,18 @@ class Computed<T> extends SignalBase<T> {
   @override
   void onDispose(VoidCallback cb) {
     _onDisposeCallbacks.add(cb);
+  }
+
+  /// Indicates if the [oldValue] and the [newValue] are equal
+  @override
+  bool _compare(T? oldValue, T? newValue) {
+    // skip if the value are equals
+    if (equals) {
+      return oldValue == newValue;
+    }
+
+    // return the [comparator] result
+    return comparator(oldValue, newValue);
   }
 
   @override
