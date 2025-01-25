@@ -1,3 +1,4 @@
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
@@ -28,7 +29,7 @@ class _ProviderScopeSignalsPageState extends State<ProviderScopeSignalsPage> {
           counterProvider,
         ],
         child: Builder(builder: (context) {
-          final count = counterProvider.get(context);
+          final count = counterProvider.of(context);
           return ProviderScope(
             providers: [
               // provide the doubleCount provider to descendants
@@ -48,9 +49,9 @@ class SomeChild extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // retrieve the count signal
-    final count = counterProvider.get(context);
+    final count = counterProvider.of(context);
     // retrieve the doubleCount signal
-    final doubleCount = doubleCounterProvider.get(context);
+    final doubleCount = doubleCounterProvider.of(context);
 
     return Center(
       child: Column(

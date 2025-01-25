@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
@@ -72,15 +73,14 @@ class SomeChild extends StatelessWidget {
   Future<void> openDialog(BuildContext context) {
     return showDialog(
       context: context,
-      builder: (_) => ProviderScope.portal(
+      builder: (_) => ProviderScopePortal(
         mainContext: context,
         child: Dialog(
           child: SignalBuilder(builder: (innerContext, child) {
-            final nameContainer = nameProvider.get(innerContext);
-            final numberContainer1 = firstNumberProvider.get(innerContext);
-            final numberContainer2 = secondNumberProvider.get(innerContext);
-            final autoIncrementNumber =
-                autoIncrementNumberProvider.get(context);
+            final nameContainer = nameProvider.of(innerContext);
+            final numberContainer1 = firstNumberProvider.of(innerContext);
+            final numberContainer2 = secondNumberProvider.of(innerContext);
+            final autoIncrementNumber = autoIncrementNumberProvider.of(context);
             return SizedBox.square(
               dimension: 100,
               child: Center(
@@ -101,10 +101,10 @@ autoIncrementNumber: ${autoIncrementNumber.value}
   @override
   Widget build(BuildContext context) {
     return SignalBuilder(builder: (context, child) {
-      final nameContainer = nameProvider.get(context);
-      final numberContainer1 = firstNumberProvider.get(context);
-      final numberContainer2 = secondNumberProvider.get(context);
-      final autoIncrementNumber = autoIncrementNumberProvider.get(context);
+      final nameContainer = nameProvider.of(context);
+      final numberContainer1 = firstNumberProvider.of(context);
+      final numberContainer2 = secondNumberProvider.of(context);
+      final autoIncrementNumber = autoIncrementNumberProvider.of(context);
       return Center(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,

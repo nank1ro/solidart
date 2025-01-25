@@ -1,3 +1,4 @@
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
@@ -27,7 +28,7 @@ class SomeChild extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // retrieve the count signal
-    final count = countProvider.get(context);
+    final count = countProvider.of(context);
 
     return Center(
       child: Column(

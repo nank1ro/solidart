@@ -1,3 +1,4 @@
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
@@ -33,8 +34,8 @@ class SomeChild extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = firstNameProvider.get(context);
-    final lastName = lastNameProvider.get(context);
+    final firstName = firstNameProvider.of(context);
+    final lastName = lastNameProvider.of(context);
 
     return Center(
       child: Column(
@@ -45,7 +46,7 @@ class SomeChild extends StatelessWidget {
             initialValue: firstName.value,
             onChanged: (value) {
               firstNameProvider
-                  .get(context)
+                  .of(context)
                   .updateValue((currentValue) => value);
             },
           ),
@@ -54,7 +55,7 @@ class SomeChild extends StatelessWidget {
             initialValue: lastName.value,
             onChanged: (value) {
               lastNameProvider
-                  .get(context)
+                  .of(context)
                   .updateValue((currentValue) => value);
             },
           ),
@@ -73,8 +74,8 @@ class FullName extends StatelessWidget {
   Widget build(BuildContext context) {
     return SignalBuilder(
       builder: (context, child) {
-        final firstName = firstNameProvider.get(context).value;
-        final lastName = lastNameProvider.get(context).value;
+        final firstName = firstNameProvider.of(context).value;
+        final lastName = lastNameProvider.of(context).value;
         return ListTile(
           title: Text('First Name: $firstName'),
           subtitle: Text('LastName: $lastName'),

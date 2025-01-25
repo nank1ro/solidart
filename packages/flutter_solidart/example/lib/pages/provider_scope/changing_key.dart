@@ -1,3 +1,4 @@
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
@@ -31,7 +32,7 @@ class _ChangingKeyPageState extends State<ChangingKeyPage> {
           body: Center(
             child: SignalBuilder(
               builder: (context, child) {
-                final counter = counterProvider.get(context);
+                final counter = counterProvider.of(context);
                 return Text('Counter: ${counter.value}');
               },
             ),
@@ -42,7 +43,7 @@ class _ChangingKeyPageState extends State<ChangingKeyPage> {
               FloatingActionButton(
                 heroTag: 'add',
                 onPressed: () {
-                  counterProvider.get(context).value++;
+                  counterProvider.of(context).value++;
                 },
                 child: const Icon(Icons.add),
               ),

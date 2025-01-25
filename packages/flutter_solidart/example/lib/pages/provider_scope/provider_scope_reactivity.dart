@@ -1,5 +1,6 @@
 // ignore_for_file: avoid_print
 
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
@@ -58,7 +59,7 @@ class _ProviderScopeReactivityPageState
                 TextButton(
                   onPressed: () {
                     firstCounterProvider
-                        .get(context)
+                        .of(context)
                         .updateValue((value) => value += 1);
                   },
                   child: const Text('+1 counter1'),
@@ -66,7 +67,7 @@ class _ProviderScopeReactivityPageState
                 TextButton(
                   onPressed: () {
                     secondCounterProvider
-                        .get(context)
+                        .of(context)
                         .updateValue((value) => value += 1);
                   },
                   child: const Text('+1 counter2'),
@@ -87,7 +88,7 @@ class _Counter1 extends StatelessWidget {
   Widget build(BuildContext context) {
     return SignalBuilder(
       builder: (context, child) {
-        final counter1 = firstCounterProvider.get(context).value;
+        final counter1 = firstCounterProvider.of(context).value;
         print('build counter1');
         return Text('Counter1: $counter1');
       },
@@ -102,7 +103,7 @@ class _Counter2 extends StatelessWidget {
   Widget build(BuildContext context) {
     return SignalBuilder(
       builder: (context, child) {
-        final counter2 = secondCounterProvider.get(context).value;
+        final counter2 = secondCounterProvider.of(context).value;
         print('build counter2');
         return Text('Counter2: $counter2');
       },
