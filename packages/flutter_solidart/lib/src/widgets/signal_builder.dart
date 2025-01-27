@@ -110,8 +110,11 @@ class SignalBuilderElement extends ComponentElement {
   @override
   void mount(Element? parent, Object? newSlot) {
     _parent = parent;
-    _effect =
-        Effect((_) => _invalidate(), onError: onError, autoDispose: false);
+    _effect = Effect(
+      (_) => _invalidate(),
+      onError: onError,
+      autoDispose: false,
+    );
     // mounting intentionally after effect is initialized and widget is built
     super.mount(parent, newSlot);
   }

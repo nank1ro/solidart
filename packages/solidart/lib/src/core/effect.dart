@@ -228,18 +228,18 @@ class Effect implements ReactionInterface {
 
   @override
   void _mayDispose() {
-    if (!autoDispose || _disposed) return;
-    if (_internalEffect.deps == null) {
-      dispose();
-    } else if (_internalEffect.deps?.dep != null) {
-      _deps.clear();
+    if (_disposed) return;
+    _deps.clear();
 
-      var link = _internalEffect.deps;
-      for (; link != null; link = link.nextDep) {
-        final dep = link.dep;
-        print('adding dep runtimeType ${dep.runtimeType}');
-        _deps.add(dep);
-      }
+    var link = _internalEffect.deps;
+    for (; link != null; link = link.nextDep) {
+      final dep = link.dep;
+
+      _deps.add(dep);
+    }
+    if (!autoDispose || _disposed) return;
+    if (_internalEffect.deps?.dep == null) {
+      dispose();
     }
   }
 }
