@@ -265,7 +265,9 @@ class ReadSignal<T> implements SignalBase<T> {
     _disposed = true;
 
     // This will dispose the signal to _disposed being true
-    _value;
+    reactiveSystem.pauseTracking();
+    _internalSignal();
+    reactiveSystem.resumeTracking();
 
     for (final sub in _subs) {
       print('sub runtimeType ${sub.runtimeType}');
