@@ -37,20 +37,8 @@ class _AlienSignal<T> with alien.Dependency implements _WriteableSignal<T> {
   final SignalBase<dynamic> parent;
 
   @override
-  T call([T? value]) {
-    if (value is T) {
-      if (!parent._compare(value, currentValue)) {
-        currentValue = value;
-        if (subs != null) {
-          reactiveSystem.propagate(subs);
-          if (reactiveSystem.batchDepth == 0) {
-            reactiveSystem.processEffectNotifications();
-          }
-        }
-      }
-
-      return value;
-    } else if (reactiveSystem.activeSub != null) {
+  T call([T? _]) {
+    if (reactiveSystem.activeSub != null) {
       reactiveSystem.link(this, reactiveSystem.activeSub!);
     }
 
