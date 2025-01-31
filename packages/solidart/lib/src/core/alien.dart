@@ -82,7 +82,7 @@ class _AlienComputed<T>
   bool notify() {
     final oldValue = currentValue;
     final newValue = getter(oldValue);
-    if (oldValue != newValue) {
+    if (!parent._compare(oldValue, newValue)) {
       currentValue = newValue;
       return true;
     }

@@ -1,7 +1,17 @@
 part of 'core.dart';
 
 /// {@macro readsignal}
-typedef ReadableSignal<T> = ReadSignal<T>;
+abstract class ReadSignal<T> extends SignalBase<T> {
+  /// {@macro readsignal}
+  ReadSignal({
+    required super.name,
+    super.comparator,
+    super.equals,
+    super.autoDispose,
+    super.trackInDevTools,
+    super.trackPreviousValue,
+  });
+}
 
 /// {@template readsignal}
 /// A read-only [Signal].
@@ -10,12 +20,12 @@ typedef ReadableSignal<T> = ReadSignal<T>;
 /// you should consider transforming it in a [ReadSignal]
 /// using the `toReadSignal` method.
 ///
-/// All derived-signals are [ReadSignal]s because they depend
+/// All derived-signals are [ReadableSignal]s because they depend
 /// on the value of a [Signal].
 /// {@endtemplate}
-class ReadSignal<T> implements SignalBase<T> {
+class ReadableSignal<T> implements ReadSignal<T> {
   /// {@macro readsignal}
-  factory ReadSignal(
+  factory ReadableSignal(
     T initialValue, {
     /// {@macro SignalBase.name}
     String? name,
@@ -35,7 +45,7 @@ class ReadSignal<T> implements SignalBase<T> {
     /// {@macro SignalBase.trackPreviousValue}
     bool? trackPreviousValue,
   }) {
-    return ReadSignal._internal(
+    return ReadableSignal._internal(
       initialValue: initialValue,
       name: name ?? ReactiveName.nameFor('ReadSignal'),
       equals: equals ?? SolidartConfig.equals,
@@ -47,7 +57,7 @@ class ReadSignal<T> implements SignalBase<T> {
     );
   }
 
-  ReadSignal._internal({
+  ReadableSignal._internal({
     required T initialValue,
     required this.name,
     required this.equals,
@@ -61,7 +71,7 @@ class ReadSignal<T> implements SignalBase<T> {
     _notifySignalCreation();
   }
 
-  ReadSignal._internalLazy({
+  ReadableSignal._internalLazy({
     required this.name,
     required this.equals,
     required this.autoDispose,

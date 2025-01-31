@@ -93,7 +93,7 @@ void _notifyDevToolsAboutSignal(
       SetSignal() => 'SetSignal',
       Signal() => 'Signal',
       Computed() => 'Computed',
-      ReadSignal() => 'ReadSignal',
+      ReadableSignal() => 'ReadSignal',
       _ => 'Unknown',
     },
     'valueType': value.runtimeType.toString(),

@@ -195,7 +195,7 @@ void main() {
       test('check Signal becomes ReadSignal', () {
         final s = Signal(0);
         expect(s, const TypeMatcher<Signal<int>>());
-        expect(s.toReadSignal(), const TypeMatcher<ReadSignal<int>>());
+        expect(s.toReadSignal(), const TypeMatcher<ReadableSignal<int>>());
       });
 
       test('Signal is disposed after dispose', () {
@@ -419,7 +419,7 @@ void main() {
       // });
 
       test('check toString()', () {
-        final s = ReadSignal(0);
+        final s = ReadableSignal(0);
         expect(s.toString(), startsWith('ReadSignal<int>(value: 0'));
       });
     },

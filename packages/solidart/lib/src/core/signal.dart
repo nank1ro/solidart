@@ -101,7 +101,7 @@ part of 'core.dart';
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-class Signal<T> extends ReadSignal<T> {
+class Signal<T> extends ReadableSignal<T> {
   /// {@macro signal}
   factory Signal(
     T initialValue, {
@@ -204,9 +204,9 @@ class Signal<T> extends ReadSignal<T> {
   /// new value.
   T updateValue(T Function(T value) callback) => value = callback(_value);
 
-  /// Converts this [Signal] into a [ReadSignal]
+  /// Converts this [Signal] into a [ReadableSignal]
   /// Use this method to remove the visility to the value setter.
-  ReadSignal<T> toReadSignal() => this;
+  ReadableSignal<T> toReadSignal() => this;
 
   @override
   String toString() =>
