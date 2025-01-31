@@ -341,12 +341,17 @@ class ReadSignal<T> implements SignalBase<T> {
     if (condition(value)) return value;
 
     final completer = Completer<T>();
-    Effect((dispose) {
-      if (condition(value)) {
-        dispose();
-        completer.complete(value);
-      }
-    });
+    late final Effect effect;
+    effect = Effect(
+      () {
+        if (condition(value)) {
+          effect.dispose();
+          completer.complete(value);
+        }
+      },
+      fireImmediately: true,
+      autoDispose: false,
+    );
     return completer.future;
   }
 

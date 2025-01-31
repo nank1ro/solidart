@@ -237,12 +237,8 @@ void main() {
         final signal2 = Signal(0);
 
         final cb = MockCallbackFunctionWithValue<int>();
-        Effect(
-          (_) => cb(signal1()),
-        );
-        Effect(
-          (_) => cb(signal2()),
-        );
+        Effect(() => cb(signal1()));
+        Effect(() => cb(signal2()));
 
         signal1.set(1);
         await pumpEventQueue();
@@ -259,7 +255,7 @@ void main() {
       test('check effect reaction with delay', () async {
         final cb = MockCallbackFunction();
         final disposeEffect = Effect(
-          (_) => cb(),
+          cb,
           delay: const Duration(milliseconds: 500),
           autoDispose: false,
         );
@@ -272,7 +268,7 @@ void main() {
       test('check effect onError', () async {
         Object? detectedError;
         Effect(
-          (_) => throw Exception(),
+          () => throw Exception(),
           onError: (error) {
             detectedError = error;
           },
@@ -737,7 +733,7 @@ void main() {
         final resource = Resource(fetcher);
 
         Effect(
-          (_) {
+          () {
             resource.state.on(
               ready: (data) {
                 if (resource.state.isRefreshing) {
@@ -1573,7 +1569,7 @@ void main() {
         expect(calls, isEmpty);
         expect(total.value, equals(30));
 
-        final disposeEffect = Effect((_) {
+        final disposeEffect = Effect(() {
           calls.add((x: x.value, y: y.value, total: total.value));
         });
 
@@ -1623,9 +1619,7 @@ void main() {
           bRunTimes++;
           return a() * 2;
         });
-        final disposeEffect = Effect((_) {
-          b();
-        });
+        final disposeEffect = Effect(b);
 
         expect(bRunTimes, equals(1));
 
@@ -1641,9 +1635,9 @@ void main() {
         final a = Signal(3);
         final b = Computed(() => a() > 0);
 
-        Effect((_) {
+        Effect(() {
           if (b()) {
-            Effect((_) {
+            Effect(() {
               if (a() == 0) {
                 throw Error();
               }
@@ -1662,9 +1656,9 @@ void main() {
         final a = Signal(1);
         final b = Signal(1);
 
-        Effect((_) {
+        Effect(() {
           if (a() > 0) {
-            Effect((_) {
+            Effect(() {
               b();
               if (a() == 0) {
                 throw Error();

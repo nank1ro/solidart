@@ -46,7 +46,7 @@ abstract class ReactionInterface {
 /// The `Effect` method returns a `Dispose` class giving you a more
 /// advanced usage:
 /// ```dart
-/// final dispose = Effect((_) {
+/// final dispose = Effect(() {
 ///     print("The count is now ${counter.value}");
 /// });
 /// ```
@@ -74,7 +74,7 @@ abstract class ReactionInterface {
 class Effect implements ReactionInterface {
   /// {@macro effect}
   factory Effect(
-    void Function(DisposeEffect dispose) callback, {
+    void Function() callback, {
     ErrorCallback? onError,
 
     /// {@macro Effect.fireImmediately}
@@ -100,7 +100,7 @@ class Effect implements ReactionInterface {
     if (delay == null) {
       effect = Effect._internal(
         fireImmediately: effectiveFireImmediately,
-        callback: () => callback(effect.dispose),
+        callback: () => callback(),
         onError: onError,
         name: effectiveName,
         autoDispose: effectiveAutoDispose,
@@ -124,7 +124,7 @@ class Effect implements ReactionInterface {
             timer = scheduler(() {
               isScheduled = false;
               if (!effect.disposed) {
-                callback(effect.dispose);
+                callback();
               } else {
                 // coverage:ignore-start
                 timer?.cancel();

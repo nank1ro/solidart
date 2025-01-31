@@ -111,7 +111,7 @@ class SignalBuilderElement extends ComponentElement {
   void mount(Element? parent, Object? newSlot) {
     _parent = parent;
     _effect = Effect(
-      (_) => _invalidate(),
+      _invalidate,
       onError: onError,
       autoDispose: false,
     );

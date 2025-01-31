@@ -1156,7 +1156,7 @@ void main() {
       'Effect autoDispose',
       (tester) async {
         final counter = Signal(0);
-        final effect = Effect((_) => counter());
+        final effect = Effect(counter);
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -1205,7 +1205,7 @@ void main() {
     (tester) async {
       final counter = Signal(0);
       final doubleCounter = Computed(() => counter() * 2);
-      final effect = Effect((_) {
+      final effect = Effect(() {
         counter();
         doubleCounter();
       });

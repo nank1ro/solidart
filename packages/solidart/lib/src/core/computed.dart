@@ -50,7 +50,7 @@ part of 'core.dart';
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-class Computed<T> extends SignalBase<T> {
+class Computed<T> extends ReadSignal<T> {
   /// {@macro computed}
   factory Computed(
     T Function() selector, {
@@ -220,7 +220,7 @@ class Computed<T> extends SignalBase<T> {
     bool fireImmediately = false,
   }) {
     var skipped = false;
-    return Effect((_) {
+    return Effect(() {
       final v = value;
       if (!fireImmediately && !skipped) {
         skipped = true;

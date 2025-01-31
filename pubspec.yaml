@@ -12,3 +12,7 @@ workspace:
   - packages/solidart
   - packages/solidart_devtools_extension
   - packages/solidart_lint
+  - examples/counter
+  - examples/github_search
+  - examples/todos
+  - examples/toggle_theme
