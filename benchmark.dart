@@ -15,7 +15,7 @@ class SolidartReactiveFramework extends ReactiveFramework {
 
   @override
   void effect(void Function() fn) {
-    solidart.Effect((_) => fn());
+    solidart.Effect(() => fn());
   }
 
   @override
@@ -38,6 +38,7 @@ class SolidartReactiveFramework extends ReactiveFramework {
 void main() {
   solidart.SolidartConfig.devToolsEnabled = false;
   solidart.SolidartConfig.trackPreviousValue = false;
+  solidart.SolidartConfig.equals = true;
   const framework = SolidartReactiveFramework();
   runFrameworkBench(framework);
 }
