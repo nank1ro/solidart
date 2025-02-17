@@ -16,10 +16,6 @@ class _ResourcePageState extends State<ResourcePage> {
 
   late final user = Resource(fetchUser, source: userId, name: 'user');
 
-  late final userHairColor = user.select((data) {
-    return jsonDecode(data)['hair_color'] as String;
-  }, name: 'userHairColor');
-
   Future<String> fetchUser() async {
     // simulating a delay to mimic a slow HTTP request
     await Future.delayed(const Duration(seconds: 2));
@@ -97,26 +93,6 @@ class _ResourcePageState extends State<ResourcePage> {
                 );
               },
             ),
-            const SizedBox(height: 30),
-            const Text(
-              'You can also `select` a value from a resource, but still continuing to handle the loading and error states',
-            ),
-            SignalBuilder(
-              builder: (context, child) {
-                final hairColorState = userHairColor.state;
-                return hairColorState.on(
-                  ready: (hairColor) {
-                    return ListTile(
-                      title: Text('Haircolor: $hairColor'),
-                      subtitle:
-                          Text('refreshing: ${hairColorState.isRefreshing}'),
-                    );
-                  },
-                  loading: () => const CircularProgressIndicator(),
-                  error: (error, stackTrace) => Text('$error'),
-                );
-              },
-            )
           ],
         ),
       ),
