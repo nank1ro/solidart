@@ -93,6 +93,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
     /// Indicates whether the resource should be computed lazily, defaults to
     /// true.
     bool lazy = true,
+
+    /// {@macro Resource.useRefreshing}
+    bool? useRefreshing,
   }) {
     return Resource._internal(
       fetcher: fetcher,
@@ -102,6 +105,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
       lazy: lazy,
+      useRefreshing: useRefreshing ?? SolidartConfig.useRefreshing,
     );
   }
 
@@ -125,6 +129,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
     /// Indicates whether the resource should be computed lazily, defaults to
     /// true.
     bool lazy = true,
+
+    /// {@macro Resource.useRefreshing}
+    bool? useRefreshing,
   }) {
     return Resource._internal(
       stream: stream,
@@ -134,6 +141,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
       lazy: lazy,
+      useRefreshing: useRefreshing ?? SolidartConfig.useRefreshing,
     );
   }
 
@@ -143,6 +151,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     required this.lazy,
     required super.autoDispose,
     required super.trackInDevTools,
+    required this.useRefreshing,
 
     /// Whether to track the previous state of the resource, defaults to true.
     bool? trackPreviousState,
@@ -181,6 +190,15 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   /// Indicates if the resource has been resolved
   bool _resolved = false;
+
+  /// {@template Resource.useRefreshing}
+  /// Whether to use `isRefreshing` in the current state of the resource,
+  /// defaults to true.
+  ///
+  /// If you set to false, the state will always transition to `loading` when
+  /// refreshing.
+  /// {@endtemplate}
+  final bool useRefreshing;
 
   /// The current resource state
   ResourceState<T> get state {
@@ -346,24 +364,14 @@ class Resource<T> extends Signal<ResourceState<T>> {
     );
     _streamSubscription?.cancel();
     _streamSubscription = null;
-    state.map(
-      ready: (ready) {
-        state = ready.copyWith(isRefreshing: true);
-      },
-      error: (error) {
-        state = error.copyWith(isRefreshing: true);
-      },
-      loading: (_) {
-        state = ResourceState<T>.loading();
-      },
-    );
+    _transition();
     _listenStream();
   }
 
-  /// Force a refresh of the [fetcher].
-  Future<void> _refetch() async {
-    assert(fetcher != null, 'You are trying to refetch, but fetcher is null');
-    try {
+  // Transitions to the refreshing state, if enabled, otherwise sets the state
+  // to loading.
+  void _transition() {
+    if (useRefreshing) {
       state.map(
         ready: (ready) {
           state = ready.copyWith(isRefreshing: true);
@@ -375,6 +383,16 @@ class Resource<T> extends Signal<ResourceState<T>> {
           state = ResourceState<T>.loading();
         },
       );
+    } else {
+      state = ResourceState<T>.loading();
+    }
+  }
+
+  /// Force a refresh of the [fetcher].
+  Future<void> _refetch() async {
+    assert(fetcher != null, 'You are trying to refetch, but fetcher is null');
+    try {
+      _transition();
       final result = await fetcher!();
       state = ResourceState<T>.ready(result);
     } catch (e, s) {
@@ -668,12 +686,6 @@ extension ResourceExtensions<T> on ResourceState<T> {
       loading: (_) => null,
     );
   }
-
-  /// Attempts to synchronously get the value of [ResourceReady].
-  ///
-  /// On error, this will rethrow the error.
-  /// If loading, will return `null`.
-  T? call() => value;
 
   /// Attempts to synchronously get the error of [ResourceError].
   ///
