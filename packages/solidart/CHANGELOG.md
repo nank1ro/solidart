@@ -2,6 +2,7 @@
 
 - **REFACTOR**: Updated the reactive system from scratch, improving the performances.
 - **BREAKING CHANGE**: Remove `set` and `call` methods from Signals (Use an extension to have them back).
+- **FEAT**: Add `useRefreshing` to `Resource` to decide whether to update the current state with `isRefreshing` (defaults to true). If you set it to false, when refreshing, the resource will go directly to the loading state.
 
 ## 2.0.0-dev.3
 

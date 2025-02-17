@@ -467,7 +467,7 @@ void main() {
             1,
           ),
         );
-        expect(resource.state(), 10);
+        expect(resource.state.value, 10);
 
         streamController.addError(UnimplementedError());
         await pumpEventQueue();
@@ -586,7 +586,7 @@ void main() {
         userId.value = 1;
         await pumpEventQueue();
         expect(resource.state, isA<ResourceReady<User>>());
-        expect(resource.state(), const User(id: 1));
+        expect(resource.state.value, const User(id: 1));
 
         userId.value = 2;
         await pumpEventQueue();
@@ -604,6 +604,32 @@ void main() {
         expect(resource.state.isReady, true);
 
         resource.dispose();
+      });
+
+      test('check Resource with useRefreshing false', () async {
+        final userId = Signal(0);
+
+        Future<User> getUser() {
+          if (userId.value == 2) throw Exception();
+          return Future.value(User(id: userId.value));
+        }
+
+        final resource = Resource(
+          getUser,
+          source: userId,
+          useRefreshing: false,
+          lazy: false,
+        );
+
+        addTearDown(resource.dispose);
+        addTearDown(userId.dispose);
+
+        await pumpEventQueue();
+        expect(resource.state, isA<ResourceReady<User>>());
+        expect(resource.state.value, const User(id: 0));
+
+        userId.value = 1;
+        expect(resource.state, isA<ResourceLoading<User>>());
       });
 
       test('update ResourceState', () async {
