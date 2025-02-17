@@ -1,8 +1,9 @@
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _firstNameId = Provider((_) => Signal("James"), lazy: false);
-final _lastNameId = Provider((_) => Signal("Smith"));
+final firstNameProvider = Provider((context) => Signal("James"));
+final lastNameProvider = Provider((context) => Signal("Smith"));
 
 // Uses identifiers to retrieve different signals of the same type
 class MultipleSignalsPage extends StatelessWidget {
@@ -17,10 +18,10 @@ class MultipleSignalsPage extends StatelessWidget {
       body: ProviderScope(
         providers: [
           // provide the firstName signal to descendants
-          _firstNameId,
+          firstNameProvider,
 
           // provide the lastName signal to descendants
-          _lastNameId,
+          lastNameProvider,
         ],
         child: const SomeChild(),
       ),
@@ -33,8 +34,8 @@ class SomeChild extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = _firstNameId.get(context);
-    final lastName = _lastNameId.get(context);
+    final firstName = firstNameProvider.of(context);
+    final lastName = lastNameProvider.of(context);
 
     return Center(
       child: Column(
@@ -44,14 +45,18 @@ class SomeChild extends StatelessWidget {
           TextFormField(
             initialValue: firstName.value,
             onChanged: (value) {
-              _firstNameId.update(context, (_) => value);
+              firstNameProvider
+                  .of(context)
+                  .updateValue((currentValue) => value);
             },
           ),
           const SizedBox(height: 8),
           TextFormField(
             initialValue: lastName.value,
             onChanged: (value) {
-              _lastNameId.update(context, (_) => value);
+              lastNameProvider
+                  .of(context)
+                  .updateValue((currentValue) => value);
             },
           ),
           const SizedBox(height: 8),
@@ -67,11 +72,15 @@ class FullName extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = _firstNameId.observe(context).value;
-    final lastName = _lastNameId.observe(context).value;
-    return ListTile(
-      title: Text('First Name: $firstName'),
-      subtitle: Text('LastName: $lastName'),
+    return SignalBuilder(
+      builder: (context, child) {
+        final firstName = firstNameProvider.of(context).value;
+        final lastName = lastNameProvider.of(context).value;
+        return ListTile(
+          title: Text('First Name: $firstName'),
+          subtitle: Text('LastName: $lastName'),
+        );
+      },
     );
   }
 }

@@ -31,6 +31,7 @@ resolution: workspace
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  disco: ^1.0.0
   flutter:
     sdk: flutter
   flutter_solidart: ^2.0.0-dev.3

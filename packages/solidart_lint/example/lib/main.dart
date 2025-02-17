@@ -1,5 +1,6 @@
 // ignore_for_file: unused_local_variable
 
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
@@ -9,7 +10,7 @@ void main() {
 
 final myClassProvider = Provider((_) => MyClass());
 final counterProvider = Provider((_) => Signal(0));
-final doubleCounterProvider = Provider.withArg(
+final doubleCounterProvider = Provider.withArgument(
   (_, Signal<int> counter) => Computed(() => counter() * 2),
 );
 
@@ -26,7 +27,7 @@ class MyApp extends StatelessWidget {
       providers: [
         myClassProvider,
         counterProvider,
-        doubleCounterProvider..setInitialArg(counter),
+        doubleCounterProvider(counter),
       ],
       child: const MaterialApp(
         title: 'Flutter Demo',
@@ -41,13 +42,13 @@ class MyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final myClass = myClassProvider.get(context);
-    final counter = counterProvider.observe(context);
+    final myClass = myClassProvider.of(context);
+    final counter = counterProvider.of(context);
 
     return ElevatedButton(
       child: const Text('Increment'),
       onPressed: () {
-        counterProvider.update(context, (value) => throw UnimplementedError());
+        counter.updateValue((value) => throw UnimplementedError());
       },
     );
   }

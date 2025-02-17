@@ -1,3 +1,4 @@
+import 'package:disco/disco.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:github_search/models/models.dart';
 import 'package:github_search/repo/repository.dart';

@@ -1,3 +1,4 @@
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:github_search/bloc/github_search_bloc.dart';
@@ -52,7 +53,7 @@ class _SearchBar extends StatefulWidget {
 class __SearchBarState extends State<_SearchBar> {
   final textController = TextEditingController();
   // retrieve the ancestor [GithubSearchBloc]
-  late final bloc = GithubSearchBloc.provider.get(context);
+  late final bloc = GithubSearchBloc.provider.of(context);
 
   @override
   void dispose() {
@@ -95,7 +96,7 @@ class _SearchBody extends StatelessWidget {
           SignalBuilder(
         builder: (context, searchResultState) {
           final searchResultState =
-              GithubSearchBloc.provider.get(context).searchResult.state;
+              GithubSearchBloc.provider.of(context).searchResult.state;
           return Stack(
             children: [
               searchResultState.on(

@@ -1,5 +1,5 @@
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:todos/controllers/controller.dart';
 import 'package:todos/widgets/todos_body.dart';
 

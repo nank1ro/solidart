@@ -13,7 +13,7 @@ class Toolbar extends StatefulWidget {
 
 class _ToolbarState extends State<Toolbar> {
   // retrieve the [TodosController]
-  late final todosController = TodosController.provider.get(context);
+  late final todosController = TodosController.provider.of(context);
 
   /// All the derived signals, they will react only when the `length` property changes
   late final allTodosCount = Computed(() => todosController.todos().length);
@@ -22,23 +22,15 @@ class _ToolbarState extends State<Toolbar> {
   late final completedTodosCount =
       Computed(() => todosController.completedTodos().length);
 
-  @override
-  void dispose() {
-    allTodosCount.dispose();
-    incompleteTodosCount.dispose();
-    completedTodosCount.dispose();
-    super.dispose();
-  }
-
   /// Maps the given [filter] to the correct list of todos
-  int mapFilterToTodosCount(TodosFilter filter) {
+  Computed<int> mapFilterToTodosCount(TodosFilter filter) {
     switch (filter) {
       case TodosFilter.all:
-        return allTodosCount();
+        return allTodosCount;
       case TodosFilter.incomplete:
-        return incompleteTodosCount();
+        return incompleteTodosCount;
       case TodosFilter.completed:
-        return completedTodosCount();
+        return completedTodosCount;
     }
   }
 
@@ -54,7 +46,8 @@ class _ToolbarState extends State<Toolbar> {
             // Each tab bar is using its specific todos count signal
             return SignalBuilder(
               builder: (context, _) {
-                final todosCount = mapFilterToTodosCount(filter);
+                TodosController.provider.of(context);
+                final todosCount = mapFilterToTodosCount(filter).value;
                 return Tab(text: '${filter.name} ($todosCount)');
               },
             );
@@ -62,7 +55,9 @@ class _ToolbarState extends State<Toolbar> {
         ).toList(),
         onTap: (index) {
           // update the current active filter
-          todosFilterProvider.update(context, (_) => TodosFilter.values[index]);
+          todosFilterProvider
+              .of(context)
+              .updateValue((_) => TodosFilter.values[index]);
         },
       ),
     );
