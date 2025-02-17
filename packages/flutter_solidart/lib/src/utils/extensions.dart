@@ -37,7 +37,7 @@ extension ValueNotifierToSignal<T> on ValueNotifier<T> {
       trackInDevTools: trackInDevTools,
     );
 
-    void setValue() => signal.set(value);
+    void setValue() => signal.value = value;
     addListener(setValue);
     signal.onDispose(() => removeListener(setValue));
     return signal;
