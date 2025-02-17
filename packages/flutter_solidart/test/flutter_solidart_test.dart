@@ -46,7 +46,7 @@ void main() {
             child: SignalBuilder(
               builder: (context, _) {
                 final counter = invalidCounterProvider.of(context);
-                return Text(counter().toString());
+                return Text(counter.value.toString());
               },
             ),
           ),
@@ -68,7 +68,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: Show(
-            when: s.call,
+            when: () => s.value,
             builder: (context) => const Text('Builder'),
             fallback: (context) => const Text('Fallback'),
           ),
@@ -263,7 +263,7 @@ void main() {
         home: Scaffold(
           body: SignalBuilder(
             builder: (context, child) {
-              return Text(s().toString());
+              return Text(s.value.toString());
             },
           ),
         ),
@@ -285,7 +285,7 @@ void main() {
         home: Scaffold(
           body: SignalBuilder(
             builder: (context, child) {
-              return Text('${s1()} ${s2()}');
+              return Text('${s1.value} ${s2.value}');
             },
           ),
         ),
@@ -311,7 +311,7 @@ void main() {
         home: Scaffold(
           body: SignalBuilder(
             builder: (context, child) {
-              return Text('${s1()} ${s2()} ${s3()}');
+              return Text('${s1.value} ${s2.value} ${s3.value}');
             },
           ),
         ),
@@ -339,7 +339,8 @@ void main() {
       final s = Signal(0);
 
       final counterProvider = Provider((_) => s);
-      final doubleCounterProvider = Provider((_) => Computed(() => s() * 2));
+      final doubleCounterProvider =
+          Provider((_) => Computed(() => s.value * 2));
 
       await tester.pumpWidget(
         MaterialApp(
@@ -373,7 +374,8 @@ void main() {
         (tester) async {
       final s = Signal(0);
 
-      final doubleCounterProvider = Provider((_) => Computed(() => s() * 2));
+      final doubleCounterProvider =
+          Provider((_) => Computed(() => s.value * 2));
 
       await tester.pumpWidget(
         MaterialApp(
@@ -435,7 +437,7 @@ void main() {
   testWidgets('(Provider) SignalBuilder works properly (1 Signal, 1 Computed)',
       (tester) async {
     final s = Signal(0);
-    final s2 = Computed(() => s() * 2);
+    final s2 = Computed(() => s.value * 2);
 
     final counterProvider = Provider((_) => s);
     final doubleCounterProvider = Provider((_) => s2);
@@ -452,7 +454,7 @@ void main() {
               builder: (context, _) {
                 final counter = counterProvider.of(context);
                 final doubleCounter = doubleCounterProvider.of(context);
-                return Text('${counter()} ${doubleCounter()}');
+                return Text('${counter.value} ${doubleCounter.value}');
               },
             ),
           ),
@@ -474,7 +476,7 @@ void main() {
 
     final doubleCounterProvider = Provider((context) {
       final counter = counterProvider.of(context);
-      return Computed(() => counter() * 2);
+      return Computed(() => counter.value * 2);
     });
 
     await tester.pumpWidget(
@@ -488,7 +490,7 @@ void main() {
                 builder: (context, _) {
                   final counter = counterProvider.of(context);
                   final doubleCounter = doubleCounterProvider.of(context);
-                  return Text('${counter()} ${doubleCounter()}');
+                  return Text('${counter.value} ${doubleCounter.value}');
                 },
               ),
             ),
@@ -563,7 +565,8 @@ void main() {
         (tester) async {
       final s = Signal(0);
       final counterProvider = Provider((_) => s);
-      final doubleCounterProvider = Provider((_) => Computed(() => s() * 2));
+      final doubleCounterProvider =
+          Provider((_) => Computed(() => s.value * 2));
 
       Future<void> showCounterDialog({required BuildContext context}) {
         return showDialog(
@@ -579,7 +582,7 @@ void main() {
                       final doubleCounter =
                           doubleCounterProvider.of(innerContext);
                       return Text(
-                        '''Dialog counter: ${counter()} doubleCounter: ${doubleCounter()}''',
+                        '''Dialog counter: ${counter.value} doubleCounter: ${doubleCounter.value}''',
                       );
                     },
                   );
@@ -735,7 +738,7 @@ void main() {
             home: Scaffold(
               body: SignalBuilder(
                 builder: (_, __) {
-                  return Text(counter().toString());
+                  return Text(counter.value.toString());
                 },
               ),
             ),
@@ -758,7 +761,7 @@ void main() {
             home: Scaffold(
               body: SignalBuilder(
                 builder: (_, __) {
-                  return Text(counter().toString());
+                  return Text(counter.value.toString());
                 },
               ),
             ),
@@ -775,13 +778,13 @@ void main() {
       'Computed autoDispose',
       (tester) async {
         final counter = Signal(0);
-        final doubleCounter = Computed(() => counter() * 2);
+        final doubleCounter = Computed(() => counter.value * 2);
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
                 builder: (_, __) {
-                  return Text(doubleCounter().toString());
+                  return Text(doubleCounter.value.toString());
                 },
               ),
             ),
@@ -800,13 +803,13 @@ void main() {
       'Effect autoDispose',
       (tester) async {
         final counter = Signal(0);
-        final effect = Effect(counter);
+        final effect = Effect(() => counter.value);
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
                 builder: (_, __) {
-                  return Text(counter().toString());
+                  return Text(counter.value.toString());
                 },
               ),
             ),
@@ -848,17 +851,17 @@ void main() {
     'Effect with multiple dependencies autoDispose',
     (tester) async {
       final counter = Signal(0);
-      final doubleCounter = Computed(() => counter() * 2);
+      final doubleCounter = Computed(() => counter.value * 2);
       final effect = Effect(() {
-        counter();
-        doubleCounter();
+        counter.value;
+        doubleCounter.value;
       });
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: SignalBuilder(
               builder: (_, __) {
-                return Text(counter().toString());
+                return Text(counter.value.toString());
               },
             ),
           ),

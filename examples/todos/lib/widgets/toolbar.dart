@@ -16,11 +16,11 @@ class _ToolbarState extends State<Toolbar> {
   late final todosController = TodosController.provider.of(context);
 
   /// All the derived signals, they will react only when the `length` property changes
-  late final allTodosCount = Computed(() => todosController.todos().length);
+  late final allTodosCount = Computed(() => todosController.todos.value.length);
   late final incompleteTodosCount =
-      Computed(() => todosController.incompleteTodos().length);
+      Computed(() => todosController.incompleteTodos.value.length);
   late final completedTodosCount =
-      Computed(() => todosController.completedTodos().length);
+      Computed(() => todosController.completedTodos.value.length);
 
   /// Maps the given [filter] to the correct list of todos
   Computed<int> mapFilterToTodosCount(TodosFilter filter) {
