@@ -1,4 +1,4 @@
-## 2.0.0
+## 2.0.0-dev.4
 
 - **FEAT**: Add `Signal.lazy` to allow the creation of a signal without an initial value. Be aware, the signal will throw an error if you try to read its value before it has been initialized.
 - **CHORE**: Remove deprecated `createSignal`, `createComputed`, `createEffect` and `createResource` helpers.

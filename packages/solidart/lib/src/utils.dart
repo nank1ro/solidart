@@ -62,3 +62,40 @@ Timer Function(void Function()) createDelayedScheduler(Duration duration) =>
     (fn) => Timer(duration, fn);
 
 /// coverage:ignore-end
+
+/// The `Option` class represents an optional value.
+
+/// It is either `Some` or `None`.
+/// Use `unwrap` to get the value of a `Some` or throw an exception if it is a
+/// `None`.
+/// Or safely switch the sealed class to get the value.
+sealed class Option<T> {
+  const Option();
+
+  /// Unwraps the option, yielding the content of a `Some`.
+  T unwrap() {
+    return switch (this) {
+      final Some<T> some => some.value,
+      _ => throw Exception('Cannot unwrap None'),
+    };
+  }
+}
+
+/// {@template some}
+/// The `Some` class represents a value of type `T`.
+/// {@endtemplate}
+class Some<T> extends Option<T> {
+  /// {@macro some}
+  const Some(this.value);
+
+  /// Te value of the `Some` class.
+  final T value;
+}
+
+/// {@template none}
+/// The `None` class represents an absence of a value.
+/// {@endtemplate}
+class None<T> extends Option<T> {
+  /// {@macro none}
+  const None();
+}

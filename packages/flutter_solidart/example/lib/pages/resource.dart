@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:http/http.dart' as http;
@@ -15,10 +13,6 @@ class _ResourcePageState extends State<ResourcePage> {
   final userId = Signal(1, name: 'userId');
 
   late final user = Resource(fetchUser, source: userId, name: 'user');
-
-  late final userHairColor = user.select((data) {
-    return jsonDecode(data)['hair_color'] as String;
-  }, name: 'userHairColor');
 
   Future<String> fetchUser() async {
     // simulating a delay to mimic a slow HTTP request
@@ -97,26 +91,6 @@ class _ResourcePageState extends State<ResourcePage> {
                 );
               },
             ),
-            const SizedBox(height: 30),
-            const Text(
-              'You can also `select` a value from a resource, but still continuing to handle the loading and error states',
-            ),
-            SignalBuilder(
-              builder: (context, child) {
-                final hairColorState = userHairColor.state;
-                return hairColorState.on(
-                  ready: (hairColor) {
-                    return ListTile(
-                      title: Text('Haircolor: $hairColor'),
-                      subtitle:
-                          Text('refreshing: ${hairColorState.isRefreshing}'),
-                    );
-                  },
-                  loading: () => const CircularProgressIndicator(),
-                  error: (error, stackTrace) => Text('$error'),
-                );
-              },
-            )
           ],
         ),
       ),
