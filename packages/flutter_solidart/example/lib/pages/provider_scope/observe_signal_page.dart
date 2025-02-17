@@ -1,7 +1,8 @@
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-final _countProvider = Provider((_) => Signal(0));
+final countProvider = Provider((context) => Signal(0));
 
 class ObserveSignalPage extends StatelessWidget {
   const ObserveSignalPage({super.key});
@@ -12,11 +13,9 @@ class ObserveSignalPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Observe Signal'),
       ),
+      // provide the count provider to descendants
       body: ProviderScope(
-        providers: [
-          // provide the count signal to descendants
-          _countProvider,
-        ],
+        providers: [countProvider],
         child: const SomeChild(),
       ),
     );
@@ -29,19 +28,23 @@ class SomeChild extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // retrieve the count signal
-    final count = _countProvider.observe(context);
+    final count = countProvider.of(context);
 
     return Center(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // render the count value
-          Text('count: ${count.value}'),
+          // react to the count value
+          SignalBuilder(
+            builder: (context, child) {
+              return Text('count: ${count.value}');
+            },
+          ),
           const SizedBox(height: 8),
           ElevatedButton(
             onPressed: () {
               // update the count signal value
-              count.updateValue((value) => value += 1);
+              count.updateValue((value) => value + 1);
             },
             child: const Text('Increment'),
           ),

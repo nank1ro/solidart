@@ -5,28 +5,24 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:todos/controllers/controller.dart';
+import 'package:todos/main.dart';
 
 import 'package:todos/models/todo.dart';
-import 'package:todos/todos_page.dart';
 import 'package:todos/widgets/todo_item.dart';
 
 // Utility function to easily wrap a [child] into a mocked todos controller.
-Widget wrapWithMockedTodosController({
-  required Widget child,
-  required TodosController todosController,
-}) {
-  return MaterialApp(
-    home: ProviderScope(
-      providers: [
-        // todo: find a way to mock with todosController
-        TodosController.provider,
-      ],
-      child: child,
-    ),
+Widget wrapWithMockedTodosController(
+  TodosController todosController,
+) {
+  return ProviderScopeOverride(
+    overrides: [
+      TodosController.provider.overrideWithValue(todosController),
+    ],
+    child: MyApp(),
   );
 }
 
@@ -40,8 +36,7 @@ void main() {
     // Build our TodosPageView and trigger a frame.
     await tester.pumpWidget(
       wrapWithMockedTodosController(
-        todosController: TodosController(initialTodos: initialTodos),
-        child: const TodosPageView(),
+        TodosController(initialTodos: initialTodos),
       ),
     );
 
@@ -62,8 +57,7 @@ void main() {
     // Build our TodosPageView and trigger a frame.
     await tester.pumpWidget(
       wrapWithMockedTodosController(
-        todosController: TodosController(),
-        child: const TodosPageView(),
+        TodosController(),
       ),
     );
 
@@ -90,9 +84,7 @@ void main() {
     // Build our TodosPageView and trigger a frame.
     await tester.pumpWidget(
       wrapWithMockedTodosController(
-        todosController: TodosController(initialTodos: initialTodos),
-        child: const TodosPageView(),
-      ),
+          TodosController(initialTodos: initialTodos)),
     );
 
     // verify that there are 3 todos rendered initially
@@ -121,12 +113,7 @@ void main() {
     );
     final todosController = TodosController(initialTodos: initialTodos);
     // Build our TodosPageView and trigger a frame.
-    await tester.pumpWidget(
-      wrapWithMockedTodosController(
-        todosController: todosController,
-        child: const TodosPageView(),
-      ),
-    );
+    await tester.pumpWidget(wrapWithMockedTodosController(todosController));
 
     // verify that the completed tabs starts with 0 todos
     expect(find.text('completed (0)'), findsOneWidget);

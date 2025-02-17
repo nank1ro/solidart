@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:todos/controllers/controller.dart';
 import 'package:todos/models/todo.dart';
 
@@ -22,7 +21,7 @@ class TodoItem extends StatelessWidget {
       direction: DismissDirection.endToStart,
       onDismissed: (_) {
         // remove the todo
-        TodosController.provider.get(context).remove(todo.id);
+        TodosController.provider.of(context).remove(todo.id);
       },
       background: Container(
         decoration: const BoxDecoration(color: Colors.red),

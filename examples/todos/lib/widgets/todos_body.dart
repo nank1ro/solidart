@@ -1,5 +1,5 @@
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:todos/controllers/controller.dart';
 import 'package:todos/models/todo.dart';
 import 'package:todos/providers.dart';
@@ -26,7 +26,7 @@ class _TodosBodyState extends State<TodosBody> {
   Widget build(BuildContext context) {
     // retrieve the [TodosController], you're safe to `get` a Signal or Provider
     // in both the `initState` and `build` methods.
-    final todosController = TodosController.provider.get(context);
+    final todosController = TodosController.provider.of(context);
 
     return ProviderScope(
       providers: [

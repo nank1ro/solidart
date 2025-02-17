@@ -1,9 +1,10 @@
+// ignore_for_file: lines_longer_than_80_chars
+
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:flutter_solidart/src/utils/diagnostic_properties_for_generic.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
@@ -31,6 +32,36 @@ class NumberContainer {
 }
 
 void main() {
+  testWidgets('(Provider) Not found signal throws an error', (tester) async {
+    final counterProvider = Provider((_) => Signal(0));
+    final invalidCounterProvider = Provider((_) => Signal(0));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProviderScope(
+            providers: [
+              counterProvider,
+            ],
+            child: SignalBuilder(
+              builder: (context, _) {
+                final counter = invalidCounterProvider.of(context);
+                return Text(counter().toString());
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.takeException(),
+      const TypeMatcher<ProviderWithoutScopeError>().having(
+        (error) => error.provider,
+        'Matching the wrong ID should result in a ProviderError.',
+        equals(invalidCounterProvider),
+      ),
+    );
+  });
   testWidgets('Show widget works properly', (tester) async {
     final s = Signal(true);
     await tester.pumpWidget(
@@ -225,7 +256,7 @@ void main() {
     expect(loadingFinder, findsNothing);
   });
 
-  testWidgets('SignalBuilder works properly', (tester) async {
+  testWidgets('SignalBuilder works properly (1 Signal)', (tester) async {
     final s = Signal(0);
     await tester.pumpWidget(
       MaterialApp(
@@ -246,7 +277,7 @@ void main() {
     expect(dataFinder(1), findsOneWidget);
   });
 
-  testWidgets('DualSignalBuilder works properly', (tester) async {
+  testWidgets('SignalBuilder works properly (2 Signals)', (tester) async {
     final s1 = Signal(0);
     final s2 = Signal(0);
     await tester.pumpWidget(
@@ -271,7 +302,7 @@ void main() {
     expect(dataFinder(1, 1), findsOneWidget);
   });
 
-  testWidgets('TripleSignalBuilder works properly', (tester) async {
+  testWidgets('SignalBuilder works properly (3 Signals)', (tester) async {
     final s1 = Signal(0);
     final s2 = Signal(0);
     final s3 = Signal(0);
@@ -301,8 +332,10 @@ void main() {
     expect(dataFinder(1, 1, 1), findsOneWidget);
   });
 
-  group('Test ProviderScope context.observe', () {
-    testWidgets('Observe signals ids', (tester) async {
+  group('Provider and SignalBuilder', () {
+    testWidgets(
+        '(Provider) SignalBuilder works properly (1 Signal and 1 Computed)',
+        (tester) async {
       final s = Signal(0);
 
       final counterProvider = Provider((_) => s);
@@ -311,17 +344,18 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProviderScope.builder(
+            body: ProviderScope(
               providers: [
                 counterProvider,
                 doubleCounterProvider,
               ],
-              builder: (context) {
-                final counter = counterProvider.observe(context).value;
-                final doubleCounter =
-                    doubleCounterProvider.observe(context).value;
-                return Text('$counter $doubleCounter');
-              },
+              child: SignalBuilder(
+                builder: (context, child) {
+                  final counter = counterProvider.of(context).value;
+                  final doubleCounter = doubleCounterProvider.of(context).value;
+                  return Text('$counter $doubleCounter');
+                },
+              ),
             ),
           ),
         ),
@@ -335,7 +369,8 @@ void main() {
       expect(counterFinder(1, 2), findsOneWidget);
     });
 
-    testWidgets('Observe Computed', (tester) async {
+    testWidgets('(Provider) SignalBuilder works properly (1 Computed)',
+        (tester) async {
       final s = Signal(0);
 
       final doubleCounterProvider = Provider((_) => Computed(() => s() * 2));
@@ -343,15 +378,16 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProviderScope.builder(
+            body: ProviderScope(
               providers: [
                 doubleCounterProvider,
               ],
-              builder: (context) {
-                final doubleCounter =
-                    doubleCounterProvider.observe(context).value;
-                return Text('$doubleCounter');
-              },
+              child: SignalBuilder(
+                builder: (context, child) {
+                  final doubleCounter = doubleCounterProvider.of(context).value;
+                  return Text('$doubleCounter');
+                },
+              ),
             ),
           ),
         ),
@@ -364,7 +400,8 @@ void main() {
       expect(counterFinder(2), findsOneWidget);
     });
 
-    testWidgets('Observe ReadSignal', (tester) async {
+    testWidgets('(Provider) SignalBuilder works properly (1 ReadSignal)',
+        (tester) async {
       final s = Signal(0);
 
       final counterProvider = Provider((_) => s.toReadSignal());
@@ -372,42 +409,16 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProviderScope.builder(
+            body: ProviderScope(
               providers: [
                 counterProvider,
               ],
-              builder: (context) {
-                final counter = counterProvider.observe(context).value;
-                return Text('$counter');
-              },
-            ),
-          ),
-        ),
-      );
-      Finder counterFinder(int value) => find.text('$value');
-      expect(counterFinder(0), findsOneWidget);
-
-      s.value = 1;
-      await tester.pumpAndSettle();
-      expect(counterFinder(1), findsOneWidget);
-    });
-
-    testWidgets('Observe ReadSignal with id', (tester) async {
-      final s = Signal(0);
-
-      final counterProvider = Provider((_) => s.toReadSignal());
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ProviderScope.builder(
-              providers: [
-                counterProvider,
-              ],
-              builder: (context) {
-                final counter = counterProvider.observe(context).value;
-                return Text('$counter');
-              },
+              child: SignalBuilder(
+                builder: (context, child) {
+                  final counter = counterProvider.of(context).value;
+                  return Text('$counter');
+                },
+              ),
             ),
           ),
         ),
@@ -421,7 +432,8 @@ void main() {
     });
   });
 
-  testWidgets('Test ProviderScope context.get with Signal', (tester) async {
+  testWidgets('(Provider) SignalBuilder works properly (1 Signal, 1 Computed)',
+      (tester) async {
     final s = Signal(0);
     final s2 = Computed(() => s() * 2);
 
@@ -431,20 +443,18 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ProviderScope.builder(
+          body: ProviderScope(
             providers: [
               counterProvider,
               doubleCounterProvider,
             ],
-            builder: (context) {
-              final counter = counterProvider.get(context);
-              final doubleCounter = doubleCounterProvider.get(context);
-              return SignalBuilder(
-                builder: (context, _) {
-                  return Text('${counter()} ${doubleCounter()}');
-                },
-              );
-            },
+            child: SignalBuilder(
+              builder: (context, _) {
+                final counter = counterProvider.of(context);
+                final doubleCounter = doubleCounterProvider.of(context);
+                return Text('${counter()} ${doubleCounter()}');
+              },
+            ),
           ),
         ),
       ),
@@ -458,55 +468,58 @@ void main() {
     expect(counterFinder(1, 2), findsOneWidget);
   });
 
-  testWidgets('Test ProviderScope throws an error for a not found signal',
-      (tester) async {
-    final counterProvider = Provider((_) => Signal(0));
-    final invalidCounterProvider = Provider((_) => Signal(0));
+  testWidgets('Signal reactivity within Provider create fn', (tester) async {
+    final s = Signal(0);
+    final counterProvider = Provider((_) => s);
+
+    final doubleCounterProvider = Provider((context) {
+      final counter = counterProvider.of(context);
+      return Computed(() => counter() * 2);
+    });
 
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ProviderScope.builder(
-            providers: [
-              counterProvider,
-            ],
-            builder: (context) {
-              final counter = invalidCounterProvider.get(context);
-              return SignalBuilder(
+          body: ProviderScope(
+            providers: [counterProvider],
+            child: ProviderScope(
+              providers: [doubleCounterProvider],
+              child: SignalBuilder(
                 builder: (context, _) {
-                  return Text(counter().toString());
+                  final counter = counterProvider.of(context);
+                  final doubleCounter = doubleCounterProvider.of(context);
+                  return Text('${counter()} ${doubleCounter()}');
                 },
-              );
-            },
+              ),
+            ),
           ),
         ),
       ),
     );
-    expect(
-      tester.takeException(),
-      const TypeMatcher<ProviderError<Signal<int>>>().having(
-        (pe) => pe.id,
-        'Matching the wrong ID should result in a ProviderError.',
-        equals(invalidCounterProvider),
-      ),
-    );
+    Finder counterFinder(int value1, int value2) =>
+        find.text('$value1 $value2');
+    expect(counterFinder(0, 0), findsOneWidget);
+
+    s.value = 1;
+    await tester.pumpAndSettle();
+    expect(counterFinder(1, 2), findsOneWidget);
   });
 
-  group('Test ProviderScope.value', () {
-    testWidgets('Test ProviderScope.value with observe', (tester) async {
-      final s = Signal(0);
+  group('ProviderScopePortal with Signals', () {
+    testWidgets('ProviderScopePortal with 1 Signal w/out autoDispose',
+        (tester) async {
+      final s = Signal(0, autoDispose: false);
       final counterProvider = Provider((_) => s);
 
       Future<void> showCounterDialog({required BuildContext context}) {
         return showDialog(
           context: context,
-          builder: (dialogContext) {
-            return ProviderScope.value(
-              mainTreeContext: context,
-              provider: counterProvider,
-              child: Builder(
-                builder: (innerContext) {
-                  final counter = counterProvider.observe(innerContext).value;
+          builder: (_) {
+            return ProviderScopePortal(
+              mainContext: context,
+              child: SignalBuilder(
+                builder: (innerContext, child) {
+                  final counter = counterProvider.of(innerContext).value;
                   return Text('Dialog counter: $counter');
                 },
               ),
@@ -518,18 +531,16 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProviderScope.builder(
-              providers: [
-                counterProvider,
-              ],
-              builder: (context) {
-                return ElevatedButton(
+            body: ProviderScope(
+              providers: [counterProvider],
+              child: Builder(
+                builder: (context) => ElevatedButton(
                   onPressed: () {
                     showCounterDialog(context: context);
                   },
                   child: const Text('show dialog'),
-                );
-              },
+                ),
+              ),
             ),
           ),
         ),
@@ -548,7 +559,7 @@ void main() {
       expect(counterFinder(1), findsOneWidget);
     });
 
-    testWidgets('Test ProviderScope.value for signals with get',
+    testWidgets('ProviderScopePortal with 1 Signal and 1 Computed',
         (tester) async {
       final s = Signal(0);
       final counterProvider = Provider((_) => s);
@@ -558,18 +569,15 @@ void main() {
         return showDialog(
           context: context,
           builder: (dialogContext) {
-            return ProviderScope.values(
-              mainTreeContext: context,
-              providers: [
-                counterProvider,
-                doubleCounterProvider,
-              ],
+            return ProviderScopePortal(
+              mainContext: context,
               child: Builder(
                 builder: (innerContext) {
-                  final counter = counterProvider.get(innerContext);
-                  final doubleCounter = doubleCounterProvider.get(innerContext);
                   return SignalBuilder(
                     builder: (_, __) {
+                      final counter = counterProvider.of(innerContext);
+                      final doubleCounter =
+                          doubleCounterProvider.of(innerContext);
                       return Text(
                         '''Dialog counter: ${counter()} doubleCounter: ${doubleCounter()}''',
                       );
@@ -585,19 +593,19 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProviderScope.builder(
+            body: ProviderScope(
               providers: [
                 counterProvider,
                 doubleCounterProvider,
               ],
-              builder: (context) {
-                return ElevatedButton(
+              child: Builder(
+                builder: (context) => ElevatedButton(
                   onPressed: () {
                     showCounterDialog(context: context);
                   },
                   child: const Text('show dialog'),
-                );
-              },
+                ),
+              ),
             ),
           ),
         ),
@@ -616,359 +624,33 @@ void main() {
       await tester.pumpAndSettle();
       expect(counterFinder(1, 2), findsOneWidget);
     });
-
-    testWidgets('Test ProviderScope.value for providers', (tester) async {
-      final numberContainerProvider = Provider((_) => const NumberContainer(1));
-
-      Future<void> showNumberDialog({required BuildContext context}) {
-        return showDialog(
-          context: context,
-          builder: (dialogContext) {
-            return ProviderScope.value(
-              provider: numberContainerProvider,
-              mainTreeContext: context,
-              child: Builder(
-                builder: (innerContext) {
-                  final numberContainer =
-                      numberContainerProvider.get(innerContext);
-                  return Text('${numberContainer.number}');
-                },
-              ),
-            );
-          },
-        );
-      }
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ProviderScope.builder(
-              providers: [
-                numberContainerProvider,
-              ],
-              builder: (context) {
-                return ElevatedButton(
-                  onPressed: () {
-                    showNumberDialog(context: context);
-                  },
-                  child: const Text('show dialog'),
-                );
-              },
-            ),
-          ),
-        ),
-      );
-      Finder counterFinder(int value) => find.text('$value');
-
-      final buttonFinder = find.text('show dialog');
-      expect(buttonFinder, findsOneWidget);
-      await tester.tap(buttonFinder);
-      await tester.pumpAndSettle();
-
-      expect(counterFinder(1), findsOneWidget);
-    });
-
-    testWidgets(
-        'Test ProviderScope.value throws an error for a not found provider',
-        (tester) async {
-      final numberContainerProvider = Provider((_) => const NumberContainer(0));
-      final nameContainerProvider =
-          Provider<NameContainer>((_) => MockNameContainer('name'));
-
-      Future<void> showNumberDialog({required BuildContext context}) {
-        return showDialog(
-          context: context,
-          builder: (dialogContext) {
-            return ProviderScope.value(
-              provider: numberContainerProvider,
-              mainTreeContext: context,
-              child: Builder(
-                builder: (innerContext) {
-                  final numberContainer =
-                      numberContainerProvider.get(innerContext);
-                  return Text('${numberContainer.number}');
-                },
-              ),
-            );
-          },
-        );
-      }
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ProviderScope.builder(
-              providers: [nameContainerProvider],
-              builder: (context) {
-                return ElevatedButton(
-                  onPressed: () {
-                    showNumberDialog(context: context);
-                  },
-                  child: const Text('show dialog'),
-                );
-              },
-            ),
-          ),
-        ),
-      );
-      final buttonFinder = find.text('show dialog');
-      await tester.tap(buttonFinder);
-      await tester.pumpAndSettle();
-      expect(
-        tester.takeException(),
-        const TypeMatcher<ProviderError<NumberContainer>>(),
-      );
-    });
   });
 
-  testWidgets(
-      'Test ProviderScope.maybeGet returns null for a not found provider',
-      (tester) async {
-    final numberContainerProvider = Provider((_) => const NumberContainer(0));
-    final nameContainerProvider = Provider<NameContainer>(
-      (_) => MockNameContainer('name'),
-    );
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ProviderScope.builder(
-            providers: [
-              nameContainerProvider,
-            ],
-            builder: (context) {
-              final numberContainer = numberContainerProvider.maybeGet(context);
-              return Text(numberContainer.toString());
-            },
-          ),
-        ),
-      ),
-    );
-    expect(find.text('null'), findsOneWidget);
-  });
-
-  test('DiagnosicPropertyForGeneric', () {
-    final builder = DiagnosticPropertiesBuilder();
-    DiagnosticPropertiesForGeneric<String>(
-      value: 'one',
-      name: 'string',
-      properties: builder,
-    );
-    expect(builder.properties.last, const TypeMatcher<StringProperty>());
-
-    DiagnosticPropertiesForGeneric<int>(
-      value: 1,
-      name: 'int',
-      properties: builder,
-    );
-    expect(builder.properties.last, const TypeMatcher<IntProperty>());
-
-    DiagnosticPropertiesForGeneric<double>(
-      value: 1.1,
-      name: 'double',
-      properties: builder,
-    );
-    expect(builder.properties.last, const TypeMatcher<DoubleProperty>());
-
-    DiagnosticPropertiesForGeneric<HitTestBehavior>(
-      value: HitTestBehavior.translucent,
-      name: 'enum',
-      properties: builder,
-    );
-    expect(
-      builder.properties.last,
-      const TypeMatcher<DiagnosticsProperty<HitTestBehavior>>(),
-    );
-
-    DiagnosticPropertiesForGeneric<bool>(
-      value: true,
-      name: 'bool',
-      properties: builder,
-    );
-    expect(
-      builder.properties.last,
-      const TypeMatcher<DiagnosticsProperty<bool>>(),
-    );
-
-    DiagnosticPropertiesForGeneric<Iterable<int>>(
-      value: [1],
-      name: 'iterable',
-      properties: builder,
-    );
-    expect(
-      builder.properties.last,
-      const TypeMatcher<DiagnosticsProperty<Iterable<int>>>(),
-    );
-
-    DiagnosticPropertiesForGeneric<Color>(
-      value: Colors.black,
-      name: 'Color',
-      properties: builder,
-    );
-    expect(
-      builder.properties.last,
-      const TypeMatcher<DiagnosticsProperty<Color>>(),
-    );
-
-    DiagnosticPropertiesForGeneric<IconData>(
-      value: Icons.mp,
-      name: 'IconData',
-      properties: builder,
-    );
-    expect(
-      builder.properties.last,
-      const TypeMatcher<IconDataProperty>(),
-    );
-  });
-
-  testWidgets('Test ProviderScope context.get with Provider', (tester) async {
-    final NameContainer nameContainer = MockNameContainer('Ale');
-
-    final numberContainer1Provider = Provider(
-      (_) => const NumberContainer(1),
-      lazy: false,
-    );
-    final numberContainer2Provider = Provider(
-      (_) => const NumberContainer(100),
-      lazy: false,
-    );
-    final nameContainerProvider = Provider(
-      (_) => nameContainer,
-      dispose: (provider) => provider.dispose(),
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ProviderScope.builder(
-            providers: [
-              nameContainerProvider,
-              numberContainer1Provider,
-              numberContainer2Provider,
-            ],
-            builder: (context) {
-              final nameContainer = nameContainerProvider.get(context);
-              final numberContainer1 = numberContainer1Provider.get(context);
-              final numberContainer2 = numberContainer2Provider.get(context);
-              return Text(
-                '''${nameContainer.name} ${numberContainer1.number} ${numberContainer2.number}''',
-              );
-            },
-          ),
-        ),
-      ),
-    );
-    Finder providerFinder(String value1, int value2, int value3) =>
-        find.text('$value1 $value2 $value3');
-
-    expect(providerFinder('Ale', 1, 100), findsOneWidget);
-
-    // mock NameProvider dispose method
-    when(nameContainer.dispose()).thenReturn(null);
-    // Push a different widget
-    await tester.pumpWidget(Container());
-    // check dispose has been called on NameProvider
-    verify(nameContainer.dispose()).called(1);
-  });
-
-  testWidgets('Test ProviderScope throws an error for a not found provider',
-      (tester) async {
-    final numberContainerProvider = Provider((_) => const NumberContainer(1));
-    final nameContainerProvider = Provider((_) => MockNameContainer('An'));
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ProviderScope.builder(
-            providers: [
-              numberContainerProvider,
-            ],
-            builder: (context) {
-              // NameProvider is not present
-              final nameContainer = nameContainerProvider.get(context);
-              return Text(nameContainer.name);
-            },
-          ),
-        ),
-      ),
-    );
-    expect(
-      tester.takeException(),
-      const TypeMatcher<ProviderError<NameContainer>>().having(
-        (pe) => pe.id,
-        'The wrong ID is used.',
-        nameContainerProvider,
-      ),
-    );
-  });
-
-  testWidgets('Test ProviderScope throws an error for a Provider<dynamic>',
-      (tester) async {
-    final numberContainerProvider =
-        Provider<dynamic>((_) => const NumberContainer(1));
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ProviderScope(
-            providers: [
-              numberContainerProvider,
-            ],
-            child: const SizedBox(),
-          ),
-        ),
-      ),
-    );
-    expect(
-      tester.takeException(),
-      const TypeMatcher<ProviderDynamicError>(),
-    );
-  });
-
-  testWidgets(
-      'Test ProviderScope throws an error for multiple providers of the same type',
-      (tester) async {
-    final numberContainerProvider = Provider((_) => const NumberContainer(1));
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ProviderScope(
-            providers: [
-              numberContainerProvider,
-              numberContainerProvider,
-            ],
-            child: const SizedBox(),
-          ),
-        ),
-      ),
-    );
-    expect(
-      tester.takeException(),
-      const TypeMatcher<MultipleProviderOfSameInstance>(),
-    );
-  });
-
-  testWidgets('Test ProviderScope.update method', (tester) async {
+  testWidgets('(Provider) Signal.updateValue method', (tester) async {
     final counterProvider = Provider((_) => Signal(0));
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ProviderScope.builder(
+          body: ProviderScope(
             providers: [
               counterProvider,
             ],
-            builder: (context) {
-              final counter = counterProvider.observe(context).value;
-              return Column(
-                children: [
-                  Text('$counter'),
-                  ElevatedButton(
-                    onPressed: () {
-                      counterProvider.update(context, (value) => value + 1);
-                    },
-                    child: const Text('add'),
-                  ),
-                ],
-              );
-            },
+            child: SignalBuilder(
+              builder: (context, child) {
+                final counter = counterProvider.of(context);
+                return Column(
+                  children: [
+                    Text('${counter.value}'),
+                    ElevatedButton(
+                      onPressed: () {
+                        counter.updateValue((value) => value + 1);
+                      },
+                      child: const Text('add'),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -981,31 +663,31 @@ void main() {
     expect(find.text('1'), findsOneWidget);
   });
 
-  testWidgets('Test ProviderScope.update method with ArgProvider',
-      (tester) async {
-    final counterProvider = Provider.withArg((_, int n) => Signal(n));
+  testWidgets('(ArgProvider) Signal.updateValue method', (tester) async {
+    final counterProvider = Provider.withArgument((_, int n) => Signal(n));
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ProviderScope.builder(
+          body: ProviderScope(
             providers: [
-              counterProvider,
+              counterProvider(0),
             ],
-            builder: (context) {
-              counterProvider.setInitialArg(0);
-              final counter = counterProvider.observe(context).value;
-              return Column(
-                children: [
-                  Text('$counter'),
-                  ElevatedButton(
-                    onPressed: () {
-                      counterProvider.update(context, (value) => value + 1);
-                    },
-                    child: const Text('add'),
-                  ),
-                ],
-              );
-            },
+            child: SignalBuilder(
+              builder: (context, _) {
+                final counter = counterProvider.of(context);
+                return Column(
+                  children: [
+                    Text('${counter.value}'),
+                    ElevatedButton(
+                      onPressed: () {
+                        counter.updateValue((value) => value + 1);
+                      },
+                      child: const Text('add'),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -1043,49 +725,11 @@ void main() {
     timeout: const Timeout(Duration(seconds: 1)),
   );
 
-  testWidgets('Test ProviderScope multiple ancestor providers of the same Type',
-      (tester) async {
-    final numberContainer1Provider = Provider((_) => const NumberContainer(1));
-    final numberContainer2Provider =
-        Provider((_) => const NumberContainer(100));
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ProviderScope(
-            providers: [
-              numberContainer1Provider,
-            ],
-            child: ProviderScope.builder(
-              providers: [
-                numberContainer2Provider,
-              ],
-              builder: (context) {
-                final numberProvider1 = numberContainer1Provider.get(context);
-                final numberProvider2 = numberContainer2Provider.get(context);
-                return Text(
-                  '''${numberProvider1.number} ${numberProvider2.number}''',
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-    Finder providerFinder(int value1, int value2) =>
-        find.text('$value1 $value2');
-
-    expect(providerFinder(1, 100), findsOneWidget);
-  });
-
   group('Automatic disposal', () {
     testWidgets(
       'Signal autoDispose',
       (tester) async {
         final counter = Signal(0);
-        counter.onDispose(() {
-          print("dispose counter");
-        });
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -1231,79 +875,4 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
-
-  // todo: ProviderScopeOverride needs to override the value in a different way
-
-  // testWidgets(
-  //     'SolidOverride should override providers regardless of the hierarchy',
-  //     (tester) async {
-  //   final counterId = Provider<Signal<int>>(() => Signal(0));
-  //   await tester.pumpWidget(
-  //     ProviderScopeOverride(
-  //       providers: [
-  //         counterId, // todo: somehow override with 100
-  //       ],
-  //       child: MaterialApp(
-  //         home: ProviderScope.builder(
-  //           providers: [
-  //             counterId,
-  //           ],
-  //           builder: (context) {
-  //             final counter = counterId.observe(context).value;
-  //             return Text(counter.toString());
-  //           },
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  //   expect(find.text('100'), findsOneWidget);
-  // });
-
-  // testWidgets('Only one SolidOverride must be present in the widget tree',
-  //     (tester) async {
-  //   final counterId = Provider<Signal<int>>(() => Signal(0));
-  //   await tester.pumpWidget(
-  //     ProviderScopeOverride(
-  //       providers: [
-  //         counterId, // todo: somehow override with 100
-  //       ],
-  //       child: MaterialApp(
-  //         home: ProviderScopeOverride.builder(
-  //           providers: [
-  //             counterId,
-  //           ],
-  //           builder: (context) {
-  //             final counter = counterId.observe(context).value;
-  //             return Text(counter.toString());
-  //           },
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  //   expect(
-  //     tester.takeException(),
-  //     const TypeMatcher<MultipleSolidOverrideError>(),
-  //   );
-  // });
-
-  // testWidgets(
-  //     '''SolidOverride.of(context) throws an error if no SolidOverride is found in the widget tree''',
-  //     (tester) async {
-  //   await tester.pumpWidget(
-  //     MaterialApp(
-  //       home: Scaffold(
-  //         body: Builder(
-  //           builder: (context) {
-  //             ProviderScopeOverride.of(context);
-  //             return const SizedBox();
-  //           },
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  //   expect(
-  //     tester.takeException(),
-  //     const TypeMatcher<FlutterError>(),
-  //   );
-  // });
 }
