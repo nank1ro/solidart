@@ -225,6 +225,23 @@ void main() {
         final signal = Signal<bool>.lazy();
         expect(() => signal.value, throwsStateError);
       });
+
+      test('untrackedValue', () {
+        final counter = Signal(0);
+
+        final cb = MockCallbackFunction();
+        final unobserve = Effect(() {
+          counter.untrackedValue;
+          counter.untrackedPreviousValue;
+          cb();
+        });
+        addTearDown(unobserve);
+
+        counter.value = 1;
+
+        // An effect is always triggered once
+        verify(cb()).called(1);
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
