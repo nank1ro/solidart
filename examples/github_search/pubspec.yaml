@@ -51,7 +51,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
   custom_lint: ^0.7.0
-  solidart_lint: ^2.0.0
+  solidart_lint: ^2.0.0-dev.2
   json_serializable: ^6.7.1
   build_runner: ^2.4.9
 
