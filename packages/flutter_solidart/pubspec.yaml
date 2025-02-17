@@ -21,7 +21,7 @@ dependencies:
   solidart: ^2.0.0-dev.4
 
 dev_dependencies:
-  disco: ^0.0.2
+  disco: ^1.0.0
   flutter_test:
     sdk: flutter
   mockito: ^5.4.4
