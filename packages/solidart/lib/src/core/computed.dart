@@ -230,9 +230,6 @@ class Computed<T> extends ReadSignal<T> {
   }
 
   @override
-  T call() => value;
-
-  @override
   bool get disposed => _disposed;
 
   @override

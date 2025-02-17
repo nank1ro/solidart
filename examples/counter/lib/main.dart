@@ -36,7 +36,7 @@ class _CounterPageState extends State<CounterPage> {
       body: Center(
         child: SignalBuilder(
           builder: (_, __) {
-            return Text(counter().toString());
+            return Text(counter.value.toString());
           },
         ),
       ),

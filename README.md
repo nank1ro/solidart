@@ -45,8 +45,6 @@ The argument passed to the class is the initial value, and the return value is t
 To retrieve the current value, you can use:
 ```dart
 print(counter.value); // prints 0
-// or
-print(counter());
 ```
 
 To change the value, you can use:
@@ -55,8 +53,6 @@ To change the value, you can use:
 counter.value++; 
 // Set the value to 2
 counter.value = 2;
-// equivalent to
-counter.set(2);
 // Update the value based on the current value
 counter.updateValue((value) => value * 2);
 ```
@@ -70,7 +66,7 @@ The effect automatically subscribes to any signal and reruns when any of them ch
 So let's create an Effect that reruns whenever `counter` changes:
 
 ```dart
-final disposeFn = Effect((_) {
+final disposeFn = Effect(() {
     print("The count is now ${counter.value}");
 });
 ```

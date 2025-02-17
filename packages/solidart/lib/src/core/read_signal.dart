@@ -229,9 +229,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
   }
 
   @override
-  T call() => value;
-
-  @override
   bool get hasPreviousValue {
     if (!trackPreviousValue) return false;
     // cause observation

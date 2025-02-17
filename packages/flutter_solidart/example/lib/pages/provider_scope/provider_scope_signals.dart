@@ -5,7 +5,7 @@ import 'package:flutter_solidart/flutter_solidart.dart';
 final counterProvider = Provider((context) => Signal(0));
 
 final doubleCounterProvider = Provider.withArgument(
-  (_, Signal<int> count) => Computed(() => count() * 2),
+  (_, Signal<int> count) => Computed(() => count.value * 2),
 );
 
 class ProviderScopeSignalsPage extends StatefulWidget {

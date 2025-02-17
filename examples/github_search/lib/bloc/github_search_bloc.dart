@@ -33,14 +33,14 @@ class GithubSearchBloc {
   );
 
   // Sets the current search term
-  void search(String term) => _searchTerm.set(term);
+  void search(String term) => _searchTerm.value = term;
 
   // Fetches the current search term
   //
   // If the term is empty, returns an empty [SearchResult]
   Future<SearchResult> _search() async {
-    if (_searchTerm().isEmpty) return SearchResult.empty();
-    return _repository.search(_searchTerm());
+    if (_searchTerm.value.isEmpty) return SearchResult.empty();
+    return _repository.search(_searchTerm.value);
   }
 
   void dispose() {

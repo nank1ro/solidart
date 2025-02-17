@@ -4,14 +4,14 @@ import 'package:solidart/solidart.dart';
 
 void main() {
   final count = Signal(0);
-  final doubleCount = Computed(() => count() * 2);
+  final doubleCount = Computed(() => count.value * 2);
 
   Effect(() {
-    print('The counter is now: ${count()}');
-    print('The double counter is now: ${doubleCount()}');
+    print('The counter is now: ${count.value}');
+    print('The double counter is now: ${doubleCount.value}');
   });
 
   count
-    ..set(1)
-    ..set(2);
+    ..value = 1
+    ..value = 2;
 }

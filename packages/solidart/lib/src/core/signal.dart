@@ -190,19 +190,12 @@ class Signal<T> extends ReadableSignal<T> {
   }) : super._internalLazy();
 
   /// {@macro set-signal-value}
-  set value(T newValue) => set(newValue);
-
-  /// {@template set-signal-value}
-  /// Sets the current signal value with [newValue].
-  ///
-  /// This operation may be skipped if the value is equal to the previous one,
-  /// check [equals] and [comparator].
-  /// {@endtemplate}
-  T set(T newValue) => _setValue(newValue);
+  set value(T newValue) => _setValue(newValue);
 
   /// Calls a function with the current value and assigns the result as the
   /// new value.
-  T updateValue(T Function(T value) callback) => value = callback(_value);
+  T updateValue(T Function(T value) callback) =>
+      value = callback(_untrackedValue);
 
   /// Converts this [Signal] into a [ReadableSignal]
   /// Use this method to remove the visility to the value setter.
@@ -210,5 +203,5 @@ class Signal<T> extends ReadableSignal<T> {
 
   @override
   String toString() =>
-      '''Signal<$T>(value: $_value, previousValue: $_previousValue)''';
+      '''Signal<$T>(value: $_untrackedValue, previousValue: $_untrackedPreviousValue)''';
 }

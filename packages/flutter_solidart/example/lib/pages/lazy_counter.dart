@@ -19,7 +19,7 @@ class _LazyCounterPageState extends State<LazyCounterPage> {
         child: SignalBuilder(
           builder: (_, __) {
             return switch (counter.hasValue) {
-              true => Text('Counter: ${counter()}'),
+              true => Text('Counter: ${counter.value}'),
               false => const Text('Counter: not initialized'),
             };
           },

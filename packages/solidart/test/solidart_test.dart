@@ -83,21 +83,20 @@ void main() {
         final cb = MockCallbackFunction();
         final unobserve = counter.observe((_, __) => cb());
 
-        expect(counter(), 0);
+        expect(counter.value, 0);
 
-        counter.set(1);
+        counter.value = 1;
         await pumpEventQueue();
-        expect(counter(), 1);
+        expect(counter.value, 1);
 
-        counter
-          ..set(2)
-          ..set(2)
-          ..set(2);
+        counter.value = 2;
+        counter.value = 2;
+        counter.value = 2;
 
         await pumpEventQueue();
-        counter.set(3);
+        counter.value = 3;
 
-        expect(counter(), 3);
+        expect(counter.value, 3);
         await pumpEventQueue();
         verify(cb()).called(3);
         // clear
@@ -114,14 +113,13 @@ void main() {
         expect(signal.value, null);
         final a = _A();
 
-        signal
-          ..set(a)
-          ..set(a)
-          ..set(a);
+        signal.value = a;
+        signal.value = a;
+        signal.value = a;
 
         await pumpEventQueue();
 
-        signal.set(_A());
+        signal.value = _A();
         await pumpEventQueue();
         verify(cb()).called(2);
 
@@ -182,9 +180,8 @@ void main() {
         unawaited(
           expectLater(count.until((value) => value > 5), completion(11)),
         );
-        count
-          ..set(2)
-          ..set(11);
+        count.value = 2;
+        count.value = 11;
       });
 
       test('check toString()', () {
@@ -207,9 +204,9 @@ void main() {
 
       test('Signal<bool> toggle', () {
         final signal = Signal(false);
-        expect(signal(), false);
+        expect(signal.value, false);
         signal.toggle();
-        expect(signal(), true);
+        expect(signal.value, true);
       });
 
       test('lazy Signal', () {
@@ -254,17 +251,17 @@ void main() {
         final signal2 = Signal(0);
 
         final cb = MockCallbackFunctionWithValue<int>();
-        Effect(() => cb(signal1()));
-        Effect(() => cb(signal2()));
+        Effect(() => cb(signal1.value));
+        Effect(() => cb(signal2.value));
 
-        signal1.set(1);
+        signal1.value = 1;
         await pumpEventQueue();
         verify(cb(1)).called(1);
-        signal1.set(2);
+        signal1.value = 2;
         await pumpEventQueue();
         verify(cb(2)).called(1);
-        signal2.set(4);
-        signal1.set(4);
+        signal2.value = 4;
+        signal1.value = 4;
         await pumpEventQueue();
         verify(cb(4)).called(2);
       });
@@ -303,7 +300,7 @@ void main() {
           () async {
         final klass = _B(_C(0));
         final s = Signal(klass);
-        final selected = Computed(() => s().c.count);
+        final selected = Computed(() => s.value.c.count);
         final cb = MockCallbackFunctionWithValue<int>();
 
         void listener() {
@@ -312,21 +309,21 @@ void main() {
 
         final unobserve = selected.observe((_, __) => listener());
 
-        s.set(_B(_C(1)));
+        s.value = _B(_C(1));
         await pumpEventQueue();
 
-        s.set(_B(_C(5)));
+        s.value = _B(_C(5));
         await pumpEventQueue();
 
-        s.set(_B(_C(1)));
+        s.value = _B(_C(1));
         await pumpEventQueue();
 
         verify(cb(1)).called(2);
-        s.set(_B(_C(2)));
+        s.value = _B(_C(2));
         await pumpEventQueue();
-        s.set(_B(_C(2)));
+        s.value = _B(_C(2));
         await pumpEventQueue();
-        s.set(_B(_C(3)));
+        s.value = _B(_C(3));
         await pumpEventQueue();
         verify(cb(2)).called(1);
         verify(cb(3)).called(1);
@@ -337,22 +334,22 @@ void main() {
 
       test("selector's readable signal contains previous value", () async {
         final signal = Signal(0);
-        final derived = Computed(() => signal() * 2);
+        final derived = Computed(() => signal.value * 2);
         await pumpEventQueue();
         expect(derived.hasPreviousValue, false);
         expect(derived.previousValue, null);
 
-        signal.set(1);
+        signal.value = 1;
         await pumpEventQueue();
         expect(derived.hasPreviousValue, true);
         expect(derived.previousValue, 0);
 
-        signal.set(2);
+        signal.value = 2;
         await pumpEventQueue();
         expect(derived.hasPreviousValue, true);
         expect(derived.previousValue, 2);
 
-        signal.set(1);
+        signal.value = 1;
         await pumpEventQueue();
         expect(derived.hasPreviousValue, true);
         expect(derived.previousValue, 4);
@@ -361,32 +358,32 @@ void main() {
       test('signal has previous value', () {
         final s = Signal(0);
         expect(s.hasPreviousValue, false);
-        s.set(1);
+        s.value = 1;
         expect(s.hasPreviousValue, true);
       });
 
       test('nullable derived signal', () async {
         final count = Signal<int?>(0);
         final doubleCount = Computed(() {
-          if (count() == null) return null;
-          return count()! * 2;
+          if (count.value == null) return null;
+          return count.value! * 2;
         });
 
         await pumpEventQueue();
         expect(doubleCount.value, 0);
 
-        count.set(1);
+        count.value = 1;
         await pumpEventQueue();
         expect(doubleCount.value, 2);
 
-        count.set(null);
+        count.value = null;
         await pumpEventQueue();
         expect(doubleCount.value, null);
       });
 
       test('derived signal disposes', () async {
         final count = Signal(0);
-        final doubleCount = Computed(() => count() * 2);
+        final doubleCount = Computed(() => count.value * 2);
         expect(doubleCount.disposed, false);
         doubleCount.dispose();
         expect(doubleCount.disposed, true);
@@ -396,8 +393,8 @@ void main() {
         final count = Signal(1);
         final doubleCount = Computed(
           () {
-            if (count() == 1) {
-              return count() * 2;
+            if (count.value == 1) {
+              return count.value * 2;
             }
             return throw Exception();
           },
@@ -412,7 +409,7 @@ void main() {
 
       test('check toString computed', () {
         final count = Signal(1);
-        final doubleCount = Computed(() => count() * 2);
+        final doubleCount = Computed(() => count.value * 2);
 
         expect(doubleCount.toString(), startsWith('Computed<int>(value: 2'));
       });
@@ -483,8 +480,8 @@ void main() {
 
         final resource = Resource.stream(
           () {
-            if (count() < 1) return Stream.value(0);
-            return Stream.value(count());
+            if (count.value < 1) return Stream.value(0);
+            return Stream.value(count.value);
           },
           source: count,
           lazy: false,
@@ -501,7 +498,7 @@ void main() {
           isA<ResourceReady<int>>().having((p0) => p0.value, 'equal to 0', 0),
         );
 
-        count.set(5);
+        count.value = 5;
         await pumpEventQueue();
         expect(
           resource.state,
@@ -521,7 +518,7 @@ void main() {
 
         final resource = Resource.stream(
           () {
-            if (source().isEven) {
+            if (source.value.isEven) {
               return streamControllerA.stream;
             }
             return streamControllerB.stream;
@@ -535,7 +532,7 @@ void main() {
         expect(resource.state.value, 1);
 
         // changing to stream B
-        source.set(1);
+        source.value = 1;
         expect(
           resource.state,
           isA<ResourceReady<int>>()
@@ -549,7 +546,7 @@ void main() {
         expect(resource.state.value, 1);
 
         streamControllerA.add(3);
-        source.set(2);
+        source.value = 2;
         await pumpEventQueue();
         expect(resource.state.value, 3);
       });
@@ -572,8 +569,8 @@ void main() {
         final userId = Signal(0);
 
         Future<User> getUser() {
-          if (userId() == 2) throw Exception();
-          return Future.value(User(id: userId()));
+          if (userId.value == 2) throw Exception();
+          return Future.value(User(id: userId.value));
         }
 
         final resource = Resource(
@@ -586,17 +583,17 @@ void main() {
         expect(resource.state, isA<ResourceReady<User>>());
         expect(resource.state.value, const User(id: 0));
 
-        userId.set(1);
+        userId.value = 1;
         await pumpEventQueue();
         expect(resource.state, isA<ResourceReady<User>>());
         expect(resource.state(), const User(id: 1));
 
-        userId.set(2);
+        userId.value = 2;
         await pumpEventQueue();
         expect(resource.state, isA<ResourceError<User>>());
         expect(resource.state.error, isException);
 
-        userId.set(3);
+        userId.value = 3;
         await pumpEventQueue();
         await resource.refresh();
         expect(resource.state, isA<ResourceReady<User>>());
@@ -1069,14 +1066,14 @@ void main() {
       test('check set', () {
         final list = ListSignal([1, 2]);
         expect(list, [1, 2]);
-        list.set([3, 4]);
+        list.value = [3, 4];
         expect(list, [3, 4]);
       });
 
       test('check set with equals', () {
         final list = ListSignal<int>([1, 2]);
         expect(list, [1, 2]);
-        list.set([3, 4]);
+        list.value = [3, 4];
         expect(list, [3, 4]);
       });
 
@@ -1257,14 +1254,14 @@ void main() {
       test('check set', () {
         final set = SetSignal({1, 2});
         expect(set, {1, 2});
-        set.set({3, 4});
+        set.value = {3, 4};
         expect(set, {3, 4});
       });
 
       test('check set with equals', () {
         final set = SetSignal<int>({1, 2});
         expect(set, {1, 2});
-        set.set({3, 4});
+        set.value = {3, 4};
         expect(set, {3, 4});
       });
 
@@ -1437,14 +1434,14 @@ void main() {
       test('check set', () {
         final map = MapSignal({'a': 1, 'b': 2});
         expect(map, {'a': 1, 'b': 2});
-        map.set({'c': 3, 'd': 4});
+        map.value = {'c': 3, 'd': 4};
         expect(map, {'c': 3, 'd': 4});
       });
 
       test('check set with equals', () {
         final map = MapSignal<String, int>({'a': 1, 'b': 2});
         expect(map, {'a': 1, 'b': 2});
-        map.set({'c': 3, 'd': 4});
+        map.value = {'c': 3, 'd': 4};
         expect(map, {'c': 3, 'd': 4});
       });
 
@@ -1540,14 +1537,14 @@ void main() {
 
       test('should correctly propagate changes through computed signals', () {
         final source = Signal(0);
-        final c1 = Computed(() => source() % 2);
-        final c2 = Computed(c1);
-        final c3 = Computed(c2);
+        final c1 = Computed(() => source.value % 2);
+        final c2 = Computed(() => c1.value);
+        final c3 = Computed(() => c2.value);
 
         c3.value;
-        source.set(1);
+        source.value = 1;
         c2.value;
-        source.set(3);
+        source.value = 3;
 
         expect(c3.value, equals(1));
       });
@@ -1557,39 +1554,38 @@ void main() {
         final a = Signal(1);
         final b = Computed(() {
           bRunTimes++;
-          return a() * 2;
+          return a.value * 2;
         });
-        final disposeEffect = Effect(b);
+        final disposeEffect = Effect(() => b.value);
 
         expect(bRunTimes, equals(1));
 
-        a.set(2);
+        a.value = 2;
         expect(bRunTimes, equals(2));
 
         disposeEffect();
-        a.set(2);
+        a.value = 2;
         expect(bRunTimes, equals(2));
       });
 
       test('should not run untracked inner effect', () {
         final a = Signal(3);
-        final b = Computed(() => a() > 0);
+        final b = Computed(() => a.value > 0);
 
         Effect(() {
-          if (b()) {
+          if (b.value) {
             Effect(() {
-              if (a() == 0) {
+              if (a.value == 0) {
                 throw Error();
               }
             });
           }
         });
 
-        a.set(a() - 1);
-        a.set(a() - 1);
-        a.set(a() - 1);
-
-        expect(b(), isFalse);
+        a.value--;
+        a.value--;
+        a.value--;
+        expect(b.value, isFalse);
       });
 
       test('should run outer effect first', () {
@@ -1597,10 +1593,10 @@ void main() {
         final b = Signal(1);
 
         Effect(() {
-          if (a() > 0) {
+          if (a.value > 0) {
             Effect(() {
-              b();
-              if (a() == 0) {
+              b.value;
+              if (a.value == 0) {
                 throw Error();
               }
             });
@@ -1608,8 +1604,8 @@ void main() {
         });
 
         batch(() {
-          a.set(0);
-          b.set(0);
+          a.value = 0;
+          b.value = 0;
         });
       });
     },

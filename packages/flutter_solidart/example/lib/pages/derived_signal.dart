@@ -10,7 +10,7 @@ class DerivedSignalsPage extends StatefulWidget {
 
 class _DerivedSignalsPageState extends State<DerivedSignalsPage> {
   late final count = Signal(0, name: 'count');
-  late final doubleCount = Computed(() => count() * 2, name: 'doubleCount');
+  late final doubleCount = Computed(() => count.value * 2, name: 'doubleCount');
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +23,9 @@ class _DerivedSignalsPageState extends State<DerivedSignalsPage> {
           builder: (_, __) => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Count: ${count()}'),
+              Text('Count: ${count.value}'),
               const SizedBox(height: 16),
-              Text('Double Count: ${doubleCount()}'),
+              Text('Double Count: ${doubleCount.value}'),
               const SizedBox(height: 16),
             ],
           ),
