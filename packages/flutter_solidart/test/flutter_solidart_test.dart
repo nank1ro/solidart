@@ -32,6 +32,36 @@ class NumberContainer {
 }
 
 void main() {
+  testWidgets('(Provider) Not found signal throws an error', (tester) async {
+    final counterProvider = Provider((_) => Signal(0));
+    final invalidCounterProvider = Provider((_) => Signal(0));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProviderScope(
+            providers: [
+              counterProvider,
+            ],
+            child: SignalBuilder(
+              builder: (context, _) {
+                final counter = invalidCounterProvider.of(context);
+                return Text(counter().toString());
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.takeException(),
+      const TypeMatcher<ProviderWithoutScopeError>().having(
+        (error) => error.provider,
+        'Matching the wrong ID should result in a ProviderError.',
+        equals(invalidCounterProvider),
+      ),
+    );
+  });
   testWidgets('Show widget works properly', (tester) async {
     final s = Signal(true);
     await tester.pumpWidget(
@@ -700,9 +730,6 @@ void main() {
       'Signal autoDispose',
       (tester) async {
         final counter = Signal(0);
-        counter.onDispose(() {
-          print("dispose counter");
-        });
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -848,36 +875,4 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
-
-  // TODO(nank1ro): place this test as first and see if it still compromises all the rest (if so, investigate Effect) (NB: I added a similar test in disco and it does not cause the reactivity problem we have noticed here)
-  testWidgets('(Provider) Not found signal throws an error', (tester) async {
-    final counterProvider = Provider((_) => Signal(0));
-    final invalidCounterProvider = Provider((_) => Signal(0));
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ProviderScope(
-            providers: [
-              counterProvider,
-            ],
-            child: SignalBuilder(
-              builder: (context, _) {
-                final counter = invalidCounterProvider.of(context);
-                return Text(counter().toString());
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-    expect(
-      tester.takeException(),
-      const TypeMatcher<SolidartCaughtException>().having(
-        (error) => (error.exception as ProviderWithoutScopeError).provider,
-        'Matching the wrong ID should result in a ProviderError.',
-        equals(invalidCounterProvider),
-      ),
-    );
-  });
 }
