@@ -204,6 +204,14 @@ class Resource<T> extends Signal<ResourceState<T>> {
   @override
   ResourceState<T>? get previousValue => previousState;
 
+  @Deprecated('Use untrackedState instead')
+  @override
+  ResourceState<T> get untrackedValue => untrackedState;
+
+  @Deprecated('Use untrackedPreviousState instead')
+  @override
+  ResourceState<T>? get untrackedPreviousValue => untrackedPreviousState;
+
   @Deprecated('Use update instead')
   @override
   ResourceState<T> updateValue(
@@ -218,6 +226,12 @@ class Resource<T> extends Signal<ResourceState<T>> {
     if (!_resolved) return null;
     return super.previousValue;
   }
+
+  /// The previous resource state, without tracking
+  ResourceState<T>? get untrackedPreviousState => super.untrackedPreviousValue;
+
+  /// The resource state without tracking
+  ResourceState<T> get untrackedState => super.untrackedValue;
 
   // The stream trasformed in a broadcast stream, if needed
   Stream<T> get _stream {
