@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:solidart/solidart.dart';
@@ -104,7 +103,6 @@ class SignalBuilderElement extends ComponentElement {
   final void Function(Object error)? onError;
 
   Element? _parent;
-  Widget? _built;
   Effect? _effect;
 
   SignalBuilder get _widget => widget as SignalBuilder;
@@ -112,7 +110,11 @@ class SignalBuilderElement extends ComponentElement {
   @override
   void mount(Element? parent, Object? newSlot) {
     _parent = parent;
-    _effect = Effect((_) => _invalidate(), onError: onError);
+    _effect = Effect(
+      _invalidate,
+      onError: onError,
+      autoDispose: false,
+    );
     // mounting intentionally after effect is initialized and widget is built
     super.mount(parent, newSlot);
   }
@@ -133,8 +135,9 @@ class SignalBuilderElement extends ComponentElement {
 
   // coverage:ignore-start
   Future<void> _invalidate() async {
-    // if the element is already dirty, we don't need to ask another rebuild
+    // // if the element is already dirty, we don't need to ask another rebuild
     if (dirty) return;
+    _widget.build(_parent!);
 
     if (_shouldWaitScheduler) {
       await SchedulerBinding.instance.endOfFrame;
@@ -153,14 +156,14 @@ class SignalBuilderElement extends ComponentElement {
 
   @override
   Widget build() {
+    final prevSub = reactiveSystem.activeSub;
     // ignore: invalid_use_of_protected_member
-    _effect!.track(
-      () {
-        _built = _widget.build(_parent!);
-      },
-      preventDisposal: true,
-    );
+    reactiveSystem.activeSub = _effect?.subscriber;
 
-    return _built!;
+    try {
+      return _widget.build(_parent!);
+    } finally {
+      reactiveSystem.activeSub = prevSub;
+    }
   }
 }

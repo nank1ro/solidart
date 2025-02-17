@@ -31,13 +31,18 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
 
     /// {@macro SignalBase.comparator}
     ValueComparator<List<E>?> comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
   }) {
     return ListSignal._internal(
       initialValue: initialValue.toList(),
-      name: name ?? ReactiveContext.main.nameFor('ListSignal'),
+      name: name ?? ReactiveName.nameFor('ListSignal'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      trackPreviousValue:
+          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
       comparator: comparator,
     );
   }
@@ -49,24 +54,27 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
     required super.autoDispose,
     required super.trackInDevTools,
     required super.comparator,
+    required super.trackPreviousValue,
   }) : super._internal();
 
   @override
-  void _setValue(List<E> newValue) {
-    if (_areEqual(_value, newValue)) {
-      return;
+  List<E> _setValue(List<E> newValue) {
+    if (_compare(_untrackedValue, newValue)) {
+      return newValue;
     }
-    _setPreviousValue(List<E>.of(_value));
-    _value = newValue;
+    _setPreviousValue(List<E>.of(_untrackedValue));
+    _untrackedValue = _value = newValue;
     _notifyChanged();
+    return newValue;
   }
 
   @override
-  List<E> updateValue(List<E> Function(List<E> value) callback) =>
-      value = callback(List<E>.of(_value));
+  List<E> updateValue(List<E> Function(List<E> value) callback) {
+    return _setValue(callback(List<E>.of(_untrackedValue)));
+  }
 
   @override
-  bool _areEqual(List<E>? oldValue, List<E>? newValue) {
+  bool _compare(List<E>? oldValue, List<E>? newValue) {
     // skip if the value are equals
     if (equals) {
       return ListEquality<E>().equals(oldValue, newValue);
@@ -85,7 +93,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   int get length {
-    _reportObserved();
     return _value.length;
   }
 
@@ -111,7 +118,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   set length(int newLength) {
-    if (newLength == _value.length) return;
+    if (newLength == _untrackedValue.length) return;
     _value.length = newLength;
     _notifyChanged();
   }
@@ -133,7 +140,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   E elementAt(int index) {
-    _reportObserved();
     return _value.elementAt(index);
   }
 
@@ -147,7 +153,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// (see Uint8List.+);
   @override
   List<E> operator +(List<E> other) {
-    _reportObserved();
     return _value + other;
   }
 
@@ -158,7 +163,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// less than [length].
   @override
   E operator [](int index) {
-    _reportObserved();
     return _value[index];
   }
 
@@ -169,10 +173,10 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// less than [length].
   @override
   void operator []=(int index, E value) {
-    final oldValue = _value[index];
+    final oldValue = _untrackedValue[index];
 
     if (oldValue != value) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
       _value[index] = value;
       _notifyChanged();
     }
@@ -190,7 +194,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   void add(E element) {
-    _setPreviousValue(List<E>.of(_value));
+    _setPreviousValue(List<E>.of(_untrackedValue));
     _value.add(element);
     _notifyChanged();
   }
@@ -208,7 +212,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   @override
   void addAll(Iterable<E> iterable) {
     if (iterable.isNotEmpty) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
       _value.addAll(iterable);
       _notifyChanged();
     }
@@ -241,7 +245,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// break iteration.
   @override
   Iterator<E> get iterator {
-    _reportObserved();
     return _value.iterator;
   }
 
@@ -267,7 +270,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   int lastIndexWhere(bool Function(E element) test, [int? start]) {
-    _reportObserved();
     return _value.lastIndexWhere(test, start);
   }
 
@@ -294,7 +296,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// If [orElse] is omitted, it defaults to throwing a [StateError].
   @override
   E lastWhere(bool Function(E element) test, {E Function()? orElse}) {
-    _reportObserved();
     return _value.lastWhere(test, orElse: orElse);
   }
 
@@ -317,7 +318,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// Stops iterating on the first matching element.
   @override
   E firstWhere(bool Function(E element) test, {E Function()? orElse}) {
-    _reportObserved();
     return _value.firstWhere(test, orElse: orElse);
   }
 
@@ -346,7 +346,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   E singleWhere(bool Function(E element) test, {E Function()? orElse}) {
-    _reportObserved();
     return _value.singleWhere(test, orElse: orElse);
   }
 
@@ -356,7 +355,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// This operation will not iterate past the second element.
   @override
   E get single {
-    _reportObserved();
     return _value.single;
   }
 
@@ -367,7 +365,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// equivalent to `this.elementAt(0)`.
   @override
   E get first {
-    _reportObserved();
     return _value.first;
   }
 
@@ -381,7 +378,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// without iterating through the previous ones).
   @override
   E get last {
-    _reportObserved();
     return _value.last;
   }
 
@@ -408,7 +404,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// If `end` is equal to `start`, then the returned list is empty.
   @override
   List<E> sublist(int start, [int? end]) {
-    _reportObserved();
     return _value.sublist(start, end);
   }
 
@@ -447,7 +442,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   List<E> toList({bool growable = true}) {
-    _reportObserved();
     return _value.toList(growable: growable);
   }
 
@@ -471,7 +465,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   set first(E value) {
     final oldValue = _value.first;
     if (oldValue != value) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
       _value.first = value;
       _notifyChanged();
     }
@@ -497,7 +491,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   set last(E value) {
     final oldValue = _value.last;
     if (oldValue != value) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
       _value.last = value;
       _notifyChanged();
     }
@@ -516,7 +510,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   @override
   void clear() {
     if (_value.isNotEmpty) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
       _value.clear();
       _notifyChanged();
     }
@@ -544,7 +538,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   @override
   void fillRange(int start, int end, [E? fillValue]) {
     if (end > start) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
       _value.fillRange(start, end, fillValue);
       _notifyChanged();
     }
@@ -566,7 +560,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   void insert(int index, E element) {
-    _setPreviousValue(List<E>.of(_value));
+    _setPreviousValue(List<E>.of(_untrackedValue));
     _value.insert(index, element);
     _notifyChanged();
   }
@@ -587,7 +581,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   @override
   void insertAll(int index, Iterable<E> iterable) {
     if (iterable.isNotEmpty) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
       _value.insertAll(index, iterable);
       _notifyChanged();
     }
@@ -615,7 +609,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
     var didRemove = false;
     final index = _value.indexOf(element as E);
     if (index >= 0) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
       _value.removeAt(index);
       _notifyChanged();
       didRemove = true;
@@ -640,7 +634,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   E removeAt(int index) {
-    _setPreviousValue(List<E>.of(_value));
+    _setPreviousValue(List<E>.of(_untrackedValue));
 
     final removed = _value.removeAt(index);
     _notifyChanged();
@@ -658,7 +652,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   E removeLast() {
-    _setPreviousValue(List<E>.of(_value));
+    _setPreviousValue(List<E>.of(_untrackedValue));
 
     final removed = _value.removeLast();
     _notifyChanged();
@@ -685,7 +679,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   @override
   void removeRange(int start, int end) {
     if (end > start) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
       _value.removeRange(start, end);
       _notifyChanged();
     }
@@ -710,7 +704,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
       }
     }
     if (removedIndexes.isNotEmpty) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
       for (final index in removedIndexes) {
         _value.removeAt(index);
       }
@@ -750,7 +744,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   @override
   void replaceRange(int start, int end, Iterable<E> replacements) {
     if (end > start || replacements.isNotEmpty) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
       _value.replaceRange(start, end, replacements);
       _notifyChanged();
     }
@@ -775,7 +769,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
       }
     }
     if (removedIndexes.isNotEmpty) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
       for (final index in removedIndexes) {
         _value.removeAt(index);
       }
@@ -803,7 +797,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   @override
   void setAll(int index, Iterable<E> iterable) {
     if (iterable.isNotEmpty) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
 
       _value.setAll(index, iterable);
       _notifyChanged();
@@ -839,7 +833,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   @override
   void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) {
     if (end > start) {
-      _setPreviousValue(List<E>.of(_value));
+      _setPreviousValue(List<E>.of(_untrackedValue));
       _value.setRange(start, end, iterable, skipCount);
       _notifyChanged();
     }
@@ -866,7 +860,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
         }
       }
       if (hasChanges) {
-        _setPreviousValue(List<E>.of(_value));
+        _setPreviousValue(List<E>.of(_untrackedValue));
         _value = newList;
         _notifyChanged();
       }
@@ -916,7 +910,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
         }
       }
       if (hasChanges) {
-        _setPreviousValue(List<E>.of(_value));
+        _setPreviousValue(List<E>.of(_untrackedValue));
         _value = newList;
         _notifyChanged();
       }

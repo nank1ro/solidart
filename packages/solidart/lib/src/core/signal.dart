@@ -101,7 +101,7 @@ part of 'core.dart';
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-class Signal<T> extends ReadSignal<T> {
+class Signal<T> extends ReadableSignal<T> {
   /// {@macro signal}
   factory Signal(
     T initialValue, {
@@ -119,13 +119,18 @@ class Signal<T> extends ReadSignal<T> {
 
     /// {@macro SignalBase.comparator}
     ValueComparator<T?> comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
   }) {
     return Signal._internal(
       initialValue: initialValue,
-      name: name ?? ReactiveContext.main.nameFor('Signal'),
+      name: name ?? ReactiveName.nameFor('Signal'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      trackPreviousValue:
+          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
       comparator: comparator,
     );
   }
@@ -150,12 +155,17 @@ class Signal<T> extends ReadSignal<T> {
 
     /// {@macro SignalBase.comparator}
     ValueComparator<T?> comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
   }) {
     return Signal._internalLazy(
-      name: name ?? ReactiveContext.main.nameFor('Signal'),
+      name: name ?? ReactiveName.nameFor('Signal'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      trackPreviousValue:
+          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
       comparator: comparator,
     );
   }
@@ -167,6 +177,7 @@ class Signal<T> extends ReadSignal<T> {
     required super.autoDispose,
     required super.trackInDevTools,
     required super.comparator,
+    required super.trackPreviousValue,
   }) : super._internal();
 
   Signal._internalLazy({
@@ -175,6 +186,7 @@ class Signal<T> extends ReadSignal<T> {
     required super.autoDispose,
     required super.trackInDevTools,
     required super.comparator,
+    required super.trackPreviousValue,
   }) : super._internalLazy();
 
   /// {@macro set-signal-value}
@@ -186,15 +198,15 @@ class Signal<T> extends ReadSignal<T> {
   /// This operation may be skipped if the value is equal to the previous one,
   /// check [equals] and [comparator].
   /// {@endtemplate}
-  void set(T newValue) => _setValue(newValue);
+  T set(T newValue) => _setValue(newValue);
 
   /// Calls a function with the current value and assigns the result as the
   /// new value.
   T updateValue(T Function(T value) callback) => value = callback(_value);
 
-  /// Converts this [Signal] into a [ReadSignal]
+  /// Converts this [Signal] into a [ReadableSignal]
   /// Use this method to remove the visility to the value setter.
-  ReadSignal<T> toReadSignal() => this;
+  ReadableSignal<T> toReadSignal() => this;
 
   @override
   String toString() =>

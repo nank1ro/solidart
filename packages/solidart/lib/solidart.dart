@@ -4,15 +4,7 @@
 library solidart;
 
 export 'src/core/core.dart'
-    hide
-        Atom,
-        Derivation,
-        DerivationState,
-        ReactionErrorHandler,
-        ReactionInterface,
-        ReactiveConfig,
-        ReactiveContext,
-        ValueComparator;
+    hide ReactionErrorHandler, ReactionInterface, ReactiveName, ValueComparator;
 export 'src/extensions.dart';
 export 'src/utils.dart'
     show SolidartCaughtException, SolidartException, SolidartReactionException;

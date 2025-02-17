@@ -16,7 +16,7 @@ class _EffectsPageState extends State<EffectsPage> {
   void initState() {
     super.initState();
     disposeEffect = Effect(
-      (disposeFn) {
+      () {
         // ignore: avoid_print
         print("The count is now ${count.value}");
       },
