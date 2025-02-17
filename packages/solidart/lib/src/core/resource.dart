@@ -97,7 +97,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     return Resource._internal(
       fetcher: fetcher,
       source: source,
-      name: name ?? ReactiveContext.main.nameFor('Resource'),
+      name: name ?? ReactiveName.nameFor('Resource'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
@@ -129,7 +129,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     return Resource._internal(
       stream: stream,
       source: source,
-      name: name ?? ReactiveContext.main.nameFor('Resource'),
+      name: name ?? ReactiveName.nameFor('Resource'),
       equals: equals ?? SolidartConfig.equals,
       autoDispose: autoDispose ?? SolidartConfig.autoDispose,
       trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
@@ -143,19 +143,22 @@ class Resource<T> extends Signal<ResourceState<T>> {
     required this.lazy,
     required super.autoDispose,
     required super.trackInDevTools,
+
+    /// Whether to track the previous state of the resource, defaults to true.
+    bool? trackPreviousState,
     this.fetcher,
     this.stream,
     this.source,
-  }) : super._internal(
+  })  : assert(
+          (fetcher != null) ^ (stream != null),
+          'Provide a fetcher or a stream',
+        ),
+        super._internal(
           initialValue: ResourceState<T>.loading(),
+          trackPreviousValue:
+              trackPreviousState ?? SolidartConfig.trackPreviousValue,
           comparator: identical,
         ) {
-    if (this is! ResourceSelector) {
-      assert(
-        (fetcher != null) ^ (stream != null),
-        'Provide a fetcher or a stream',
-      );
-    }
     // resolve the resource immediately if not lazy
     if (!lazy) _resolve();
   }
@@ -201,6 +204,14 @@ class Resource<T> extends Signal<ResourceState<T>> {
   @override
   ResourceState<T>? get previousValue => previousState;
 
+  @Deprecated('Use untrackedState instead')
+  @override
+  ResourceState<T> get untrackedValue => untrackedState;
+
+  @Deprecated('Use untrackedPreviousState instead')
+  @override
+  ResourceState<T>? get untrackedPreviousValue => untrackedPreviousState;
+
   @Deprecated('Use update instead')
   @override
   ResourceState<T> updateValue(
@@ -215,6 +226,12 @@ class Resource<T> extends Signal<ResourceState<T>> {
     if (!_resolved) return null;
     return super.previousValue;
   }
+
+  /// The previous resource state, without tracking
+  ResourceState<T>? get untrackedPreviousState => super.untrackedPreviousValue;
+
+  /// The resource state without tracking
+  ResourceState<T> get untrackedState => super.untrackedValue;
 
   // The stream trasformed in a broadcast stream, if needed
   Stream<T> get _stream {
@@ -254,9 +271,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
       """The resource has been already resolved, you can't resolve it more than once. Use `refresh()` instead if you want to refresh the value.""",
     );
     _resolved = true;
-
-    // no need to resolve a resource selector
-    if (this is ResourceSelector) return;
 
     if (fetcher != null) {
       // start fetching
@@ -366,22 +380,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
     } catch (e, s) {
       state = ResourceState<T>.error(e, stackTrace: s);
     }
-  }
-
-  /// The [select] function allows filtering the Resource's data by reading
-  /// only the properties that you care about.
-  ///
-  /// The advantage is that you keep handling the loading and error states.
-  Resource<Selected> select<Selected>(
-    Selected Function(T data) selector, {
-    String? name,
-  }) {
-    _resolveIfNeeded();
-    return ResourceSelector<T, Selected>(
-      resource: this,
-      selector: selector,
-      name: name ?? ReactiveContext.main.nameFor('ResourceSelector'),
-    );
   }
 
   /// Returns a future that completes with the value when the Resource is ready
@@ -616,82 +614,6 @@ class ResourceError<T> implements ResourceState<T> {
     );
   }
   // coverage:ignore-end
-}
-
-/// {@template resource-selector}
-/// The [selector] function allows filtering the Resource's data by reading
-/// only the properties that you care about.
-///
-/// The advantage is that you keep handling the loading and error states.
-/// {@endtemplate}
-class ResourceSelector<Input, Output> extends Resource<Output> {
-  /// {@macro resource-selector}
-  ResourceSelector({
-    required this.resource,
-    required this.selector,
-    required super.name,
-  }) : super._internal(
-          autoDispose: resource.autoDispose,
-          trackInDevTools: resource.trackInDevTools,
-          equals: resource.equals,
-          lazy: resource.lazy,
-        ) {
-    // set current state
-    state = _mapInputState(resource.state);
-    // listen next states
-    _addListener();
-    // dispose the selector when the input resource is disposed
-    resource.onDispose(dispose);
-  }
-
-  /// The input resource
-  final Resource<Input> resource;
-
-  /// The data selector
-  final Output Function(Input) selector;
-
-  late final DisposeObservation _disposeObservation;
-
-  void _addListener() {
-    _disposeObservation = resource.observe((_, curr) {
-      state = _mapInputState(curr);
-    });
-  }
-
-  @override
-  Future<void> _resolve() async {
-    if (!resource._resolved) return resource._resolve();
-  }
-
-  @override
-  Future<void> refresh() => resource.refresh();
-
-  ResourceState<Output> _mapInputState(ResourceState<Input> input) {
-    return input.map(
-      ready: (ready) {
-        return ResourceState<Output>.ready(
-          selector(ready.value),
-          isRefreshing: ready.isRefreshing,
-        );
-      },
-      error: (error) {
-        return ResourceState<Output>.error(
-          error.error,
-          stackTrace: error.stackTrace,
-          isRefreshing: error.isRefreshing,
-        );
-      },
-      loading: (loading) {
-        return ResourceState<Output>.loading();
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _disposeObservation();
-    super.dispose();
-  }
 }
 
 /// Some useful extension available on any [ResourceState].

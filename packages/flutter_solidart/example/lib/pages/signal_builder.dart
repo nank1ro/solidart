@@ -17,7 +17,7 @@ class _SignalBuilderPageState extends State<SignalBuilderPage> {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('DualSignalBuilder'),
+        title: const Text('SignalBuilder'),
       ),
       body: Center(
         child: Column(
