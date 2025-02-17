@@ -33,7 +33,7 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  flutter_solidart: ^2.0.0
+  flutter_solidart: ^2.0.0-dev.3
   uuid: ^4.4.0
 
 dev_dependencies:
