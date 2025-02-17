@@ -1,18 +1,11 @@
-## 2.0.0
+## 2.0.0-dev.3
 
-- **FEAT**: The `SignalBuilder` widget now automatically tracks the `Signal`s used in the `builder` function allowing you to react to N signals at the same time. See the [migration guide](https://docs.page/nank1ro/solidart/migration).
-- **BREAKING CHANGE**: Removed `DualSignalBuilder` and `TripleSignalBuilder` in favor of `SignalBuilder`.
-- **BREAKING CHANGE**: Removed `ResourceBuilder` in favor of `SignalBuilder`. See the [migration guide](https://docs.page/nank1ro/solidart/migration).
-- **CHORE**: Improved `Solid` widget performance by more than 3000% in finding ancestor providers.
-- **FEAT**: Add `SolidOverride` widget to override providers regardless of their position in the widget tree.
-- **CHORE**: Remove deprecated `SolidProvider` widget.
+- **BREAKING CHANGE**: Remove `Solid` and `Provider`s, use [disco](https://pub.dev/packages/disco) instead.
 
 ### Changes from solidart
 
-- *CHORE*: Remove deprecated `createSignal`, `createComputed`, `createEffect` and `createResource` helpers.
-- *CHORE*: Remove `SignalOptions` and `ResourceOptions` classes.
-- **FEAT**: Add `batch` function to execute a callback that will not side-effect until its top-most batch is completed. See docs [here](https://docs.page/nank1ro/solidart~dev/learning/batch)
-- **CHORE**: Add `trackInDevTools` to `SignalOptions` and `ResourceOptions` to disable the DevTools tracking for specific signals and resources, defaults to `SolidartConfig.devToolsEnabled`.
+- **REFACTOR**: Updated the reactive system from scratch, improving the performances.
+- **BREAKING CHANGE**: Remove `set` and `call` methods from Signals (Use an extension to have them back).
 
 ## 2.0.0-dev.2
 
