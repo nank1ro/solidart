@@ -1,7 +1,5 @@
 part of 'core.dart';
 
-/// coverage:ignore-start
-
 /// The type of the event emitted to the devtools
 enum DevToolsEventType {
   /// The signal was created
@@ -105,4 +103,3 @@ void _notifyDevToolsAboutSignal(
     'lastUpdate': DateTime.now().toIso8601String(),
   });
 }
-// coverage:ignore-end
