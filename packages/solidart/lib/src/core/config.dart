@@ -18,16 +18,6 @@ abstract class SolidartConfig {
   /// Whether to track the previous value of the signal, defaults to true.
   static bool trackPreviousValue = true;
 
-  /// {@template fire-effect-immediately}
-  /// Whether to fire immediately the effect, defaults to true.
-  /// {@endtemplate}
-  static bool fireEffectImmediately = true;
-
-  /// {@template fire-computed-immediately}
-  /// Whether to fire immediately the computed, defaults to true.
-  /// {@endtemplate}
-  static bool fireComputedImmediately = true;
-
   /// The list of observers.
   static final observers = <SolidartObserver>[];
 }

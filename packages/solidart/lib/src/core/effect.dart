@@ -67,7 +67,7 @@ abstract class ReactionInterface {
 ///
 ///
 /// Any effect runs at least once immediately when is created with the current
-/// signals values, unless you specify otherwise with the `fireImmediately`
+/// signals values.
 ///
 /// > An effect is useless after it is disposed, you must not use it anymore.
 /// {@endtemplate}
@@ -76,9 +76,6 @@ class Effect implements ReactionInterface {
   factory Effect(
     void Function() callback, {
     ErrorCallback? onError,
-
-    /// {@macro Effect.fireImmediately}
-    bool? fireImmediately,
 
     /// The name of the effect, useful for logging
     String? name,
@@ -94,12 +91,9 @@ class Effect implements ReactionInterface {
   }) {
     late Effect effect;
     final effectiveName = name ?? ReactiveName.nameFor('Effect');
-    final effectiveFireImmediately =
-        fireImmediately ?? SolidartConfig.fireEffectImmediately;
     final effectiveAutoDispose = autoDispose ?? SolidartConfig.autoDispose;
     if (delay == null) {
       effect = Effect._internal(
-        fireImmediately: effectiveFireImmediately,
         callback: () => callback(),
         onError: onError,
         name: effectiveName,
@@ -111,7 +105,6 @@ class Effect implements ReactionInterface {
       Timer? timer;
 
       effect = Effect._internal(
-        fireImmediately: effectiveFireImmediately,
         callback: () {
           if (!isScheduled) {
             isScheduled = true;
@@ -138,10 +131,7 @@ class Effect implements ReactionInterface {
         autoDispose: effectiveAutoDispose,
       );
     }
-    // ignore: cascade_invocations
-    if (effectiveFireImmediately) {
-      effect._schedule();
-    }
+    effect._schedule();
     return effect;
   }
 
@@ -150,9 +140,6 @@ class Effect implements ReactionInterface {
     required VoidCallback callback,
     required this.name,
     required this.autoDispose,
-
-    /// {@macro Effect.fireImmediately}
-    required this.fireImmediately,
     ErrorCallback? onError,
   }) : _onError = onError {
     _internalEffect = _AlienEffect(callback, parent: this);
@@ -166,14 +153,6 @@ class Effect implements ReactionInterface {
 
   /// Optionally handle the error case
   final ErrorCallback? _onError;
-
-  /// {@template Effect.fireImmediately}
-  /// {@macro fire-effect-immediately}
-  ///
-  /// If a value is not provided, defaults to
-  /// [SolidartConfig.fireEffectImmediately].
-  /// {@endtemplate}
-  final bool fireImmediately;
 
   bool _disposed = false;
 

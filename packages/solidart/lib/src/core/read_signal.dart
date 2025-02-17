@@ -356,7 +356,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
           completer.complete(value);
         }
       },
-      fireImmediately: true,
       autoDispose: false,
     );
     return completer.future;

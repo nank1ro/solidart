@@ -71,9 +71,6 @@ class Computed<T> extends ReadSignal<T> {
 
     /// {@macro SignalBase.trackPreviousValue}
     bool? trackPreviousValue,
-
-    /// {@macro Computed.fireImmediately}
-    bool? fireImmediately,
   }) {
     return Computed._internal(
       selector: selector,
@@ -84,8 +81,6 @@ class Computed<T> extends ReadSignal<T> {
       trackPreviousValue:
           trackPreviousValue ?? SolidartConfig.trackPreviousValue,
       comparator: comparator,
-      fireImmediately:
-          fireImmediately ?? SolidartConfig.fireComputedImmediately,
     );
   }
 
@@ -97,7 +92,6 @@ class Computed<T> extends ReadSignal<T> {
     required super.trackInDevTools,
     required super.comparator,
     required super.trackPreviousValue,
-    required this.fireImmediately,
   }) {
     var runnedOnce = false;
     _internalComputed = _AlienComputed(
@@ -122,9 +116,6 @@ class Computed<T> extends ReadSignal<T> {
       },
       parent: this,
     );
-    if (fireImmediately) {
-      _internalComputed();
-    }
 
     _notifySignalCreation();
   }
@@ -148,14 +139,6 @@ class Computed<T> extends ReadSignal<T> {
   // Keeps track of all the callbacks passed to [onDispose].
   // Used later to fire each callback when this signal is disposed.
   final _onDisposeCallbacks = <VoidCallback>[];
-
-  /// {@template Computed.fireImmediately}
-  /// {@macro fire-computed-immediately}
-  ///
-  /// If a value is not provided, defaults to
-  /// [SolidartConfig.fireComputedImmediately].
-  /// {@endtemplate}
-  final bool fireImmediately;
 
   // A computed signal is always initialized
   @override
