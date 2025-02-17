@@ -1,5 +1,7 @@
 part of 'core.dart';
 
+// coverage:ignore-start
+
 /// The type of the event emitted to the devtools
 enum DevToolsEventType {
   /// The signal was created
@@ -37,30 +39,24 @@ extension DevToolsExt<T> on SignalBase<T> {
     for (final obs in SolidartConfig.observers) {
       obs.didCreateSignal(this);
     }
-    // coverage:ignore-start
     if (!trackInDevTools) return;
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.created);
-    // coverage:ignore-end
   }
 
   void _notifySignalUpdate() {
     for (final obs in SolidartConfig.observers) {
       obs.didUpdateSignal(this);
     }
-    // coverage:ignore-start
     if (!trackInDevTools) return;
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
-    // coverage:ignore-end
   }
 
   void _notifySignalDisposal() {
     for (final obs in SolidartConfig.observers) {
       obs.didDisposeSignal(this);
     }
-    // coverage:ignore-start
     if (!trackInDevTools) return;
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.disposed);
-    // coverage:ignore-end
   }
 }
 
@@ -103,3 +99,5 @@ void _notifyDevToolsAboutSignal(
     'lastUpdate': DateTime.now().toIso8601String(),
   });
 }
+
+// coverage:ignore-end
