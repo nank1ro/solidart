@@ -18,6 +18,9 @@ abstract class SolidartConfig {
   /// Whether to track the previous value of the signal, defaults to true.
   static bool trackPreviousValue = true;
 
+  /// {@macro Resource.useRefreshing}
+  static bool useRefreshing = true;
+
   /// The list of observers.
   static final observers = <SolidartObserver>[];
 }
