@@ -124,7 +124,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
   bool _hasPreviousValue = false;
 
   T get _value {
-    print('disposed $_disposed');
     if (_disposed) {
       reactiveSystem.pauseTracking();
       final v = _internalSignal().unwrap();
@@ -280,7 +279,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
     reactiveSystem.resumeTracking();
 
     for (final sub in _subs) {
-      print('sub runtimeType ${sub.runtimeType}');
       if (sub is _AlienEffect) {
         if (sub.deps?.dep == _internalSignal) {
           sub.deps = null;
@@ -335,7 +333,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   @override
   void _mayDispose() {
-    print('may dispose $name');
     if (!autoDispose || _disposed) return;
     if (_internalSignal.subs == null) dispose();
   }

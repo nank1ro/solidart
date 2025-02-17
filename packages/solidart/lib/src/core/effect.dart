@@ -211,12 +211,9 @@ class Effect implements ReactionInterface {
     if (_disposed) return;
     _disposed = true;
 
-    print('dispose effect ${_deps.length}');
-
     _internalEffect.dispose();
 
     for (final dep in _deps) {
-      print('dep runtimeType ${dep.runtimeType}');
       // if (dep is Signal) dep._mayDispose();
       // if (dep is Computed) dep._mayDispose();
       if (dep is _AlienSignal) dep.parent._mayDispose();

@@ -233,8 +233,6 @@ class Computed<T> extends ReadSignal<T> {
   @override
   void _mayDispose() {
     if (!autoDispose || _disposed) return;
-    print(
-        'may dispose computed ${_internalComputed.deps} | ${_internalComputed.subs}');
     if (_internalComputed.deps == null && _internalComputed.subs == null) {
       dispose();
     } else {

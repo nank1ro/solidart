@@ -14,22 +14,6 @@ class _CounterPageState extends State<CounterPage> {
       Computed(() => counter() * 2, name: 'doubleCounter');
 
   @override
-  void initState() {
-    super.initState();
-    counter.onDispose(() {
-      print('Counter disposed');
-    });
-    doubleCounter.onDispose(() {
-      print('DoubleCounter disposed');
-    });
-
-    // Future.delayed(const Duration(seconds: 1), () {
-    //   counter.dispose();
-    //   print('doubleCounter: ${doubleCounter()}');
-    // });
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Counter')),
