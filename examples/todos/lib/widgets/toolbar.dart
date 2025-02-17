@@ -22,15 +22,6 @@ class _ToolbarState extends State<Toolbar> {
   late final completedTodosCount =
       Computed(() => todosController.completedTodos().length);
 
-  @override
-  void dispose() {
-    // TODO(nank1ro): don't they already auto dispose here? Can we remove the dispose calls?
-    allTodosCount.dispose();
-    incompleteTodosCount.dispose();
-    completedTodosCount.dispose();
-    super.dispose();
-  }
-
   /// Maps the given [filter] to the correct list of todos
   Computed<int> mapFilterToTodosCount(TodosFilter filter) {
     switch (filter) {
