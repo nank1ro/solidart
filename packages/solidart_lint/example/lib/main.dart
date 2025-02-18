@@ -11,7 +11,7 @@ void main() {
 final myClassProvider = Provider((_) => MyClass());
 final counterProvider = Provider((_) => Signal(0));
 final doubleCounterProvider = Provider.withArgument(
-  (_, Signal<int> counter) => Computed(() => counter() * 2),
+  (_, Signal<int> counter) => Computed(() => counter.value * 2),
 );
 
 class MyClass {}
