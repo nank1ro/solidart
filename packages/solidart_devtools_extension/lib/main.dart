@@ -107,11 +107,10 @@ class _SignalsState extends State<Signals> {
   final signals = MapSignal<String, SignalData>({});
 
   late final filteredSignals = Computed(() {
-    final lowercasedSearch = searchText().toLowerCase();
-    final type = filterType();
-    final viewDisposed = showDisposed();
-    return signals()
-        .entries
+    final lowercasedSearch = searchText.value.toLowerCase();
+    final type = filterType.value;
+    final viewDisposed = showDisposed.value;
+    return signals.value.entries
         .where((entry) =>
             entry.key.toString().toLowerCase().contains(lowercasedSearch) ||
             entry.value.matchesSearch(lowercasedSearch))
@@ -146,7 +145,8 @@ class _SignalsState extends State<Signals> {
           );
       }
     });
-    searchController.addListener(() => searchText.set(searchController.text));
+    searchController
+        .addListener(() => searchText.value = searchController.text);
   }
 
   @override
@@ -174,7 +174,7 @@ class _SignalsState extends State<Signals> {
                     controller: searchController,
                     trailing: [
                       Show(
-                        when: () => searchText().isNotEmpty,
+                        when: () => searchText.value.isNotEmpty,
                         builder: (context) {
                           return IconButton(
                             onPressed: searchController.clear,
@@ -190,14 +190,14 @@ class _SignalsState extends State<Signals> {
                       SignalBuilder(builder: (context, _) {
                         return DropdownButton(
                           padding: const EdgeInsets.symmetric(horizontal: 4),
-                          value: filterType(),
+                          value: filterType.value,
                           borderRadius:
                               const BorderRadius.all(Radius.circular(10)),
                           hint: const Text('Type'),
-                          icon: filterType() == null
+                          icon: filterType.value == null
                               ? null
                               : IconButton(
-                                  onPressed: () => filterType.set(null),
+                                  onPressed: () => filterType.value = null,
                                   icon: const Icon(Icons.clear),
                                 ),
                           items: SignalType.values
@@ -206,16 +206,16 @@ class _SignalsState extends State<Signals> {
                                     child: Text(e.name.capitalizeFirst()),
                                   ))
                               .toList(),
-                          onChanged: filterType.set,
+                          onChanged: (v) => filterType.value = v,
                         );
                       }),
                       const SizedBox(width: 4),
                       SignalBuilder(
                         builder: (context, _) {
                           return FilterChip(
-                            selected: showDisposed(),
+                            selected: showDisposed.value,
                             label: const Text('Disposed'),
-                            onSelected: showDisposed.set,
+                            onSelected: (v) => showDisposed.value = v,
                           );
                         },
                       ),
@@ -225,21 +225,21 @@ class _SignalsState extends State<Signals> {
                   SignalBuilder(
                     builder: (context, _) {
                       return Text(
-                          '${filteredSignals().length} visible of ${signals().length}');
+                          '${filteredSignals.value.length} visible of ${signals.value.length}');
                     },
                   ),
                   const SizedBox(height: 8),
                   Expanded(
                     child: SignalBuilder(builder: (context, _) {
                       return ListView.separated(
-                        itemCount: filteredSignals().length,
+                        itemCount: filteredSignals.value.length,
                         itemBuilder: (BuildContext context, int index) {
-                          final entry = filteredSignals().elementAt(index);
+                          final entry = filteredSignals.value.elementAt(index);
                           final name = entry.key;
                           final signal = entry.value;
                           return SignalBuilder(
                             builder: (context, _) {
-                              final selected = selectedSignalName() == name;
+                              final selected = selectedSignalName.value == name;
                               return Stack(
                                 children: [
                                   ListTile(
@@ -312,14 +312,14 @@ class _SignalsState extends State<Signals> {
         Expanded(
           child: SignalBuilder(
             builder: (context, _) {
-              if (selectedSignalName() == null) return const SizedBox();
-              final signal = filteredSignals()
+              if (selectedSignalName.value == null) return const SizedBox();
+              final signal = filteredSignals.value
                   .firstWhereOrNull(
-                      (element) => element.key == selectedSignalName())
+                      (element) => element.key == selectedSignalName.value)
                   ?.value;
               if (signal == null) return const SizedBox();
               return Card(
-                key: ValueKey(selectedSignalName()),
+                key: ValueKey(selectedSignalName.value),
                 child: LayoutBuilder(builder: (context, constraints) {
                   return SingleChildScrollView(
                     padding:
@@ -331,7 +331,7 @@ class _SignalsState extends State<Signals> {
                       child: Column(
                         children: [
                           ParameterView(
-                              name: 'name', value: selectedSignalName()),
+                              name: 'name', value: selectedSignalName.value),
                           ParameterView(
                               name: 'type',
                               value: signal.type.name.capitalizeFirst()),

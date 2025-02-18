@@ -10,7 +10,7 @@ class SolidartReactiveFramework extends ReactiveFramework {
   @override
   Computed<T> computed<T>(T Function() fn) {
     final computed = solidart.Computed(fn);
-    return createComputed(computed.call);
+    return createComputed(() => computed.value);
   }
 
   @override
@@ -21,7 +21,7 @@ class SolidartReactiveFramework extends ReactiveFramework {
   @override
   Signal<T> signal<T>(T value) {
     final signal = solidart.Signal(value);
-    return createSignal(signal.call, signal.set);
+    return createSignal(() => signal.value, (value) => signal.value = value);
   }
 
   @override
