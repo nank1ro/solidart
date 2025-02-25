@@ -10,6 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:solidart/src/utils.dart';
 
+part 'alien.dart';
 part 'batch.dart';
 part 'collections/list.dart';
 part 'collections/map.dart';
@@ -23,4 +24,3 @@ part 'read_signal.dart';
 part 'resource.dart';
 part 'signal.dart';
 part 'signal_base.dart';
-part 'alien.dart';

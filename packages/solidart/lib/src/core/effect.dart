@@ -173,7 +173,9 @@ class Effect implements ReactionInterface {
     } catch (e, s) {
       _onError?.call(SolidartCaughtException(e, stackTrace: s));
     } finally {
-      Future.microtask(_mayDispose);
+      if (SolidartConfig.autoDispose) {
+        Future.microtask(_mayDispose);
+      }
     }
   }
 
@@ -205,17 +207,20 @@ class Effect implements ReactionInterface {
   @override
   void _mayDispose() {
     if (_disposed) return;
-    _deps.clear();
 
-    var link = _internalEffect.deps;
-    for (; link != null; link = link.nextDep) {
-      final dep = link.dep;
+    print('may dispose');
+    if (SolidartConfig.autoDispose) {
+      _deps.clear();
+      var link = _internalEffect.deps;
+      for (; link != null; link = link.nextDep) {
+        final dep = link.dep;
 
-      _deps.add(dep);
-    }
-    if (!autoDispose || _disposed) return;
-    if (_internalEffect.deps?.dep == null) {
-      dispose();
+        _deps.add(dep);
+      }
+      if (!autoDispose || _disposed) return;
+      if (_internalEffect.deps?.dep == null) {
+        dispose();
+      }
     }
   }
 }

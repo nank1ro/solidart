@@ -119,6 +119,5 @@ class _AlienEffect with alien.Dependency, alien.Subscriber implements _Effect {
       reactiveSystem.link(this, reactiveSystem.activeScope!);
     }
     reactiveSystem.runEffect(this);
-    return;
   }
 }

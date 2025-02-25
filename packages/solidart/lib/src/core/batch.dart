@@ -8,7 +8,7 @@ part of 'core.dart';
 /// final x = Signal(10);
 /// final y = Signal(20);
 ///
-/// Effect((_) => print('x = ${x.value}, y = ${y.value}'));
+/// Effect(() => print('x = ${x.value}, y = ${y.value}'));
 /// // The Effect above prints 'x = 10, y = 20'
 ///
 /// batch(() {

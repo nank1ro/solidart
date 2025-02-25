@@ -1,3 +1,7 @@
+## 2.0.0-dev.5
+
+- **CHORE**: Improve the performance
+
 ## 2.0.0-dev.4
 
 - **REFACTOR**: Updated the reactive system from scratch, improving the performances.
