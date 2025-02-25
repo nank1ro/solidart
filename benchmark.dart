@@ -38,6 +38,7 @@ class SolidartReactiveFramework extends ReactiveFramework {
 void main() {
   solidart.SolidartConfig.devToolsEnabled = false;
   solidart.SolidartConfig.trackPreviousValue = false;
+  solidart.SolidartConfig.autoDispose = false;
   solidart.SolidartConfig.equals = true;
   const framework = SolidartReactiveFramework();
   runFrameworkBench(framework);

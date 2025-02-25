@@ -174,7 +174,9 @@ class Computed<T> extends ReadSignal<T> {
       return value;
     }
     final value = _internalComputed();
-    Future.microtask(_mayDispose);
+    if (autoDispose) {
+      Future.microtask(_mayDispose);
+    }
     return value;
   }
 
@@ -215,7 +217,7 @@ class Computed<T> extends ReadSignal<T> {
 
   @override
   void _mayDispose() {
-    if (!autoDispose || _disposed) return;
+    if (_disposed) return;
     if (_internalComputed.deps == null && _internalComputed.subs == null) {
       dispose();
     } else {

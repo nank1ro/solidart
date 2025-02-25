@@ -166,6 +166,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   }
 
   set _value(T newValue) {
+    if (_compare(_untrackedValue, newValue)) return;
     _untrackedPreviousValue = _untrackedValue;
     _untrackedValue = newValue;
     _internalSignal.currentValue = Some(newValue);
@@ -275,28 +276,30 @@ class ReadableSignal<T> implements ReadSignal<T> {
     _internalSignal();
     reactiveSystem.resumeTracking();
 
-    for (final sub in _subs) {
-      if (sub is _AlienEffect) {
-        if (sub.deps?.dep == _internalSignal) {
-          sub.deps = null;
-        }
-        if (sub.depsTail?.dep == _internalSignal) {
-          sub.depsTail = null;
-        }
+    if (SolidartConfig.autoDispose) {
+      for (final sub in _subs) {
+        if (sub is _AlienEffect) {
+          if (sub.deps?.dep == _internalSignal) {
+            sub.deps = null;
+          }
+          if (sub.depsTail?.dep == _internalSignal) {
+            sub.depsTail = null;
+          }
 
-        sub.parent._mayDispose();
-      }
-      if (sub is _AlienComputed) {
-        if (sub.deps?.dep == _internalSignal) {
-          sub.deps = null;
+          sub.parent._mayDispose();
         }
-        if (sub.depsTail?.dep == _internalSignal) {
-          sub.depsTail = null;
+        if (sub is _AlienComputed) {
+          if (sub.deps?.dep == _internalSignal) {
+            sub.deps = null;
+          }
+          if (sub.depsTail?.dep == _internalSignal) {
+            sub.depsTail = null;
+          }
+          sub.parent._mayDispose();
         }
-        sub.parent._mayDispose();
       }
+      _subs.clear();
     }
-    _subs.clear();
 
     _listeners.clear();
 
