@@ -208,7 +208,6 @@ class Effect implements ReactionInterface {
   void _mayDispose() {
     if (_disposed) return;
 
-    print('may dispose');
     if (SolidartConfig.autoDispose) {
       _deps.clear();
       var link = _internalEffect.deps;
