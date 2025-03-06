@@ -173,9 +173,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
     _reportChanged();
   }
 
-  /// All the observers
-  final List<ObserveCallback<T>> _listeners = [];
-
   @override
   T get value {
     if (!_hasValue) {
@@ -216,22 +213,12 @@ class ReadableSignal<T> implements ReadSignal<T> {
     // notify with the new value
     _value = newValue;
 
-    _notifyListeners();
-
     if (firstValue) {
       _notifySignalCreation();
     } else {
       _notifySignalUpdate();
     }
     return newValue;
-  }
-
-  void _notifyListeners() {
-    if (_listeners.isNotEmpty) {
-      for (final listener in _listeners.toList(growable: false)) {
-        listener(_previousValue, _untrackedValue);
-      }
-    }
   }
 
   @override
@@ -266,7 +253,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   /// Returns the number of listeners listening to this signal.
   @override
-  int get listenerCount => _listeners.length;
+  int get listenerCount => _subs.length;
 
   final _subs = <alien.Subscriber>{};
 
@@ -306,8 +293,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
       _subs.clear();
     }
 
-    _listeners.clear();
-
     for (final cb in _onDisposeCallbacks) {
       cb();
     }
@@ -324,14 +309,18 @@ class ReadableSignal<T> implements ReadSignal<T> {
     ObserveCallback<T> listener, {
     bool fireImmediately = false,
   }) {
-    if (fireImmediately == true) {
-      listener(_previousValue, _value);
-    }
-
-    _listeners.add(listener);
+    var skipped = false;
+    final disposeEffect = Effect(() {
+      final v = value;
+      if (!fireImmediately && !skipped) {
+        skipped = true;
+        return;
+      }
+      listener(_untrackedPreviousValue, v);
+    });
 
     return () {
-      _listeners.remove(listener);
+      disposeEffect();
       _mayDispose();
     };
   }

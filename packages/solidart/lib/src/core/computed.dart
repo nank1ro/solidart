@@ -210,14 +210,19 @@ class Computed<T> extends ReadSignal<T> {
     bool fireImmediately = false,
   }) {
     var skipped = false;
-    return Effect(() {
+    final disposeEffect = Effect(() {
       final v = value;
       if (!fireImmediately && !skipped) {
         skipped = true;
         return;
       }
-      listener(previousValue, v);
+      listener(_untrackedPreviousValue, v);
     });
+
+    return () {
+      disposeEffect();
+      _mayDispose();
+    };
   }
 
   @override
@@ -248,7 +253,7 @@ class Computed<T> extends ReadSignal<T> {
   }
 
   @override
-  int get listenerCount => throw UnimplementedError();
+  int get listenerCount => _deps.length;
 
   @override
   void onDispose(VoidCallback cb) {
