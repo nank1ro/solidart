@@ -180,6 +180,11 @@ class Computed<T> extends ReadSignal<T> {
     return value;
   }
 
+  @override
+  T call() {
+    return value;
+  }
+
   /// Returns the previous value of the computed.
   @override
   T? get previousValue {

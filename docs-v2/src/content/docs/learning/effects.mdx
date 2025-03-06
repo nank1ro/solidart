@@ -13,7 +13,7 @@ The effect automatically subscribes to any signal and reruns when any of them ch
 So let's create an Effect that reruns whenever `counter` changes:
 
 ```dart
-final disposeEffect = Effect((dispose) {
+final disposeEffect = Effect(() {
     print("The count is now ${counter.value}");
 });
 ```
@@ -31,7 +31,7 @@ The effect prints `The count is now 1`;
 The `Effect` class returns a `Dispose` callback, invoke it to stop listening and clearing the effect.
 
 ```dart
-final disposeEffect = Effect((dispose) {
+final disposeEffect = Effect(() {
     print("The count is now ${counter.value}");
 });
 
