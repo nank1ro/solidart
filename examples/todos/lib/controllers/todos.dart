@@ -1,7 +1,12 @@
 import 'package:disco/disco.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:todos/models/todo.dart';
+import 'package:flutter_solidart/flutter_solidart.dart' hide Provider;
+import 'package:solidart_example/domain/todo.dart';
+
+final todosControllerProvider = Provider<TodosController>(
+  (context) => TodosController(initialTodos: Todo.sample),
+  dispose: (controller) => controller.dispose(),
+);
 
 /// Contains the state of the [todos] list and allows to
 /// - `add`: Add a todo in the list of [todos]
@@ -14,11 +19,6 @@ class TodosController {
   TodosController({
     List<Todo> initialTodos = const [],
   }) : todos = ListSignal(initialTodos);
-
-  static final provider = Provider(
-    (_) => TodosController(initialTodos: Todo.sample),
-    dispose: (controller) => controller.dispose(),
-  );
 
   // The list of todos
   final ListSignal<Todo> todos;

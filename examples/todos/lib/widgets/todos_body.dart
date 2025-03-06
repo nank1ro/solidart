@@ -1,10 +1,12 @@
 import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
-import 'package:todos/controllers/controller.dart';
-import 'package:todos/models/todo.dart';
-import 'package:todos/providers.dart';
-import 'package:todos/widgets/todos_list.dart';
-import 'package:todos/widgets/toolbar.dart';
+import 'package:flutter_solidart/flutter_solidart.dart' hide Provider;
+import 'package:solidart_example/controllers/todos.dart';
+import 'package:solidart_example/domain/todo.dart';
+import 'package:solidart_example/widgets/todos_list.dart';
+import 'package:solidart_example/widgets/toolbar.dart';
+
+final todosFilterProvider = Provider((context) => Signal(TodosFilter.all));
 
 class TodosBody extends StatefulWidget {
   const TodosBody({super.key});
@@ -24,14 +26,14 @@ class _TodosBodyState extends State<TodosBody> {
 
   @override
   Widget build(BuildContext context) {
-    // retrieve the [TodosController], you're safe to `get` a Signal or Provider
-    // in both the `initState` and `build` methods.
-    final todosController = TodosController.provider.of(context);
+    // retrieve the [TodosController], you're safe to retrieve Provider in both
+    // the `initState` and `build` methods.
+    final todosController = todosControllerProvider.of(context);
 
     return ProviderScope(
       providers: [
         // make the active filter signal visible only to descendants.
-        // created here because this is where it starts to be necessary.
+        // scoped here because this is where it starts to be necessary.
         todosFilterProvider,
       ],
       child: Column(
@@ -59,9 +61,7 @@ class _TodosBodyState extends State<TodosBody> {
           const SizedBox(height: 16),
           Expanded(
             child: TodoList(
-              onTodoToggle: (id) {
-                todosController.toggle(id);
-              },
+              onTodoToggle: todosController.toggle,
             ),
           ),
         ],

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:todos/controllers/controller.dart';
-import 'package:todos/models/todo.dart';
+import 'package:solidart_example/controllers/todos.dart';
+import 'package:solidart_example/domain/todo.dart';
 
 /// Renders a ListTile with a checkbox where you can change
 /// the "completion" status of a [Todo]
@@ -21,7 +21,7 @@ class TodoItem extends StatelessWidget {
       direction: DismissDirection.endToStart,
       onDismissed: (_) {
         // remove the todo
-        TodosController.provider.of(context).remove(todo.id);
+        todosControllerProvider.of(context).remove(todo.id);
       },
       background: Container(
         decoration: const BoxDecoration(color: Colors.red),

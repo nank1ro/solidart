@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:todos/controllers/controller.dart';
-import 'package:todos/models/todo.dart';
+import 'package:solidart_example/controllers/todos.dart';
+import 'package:solidart_example/domain/todo.dart';
 
 void main() {
   group('TodosController -', () {

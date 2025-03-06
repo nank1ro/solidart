@@ -8,21 +8,23 @@
 import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:todos/controllers/controller.dart';
-import 'package:todos/main.dart';
-
-import 'package:todos/models/todo.dart';
-import 'package:todos/widgets/todo_item.dart';
+import 'package:solidart_example/controllers/todos.dart';
+import 'package:solidart_example/domain/todo.dart';
+import 'package:solidart_example/main.dart';
+import 'package:solidart_example/widgets/todo_item.dart';
 
 // Utility function to easily wrap a [child] into a mocked todos controller.
-Widget wrapWithMockedTodosController(
-  TodosController todosController,
-) {
-  return ProviderScopeOverride(
-    overrides: [
-      TodosController.provider.overrideWithValue(todosController),
-    ],
-    child: MyApp(),
+Widget wrapWithMockedTodosController({
+  required Widget child,
+  required TodosController todosController,
+}) {
+  return MaterialApp(
+    home: ProviderScopeOverride(
+      overrides: [
+        todosControllerProvider.overrideWithValue(todosController),
+      ],
+      child: child,
+    ),
   );
 }
 
@@ -31,12 +33,13 @@ void main() {
     // create controller with an initial value
     final initialTodos = List.generate(
       3,
-      (i) => Todo(id: "$i", task: 'mock$i', completed: false),
+      (i) => Todo(id: i.toString(), task: 'mock$i', completed: false),
     );
-    // Build our TodosPageView and trigger a frame.
+    // Build our App and trigger a frame.
     await tester.pumpWidget(
       wrapWithMockedTodosController(
-        TodosController(initialTodos: initialTodos),
+        todosController: TodosController(initialTodos: initialTodos),
+        child: const MyApp(),
       ),
     );
 
@@ -54,10 +57,11 @@ void main() {
   });
 
   testWidgets('Add a todo', (WidgetTester tester) async {
-    // Build our TodosPageView and trigger a frame.
+    // Build our App and trigger a frame.
     await tester.pumpWidget(
       wrapWithMockedTodosController(
-        TodosController(),
+        todosController: TodosController(),
+        child: const MyApp(),
       ),
     );
 
@@ -79,12 +83,14 @@ void main() {
     // create controller with an initial value
     final initialTodos = List.generate(
       3,
-      (i) => Todo(id: "$i", task: 'mock$i', completed: false),
+      (i) => Todo(id: i.toString(), task: 'mock$i', completed: false),
     );
-    // Build our TodosPageView and trigger a frame.
+    // Build our App and trigger a frame.
     await tester.pumpWidget(
       wrapWithMockedTodosController(
-          TodosController(initialTodos: initialTodos)),
+        todosController: TodosController(initialTodos: initialTodos),
+        child: const MyApp(),
+      ),
     );
 
     // verify that there are 3 todos rendered initially
@@ -109,11 +115,16 @@ void main() {
     // create controller with an initial value
     final initialTodos = List.generate(
       2,
-      (i) => Todo(id: "$i", task: 'mock$i', completed: false),
+      (i) => Todo(id: '$i', task: 'mock$i', completed: false),
     );
     final todosController = TodosController(initialTodos: initialTodos);
-    // Build our TodosPageView and trigger a frame.
-    await tester.pumpWidget(wrapWithMockedTodosController(todosController));
+    // Build our App and trigger a frame.
+    await tester.pumpWidget(
+      wrapWithMockedTodosController(
+        todosController: todosController,
+        child: const MyApp(),
+      ),
+    );
 
     // verify that the completed tabs starts with 0 todos
     expect(find.text('completed (0)'), findsOneWidget);
