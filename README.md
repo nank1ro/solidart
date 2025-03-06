@@ -23,13 +23,13 @@ For a comprehensive and updated documentation go to [The Official Documentation]
 
 There are 5 main concepts you should be aware:
 
-1. [Signals](#signals)
-2. [Effects](#effects)
+1. [Signal](#signal)
+2. [Effect](#effect)
 3. [Computed](#computed)
-4. [Resources](#resources)
-5. [Solid (only flutter_solidart)](#solid)
+4. [Resource](#resource)
+5. [Dependency Injection](#dependency-injection)
 
-### Signals
+### Signal
 
 Signals are the cornerstone of reactivity in _solidart_. They contain values that change over time; when you change a signal's value, it automatically updates anything that uses it.
 
@@ -49,15 +49,13 @@ print(counter.value); // prints 0
 
 To change the value, you can use:
 ```dart
-// Increments by 1
-counter.value++; 
 // Set the value to 2
 counter.value = 2;
 // Update the value based on the current value
 counter.updateValue((value) => value * 2);
 ```
 
-### Effects
+### Effect
 
 Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
 
@@ -89,7 +87,7 @@ name.set('Jane');
 print(fullName()); // prints "Jane Doe"
 ```
 
-### Resources
+### Resource
 
 Resources are special Signals designed specifically to handle Async loading. Their purpose is wrap async values in a way that makes them easy to interact with.
 
@@ -123,8 +121,7 @@ If you're using `SignalBuilder` you can react to the state of the resource:
 ```dart
 SignalBuilder(
   builder: (_, __) {
-    final userState = user.state;
-    return userState.on(
+    return user.state.on(
       ready: (data) {
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -170,114 +167,15 @@ SignalBuilder(
 The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
 The are also other convenience methods to handle only specific states.
 
-### Solid
+### Dependency Injection
 
-The Flutter framework works like a Tree. There are ancestors and there are descendants.
+The dependency injection in `flutter_solidart` is done using the [disco](https://disco.mariuti.com) package.
 
-You may incur the need to pass a Signal deep into the tree, this is discouraged.
-You should never pass a signal as a parameter.
+This replaced the `Solid` widget which was used in the previous versions of `flutter_solidart`.
 
-To avoid this there's the _Solid_ widget.
+[disco](https://disco.mariuti.com) has been built on top of `Solid` to provide a more powerful and flexible way to handle dependency injection.
 
-With this widget you can pass a signal down the tree to anyone who needs it.
-
-You will have already seen `Theme.of(context)` or `MediaQuery.of(context)`, the procedure is practically the same.
-
-Let's see an example to grasp the concept.
-
-You're going to see how to build a toggle theme feature using `Solid`, this example is present also here https://github.com/nank1ro/solidart/tree/main/examples/toggle_theme
-
-```dart
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // Provide the theme mode signal to descendats
-    return Solid( // [1]
-      providers: [
-        Provider<Signal<ThemeMode>>(
-          create: () => Signal(ThemeMode.light),
-        ),
-      ],
-      // using the builder method to immediately access the signal
-      builder: (context) {
-        // observe the theme mode value this will rebuild every time the themeMode signal changes.
-        final themeMode = context.observe<Signal<ThemeMode>>().value; // [2]
-        return MaterialApp(
-          title: 'Toggle theme',
-          themeMode: themeMode,
-          theme: ThemeData.light(),
-          darkTheme: ThemeData.dark(),
-          home: const MyHomePage(),
-        );
-      },
-    );
-  }
-}
-
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // retrieve the theme mode signal
-    final themeMode = context.get<Signal<ThemeMode>>(); // [3]
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Toggle theme'),
-      ),
-      body: Center(
-        child:
-            // Listen to the theme mode signal rebuilding only the IconButton
-            SignalBuilder( // [4]
-          builder: (_, __) {
-            final mode = themeMode.value;
-            return IconButton(
-              onPressed: () { // [5]
-                // toggle the theme mode
-                if (mode == ThemeMode.light) {
-                  themeMode.value = ThemeMode.dark;
-                } else {
-                  themeMode.value = ThemeMode.light;
-                }
-              },
-              icon: Icon(
-                mode == ThemeMode.light ? Icons.dark_mode : Icons.light_mode,
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-```
-
-First at `[1]` we've used the `Solid` widget to provide the `themeMode` signal to descendants.
-
-The `Solid` widgets takes a list of providers:
- The `Provider` has a `create` function that returns the signal.
-You may create a signal or a derived signal. The value is a Function
-because the signal is created lazily only when used for the first time, if
-you never access the signal it never gets created.
-In the `Provider` you can also specify an `id`entifier for having multiple
-signals of the same type.
-
-At `[2]` we `observe` the signal. The `observe` method listen to the signal value and rebuilds the widget when the value changes. It takes an optional `id` that is the signal identifier that you want to use. This method must be called only inside the `build` method.
-
-At `[3]` we `get` the signal with the given signal type. This doesn't listen to signal value. You may use this method inside the `initState` and `build` methods.
-
-At `[4]` using the `SignalBuilder` widget we rebuild the `IconButton` every time the signal value changes.
-
-And finally at `[5]` we update the signal value.
-
-> It is mandatory to pass the type of signal value otherwise you're going to encounter an error, for example:
-
-```dart
-Provider<Signal<ThemeMode>>(create: () => Signal(ThemeMode.light))
-```
-and `context.observe<Signal<ThemeMode>>`, `context.get<Signal<ThemeMode>>` where `Signal<ThemeMode>` is the type of signal with its type value.
+[Refer to the official disco documentation](https://disco.mariuti.com) which contains also examples written with `flutter_solidart`
 
 ## DevTools
 
@@ -306,7 +204,6 @@ Learn every feature of `flutter_solidart` including:
 4. `Effect`s
 5. `SignalBuilder`, `DualSignalBuilder` and `TripleSignalBuilder`
 6. `Resource`
-7. `Solid` and its fine-grained reactivity
 
 ## Contributors
 

@@ -4,6 +4,8 @@
 [![GitHub issues](https://img.shields.io/github/issues/nank1ro/solidart)](https://github.com/nank1ro/solidart/issues/)
 [![GitHub pull-requests](https://img.shields.io/github/issues-pr/nank1ro/solidart.svg)](https://gitHub.com/nank1ro/solidart/pull/)
 [![solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/solidart?include_prereleases)](https://pub.dev/packages/solidart)
+[![flutter_solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/flutter_solidart?include_prereleases)](https://pub.dev/packages/flutter_solidart)
+[![All Contributors](https://img.shields.io/github/all-contributors/nank1ro/solidart?color=ee8449&style=flat-square)](#contributors)
 [![](https://dcbadge.vercel.app/api/server/2JBzeeQShh)](https://discord.gg/2JBzeeQShh)
 
 # A simple state-management library inspired by SolidJS.
@@ -19,14 +21,14 @@ The objectives of this project are:
 
 For a comprehensive and updated documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart~dev)
 
-There are 4 main concepts you should be aware:
+There are 5 main concepts you should be aware:
 
-1. [Signals](#signals)
-2. [Effects](#effects)
+1. [Signal](#signal)
+2. [Effect](#effect)
 3. [Computed](#computed)
-4. [Resources](#resources)
+4. [Resource](#resource)
 
-### Signals
+### Signal
 
 Signals are the cornerstone of reactivity in _solidart_. They contain values that change over time; when you change a signal's value, it automatically updates anything that uses it.
 
@@ -52,7 +54,7 @@ counter.value = 2;
 counter.updateValue((value) => value * 2);
 ```
 
-### Effects
+### Effect
 
 Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
 
@@ -77,14 +79,14 @@ A `Computed` automatically subscribes to any signal provided and reruns when any
 final name = Signal('John');
 final lastName = Signal('Doe');
 final fullName = Computed(() => '${name.value} ${lastName.value}');
-print(fullName.value); // prints "John Doe"
+print(fullName()); // prints "John Doe"
 
 // Update the name
-name.value = 'Jane';
-print(fullName.value); // prints "Jane Doe"
+name.set('Jane');
+print(fullName()); // prints "Jane Doe"
 ```
 
-### Resources
+### Resource
 
 Resources are special Signals designed specifically to handle Async loading. Their purpose is wrap async values in a way that makes them easy to interact with.
 
@@ -118,8 +120,7 @@ If you're using `SignalBuilder` you can react to the state of the resource:
 ```dart
 SignalBuilder(
   builder: (_, __) {
-    final userState = user.state;
-    return userState.on(
+    return user.state.on(
       ready: (data) {
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -170,3 +171,46 @@ The are also other convenience methods to handle only specific states.
 <img src="https://raw.githubusercontent.com/nank1ro/solidart/main/assets/devtools.png" width="100%">
 
 You can debug your application using the Solidart DevTools extension and filter your signals.
+
+## Examples
+
+### Sample features using flutter_solidart:
+
+- [Counter](https://zapp.run/github/nank1ro/solidart/tree/main/examples/counter)
+- [Toggle theme (dark/light mode)](https://zapp.run/github/nank1ro/solidart/tree/main/examples/toggle_theme)
+- [Todos](https://zapp.run/github/nank1ro/solidart/tree/main/examples/todos)
+- [Github Search](https://zapp.run/github/nank1ro/solidart/tree/main/examples/github_search)
+
+### Showcase of all flutter_solidart features
+
+- [Showcase of all features](https://zapp.run/github/nank1ro/solidart/tree/main/packages/flutter_solidart/example)
+
+Learn every feature of `flutter_solidart` including:
+
+1. `Signal`
+2. `Show` widget
+3. `Computed`
+4. `Effect`s
+5. `SignalBuilder`, `DualSignalBuilder` and `TripleSignalBuilder`
+6. `Resource`
+
+## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="http://www.bestofcode.dev"><img src="https://avatars.githubusercontent.com/u/60045235?v=4?s=100" width="100px;" alt="Alexandru Mariuti"/><br /><sub><b>Alexandru Mariuti</b></sub></a><br /><a href="https://github.com/nank1ro/solidart/commits?author=nank1ro" title="Code">💻</a> <a href="https://github.com/nank1ro/solidart/issues?q=author%3Anank1ro" title="Bug reports">🐛</a> <a href="#maintenance-nank1ro" title="Maintenance">🚧</a> <a href="#question-nank1ro" title="Answering Questions">💬</a> <a href="https://github.com/nank1ro/solidart/pulls?q=is%3Apr+reviewed-by%3Anank1ro" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/nank1ro/solidart/commits?author=nank1ro" title="Documentation">📖</a> <a href="https://github.com/nank1ro/solidart/commits?author=nank1ro" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/manuel-plavsic"><img src="https://avatars.githubusercontent.com/u/55398763?v=4?s=100" width="100px;" alt="manuel-plavsic"/><br /><sub><b>manuel-plavsic</b></sub></a><br /><a href="https://github.com/nank1ro/solidart/commits?author=manuel-plavsic" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/luketg8"><img src="https://avatars.githubusercontent.com/u/10770936?v=4?s=100" width="100px;" alt="Luke Greenwood"/><br /><sub><b>Luke Greenwood</b></sub></a><br /><a href="https://github.com/nank1ro/solidart/commits?author=luketg8" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/9dan"><img src="https://avatars.githubusercontent.com/u/32853831?v=4?s=100" width="100px;" alt="9dan"/><br /><sub><b>9dan</b></sub></a><br /><a href="https://github.com/nank1ro/solidart/commits?author=9dan" title="Code">💻</a> <a href="https://github.com/nank1ro/solidart/issues?q=author%3A9dan" title="Bug reports">🐛</a> <a href="https://github.com/nank1ro/solidart/commits?author=9dan" title="Documentation">📖</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
