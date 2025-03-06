@@ -21,4 +21,4 @@ dependencies:
 dev_dependencies:
   mockito: ^5.4.4
   test: ^1.25.3
-  very_good_analysis: ^5.1.0
+  very_good_analysis: ^7.0.0

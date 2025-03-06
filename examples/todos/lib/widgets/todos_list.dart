@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:todos/controllers/controller.dart';
-import 'package:todos/models/todo.dart';
-import 'package:todos/providers.dart';
-import 'package:todos/widgets/todo_item.dart';
+import 'package:solidart_example/controllers/todos.dart';
+import 'package:solidart_example/domain/todo.dart';
+import 'package:solidart_example/widgets/todo_item.dart';
+import 'package:solidart_example/widgets/todos_body.dart';
 
 class TodoList extends StatefulWidget {
   const TodoList({
@@ -19,7 +19,7 @@ class TodoList extends StatefulWidget {
 
 class _TodoListState extends State<TodoList> {
   // retrieve the [TodosController]
-  late final todosController = TodosController.provider.of(context);
+  late final todosController = todosControllerProvider.of(context);
 
   // Given a [filter] return the correct list of todos
   ReadSignal<List<Todo>> mapFilterToTodosList(TodosFilter filter) {
@@ -36,8 +36,8 @@ class _TodoListState extends State<TodoList> {
   @override
   Widget build(BuildContext context) {
     return SignalBuilder(
-      builder: (_, __) {
-        // React to the activeFilter
+      builder: (context, child) {
+        // rebuilds every time the activeFilter value changes
         final activeFilter = todosFilterProvider.of(context).value;
         // react to the correct list of todos list
         final todos = mapFilterToTodosList(activeFilter).value;
