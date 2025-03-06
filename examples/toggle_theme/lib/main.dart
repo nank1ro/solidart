@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
 final themeModeProvider =
-    Provider<Signal<ThemeMode>>((_) => Signal(ThemeMode.light));
+    Provider<Signal<ThemeMode>>((_) => Signal(ThemeMode.dark));
 
 void main() {
   runApp(const MyApp());
