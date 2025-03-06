@@ -186,6 +186,11 @@ class ReadableSignal<T> implements ReadSignal<T> {
     return _value;
   }
 
+  @override
+  T call() {
+    return value;
+  }
+
   /// {@template set-signal-value}
   /// Sets the current signal value with [newValue].
   ///

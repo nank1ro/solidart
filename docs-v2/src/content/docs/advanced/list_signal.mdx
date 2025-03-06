@@ -5,5 +5,17 @@ sidebar:
   order: 1
 ---
 
-A ListSignal is a special signal that can be used to represent a list of values.
+A `ListSignal` is a special signal that can be used to represent a list of values.
 
+When you modify any element on the list, the `ListSignal` will automatically notify its observers.
+
+```dart
+final items = ListSignal([1, 2]);
+
+items.observe((previousValue, value) {
+  print("Items changed: $previousValue -> $value");
+});
+
+items.add(3); // prints "Items changed: [1, 2] -> [1, 2, 3]"
+items[0] = 10; // prints "Items changed: [1, 2, 3] -> [10, 2, 3]"
+```

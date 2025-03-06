@@ -32,7 +32,7 @@ final count = Signal(0);
 @override
 void initState() {
   super.initState();
-  Effect((_) {
+  Effect(() {
       print("The count is ${count.value}");
     },
   );
@@ -55,7 +55,7 @@ late final DisposeEffect disposeEffect;
 @override
 void initState() {
   super.initState();
-  disposeEffect = Effect((_) {
+  disposeEffect = Effect(() {
       print("The count is ${count.value}");
     },
   );
@@ -80,7 +80,7 @@ final name = Signal('Alex');
 @override
 void initState() {
   super.initState();
-  Effect((_) {
+  Effect(() {
       print("The count is ${count.value} and the name is ${name.value}");
     },
   );

@@ -5,7 +5,6 @@ import 'package:example/pages/derived_signal.dart';
 import 'package:example/pages/effects.dart';
 import 'package:example/pages/lazy_counter.dart';
 import 'package:example/pages/map_signal.dart';
-import 'package:example/pages/provider_scope/provider_scope.dart';
 import 'package:example/pages/resource.dart';
 import 'package:example/pages/set_signal.dart';
 import 'package:example/pages/show.dart';
@@ -66,7 +65,6 @@ final routes = <String, WidgetBuilder>{
   '/effects': (_) => const EffectsPage(),
   '/signal-builder': (_) => const SignalBuilderPage(),
   '/resource': (_) => const ResourcePage(),
-  '/provider-scope': (_) => const ProviderScopePage(),
   '/list-signal': (_) => const ListSignalPage(),
   '/set-signal': (_) => const SetSignalPage(),
   '/map-signal': (_) => const MapSignalPage(),
