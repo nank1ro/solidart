@@ -1,0 +1,27 @@
+---
+title: Untracked
+description: Learn how to declare a signal not to be tracked in solidart
+sidebar:
+  order: 5
+  badge: advanced
+---
+
+Execute a callback that will not be tracked by the reactive system.
+
+This can be useful inside Effects or Observations to prevent a signal from being tracked.
+
+## Example
+
+```dart
+final count = Signal(0);
+final doubleCount = Signal(0);
+
+Effect(() {
+  final value = count();
+  untracked(() {
+    doubleCount.value = value * 2;
+  });
+});
+```
+
+The `Effect` will track only `count` and will not react to the changes of `doubleCount`.
