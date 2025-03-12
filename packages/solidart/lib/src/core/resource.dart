@@ -206,6 +206,10 @@ class Resource<T> extends Signal<ResourceState<T>> {
     return super.value;
   }
 
+  /// The current resource state
+  @override
+  ResourceState<T> call() => state;
+
   /// Updates the current resource state
   set state(ResourceState<T> state) => super.value = state;
 
