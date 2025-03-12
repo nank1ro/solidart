@@ -7,7 +7,6 @@ import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
 import 'package:solidart/src/core/core.dart';
-import 'package:solidart/src/extensions.dart';
 import 'package:solidart/src/utils.dart';
 import 'package:test/test.dart';
 
@@ -238,6 +237,29 @@ void main() {
 
         // An effect is always triggered once
         verify(cb()).called(1);
+      });
+
+      test('Test untracked', () {
+        final count = Signal(0);
+        final effectCount = Signal(0);
+        int fn() => effectCount.value + 1;
+
+        final cb = MockCallbackFunction();
+        Effect(() {
+          count.value;
+          cb.call();
+
+          // Whenever this effect is triggered, run `fn` that gives new value
+          effectCount.value = untracked(fn);
+        });
+
+        expect(count.value, 0);
+        expect(effectCount.value, 1);
+
+        count.value = 1;
+        expect(effectCount.value, 2);
+
+        verify(cb()).called(2);
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),

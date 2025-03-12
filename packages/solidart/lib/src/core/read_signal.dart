@@ -125,10 +125,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   T get _value {
     if (_disposed) {
-      reactiveSystem.pauseTracking();
-      final v = _internalSignal().unwrap();
-      reactiveSystem.resumeTracking();
-      return v;
+      return untracked(() => _internalSignal().unwrap());
     }
     _reportObserved();
     final value = _internalSignal().unwrap();
@@ -150,18 +147,19 @@ class ReadableSignal<T> implements ReadSignal<T> {
   T? _untrackedPreviousValue;
 
   /// Returns the untracked previous value of the signal.
+  @override
   T? get untrackedPreviousValue {
     return _untrackedPreviousValue;
   }
 
   /// Returns the value without triggering the reactive system.
+  @override
   T get untrackedValue {
     if (!_hasValue) {
       throw StateError(
         '''The signal named "$name" is lazy and has not been initialized yet, cannot access its value''',
       );
     }
-    // _reportObserved();
     return _untrackedValue;
   }
 
@@ -172,9 +170,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
     _internalSignal.currentValue = Some(newValue);
     _reportChanged();
   }
-
-  /// All the observers
-  final List<ObserveCallback<T>> _listeners = [];
 
   @override
   T get value {
@@ -216,22 +211,12 @@ class ReadableSignal<T> implements ReadSignal<T> {
     // notify with the new value
     _value = newValue;
 
-    _notifyListeners();
-
     if (firstValue) {
       _notifySignalCreation();
     } else {
       _notifySignalUpdate();
     }
     return newValue;
-  }
-
-  void _notifyListeners() {
-    if (_listeners.isNotEmpty) {
-      for (final listener in _listeners.toList(growable: false)) {
-        listener(_previousValue, _untrackedValue);
-      }
-    }
   }
 
   @override
@@ -266,7 +251,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   /// Returns the number of listeners listening to this signal.
   @override
-  int get listenerCount => _listeners.length;
+  int get listenerCount => _subs.length;
 
   final _subs = <alien.Subscriber>{};
 
@@ -306,8 +291,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
       _subs.clear();
     }
 
-    _listeners.clear();
-
     for (final cb in _onDisposeCallbacks) {
       cb();
     }
@@ -317,24 +300,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   @override
   bool get disposed => _disposed;
-
-  /// Observe the signal and trigger the [listener] every time the value changes
-  @override
-  DisposeObservation observe(
-    ObserveCallback<T> listener, {
-    bool fireImmediately = false,
-  }) {
-    if (fireImmediately == true) {
-      listener(_previousValue, _value);
-    }
-
-    _listeners.add(listener);
-
-    return () {
-      _listeners.remove(listener);
-      _mayDispose();
-    };
-  }
 
   @override
   void _mayDispose() {

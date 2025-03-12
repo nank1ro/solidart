@@ -195,29 +195,15 @@ class Computed<T> extends ReadSignal<T> {
   }
 
   /// Returns the untracked value of the computed.
+  @override
   T get untrackedValue {
     return _untrackedValue;
   }
 
   /// Returns the untracked previous value of the computed.
+  @override
   T? get untrackedPreviousValue {
     return _untrackedPreviousValue;
-  }
-
-  @override
-  DisposeObservation observe(
-    ObserveCallback<T> listener, {
-    bool fireImmediately = false,
-  }) {
-    var skipped = false;
-    return Effect(() {
-      final v = value;
-      if (!fireImmediately && !skipped) {
-        skipped = true;
-        return;
-      }
-      listener(previousValue, v);
-    });
   }
 
   @override
@@ -248,7 +234,7 @@ class Computed<T> extends ReadSignal<T> {
   }
 
   @override
-  int get listenerCount => throw UnimplementedError();
+  int get listenerCount => _deps.length;
 
   @override
   void onDispose(VoidCallback cb) {
