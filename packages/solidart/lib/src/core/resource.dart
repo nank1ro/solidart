@@ -301,7 +301,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
     // react to the [source], if provided.
     if (source != null) {
-      _sourceDisposeObservation = source!.observe((_, __) => refresh());
+      _sourceDisposeObservation = source!.observe((p, v) {
+        refresh();
+      });
       source!.onDispose(_sourceDisposeObservation!);
     }
   }

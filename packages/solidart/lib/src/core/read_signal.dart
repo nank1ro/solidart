@@ -125,10 +125,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   T get _value {
     if (_disposed) {
-      reactiveSystem.pauseTracking();
-      final v = _internalSignal().unwrap();
-      reactiveSystem.resumeTracking();
-      return v;
+      return untracked(() => _internalSignal().unwrap());
     }
     _reportObserved();
     final value = _internalSignal().unwrap();
@@ -150,18 +147,19 @@ class ReadableSignal<T> implements ReadSignal<T> {
   T? _untrackedPreviousValue;
 
   /// Returns the untracked previous value of the signal.
+  @override
   T? get untrackedPreviousValue {
     return _untrackedPreviousValue;
   }
 
   /// Returns the value without triggering the reactive system.
+  @override
   T get untrackedValue {
     if (!_hasValue) {
       throw StateError(
         '''The signal named "$name" is lazy and has not been initialized yet, cannot access its value''',
       );
     }
-    // _reportObserved();
     return _untrackedValue;
   }
 
@@ -302,28 +300,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   @override
   bool get disposed => _disposed;
-
-  /// Observe the signal and trigger the [listener] every time the value changes
-  @override
-  DisposeObservation observe(
-    ObserveCallback<T> listener, {
-    bool fireImmediately = false,
-  }) {
-    var skipped = false;
-    final disposeEffect = Effect(() {
-      final v = value;
-      if (!fireImmediately && !skipped) {
-        skipped = true;
-        return;
-      }
-      listener(_untrackedPreviousValue, v);
-    });
-
-    return () {
-      disposeEffect();
-      _mayDispose();
-    };
-  }
 
   @override
   void _mayDispose() {
