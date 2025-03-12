@@ -81,6 +81,12 @@ abstract class SignalBase<T> {
   /// Defaults to null when no previous value is present.
   T? get previousValue;
 
+  /// Returns the untracked previous value of the signal.
+  T? get untrackedPreviousValue;
+
+  /// Returns the untracked value of the signal.
+  T get untrackedValue;
+
   /// Tells if the signal is disposed;
   bool get disposed;
 
@@ -89,12 +95,6 @@ abstract class SignalBase<T> {
 
   /// The total number of listeners subscribed to the signal.
   int get listenerCount;
-
-  /// Observe the signal and trigger the [listener] every time the value changes
-  DisposeObservation observe(
-    ObserveCallback<T> listener, {
-    bool fireImmediately = false,
-  });
 
   /// Tries to dispose the signal, if no observers are present
   void _mayDispose();

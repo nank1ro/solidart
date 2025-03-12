@@ -923,7 +923,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
 
   void _notifyChanged() {
     _reportChanged();
-    _notifyListeners();
     _notifySignalUpdate();
   }
 }

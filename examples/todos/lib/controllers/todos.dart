@@ -1,6 +1,6 @@
 import 'package:disco/disco.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_solidart/flutter_solidart.dart' hide Provider;
+import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:solidart_example/domain/todo.dart';
 
 final todosControllerProvider = Provider<TodosController>(
