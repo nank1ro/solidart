@@ -15,6 +15,8 @@ extension ObserveSignal<T> on SignalBase<T> {
   }) {
     var skipped = false;
     final disposeEffect = Effect(() {
+      // Tracks the value
+      value;
       if (!fireImmediately && !skipped) {
         skipped = true;
         return;
