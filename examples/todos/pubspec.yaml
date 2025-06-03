@@ -12,14 +12,14 @@ dependencies:
   disco: ^1.0.0
   flutter:
     sdk: flutter
-  flutter_solidart: ^2.0.0-dev.2
+  flutter_solidart: ^2.0.0
   uuid: ^4.5.1
 
 dev_dependencies:
   custom_lint: ^0.7.0
   flutter_test:
     sdk: flutter
-  solidart_lint: ^2.0.0-dev.2
+  solidart_lint: ^2.0.0
   very_good_analysis: ^7.0.0
 
 dependency_overrides:

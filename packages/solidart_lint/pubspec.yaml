@@ -1,6 +1,6 @@
 name: solidart_lint
 description: solidart_lint is a developer tool for users of solidart, designed to help stop common issues and simplify repetitive tasks
-version: 2.0.0-dev.2
+version: 2.0.0
 repository: https://github.com/nank1ro/solidart
 documentation: https://solidart.mariuti.com
 topics:
