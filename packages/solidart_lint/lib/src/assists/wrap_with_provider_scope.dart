@@ -1,8 +1,8 @@
 import 'package:analyzer/source/source_range.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-class WrapWithSolid extends DartAssist {
-  WrapWithSolid();
+class WrapWithProviderScope extends DartAssist {
+  WrapWithProviderScope();
 
   @override
   void run(
@@ -29,7 +29,7 @@ class WrapWithSolid extends DartAssist {
       changeBuilder.addDartFileEdit((builder) {
         builder.addSimpleInsertion(
             node.offset,
-            'Solid(\n'
+            'ProviderScope(\n'
             '  providers: [],\n'
             '  child: ');
         builder.addSimpleInsertion(node.end, ',\n)');
