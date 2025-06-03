@@ -121,12 +121,14 @@ class SignalBuilderElement extends ComponentElement {
     super.mount(parent, newSlot);
   }
 
+  // coverage:ignore-start
   @override
   void update(SignalBuilder newWidget) {
     super.update(newWidget);
     assert(widget == newWidget, 'The widget and newWidget must be the same');
     rebuild(force: true);
   }
+  // coverage:ignore-end
 
   @override
   void unmount() {

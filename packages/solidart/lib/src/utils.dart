@@ -61,8 +61,6 @@ class SolidartCaughtException extends SolidartException {
 Timer Function(void Function()) createDelayedScheduler(Duration duration) =>
     (fn) => Timer(duration, fn);
 
-/// coverage:ignore-end
-
 /// The `Option` class represents an optional value.
 
 /// It is either `Some` or `None`.
@@ -99,3 +97,5 @@ class None<T> extends Option<T> {
   /// {@macro none}
   const None();
 }
+
+/// coverage:ignore-end
