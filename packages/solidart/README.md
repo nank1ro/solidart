@@ -4,6 +4,8 @@
 [![GitHub issues](https://img.shields.io/github/issues/nank1ro/solidart)](https://github.com/nank1ro/solidart/issues/)
 [![GitHub pull-requests](https://img.shields.io/github/issues-pr/nank1ro/solidart.svg)](https://gitHub.com/nank1ro/solidart/pull/)
 [![solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/solidart?include_prereleases)](https://pub.dev/packages/solidart)
+[![flutter_solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/flutter_solidart?include_prereleases)](https://pub.dev/packages/flutter_solidart)
+[![All Contributors](https://img.shields.io/github/all-contributors/nank1ro/solidart?color=ee8449&style=flat-square)](#contributors)
 [![](https://dcbadge.vercel.app/api/server/2JBzeeQShh)](https://discord.gg/2JBzeeQShh)
 
 # A simple state-management library inspired by SolidJS.
@@ -17,16 +19,16 @@ The objectives of this project are:
 
 ## Learning
 
-For a comprehensive and updated documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart)
+For a comprehensive and updated documentation go to [The Official Documentation](https://solidart.mariuti.com)
 
-There are 4 main concepts you should be aware:
+There are 5 main concepts you should be aware:
 
-1. [Signals](#signals)
-2. [Effects](#effects)
+1. [Signal](#signal)
+2. [Effect](#effect)
 3. [Computed](#computed)
-4. [Resources](#resources)
+4. [Resource](#resource)
 
-### Signals
+### Signal
 
 Signals are the cornerstone of reactivity in _solidart_. They contain values that change over time; when you change a signal's value, it automatically updates anything that uses it.
 
@@ -42,23 +44,17 @@ The argument passed to the class is the initial value, and the return value is t
 To retrieve the current value, you can use:
 ```dart
 print(counter.value); // prints 0
-// or
-print(counter());
 ```
 
 To change the value, you can use:
 ```dart
-// Increments by 1
-counter.value++; 
 // Set the value to 2
 counter.value = 2;
-// equivalent to
-counter.set(2);
 // Update the value based on the current value
 counter.updateValue((value) => value * 2);
 ```
 
-### Effects
+### Effect
 
 Signals are trackable values, but they are only one half of the equation. To complement those are observers that can be updated by those trackable values. An effect is one such observer; it runs a side effect that depends on signals.
 
@@ -67,7 +63,7 @@ The effect automatically subscribes to any signal and reruns when any of them ch
 So let's create an Effect that reruns whenever `counter` changes:
 
 ```dart
-final disposeFn = Effect((_) {
+final disposeFn = Effect(() {
     print("The count is now ${counter.value}");
 });
 ```
@@ -90,7 +86,7 @@ name.set('Jane');
 print(fullName()); // prints "Jane Doe"
 ```
 
-### Resources
+### Resource
 
 Resources are special Signals designed specifically to handle Async loading. Their purpose is wrap async values in a way that makes them easy to interact with.
 
@@ -113,66 +109,29 @@ Future<String> fetchUser() async {
 }
 
 // The resource
-final user = Resource(fetcher: fetchUser, source: userId);
+final user = Resource(fetchUser, source: userId);
 ```
 
 A Resource can also be driven from a [stream] instead of a Future.
 In this case you just need to pass the `stream` field to the `Resource` class.
 
-If you're using `ResourceBuilder` you can react to the state of the resource:
+## Contributors
 
-```dart
-ResourceBuilder(
-  resource: user,
-  builder: (_, userState) {
-    return userState.on(
-      ready: (data) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(data),
-              subtitle:
-                  Text('refreshing: ${userState.isRefreshing}'),
-            ),
-            userState.isRefreshing
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: user.refresh,
-                    child: const Text('Refresh'),
-                  ),
-          ],
-        );
-      },
-      error: (e, _) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(e.toString()),
-            userState.isRefreshing
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: user.refresh,
-                    child: const Text('Refresh'),
-                  ),
-          ],
-        );
-      },
-      loading: () {
-        return const RepaintBoundary(
-          child: CircularProgressIndicator(),
-        );
-      },
-    );
-  },
-)
-```
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="http://www.bestofcode.dev"><img src="https://avatars.githubusercontent.com/u/60045235?v=4?s=100" width="100px;" alt="Alexandru Mariuti"/><br /><sub><b>Alexandru Mariuti</b></sub></a><br /><a href="https://github.com/nank1ro/solidart/commits?author=nank1ro" title="Code">💻</a> <a href="https://github.com/nank1ro/solidart/issues?q=author%3Anank1ro" title="Bug reports">🐛</a> <a href="#maintenance-nank1ro" title="Maintenance">🚧</a> <a href="#question-nank1ro" title="Answering Questions">💬</a> <a href="https://github.com/nank1ro/solidart/pulls?q=is%3Apr+reviewed-by%3Anank1ro" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/nank1ro/solidart/commits?author=nank1ro" title="Documentation">📖</a> <a href="https://github.com/nank1ro/solidart/commits?author=nank1ro" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/manuel-plavsic"><img src="https://avatars.githubusercontent.com/u/55398763?v=4?s=100" width="100px;" alt="manuel-plavsic"/><br /><sub><b>manuel-plavsic</b></sub></a><br /><a href="https://github.com/nank1ro/solidart/commits?author=manuel-plavsic" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/luketg8"><img src="https://avatars.githubusercontent.com/u/10770936?v=4?s=100" width="100px;" alt="Luke Greenwood"/><br /><sub><b>Luke Greenwood</b></sub></a><br /><a href="https://github.com/nank1ro/solidart/commits?author=luketg8" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/9dan"><img src="https://avatars.githubusercontent.com/u/32853831?v=4?s=100" width="100px;" alt="9dan"/><br /><sub><b>9dan</b></sub></a><br /><a href="https://github.com/nank1ro/solidart/commits?author=9dan" title="Code">💻</a> <a href="https://github.com/nank1ro/solidart/issues?q=author%3A9dan" title="Bug reports">🐛</a> <a href="https://github.com/nank1ro/solidart/commits?author=9dan" title="Documentation">📖</a></td>
+    </tr>
+  </tbody>
+</table>
 
-The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
-The are also other convenience methods to handle only specific states.
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
 
-## DevTools
-
-<img src="https://raw.githubusercontent.com/nank1ro/solidart/main/assets/devtools.png" width="100%">
-
-You can debug your application using the Solidart DevTools extension and filter your signals.
+<!-- ALL-CONTRIBUTORS-LIST:END -->

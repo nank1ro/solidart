@@ -11,21 +11,40 @@ to interact with handling the common states of a future or stream __data__, __er
 
 A __Resource__ extends a [Signal](/api-docs/signal), so all the API of __Signal__ are available.
 
-## Constructor
+## Constructors
+
+Future-based constructor:
 
 ```dart
-Resource({
-  Future<T> Function()? fetcher,
-  Stream<T>? Function()? stream,
-  ResourceOptions? options,
+Resource(
+  Future<T> Function() fetcher, {
   SignalBase<dynamic>? source,
+  String? name,
+  bool? equals,
+  bool? autoDispose,
+  bool? trackInDevTools,
+  bool lazy = true,
+});
+```
+
+Stream-based constructor:
+
+```dart
+Resource.stream(
+  Stream<T> Function() stream, {  
+  SignalBase<dynamic>? source,
+  String? name,
+  bool? equals,
+  bool? autoDispose,
+  bool? trackInDevTools,
+  bool lazy = true,
 });
 ```
 
 `fetcher` is the function that returns a `Future`.
 `stream` is the function that returns a `Stream`.
-`options` are the [options](/api-docs/resource-options) of the resource.
 `source` is the query to the async data `fetcher` or `stream` function that triggers the resource everytime it changes.
+the other parameters are the options of the resource.
 
 ```dart
 // Using http as a client, you can use any other client
@@ -43,7 +62,7 @@ Future<String> fetchUser() async {
 }
 
 // The resource (source is optional)
-final user = Resource(fetcher: fetchUser, source: userId);
+final user = Resource(fetchUser, source: userId);
 ```
 
 In the example above, just changing the `userId` value will trigger the `Resource` again.

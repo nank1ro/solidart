@@ -24,6 +24,15 @@ Signal(
 
 `options` are the [options](/api-docs/signal-options) of the signal.
 
+---
+
+```dart
+Signal.lazy();
+```
+
+`Signal.lazy` is a lazy signal, it doesn't need a value at the moment of creation.
+But would throw a StateError if you try to access the value before setting one.
+
 ## `set value(T newValue)`
 
 Sets the current signal value with `newValue`.

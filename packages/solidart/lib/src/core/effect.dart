@@ -3,71 +3,17 @@ part of 'core.dart';
 /// Dispose function
 typedef DisposeEffect = void Function();
 
-/// {@template effect-options}
-/// The effect options
-///
-/// The [name] of the effect, useful for logging
-/// The [delay] is used to delay each effect reaction
-/// {@endtemplate}
-@immutable
-class EffectOptions {
-  /// {@macro effect-options}
-  EffectOptions({
-    this.name,
-    this.delay,
-    bool? autoDispose,
-  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose;
-
-  /// The name of the effect, useful for logging
-  final String? name;
-
-  /// Delay each effect reaction
-  final Duration? delay;
-
-  /// Whether to automatically dispose the effect (defaults to true).
-  ///
-  /// This happens automatically when all the tracked dependencies are disposed.
-  final bool autoDispose;
-
-  // coverage:ignore-start
-
-  /// Creates a copy of this [EffectOptions] with the given [name].
-  EffectOptions copyWith({
-    String? name,
-  }) {
-    return EffectOptions(
-      name: name ?? this.name,
-      delay: delay,
-      autoDispose: autoDispose,
-    );
-  }
-
-  // coverage:ignore-end
-}
-
-// coverage:ignore-start
-
-/// {@macro effect}
-@Deprecated('Use Effect instead')
-DisposeEffect createEffect(
-  void Function(DisposeEffect dispose) callback, {
-  ErrorCallback? onError,
-  EffectOptions? options,
-}) {
-  return Effect(callback, onError: onError, options: options).dispose;
-}
-// coverage:ignore-end
-
 /// The reaction interface
-abstract class ReactionInterface implements Derivation {
+abstract class ReactionInterface {
   /// Indicate if the reaction is dispose
   bool get disposed;
 
+  /// Tries to dispose the effects, if no listeners are present
+  // ignore: unused_element
+  void _mayDispose();
+
   /// Disposes the reaction
   void dispose();
-
-  /// Runs the reaction
-  void _run();
 }
 
 /// {@template effect}
@@ -100,7 +46,7 @@ abstract class ReactionInterface implements Derivation {
 /// The `Effect` method returns a `Dispose` class giving you a more
 /// advanced usage:
 /// ```dart
-/// final dispose = Effect((_) {
+/// final dispose = Effect(() {
 ///     print("The count is now ${counter.value}");
 /// });
 /// ```
@@ -121,28 +67,40 @@ abstract class ReactionInterface implements Derivation {
 ///
 ///
 /// Any effect runs at least once immediately when is created with the current
-/// signals values
+/// signals values.
 ///
 /// > An effect is useless after it is disposed, you must not use it anymore.
 /// {@endtemplate}
 class Effect implements ReactionInterface {
   /// {@macro effect}
   factory Effect(
-    void Function(DisposeEffect dispose) callback, {
+    void Function() callback, {
     ErrorCallback? onError,
-    EffectOptions? options,
+
+    /// The name of the effect, useful for logging
+    String? name,
+
+    /// Delay each effect reaction
+    Duration? delay,
+
+    /// Whether to automatically dispose the effect (defaults to true).
+    ///
+    /// This happens automatically when all the tracked dependencies are
+    /// disposed.
+    bool? autoDispose,
   }) {
     late Effect effect;
-    final name = options?.name ?? ReactiveContext.main.nameFor('Effect');
-    final effectiveOptions = (options ?? EffectOptions()).copyWith(name: name);
-    if (effectiveOptions.delay == null) {
+    final effectiveName = name ?? ReactiveName.nameFor('Effect');
+    final effectiveAutoDispose = autoDispose ?? SolidartConfig.autoDispose;
+    if (delay == null) {
       effect = Effect._internal(
-        callback: () => effect._track(() => callback(effect.dispose)),
+        callback: () => callback(),
         onError: onError,
-        options: effectiveOptions,
+        name: effectiveName,
+        autoDispose: effectiveAutoDispose,
       );
     } else {
-      final scheduler = createDelayedScheduler(effectiveOptions.delay!);
+      final scheduler = createDelayedScheduler(delay);
       var isScheduled = false;
       Timer? timer;
 
@@ -159,7 +117,7 @@ class Effect implements ReactionInterface {
             timer = scheduler(() {
               isScheduled = false;
               if (!effect.disposed) {
-                effect._track(() => callback(effect.dispose));
+                callback();
               } else {
                 // coverage:ignore-start
                 timer?.cancel();
@@ -168,11 +126,11 @@ class Effect implements ReactionInterface {
             });
           }
         },
-        options: effectiveOptions,
         onError: onError,
+        name: effectiveName,
+        autoDispose: effectiveAutoDispose,
       );
     }
-    // ignore: cascade_invocations
     effect._schedule();
     return effect;
   }
@@ -180,121 +138,45 @@ class Effect implements ReactionInterface {
   /// {@macro effect}
   Effect._internal({
     required VoidCallback callback,
-    required this.options,
+    required this.name,
+    required this.autoDispose,
     ErrorCallback? onError,
-  })  : _onError = onError,
-        name = options.name!,
-        _callback = callback;
+  }) : _onError = onError {
+    _internalEffect = _AlienEffect(callback, parent: this);
+  }
 
   /// The name of the effect, useful for logging purposes.
   final String name;
 
-  /// The callback that is fired each time a signal updates.
-  final VoidCallback _callback;
+  /// Whether to automatically dispose the effect (defaults to true).
+  final bool autoDispose;
 
   /// Optionally handle the error case
   final ErrorCallback? _onError;
 
-  /// {@macro effect-options}
-  final EffectOptions options;
-
-  final _context = ReactiveContext.main;
-  bool _isScheduled = false;
   bool _disposed = false;
-  bool _isRunning = false;
 
-  @override
-  // ignore: prefer_final_fields
-  DerivationState _dependenciesState = DerivationState.notTracking;
+  late final _AlienEffect _internalEffect;
 
-  @override
-  SolidartCaughtException? _errorValue;
+  final _deps = <alien.Dependency>{};
 
-  @override
-  Set<Atom>? _newObservables;
+  /// The subscriber of the effect, do not use it directly.
+  @protected
+  alien.Subscriber get subscriber => _internalEffect;
 
   @override
   bool get disposed => _disposed;
 
-  final Set<Atom> __observables = {};
-
-  @override
-  // ignore: prefer_final_fields
-  Set<Atom> get _observables => __observables;
-
-  @override
-  set _observables(Set<Atom> newObservables) {
-    __observables
-      ..clear()
-      ..addAll(newObservables);
-  }
-
-  @override
-  void _onBecomeStale() {
-    _schedule();
-  }
-
   void _schedule() {
-    if (_isScheduled) {
-      return;
-    }
-
-    _isScheduled = true;
-    _context
-      ..addPendingReaction(this)
-      ..runReactions();
-  }
-
-  void _track(void Function() fn) {
-    _context.startBatch();
-
-    _isRunning = true;
-    _context.trackDerivation(this, fn);
-    _isRunning = false;
-
-    if (_disposed) {
-      _context.clearObservables(this);
-    }
-
-    if (_context.hasCaughtException(this)) {
-      if (_onError != null) {
-        _onError!.call(_errorValue!);
-      }
-      // coverage:ignore-start
-      else {
-        throw _errorValue!;
-      }
-      // coverage:ignore-end
-    }
-
-    _context.endBatch();
-  }
-
-  @override
-  void _run() {
-    if (_disposed) return;
-
-    _context.startBatch();
-
-    _isScheduled = false;
-
-    if (_context.shouldCompute(this)) {
-      try {
-        _callback();
-      } on Object catch (e, s) {
-        // coverage:ignore-start
-        // Note: "on Object" accounts for both Error and Exception
-        _errorValue = SolidartCaughtException(e, stackTrace: s);
-        if (_onError != null) {
-          _onError!.call(_errorValue!);
-        } else {
-          throw _errorValue!;
-        }
-        // coverage:ignore-end
+    try {
+      _internalEffect.run();
+    } catch (e, s) {
+      _onError?.call(SolidartCaughtException(e, stackTrace: s));
+    } finally {
+      if (SolidartConfig.autoDispose) {
+        Future.microtask(_mayDispose);
       }
     }
-
-    _context.endBatch();
   }
 
   /// Invalidates the effect.
@@ -310,20 +192,34 @@ class Effect implements ReactionInterface {
     if (_disposed) return;
     _disposed = true;
 
-    if (_isRunning) return;
+    _internalEffect.dispose();
 
-    // ignore: cascade_invocations
-    _context
-      ..startBatch()
-      ..clearObservables(this)
-      ..endBatch();
+    for (final dep in _deps) {
+      // if (dep is Signal) dep._mayDispose();
+      // if (dep is Computed) dep._mayDispose();
+      if (dep is _AlienSignal) dep.parent._mayDispose();
+      if (dep is _AlienComputed) dep.parent._mayDispose();
+    }
+
+    _deps.clear();
   }
 
   @override
   void _mayDispose() {
-    if (options.autoDispose &&
-        (_observables.isEmpty || _observables.every((ob) => ob.disposed))) {
-      dispose();
+    if (_disposed) return;
+
+    if (SolidartConfig.autoDispose) {
+      _deps.clear();
+      var link = _internalEffect.deps;
+      for (; link != null; link = link.nextDep) {
+        final dep = link.dep;
+
+        _deps.add(dep);
+      }
+      if (!autoDispose || _disposed) return;
+      if (_internalEffect.deps?.dep == null) {
+        dispose();
+      }
     }
   }
 }

@@ -1,0 +1,113 @@
+---
+title: Automatic disposal
+description: Learn Automatic Disposal in solidart
+sidebar:
+  order: 1
+---
+import { Aside } from '@astrojs/starlight/components';
+
+<Aside type="tip">**TL;DR**: Always dispose Effects and Observations, the rest will be disposed automatically.</Aside>
+
+By default when you create a `Signal`, `Computed`, `Resource` or `Effect` the library will dispose them automatically.
+
+You can customize this behaviour for a specific trackable Object using the options, for example for a `Signal` you have to create it with `autoDispose` set to `false`.
+
+```dart
+final counter = Signal(0, autoDispose: false);
+```
+
+If you want to disable it globally instead, use
+
+```dart
+SolidartConfig.autoDispose = false;
+```
+
+The automatic disposal happens automatically when there are no longer subscribers and listeners (for `Signal`, `Computed`, `Resource`) and when the __currently__ tracked dependencies are all disposed (for `Effect`).
+
+There is a single case that the automatic disposal won't cover:
+
+```dart
+final count = Signal(0);
+
+@override
+void initState() {
+  super.initState();
+  Effect(() {
+      print("The count is ${count.value}");
+    },
+  );
+}
+
+@override
+void dispose() {
+  // nothing disposed manually here
+  super.dispose();
+}
+```
+
+In the example above the `count` signal will not be disposed because the `Effect` is a subscriber, and the `Effect` won't be disposed because the `count` that watches is not disposed. So they're going to be alive forever.
+In order to fix this we need to dispose the `Effect` manually:
+
+```dart
+final count = Signal(0);
+late final DisposeEffect disposeEffect;
+
+@override
+void initState() {
+  super.initState();
+  disposeEffect = Effect(() {
+      print("The count is ${count.value}");
+    },
+  );
+}
+
+@override
+void dispose() {
+  disposeEffect();
+  super.dispose();
+}
+```
+
+In this case the `count` signal would be disposed because the subscriber is disposed and no longer watches it.
+This would work also if you disposed only the `count` instead of the `Effect`.
+
+But I suggest to always dispose the `Effect` because it's always one, but if it is tracking multiple signals, all of them need to be disposed in order for the effect to dispose, for example:
+
+```dart
+final count = Signal(0);
+final name = Signal('Alex');
+
+@override
+void initState() {
+  super.initState();
+  Effect(() {
+      print("The count is ${count.value} and the name is ${name.value}");
+    },
+  );
+}
+
+@override
+void dispose() {
+  count.dispose();
+  name.dispose();
+  super.dispose();
+}
+```
+
+As you can see both the `count` and `name` signals needs to be disposed in order for the `Effect` to dispose.
+This is the reason why I suggest to always dispose the `Effect`.
+
+<Aside>The same behavior applies to `Observation`</Aside>
+
+In any case, don't worry to call `dispose()` yourself. It won't produce any error if it's already disposed. It just skips the operation.
+In fact in the source code the operation is skipped if the object is already disposed:
+
+```dart
+@override
+void dispose() {
+  // ignore if already disposed
+  if (_disposed) return;
+  ...
+}
+```
+

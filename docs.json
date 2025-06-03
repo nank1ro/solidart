@@ -53,6 +53,10 @@
         [
           "Computed",
           "/learning/computed"
+        ],
+        [
+          "Batch",
+          "/learning/batch"
         ]
       ]
     ],
@@ -66,10 +70,6 @@
         [
           "SignalBuilder",
           "/flutter/signal-builder"
-        ],
-        [
-          "ResourceBuilder",
-          "/flutter/resource-builder"
         ],
         [
           "Solid",
@@ -92,6 +92,15 @@
         [
           "Introduction",
           "/testing/introduction"
+        ]
+      ]
+    ],
+    [
+      "Migration",
+      [
+        [
+          "Migration",
+          "/migration"
         ]
       ]
     ],
@@ -137,10 +146,6 @@
         [
           "SignalBuilder",
           "/api-docs/signal-builder"
-        ],
-        [
-          "ResourceBuilder",
-          "/api-docs/resource-builder"
         ],
         [
           "Solid",

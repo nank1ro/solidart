@@ -23,18 +23,18 @@ class WrapWithShow extends DartAssist {
 
       final changeBuilder = reporter.createChangeBuilder(
         message: 'Wrap with Show',
-        priority: 1,
+        priority: 0,
       );
 
       changeBuilder.addDartFileEdit((builder) {
         builder.addSimpleInsertion(
             node.offset,
             'Show(\n'
-            'when: null,\n'
-            'fallback: null,\n'
-            'builder: (context) {\n'
-            'return ');
-        builder.addSimpleInsertion(node.end, '; },)');
+            '  when: null,\n'
+            '  fallback: null,\n'
+            '  builder: (context) {\n'
+            '    return ');
+        builder.addSimpleInsertion(node.end, ';\n  },\n)');
       });
     });
   }

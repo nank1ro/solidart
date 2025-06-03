@@ -1,27 +1,28 @@
 name: flutter_solidart
 description: A simple State Management solution for Flutter applications inspired by SolidJS
-version: 1.7.1
+version: 2.0.0
 repository: https://github.com/nank1ro/solidart
-documentation: https://docs.page/nank1ro/solidart~dev
+documentation: https://solidart.mariuti.com
 topics:
   - state-management
   - signals
 
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.6.0
   flutter: ">=1.17.0"
+
+resolution: workspace
 
 dependencies:
   collection: ^1.18.0
   flutter:
     sdk: flutter
   meta: ^1.11.0
-  solidart: ^1.5.4
+  solidart: ^2.0.0
 
 dev_dependencies:
+  disco: ^1.0.0
   flutter_test:
     sdk: flutter
   mockito: ^5.4.4
-  very_good_analysis: ^5.1.0
-
-flutter:
+  very_good_analysis: ^7.0.0

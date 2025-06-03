@@ -1,0 +1,38 @@
+---
+title: SignalBuilder
+description: Learn SignalBuilder in flutter_solidart
+sidebar:
+  order: 1
+---
+
+A magic widget builder that automatically rebuilds everytime a signal used inside its builder changes.
+
+Reacts to any number of *signals* calling the `builder` each time.
+
+The `builder` argument must not be null.
+
+The `child` is optional but is good practice to use if part of the widget
+subtree does not depend on the value of the *signals*.
+
+```dart {9} {13-17}
+class SampleCounter extends StatefulWidget {
+  const SampleCounter({super.key});
+
+  @override
+  State<SampleCounter> createState() => _SampleCounterState();
+}
+
+class _SampleCounterState extends State<SampleCounter> {
+  final counter = Signal(0);
+
+  @override
+  Widget build(BuildContext context) {
+    return SignalBuilder(
+      builder: (context, child) {
+        return Text(counter.value.toString());
+      },
+    );
+  }
+}
+```
+

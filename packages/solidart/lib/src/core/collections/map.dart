@@ -17,32 +17,55 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// {@macro map-signal}
   factory MapSignal(
     Map<K, V> initialValue, {
-    SignalOptions<Map<K, V>>? options,
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    ValueComparator<Map<K, V>?> comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('MapSignal');
-    final effectiveOptions =
-        (options ?? SignalOptions<Map<K, V>>(name: name)).copyWith(name: name);
     return MapSignal._internal(
       initialValue: Map<K, V>.of(initialValue),
-      options: effectiveOptions,
-      name: name,
+      name: name ?? ReactiveName.nameFor('MapSignal'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      trackPreviousValue:
+          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
+      comparator: comparator,
     );
   }
 
   MapSignal._internal({
     required super.initialValue,
     required super.name,
-    required super.options,
+    required super.equals,
+    required super.autoDispose,
+    required super.trackInDevTools,
+    required super.comparator,
+    required super.trackPreviousValue,
   }) : super._internal();
 
   @override
-  void _setValue(Map<K, V> newValue) {
-    if (_areEqual(_value, newValue)) {
-      return;
+  Map<K, V> _setValue(Map<K, V> newValue) {
+    if (_compare(_value, newValue)) {
+      return newValue;
     }
     _setPreviousValue(Map<K, V>.of(_value));
-    _value = newValue;
+    _untrackedValue = _value = newValue;
     _notifyChanged();
+    return newValue;
   }
 
   @override
@@ -50,14 +73,14 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
       value = callback(Map<K, V>.of(_value));
 
   @override
-  bool _areEqual(Map<K, V>? oldValue, Map<K, V>? newValue) {
+  bool _compare(Map<K, V>? oldValue, Map<K, V>? newValue) {
     // skip if the value are equals
-    if (options.equals) {
+    if (equals) {
       return MapEquality<K, V>().equals(oldValue, newValue);
     }
 
     // return the [comparator] result
-    return options.comparator!(oldValue, newValue);
+    return comparator(oldValue, newValue);
   }
 
   /// The value for the given [key], or `null` if [key] is not in the map.
@@ -69,7 +92,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// is important.
   @override
   V? operator [](Object? key) {
-    _reportObserved();
+    value;
 
     // Wrap in parentheses to avoid parsing conflicts when casting the key
     return _value[(key as K?)];
@@ -116,7 +139,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// Modifying the map while iterating the keys may break the iteration.
   @override
   Iterable<K> get keys {
-    _reportObserved();
+    value;
     return _value.keys;
   }
 
@@ -133,7 +156,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// Modifying the map while iterating the values may break the iteration.
   @override
   Iterable<V> get values {
-    _reportObserved();
+    value;
     return _value.values;
   }
 
@@ -185,21 +208,21 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// The number of key/value pairs in the map.
   @override
   int get length {
-    _reportObserved();
+    value;
     return _value.length;
   }
 
   /// Whether there is no key/value pair in the map.
   @override
   bool get isEmpty {
-    _reportObserved();
+    value;
     return _value.isEmpty;
   }
 
   /// Whether there is at least one key/value pair in the map.
   @override
   bool get isNotEmpty {
-    _reportObserved();
+    value;
     return _value.isNotEmpty;
   }
 
@@ -215,7 +238,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   bool containsKey(Object? key) {
-    _reportObserved();
+    value;
     return _value.containsKey(key);
   }
 
@@ -231,14 +254,14 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   bool containsValue(Object? value) {
-    _reportObserved();
+    this.value;
     return _value.containsValue(value);
   }
 
   /// The map entries of the Map.
   @override
   Iterable<MapEntry<K, V>> get entries {
-    _reportObserved();
+    value;
     return _value.entries;
   }
 
@@ -313,7 +336,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   @override
   V putIfAbsent(K key, V Function() ifAbsent) {
     if (_value.containsKey(key)) {
-      _reportObserved();
+      value;
       return _value[key] as V;
     }
     _setPreviousValue(Map<K, V>.of(_value));
@@ -417,11 +440,10 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
 
   @override
   String toString() =>
-      '''MapSignal<$K, $V>(value: $_value, previousValue: $_previousValue, options; $options)''';
+      '''MapSignal<$K, $V>(value: $_value, previousValue: $_previousValue)''';
 
   void _notifyChanged() {
     _reportChanged();
-    _notifyListeners();
     _notifySignalUpdate();
   }
 }

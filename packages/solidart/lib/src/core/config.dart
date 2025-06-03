@@ -4,12 +4,22 @@ part of 'core.dart';
 /// The global configuration of the reactive system.
 /// {@endtemplate}
 abstract class SolidartConfig {
+  /// Whether to use the equality operator when updating the signal, defaults to
+  /// false
+  static bool equals = false;
+
   /// Whether to enable the auto disposal of the reactive system, defaults to
   /// true.
   static bool autoDispose = true;
 
-  /// Whether to enable the DevTools extension, defaults to kDebugMode.
-  static bool devToolsEnabled = true;
+  /// Whether to enable the DevTools extension, defaults to false.
+  static bool devToolsEnabled = false;
+
+  /// Whether to track the previous value of the signal, defaults to true.
+  static bool trackPreviousValue = true;
+
+  /// {@macro Resource.useRefreshing}
+  static bool useRefreshing = true;
 
   /// The list of observers.
   static final observers = <SolidartObserver>[];

@@ -13,7 +13,7 @@ class ListSignalPage extends StatefulWidget {
 }
 
 class _ListSignalPageState extends State<ListSignalPage> {
-  final items = ListSignal([1, 2], options: SignalOptions(name: 'items'));
+  final items = ListSignal([1, 2], name: 'items');
 
   @override
   void initState() {
@@ -39,8 +39,7 @@ class _ListSignalPageState extends State<ListSignalPage> {
           children: [
             Expanded(
               child: SignalBuilder(
-                signal: items,
-                builder: (context, items, __) {
+                builder: (context, child) {
                   return ListView.separated(
                     itemCount: items.length,
                     itemBuilder: (BuildContext context, int index) {

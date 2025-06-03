@@ -19,9 +19,8 @@ import 'package:solidart/solidart.dart';
 /// @override
 /// Widget build(BuildContext context) {
 ///   return SignalBuilder(
-///     signal: loggedIn,
-///     builder: (context, isUserLoggedIn, child) {
-///       if (isUserLoggedIn) return const Text('Logged in');
+///     builder: (context, child) {
+///       if (loggedIn()) return const Text('Logged in');
 ///       return const Text('Logged out');
 ///     },
 ///   );
@@ -96,7 +95,7 @@ class _ShowState<T extends bool> extends State<Show<T>> {
   @override
   void initState() {
     super.initState();
-    disposeEffect = Effect((_) {
+    disposeEffect = Effect(() {
       show.value = widget.when();
     }).call;
   }
@@ -114,7 +113,7 @@ class _ShowState<T extends bool> extends State<Show<T>> {
       valueListenable: show,
       builder: (context, condition, _) {
         if (!condition) {
-          return widget.fallback?.call(context) ?? const SizedBox();
+          return widget.fallback?.call(context) ?? const SizedBox.shrink();
         }
         return widget.builder(context);
       },

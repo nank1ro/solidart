@@ -9,14 +9,14 @@ class EffectsPage extends StatefulWidget {
 }
 
 class _EffectsPageState extends State<EffectsPage> {
-  final count = Signal(0, options: SignalOptions(name: 'count'));
+  final count = Signal(0, name: 'count');
   late final DisposeEffect disposeEffect;
 
   @override
   void initState() {
     super.initState();
     disposeEffect = Effect(
-      (disposeFn) {
+      () {
         // ignore: avoid_print
         print("The count is now ${count.value}");
       },
@@ -39,11 +39,9 @@ class _EffectsPageState extends State<EffectsPage> {
           children: [
             const Text('Check the console to see the effect printing'),
             const SizedBox(height: 16),
-            SignalBuilder(
-                signal: count,
-                builder: (context, value, __) {
-                  return Text('Count: $value');
-                }),
+            SignalBuilder(builder: (context, child) {
+              return Text('Count: ${count.value}');
+            }),
           ],
         ),
       ),

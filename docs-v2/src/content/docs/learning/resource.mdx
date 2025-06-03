@@ -1,0 +1,56 @@
+---
+title: Resource
+description: Learn resources in solidart
+sidebar:
+  order: 4
+---
+
+`Resources` are special `Signal`s designed specifically to handle __async loading__. Their purpose is wrap async values in a way that makes them easy to interact with handling the common states of a future __data__, __error__ and __loading__.
+
+Resources can be driven by a `source` signal that provides the query to an async data.
+
+The contents of the function can be anything. You can hit typical REST endpoints or GraphQL or anything that generates a future or a stream. Resources are not opinionated on the means of loading the data, only that they are driven by futures and streams.
+
+Let's create a Resource:
+
+```dart
+// Using http as a client
+import 'package:http/http.dart' as http;
+
+// The source
+final userId = Signal(1);
+
+// The fetcher
+Future<String> fetchUser() async {
+    final response = await http.get(
+      Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
+    );
+    return response.body;
+}
+
+// The resource (source is optional)
+final user = Resource(fetchUser, source: userId);
+```
+
+A Resource can also be driven from a `Stream` instead of a `Future`, and can be created with `Resource.stream(() => stream)`.
+
+The resource has a value named `ResourceState`, that provides many useful convenience methods to correctly handle the state of the resource.
+
+The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
+The are also other convenience methods to handle only specific states:
+- `on` forces you to handle all the states of a Resource
+- `maybeOn` lets you decide which states to handle and provide an `orElse` action for unhandled states
+- `map` equal to `on` but gives access to the `ResourceState` data class
+- `maybeMap` equal to `maybeOn` but gives access to the `ResourceState` data class
+- `isReady` indicates if the `Resource` is in the ready state
+- `isLoading` indicates if the `Resource` is in the loading state
+- `hasError` indicates if the `Resource` is in the error state
+- `asReady` upcast `ResourceState` into a `ResourceReady`, or return null if the `ResourceState` is in loading/error state
+- `asError` upcast `ResourceState` into a `ResourceError`, or return null if the `ResourceState` is in loading/ready state
+- `value` attempts to synchronously get the value of `ResourceReady`
+- `error` attempts to synchronously get the error of `ResourceError`
+
+A `Resource` provides the `fetch` and `refresh` methods.
+
+The `refresh` method forces an update and calls the `fetcher` function again or subscribes again to the `stream`.
+

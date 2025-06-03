@@ -1,3 +1,52 @@
+## 2.0.0
+
+- **BREAKING CHANGE**: Remove `Solid` and `Provider`s, use [disco](https://pub.dev/packages/disco) instead.
+- **FEAT**: The `SignalBuilder` widget now automatically tracks the `Signal`s used in the `builder` function allowing you to react to N signals at the same time. See the [migration guide](https://docs.page/nank1ro/solidart~dev/migration).
+- **BREAKING CHANGE**: Removed `DualSignalBuilder` and `TripleSignalBuilder` in favor of `SignalBuilder`.
+- **BREAKING CHANGE**: Removed `ResourceBuilder` in favor of `SignalBuilder`. See the [migration guide](https://docs.page/nank1ro/solidart~dev/migration).
+
+### Changes from solidart
+
+- **CHORE**: Improve the performance by using `alien_signals` for the reactive system.
+- **FEAT**: Expose `untracked`.
+- **REFACTOR**: Updated the reactive system from scratch, improving the performances.
+- **BREAKING CHANGE**: Remove `set` and `call` methods from Signals (Use an extension to have them back).
+- **FEAT**: Add `useRefreshing` to `Resource` to decide whether to update the current state with `isRefreshing` (defaults to true). If you set it to false, when refreshing, the resource will go directly to the loading state.
+- **FEAT**: Add `Signal.lazy` to allow the creation of a signal without an initial value. Be aware, the signal will throw an error if you try to read its value before it has been initialized.
+- **CHORE**: Remove deprecated `createSignal`, `createComputed`, `createEffect` and `createResource` helpers.
+- **CHORE**: Remove `SignalOptions` and `ResourceOptions` classes.
+- **FEAT**: Add `batch` function to execute a callback that will not side-effect until its top-most batch is completed. See docs [here](https://solidart.mariuti.com/learning/batch)
+- **CHORE**: Add `trackInDevTools` to `SignalOptions` and `ResourceOptions` to disable the DevTools tracking for specific signals and resources, defaults to `SolidartConfig.devToolsEnabled`.
+
+## 2.0.0-dev.3
+
+- **BREAKING CHANGE**: Remove `Solid` and `Provider`s, use [disco](https://pub.dev/packages/disco) instead.
+
+### Changes from solidart
+
+- **REFACTOR**: Updated the reactive system from scratch, improving the performances.
+- **BREAKING CHANGE**: Remove `set` and `call` methods from Signals (Use an extension to have them back).
+- **FEAT**: Add `useRefreshing` to `Resource` to decide whether to update the current state with `isRefreshing` (defaults to true). If you set it to false, when refreshing, the resource will go directly to the loading state.
+
+## 2.0.0-dev.2
+
+### Changes from solidart
+
+- *CHORE*: Remove deprecated `createSignal`, `createComputed`, `createEffect` and `createResource` helpers.
+- *CHORE*: Remove `SignalOptions` and `ResourceOptions` classes.
+
+## 2.0.0-dev.1
+
+- **FEAT**: The `SignalBuilder` widget now automatically tracks the `Signal`s used in the `builder` function allowing you to react to N signals at the same time. See the [migration guide](https://docs.page/nank1ro/solidart~dev/migration).
+- **BREAKING CHANGE**: Removed `DualSignalBuilder` and `TripleSignalBuilder` in favor of `SignalBuilder`.
+- **BREAKING CHANGE**: Removed `ResourceBuilder` in favor of `SignalBuilder`. See the [migration guide](https://docs.page/nank1ro/solidart~dev/migration).
+- **CHORE**: Improved `Solid` widget performance by more than 3000% in finding ancestor providers.
+
+### Changes from solidart
+
+- **FEAT**: Add `batch` function to execute a callback that will not side-effect until its top-most batch is completed. See docs [here](https://docs.page/nank1ro/solidart~dev/learning/batch)
+- **CHORE**: Add `trackInDevTools` to `SignalOptions` and `ResourceOptions` to disable the DevTools tracking for specific signals and resources, defaults to `SolidartConfig.devToolsEnabled`.
+
 ## 1.7.1
 
 - Update dependencies
@@ -25,7 +74,7 @@
 
 ### Changes from solidart
 
-- **FEAT**: Automatic disposal, [see the docs here](https://docs.page/nank1ro/solidart/advanced/automatic-disposal)
+- **FEAT**: Automatic disposal, [see the docs here](https://docs.page/nank1ro/solidart~dev/advanced/automatic-disposal)
 
 ## 1.4.3
 
