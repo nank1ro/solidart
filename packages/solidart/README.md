@@ -19,7 +19,7 @@ The objectives of this project are:
 
 ## Learning
 
-For a comprehensive and updated documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart~dev)
+For a comprehensive and updated documentation go to [The Official Documentation](https://solidart.mariuti.com)
 
 There are 5 main concepts you should be aware:
 
@@ -114,85 +114,6 @@ final user = Resource(fetchUser, source: userId);
 
 A Resource can also be driven from a [stream] instead of a Future.
 In this case you just need to pass the `stream` field to the `Resource` class.
-
-If you're using `SignalBuilder` you can react to the state of the resource:
-
-```dart
-SignalBuilder(
-  builder: (_, __) {
-    return user.state.on(
-      ready: (data) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(data),
-              subtitle:
-                  Text('refreshing: ${userState.isRefreshing}'),
-            ),
-            userState.isRefreshing
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: user.refresh,
-                    child: const Text('Refresh'),
-                  ),
-          ],
-        );
-      },
-      error: (e, _) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(e.toString()),
-            userState.isRefreshing
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: user.refresh,
-                    child: const Text('Refresh'),
-                  ),
-          ],
-        );
-      },
-      loading: () {
-        return const RepaintBoundary(
-          child: CircularProgressIndicator(),
-        );
-      },
-    );
-  },
-)
-```
-
-The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
-The are also other convenience methods to handle only specific states.
-
-## DevTools
-
-<img src="https://raw.githubusercontent.com/nank1ro/solidart/main/assets/devtools.png" width="100%">
-
-You can debug your application using the Solidart DevTools extension and filter your signals.
-
-## Examples
-
-### Sample features using flutter_solidart:
-
-- [Counter](https://zapp.run/github/nank1ro/solidart/tree/main/examples/counter)
-- [Toggle theme (dark/light mode)](https://zapp.run/github/nank1ro/solidart/tree/main/examples/toggle_theme)
-- [Todos](https://zapp.run/github/nank1ro/solidart/tree/main/examples/todos)
-- [Github Search](https://zapp.run/github/nank1ro/solidart/tree/main/examples/github_search)
-
-### Showcase of all flutter_solidart features
-
-- [Showcase of all features](https://zapp.run/github/nank1ro/solidart/tree/main/packages/flutter_solidart/example)
-
-Learn every feature of `flutter_solidart` including:
-
-1. `Signal`
-2. `Show` widget
-3. `Computed`
-4. `Effect`s
-5. `SignalBuilder`, `DualSignalBuilder` and `TripleSignalBuilder`
-6. `Resource`
 
 ## Contributors
 
