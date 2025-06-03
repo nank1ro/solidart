@@ -1,3 +1,5 @@
+// ignore_for_file: document_ignores
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';

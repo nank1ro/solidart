@@ -1,5 +1,5 @@
 /// Flutter solidart library.
-library flutter_solidart;
+library;
 
 export 'package:solidart/solidart.dart';
 
