@@ -33,7 +33,7 @@ dependencies:
   disco: ^1.0.0
   flutter:
     sdk: flutter
-  flutter_solidart: ^2.0.0-dev.3
+  flutter_solidart: ^2.0.0
   json_annotation: ^4.8.1
   equatable: ^2.0.5
   http: ^1.3.0

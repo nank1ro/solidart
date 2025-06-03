@@ -31,7 +31,7 @@ dependencies:
   disco: ^1.0.0
   flutter:
     sdk: flutter
-  flutter_solidart: ^2.0.0-dev.3
+  flutter_solidart: ^2.0.0
 
 dev_dependencies:
   custom_lint: ^0.7.0
