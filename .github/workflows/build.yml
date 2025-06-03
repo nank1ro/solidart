@@ -26,9 +26,7 @@ jobs:
           channel: "stable"
 
       - name: Install dependencies
-        run: |
-          flutter pub get
-          cd packages/flutter_solidart/example && flutter pub get && cd ../..
+        run: flutter pub get
 
       - name: Install melos
         run: dart pub global activate melos
