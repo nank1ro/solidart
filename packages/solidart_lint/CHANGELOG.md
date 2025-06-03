@@ -3,6 +3,15 @@
 - Fix `LintCode` issue (thanks to @manuel-plavsic)
 - Remove the deprecated `invalid_observe_type` lint
 - Remove `Wrap with ResourceBuilder` assist
+- Fix `LintCode` issue (thanks to @manuel-plavsic)
+- Remove the deprecated `invalid_observe_type` lint
+- Remove `Wrap with ResourceBuilder` assist
+
+## 2.0.0-dev.3
+
+- Fix `LintCode` issue (thanks to @manuel-plavsic)
+- Remove the deprecated `invalid_observe_type` lint
+- Remove `Wrap with ResourceBuilder` assist
 
 ## 2.0.0-dev.2
 
