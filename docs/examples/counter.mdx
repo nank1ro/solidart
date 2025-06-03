@@ -17,21 +17,13 @@ final counter = Signal(0);
 
 Starting it from the `0` value.
 
-In the `dispose()` method we dispose the signal:
-```dart
-@override
-void dispose() {
-  counter.dispose();
-  super.dispose();
-}
-```
+> There is no `counter.dispose` as you may have noticed, because by default solidart will auto dispose signals when there are no more listeners.
 
 To display the `counter` value we've used a `SignalBuilder` that rebuild any time the `counter` value changes:
 ```dart
 SignalBuilder(
-  signal: counter,
-  builder: (_, value, __) {
-    return Text('$value');
+  builder: (_, __) {
+    return Text('${counter.value}');  
   },
 )
 ```

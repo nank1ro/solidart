@@ -1,10 +1,17 @@
 part of 'core.dart';
 
 /// {@macro readsignal}
-@Deprecated(
-  '''Use ReadSignal instead. It will be removed in future releases.''',
-)
-typedef ReadableSignal<T> = ReadSignal<T>;
+abstract class ReadSignal<T> extends SignalBase<T> {
+  /// {@macro readsignal}
+  ReadSignal({
+    required super.name,
+    super.comparator,
+    super.equals,
+    super.autoDispose,
+    super.trackInDevTools,
+    super.trackPreviousValue,
+  });
+}
 
 /// {@template readsignal}
 /// A read-only [Signal].
@@ -13,35 +20,102 @@ typedef ReadableSignal<T> = ReadSignal<T>;
 /// you should consider transforming it in a [ReadSignal]
 /// using the `toReadSignal` method.
 ///
-/// All derived-signals are [ReadSignal]s because they depend
+/// All derived-signals are [ReadableSignal]s because they depend
 /// on the value of a [Signal].
 /// {@endtemplate}
-class ReadSignal<T> extends Atom implements SignalBase<T> {
+class ReadableSignal<T> implements ReadSignal<T> {
   /// {@macro readsignal}
-  factory ReadSignal(
+  factory ReadableSignal(
     T initialValue, {
-    SignalOptions<T>? options,
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    ValueComparator<T?> comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('ReadSignal');
-    final effectiveOptions =
-        (options ?? SignalOptions<T>(name: name)).copyWith(name: name);
-    return ReadSignal._internal(
+    return ReadableSignal._internal(
       initialValue: initialValue,
-      options: effectiveOptions,
-      name: name,
+      name: name ?? ReactiveName.nameFor('ReadSignal'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      trackPreviousValue:
+          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
+      comparator: comparator,
     );
   }
 
-  ReadSignal._internal({
+  ReadableSignal._internal({
     required T initialValue,
-    required super.name,
-    required this.options,
-  }) : _value = initialValue {
+    required this.name,
+    required this.equals,
+    required this.autoDispose,
+    required this.trackInDevTools,
+    required this.comparator,
+    required this.trackPreviousValue,
+  }) : _hasValue = true {
+    _internalSignal = _AlienSignal(Some(initialValue), parent: this);
+    _untrackedValue = initialValue;
     _notifySignalCreation();
   }
 
-  // Tracks the internal value
-  T _value;
+  ReadableSignal._internalLazy({
+    required this.name,
+    required this.equals,
+    required this.autoDispose,
+    required this.trackInDevTools,
+    required this.comparator,
+    required this.trackPreviousValue,
+  }) : _hasValue = false {
+    _internalSignal = _AlienSignal(None<T>(), parent: this);
+  }
+
+  /// {@macro SignalBase.name}
+  @override
+  final String name;
+
+  /// {@macro SignalBase.equals}
+  @override
+  final bool equals;
+
+  /// {@macro SignalBase.autoDispose}
+  @override
+  final bool autoDispose;
+
+  /// {@macro SignalBase.trackInDevTools}
+  @override
+  final bool trackInDevTools;
+
+  /// {@macro SignalBase.trackPreviousValue}
+  @override
+  final bool trackPreviousValue;
+
+  /// {@macro SignalBase.comparator}
+  @override
+  final ValueComparator<T?> comparator;
+
+  /// Tracks the internal value
+  late final _AlienSignal<Option<T>> _internalSignal;
+
+  @override
+  bool get hasValue {
+    _reportObserved();
+    return _hasValue;
+  }
+
+  bool _hasValue = false;
 
   // Tracks the internal previous value
   T? _previousValue;
@@ -49,82 +123,125 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
   // Whether or not there is a previous value
   bool _hasPreviousValue = false;
 
-  /// All the observers
-  final List<ObserveCallback<T>> _listeners = [];
+  T get _value {
+    if (_disposed) {
+      return untracked(() => _internalSignal().unwrap());
+    }
+    _reportObserved();
+    final value = _internalSignal().unwrap();
+
+    if (autoDispose) {
+      _subs.clear();
+
+      var link = _internalSignal.subs;
+      for (; link != null; link = link.nextSub) {
+        final sub = link.sub;
+        _subs.add(sub);
+      }
+    }
+    return value;
+  }
+
+  late T _untrackedValue;
+
+  T? _untrackedPreviousValue;
+
+  /// Returns the untracked previous value of the signal.
+  @override
+  T? get untrackedPreviousValue {
+    return _untrackedPreviousValue;
+  }
+
+  /// Returns the value without triggering the reactive system.
+  @override
+  T get untrackedValue {
+    if (!_hasValue) {
+      throw StateError(
+        '''The signal named "$name" is lazy and has not been initialized yet, cannot access its value''',
+      );
+    }
+    return _untrackedValue;
+  }
+
+  set _value(T newValue) {
+    if (_compare(_untrackedValue, newValue)) return;
+    _untrackedPreviousValue = _untrackedValue;
+    _untrackedValue = newValue;
+    _internalSignal.currentValue = Some(newValue);
+    _reportChanged();
+  }
 
   @override
   T get value {
-    _reportObserved();
+    if (!_hasValue) {
+      throw StateError(
+        '''The signal named "$name" is lazy and has not been initialized yet, cannot access its value''',
+      );
+    }
     return _value;
+  }
+
+  @override
+  T call() {
+    return value;
   }
 
   /// {@template set-signal-value}
   /// Sets the current signal value with [newValue].
   ///
   /// This operation may be skipped if the value is equal to the previous one,
-  /// check [SignalOptions.equals] and [SignalOptions.comparator].
+  /// check [equals] and [comparator].
   /// {@endtemplate}
-  void _setValue(T newValue) {
-    // skip if the value are equals
-    if (_areEqual(_value, newValue)) {
-      return;
+  T _setValue(T newValue) {
+    final firstValue = !_hasValue;
+
+    if (firstValue) {
+      _untrackedValue = newValue;
+      _hasValue = true;
+    }
+
+    // // skip if the values are equal
+    if (!firstValue && _compare(_untrackedValue, newValue)) {
+      return newValue;
     }
 
     // store the previous value
-    _setPreviousValue(_value);
+    if (!firstValue) _setPreviousValue(_untrackedValue);
 
     // notify with the new value
     _value = newValue;
-    _reportChanged();
-    _notifyListeners();
-    _notifySignalUpdate();
-  }
 
-  void _notifyListeners() {
-    if (_listeners.isNotEmpty) {
-      _context.untracked(() {
-        for (final listener in _listeners.toList(growable: false)) {
-          listener(_previousValue, _value);
-        }
-      });
+    if (firstValue) {
+      _notifySignalCreation();
+    } else {
+      _notifySignalUpdate();
     }
+    return newValue;
   }
-
-  /// Indicates if the [oldValue] and the [newValue] are equal
-  bool _areEqual(T? oldValue, T? newValue) {
-    // skip if the value are equals
-    if (options.equals) {
-      return oldValue == newValue;
-    }
-
-    // return the [comparator] result
-    return options.comparator!(oldValue, newValue);
-  }
-
-  @override
-  T call() => value;
 
   @override
   bool get hasPreviousValue {
-    _reportObserved();
+    if (!trackPreviousValue) return false;
+    // cause observation
+    value;
     return _hasPreviousValue;
   }
 
   /// The previous value, if any.
   @override
   T? get previousValue {
-    _reportObserved();
+    if (!trackPreviousValue) return null;
+    // cause observation
+    value;
     return _previousValue;
   }
 
   /// Sets the previous signal value to [value].
   void _setPreviousValue(T value) {
+    if (!trackPreviousValue) return;
     _previousValue = value;
     _hasPreviousValue = true;
   }
-
-  @override
-  final SignalOptions<T> options;
 
   bool _disposed = false;
 
@@ -134,7 +251,9 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
 
   /// Returns the number of listeners listening to this signal.
   @override
-  int get listenerCount => _observers.length + _listeners.length;
+  int get listenerCount => _subs.length;
+
+  final _subs = <alien.Subscriber>{};
 
   @override
   void dispose() {
@@ -142,45 +261,50 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     if (_disposed) return;
     _disposed = true;
 
-    _listeners.clear();
+    // This will dispose the signal to _disposed being true
+    reactiveSystem.pauseTracking();
+    _internalSignal();
+    reactiveSystem.resumeTracking();
+
+    if (SolidartConfig.autoDispose) {
+      for (final sub in _subs) {
+        if (sub is _AlienEffect) {
+          if (sub.deps?.dep == _internalSignal) {
+            sub.deps = null;
+          }
+          if (sub.depsTail?.dep == _internalSignal) {
+            sub.depsTail = null;
+          }
+
+          sub.parent._mayDispose();
+        }
+        if (sub is _AlienComputed) {
+          if (sub.deps?.dep == _internalSignal) {
+            sub.deps = null;
+          }
+          if (sub.depsTail?.dep == _internalSignal) {
+            sub.depsTail = null;
+          }
+          sub.parent._mayDispose();
+        }
+      }
+      _subs.clear();
+    }
 
     for (final cb in _onDisposeCallbacks) {
       cb();
     }
     _onDisposeCallbacks.clear();
     _notifySignalDisposal();
-    for (final o in _observers.toList()) {
-      o._mayDispose();
-    }
   }
 
   @override
   bool get disposed => _disposed;
 
-  /// Observe the signal and trigger the [listener] every time the value changes
-  @override
-  DisposeObservation observe(
-    ObserveCallback<T> listener, {
-    bool fireImmediately = false,
-  }) {
-    if (fireImmediately == true) {
-      listener(_previousValue, _value);
-    }
-
-    _listeners.add(listener);
-
-    return () {
-      _listeners.remove(listener);
-      _mayDispose();
-    };
-  }
-
   @override
   void _mayDispose() {
-    if (!options.autoDispose) return;
-    if (_listeners.isEmpty && _observers.isEmpty) {
-      dispose();
-    }
+    if (!autoDispose || _disposed) return;
+    if (_internalSignal.subs == null) dispose();
   }
 
   @override
@@ -194,38 +318,47 @@ class ReadSignal<T> extends Atom implements SignalBase<T> {
     if (condition(value)) return value;
 
     final completer = Completer<T>();
-    Effect((dispose) {
-      if (condition(value)) {
-        dispose();
-        completer.complete(value);
-      }
-    });
+    late final Effect effect;
+    effect = Effect(
+      () {
+        if (condition(value)) {
+          effect.dispose();
+          completer.complete(value);
+        }
+      },
+      autoDispose: false,
+    );
     return completer.future;
   }
-  // coverage:ignore-end
 
-  void _notifySignalCreation() {
-    for (final obs in SolidartConfig.observers) {
-      obs.didCreateSignal(this);
+  void _reportObserved() {
+    if (reactiveSystem.activeSub != null) {
+      reactiveSystem.link(_internalSignal, reactiveSystem.activeSub!);
     }
-    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.created);
   }
 
-  void _notifySignalUpdate() {
-    for (final obs in SolidartConfig.observers) {
-      obs.didUpdateSignal(this);
+  void _reportChanged() {
+    if (_internalSignal.subs != null) {
+      reactiveSystem.propagate(_internalSignal.subs);
+      if (reactiveSystem.batchDepth == 0) {
+        reactiveSystem.processEffectNotifications();
+      }
     }
-    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
-  }
-
-  void _notifySignalDisposal() {
-    for (final obs in SolidartConfig.observers) {
-      obs.didDisposeSignal(this);
-    }
-    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.disposed);
   }
 
   @override
   String toString() =>
-      '''ReadSignal<$T>(value: $_value, previousValue: $_previousValue, options: $options)''';
+      '''ReadSignal<$T>(value: $_value, previousValue: $_previousValue)''';
+
+  /// Indicates if the [oldValue] and the [newValue] are equal
+  @override
+  bool _compare(T? oldValue, T? newValue) {
+    // skip if the value are equals
+    if (equals) {
+      return oldValue == newValue;
+    }
+
+    // return the [comparator] result
+    return comparator(oldValue, newValue);
+  }
 }

@@ -6,6 +6,7 @@ import 'package:devtools_app_shared/ui.dart';
 import 'package:devtools_extensions/devtools_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 void main() {
   runApp(const FooDevToolsExtension());
@@ -107,11 +108,10 @@ class _SignalsState extends State<Signals> {
   final signals = MapSignal<String, SignalData>({});
 
   late final filteredSignals = Computed(() {
-    final lowercasedSearch = searchText().toLowerCase();
-    final type = filterType();
-    final viewDisposed = showDisposed();
-    return signals()
-        .entries
+    final lowercasedSearch = searchText.value.toLowerCase();
+    final type = filterType.value;
+    final viewDisposed = showDisposed.value;
+    return signals.value.entries
         .where((entry) =>
             entry.key.toString().toLowerCase().contains(lowercasedSearch) ||
             entry.value.matchesSearch(lowercasedSearch))
@@ -123,9 +123,9 @@ class _SignalsState extends State<Signals> {
   @override
   void initState() {
     super.initState();
-    sub = serviceManager.service?.onExtensionEvent
-        .where((e) => e.extensionKind?.startsWith('solidart.signal') ?? false)
-        .listen((event) {
+    sub = serviceManager.service?.onExtensionEvent.where((e) {
+      return e.extensionKind?.startsWith('solidart.signal') ?? false;
+    }).listen((event) {
       final data = event.extensionData?.data;
       if (data == null) return;
       switch (event.extensionKind) {
@@ -146,7 +146,8 @@ class _SignalsState extends State<Signals> {
           );
       }
     });
-    searchController.addListener(() => searchText.set(searchController.text));
+    searchController
+        .addListener(() => searchText.value = searchController.text);
   }
 
   @override
@@ -159,229 +160,273 @@ class _SignalsState extends State<Signals> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SearchBar(
-                    hintText: 'Search signals',
-                    controller: searchController,
-                    trailing: [
-                      Show(
-                        when: () => searchText().isNotEmpty,
-                        builder: (context) {
-                          return IconButton(
-                            onPressed: searchController.clear,
-                            icon: const Icon(Icons.clear),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      SignalBuilder(
-                          signal: filterType,
-                          builder: (context, type, _) {
-                            return DropdownButton(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 4),
-                              value: type,
-                              borderRadius:
-                                  const BorderRadius.all(Radius.circular(10)),
-                              hint: const Text('Type'),
-                              icon: type == null
-                                  ? null
-                                  : IconButton(
-                                      onPressed: () => filterType.set(null),
-                                      icon: const Icon(Icons.clear),
-                                    ),
-                              items: SignalType.values
-                                  .map((e) => DropdownMenuItem(
-                                        value: e,
-                                        child: Text(e.name.capitalizeFirst()),
-                                      ))
-                                  .toList(),
-                              onChanged: filterType.set,
-                            );
-                          }),
-                      const SizedBox(width: 4),
-                      SignalBuilder(
-                        signal: showDisposed,
-                        builder: (context, disposed, _) {
-                          return FilterChip(
-                            selected: disposed,
-                            label: const Text('Disposed'),
-                            onSelected: showDisposed.set,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  DualSignalBuilder(
-                    firstSignal: signals,
-                    secondSignal: filteredSignals,
-                    builder: (context, signals, filteredSignals, _) {
-                      return Text(
-                          '${filteredSignals.length} visible of ${signals.length}');
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: SignalBuilder(
-                        signal: filteredSignals,
-                        builder: (context, filteredSignals, _) {
-                          return ListView.separated(
-                            itemCount: filteredSignals.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              final entry = filteredSignals.elementAt(index);
-                              final name = entry.key;
-                              final signal = entry.value;
-                              return SignalBuilder(
-                                signal: selectedSignalName,
-                                builder: (context, selectedName, _) {
-                                  final selected = selectedName == name;
-                                  return Stack(
-                                    children: [
-                                      ListTile(
-                                        selectedTileColor:
-                                            theme.colorScheme.onSecondary,
-                                        selectedColor:
-                                            theme.colorScheme.onSurfaceVariant,
-                                        tileColor:
-                                            theme.colorScheme.surfaceVariant,
-                                        title: Text(name),
-                                        titleAlignment:
-                                            ListTileTitleAlignment.center,
-                                        trailing: selected
-                                            ? const Icon(Icons.east_rounded)
-                                            : null,
-                                        selected: selected,
-                                        subtitle: Row(
-                                          children: [
-                                            Chip(
-                                              label: Text(
-                                                signal.type.name
-                                                    .capitalizeFirst(),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Chip(
-                                              label: Text(signal.valueType),
-                                            ),
-                                          ],
-                                        ),
-                                        onTap: () {
-                                          selectedSignalName.value = name;
-                                        },
-                                        shape: const RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.all(
-                                            Radius.circular(10),
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        top: 0,
-                                        bottom: 0,
-                                        right: 0,
-                                        child: Container(
-                                          width: 10,
-                                          decoration: BoxDecoration(
-                                            color: signal.disposed
-                                                ? Colors.red
-                                                : Colors.green,
-                                            borderRadius:
-                                                const BorderRadius.only(
-                                              topRight: Radius.circular(8),
-                                              bottomRight: Radius.circular(8),
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                    ],
-                                  );
-                                },
+
+    final lightTheme = ShadThemeData(
+      brightness: Brightness.light,
+      colorScheme: ShadSlateColorScheme.light(),
+    );
+    final darkTheme = ShadThemeData(
+      brightness: Brightness.dark,
+      colorScheme: ShadSlateColorScheme.dark(),
+    );
+
+    return ShadApp(
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: theme.brightness == Brightness.dark
+          ? ThemeMode.dark
+          : ThemeMode.light,
+      home: Scaffold(
+        body: Builder(
+          builder: (context) {
+            final shadTheme = ShadTheme.of(context);
+            return ShadResizablePanelGroup(
+              showHandle: true,
+              children: [
+                ShadResizablePanel(
+                  id: 'sidebar',
+                  minSize: 0.3,
+                  defaultSize: .5,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ShadInput(
+                          placeholder: Text('Search signals'),
+                          controller: searchController,
+                          trailing: Show(
+                            when: () => searchText.value.isNotEmpty,
+                            builder: (context) {
+                              return ShadIconButton(
+                                onPressed: searchController.clear,
+                                width: 20,
+                                height: 20,
+                                padding: EdgeInsets.zero,
+                                decoration: const ShadDecoration(
+                                  secondaryBorder: ShadBorder.none,
+                                  secondaryFocusedBorder: ShadBorder.none,
+                                ),
+                                icon: const Icon(Icons.clear, size: 14),
                               );
                             },
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
-                          );
-                        }),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: DualSignalBuilder(
-            firstSignal: filteredSignals,
-            secondSignal: selectedSignalName,
-            builder: (context, filteredSignals, selectedName, _) {
-              if (selectedName == null) return const SizedBox();
-              final signal = filteredSignals
-                  .firstWhereOrNull((element) => element.key == selectedName)
-                  ?.value;
-              if (signal == null) return const SizedBox();
-              return Card(
-                key: ValueKey(selectedName),
-                child: LayoutBuilder(builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight - 48,
-                      ),
-                      child: Column(
-                        children: [
-                          ParameterView(name: 'name', value: selectedName),
-                          ParameterView(
-                              name: 'type',
-                              value: signal.type.name.capitalizeFirst()),
-                          ParameterView(name: 'value', value: signal.value),
-                          ParameterView(
-                            name: 'previousValue',
-                            value: signal.previousValue,
                           ),
-                          ParameterView(
-                            name: 'hasPreviousValue',
-                            value: signal.hasPreviousValue,
-                          ),
-                          ParameterView(
-                            name: 'disposed',
-                            value: signal.disposed,
-                          ),
-                          ParameterView(
-                            name: 'autoDispose',
-                            value: signal.autoDispose,
-                          ),
-                          ParameterView(
-                            name: 'listenerCount',
-                            value: signal.listenerCount,
-                          ),
-                          ParameterView(
-                            name: 'lastUpdate',
-                            value: signal.lastUpdate,
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            SignalBuilder(builder: (context, _) {
+                              return ShadSelect<SignalType>(
+                                selectedOptionBuilder: (context, v) {
+                                  return Text(v.name.capitalizeFirst());
+                                },
+                                allowDeselection: true,
+                                placeholder: const Text('Type'),
+                                initialValue: filterType.value,
+                                options: SignalType.values
+                                    .map((e) => ShadOption(
+                                          value: e,
+                                          child: Text(e.name.capitalizeFirst()),
+                                        ))
+                                    .toList(),
+                                onChanged: (v) => filterType.value = v,
+                              );
+                            }),
+                            SizedBox(
+                                height: 20,
+                                child: const ShadSeparator.vertical()),
+                            SignalBuilder(
+                              builder: (context, _) {
+                                return ShadCheckbox(
+                                  value: showDisposed.value,
+                                  label: const Text('Show disposed'),
+                                  padding: EdgeInsets.only(left: 4),
+                                  onChanged: (v) => showDisposed.value = v,
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        SignalBuilder(
+                          builder: (context, _) {
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Text(
+                                '${filteredSignals.value.length} visible of ${signals.value.length}',
+                                style: shadTheme.textTheme.muted,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: SignalBuilder(builder: (context, _) {
+                            return ListView.separated(
+                              itemCount: filteredSignals.value.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                final entry =
+                                    filteredSignals.value.elementAt(index);
+                                final name = entry.key;
+                                final signal = entry.value;
+                                return SignalBuilder(
+                                  builder: (context, _) {
+                                    final selected =
+                                        selectedSignalName.value == name;
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4),
+                                      child: Stack(
+                                        children: [
+                                          ShadGestureDetector(
+                                            cursor: SystemMouseCursors.click,
+                                            onTap: () {
+                                              selectedSignalName.value = name;
+                                            },
+                                            child: ShadCard(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 16,
+                                                      horizontal: 24),
+                                              title: Text(name),
+                                              backgroundColor: selected
+                                                  ? shadTheme.colorScheme.accent
+                                                  : null,
+                                              trailing: selected
+                                                  ? const Icon(
+                                                      LucideIcons.chevronRight)
+                                                  : null,
+                                              description: Row(
+                                                children: [
+                                                  ShadBadge(
+                                                    child: Text(
+                                                      signal.type.name
+                                                          .capitalizeFirst(),
+                                                    ),
+                                                    onPressed: () {
+                                                      selectedSignalName.value =
+                                                          name;
+                                                    },
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  ShadBadge(
+                                                    child:
+                                                        Text(signal.valueType),
+                                                    onPressed: () {
+                                                      selectedSignalName.value =
+                                                          name;
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            top: 0,
+                                            bottom: 0,
+                                            right: 0,
+                                            child: Container(
+                                              width: 10,
+                                              decoration: BoxDecoration(
+                                                color: signal.disposed
+                                                    ? Colors.red
+                                                    : Colors.green,
+                                                borderRadius:
+                                                    const BorderRadius.only(
+                                                  topRight: Radius.circular(8),
+                                                  bottomRight:
+                                                      Radius.circular(8),
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 8),
+                            );
+                          }),
+                        ),
+                      ],
                     ),
-                  );
-                }),
-              );
-            },
-          ),
+                  ),
+                ),
+                ShadResizablePanel(
+                    id: 'detail',
+                    defaultSize: .5,
+                    minSize: 0.3,
+                    child: SignalBuilder(
+                      builder: (context, _) {
+                        if (selectedSignalName.value == null) {
+                          return const SizedBox();
+                        }
+                        final signal = filteredSignals.value
+                            .firstWhereOrNull((element) =>
+                                element.key == selectedSignalName.value)
+                            ?.value;
+                        if (signal == null) return const SizedBox();
+                        return KeyedSubtree(
+                          key: ValueKey(selectedSignalName.value),
+                          child: LayoutBuilder(builder: (context, constraints) {
+                            return SingleChildScrollView(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 24),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: constraints.maxHeight - 48,
+                                ),
+                                child: Column(
+                                  children: [
+                                    ParameterView(
+                                        name: 'name',
+                                        value: selectedSignalName.value),
+                                    ParameterView(
+                                        name: 'type',
+                                        value:
+                                            signal.type.name.capitalizeFirst()),
+                                    ParameterView(
+                                        name: 'value', value: signal.value),
+                                    ParameterView(
+                                      name: 'previousValue',
+                                      value: signal.previousValue,
+                                    ),
+                                    ParameterView(
+                                      name: 'hasPreviousValue',
+                                      value: signal.hasPreviousValue,
+                                    ),
+                                    ParameterView(
+                                      name: 'disposed',
+                                      value: signal.disposed,
+                                    ),
+                                    ParameterView(
+                                      name: 'autoDispose',
+                                      value: signal.autoDispose,
+                                    ),
+                                    ParameterView(
+                                      name: 'listenerCount',
+                                      value: signal.listenerCount,
+                                    ),
+                                    ParameterView(
+                                      name: 'lastUpdate',
+                                      value: signal.lastUpdate,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        );
+                      },
+                    )),
+              ],
+            );
+          },
         ),
-      ],
+      ),
     );
   }
 }
@@ -412,38 +457,46 @@ class _ParameterViewState extends State<ParameterView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      children: [
-        DefaultTextStyle(
-          style:
-              theme.textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
-          child: InkWell(
-            onTap: isExpandible
-                ? () => setState(() => expanded = !expanded)
-                : null,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+    return ShadTheme(
+      data: ShadTheme.of(context).copyWith(
+        textTheme: ShadTextTheme(family: kDefaultFontFamilyMono),
+      ),
+      child: Builder(builder: (context) {
+        return Column(
+          children: [
+            DefaultTextStyle(
+              style: theme.textTheme.bodyMedium!
+                  .copyWith(fontWeight: FontWeight.bold),
+              child: InkWell(
+                onTap: isExpandible
+                    ? () => setState(() => expanded = !expanded)
+                    : null,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Visibility.maintain(
-                      visible: isExpandible,
-                      child: RotatedBox(
-                        quarterTurns: expanded ? 1 : 0,
-                        child: const Icon(Icons.arrow_right_rounded),
-                      ),
+                    Row(
+                      children: [
+                        Visibility.maintain(
+                          visible: isExpandible,
+                          child: RotatedBox(
+                            quarterTurns: expanded ? 1 : 0,
+                            child: const Icon(LucideIcons.chevronRight),
+                          ),
+                        ),
+                        Text('${widget.name}: ',
+                            style: ShadTheme.of(context).textTheme.p),
+                      ],
                     ),
-                    Text('${widget.name}: '),
+                    const SizedBox(width: 4),
+                    Expanded(child: getView()),
                   ],
                 ),
-                const SizedBox(width: 4),
-                Expanded(child: getView()),
-              ],
+              ),
             ),
-          ),
-        ),
-        getExpandedView(),
-      ],
+            getExpandedView(),
+          ],
+        );
+      }),
     );
   }
 
@@ -454,22 +507,25 @@ class _ParameterViewState extends State<ParameterView> {
   }
 
   Widget getView() {
+    final isDark = Theme.of(context).isDarkTheme;
+    final textTheme = ShadTheme.of(context).textTheme;
+
     if (widget.value == null) {
-      return const SelectableText(
+      return SelectableText(
         'null',
-        style: TextStyle(color: Color(0xFFFF79C6)),
+        style: textTheme.p.copyWith(color: Color(0xFFFF79C6)),
       );
     }
     if (widget.value is num) {
       return SelectableText(
         widget.value.toString(),
-        style: const TextStyle(color: Colors.blue),
+        style: textTheme.p.copyWith(color: Colors.blue),
       );
     }
     if (widget.value is bool) {
       return SelectableText(
         widget.value.toString(),
-        style: const TextStyle(color: Color(0xFFBC93F9)),
+        style: textTheme.p.copyWith(color: Color(0xFFBC93F9)),
       );
     }
     if (widget.value is DateTime) {
@@ -478,7 +534,9 @@ class _ParameterViewState extends State<ParameterView> {
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
       return SelectableText(
         dateString,
-        style: const TextStyle(color: Color(0xFFF1FA8C)),
+        style: textTheme.p.copyWith(
+          color: isDark ? Colors.yellow : Colors.orange,
+        ),
       );
     }
     if (widget.value is List) {
@@ -486,12 +544,12 @@ class _ParameterViewState extends State<ParameterView> {
       if (list.isEmpty) {
         return Text(
           '${widget.value.runtimeType}(0)',
-          style: TextStyle(color: Colors.grey[600]),
+          style: ShadTheme.of(context).textTheme.muted,
         );
       } else {
         return Text(
           '${widget.value.runtimeType}(${list.length})',
-          style: TextStyle(color: Colors.grey[600]),
+          style: ShadTheme.of(context).textTheme.muted,
         );
       }
     }
@@ -501,22 +559,20 @@ class _ParameterViewState extends State<ParameterView> {
       if (list.isEmpty) {
         return Text(
           '${widget.value.runtimeType}(0)',
-          style: TextStyle(color: Colors.grey[600]),
+          style: ShadTheme.of(context).textTheme.muted,
         );
       } else {
         return Text(
           '${widget.value.runtimeType}(${list.length})',
-          style: TextStyle(color: Colors.grey[600]),
+          style: ShadTheme.of(context).textTheme.muted,
         );
       }
     }
 
     return SelectableText(
       '"${widget.value.toString()}"',
-      style: TextStyle(
-        color: Theme.of(context).isDarkTheme
-            ? const Color(0xFFF1FA8C)
-            : Colors.green,
+      style: textTheme.p.copyWith(
+        color: isDark ? const Color(0xFFF1FA8C) : Colors.green,
       ),
     );
   }

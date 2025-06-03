@@ -1,3 +1,4 @@
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:github_search/bloc/github_search_bloc.dart';
@@ -9,13 +10,10 @@ class SearchPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Solid(
+    return ProviderScope(
       providers: [
         // Provide the [GithubSearchBloc] to descendants
-        Provider<GithubSearchBloc>(
-          create: () => GithubSearchBloc(),
-          dispose: (bloc) => bloc.dispose(),
-        ),
+        GithubSearchBloc.provider,
       ],
       child: const SearchPageBody(),
     );
@@ -46,8 +44,7 @@ class SearchPageBody extends StatelessWidget {
 }
 
 class _SearchBar extends StatefulWidget {
-  // ignore: unused_element
-  const _SearchBar({super.key});
+  const _SearchBar();
 
   @override
   State<_SearchBar> createState() => __SearchBarState();
@@ -56,7 +53,7 @@ class _SearchBar extends StatefulWidget {
 class __SearchBarState extends State<_SearchBar> {
   final textController = TextEditingController();
   // retrieve the ancestor [GithubSearchBloc]
-  late final bloc = context.get<GithubSearchBloc>();
+  late final bloc = GithubSearchBloc.provider.of(context);
 
   @override
   void dispose() {
@@ -89,17 +86,17 @@ class __SearchBarState extends State<_SearchBar> {
 }
 
 class _SearchBody extends StatelessWidget {
-  // ignore: unused_element
-  const _SearchBody({super.key});
+  const _SearchBody();
 
   @override
   Widget build(BuildContext context) {
     return SizedBox.expand(
       child:
           // Handle the search result state
-          ResourceBuilder(
-        resource: context.get<GithubSearchBloc>().searchResult,
+          SignalBuilder(
         builder: (context, searchResultState) {
+          final searchResultState =
+              GithubSearchBloc.provider.of(context).searchResult.state;
           return Stack(
             children: [
               searchResultState.on(
@@ -116,7 +113,7 @@ class _SearchBody extends StatelessWidget {
                 Positioned.fill(
                   child: Container(
                     alignment: Alignment.center,
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     child: const CircularProgressIndicator(),
                   ),
                 ),
@@ -130,8 +127,6 @@ class _SearchBody extends StatelessWidget {
 
 class _SearchResults extends StatelessWidget {
   const _SearchResults({
-    // ignore: unused_element
-    super.key,
     required this.items,
   });
 

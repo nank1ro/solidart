@@ -19,21 +19,14 @@ jobs:
       cancel-in-progress: true
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: dart-lang/setup-dart@v1.5.0
-
-      # Dart
-      - name: Install dependencies
-        run: dart pub get
-        working-directory: ./packages/solidart
-
-      # Flutter
-      - uses: subosito/flutter-action@v2.10.0
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1.7.0
+      - uses: subosito/flutter-action@v2.18.0
         with:
           channel: "stable"
+
       - name: Install dependencies
         run: flutter pub get
-        working-directory: ./packages/flutter_solidart
 
       - name: Install melos
         run: dart pub global activate melos
@@ -51,6 +44,7 @@ jobs:
         run: melos run combine_coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           files: ./lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}

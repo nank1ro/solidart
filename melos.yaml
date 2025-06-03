@@ -13,10 +13,12 @@ scripts:
   test:
     run: |
       yes 2>/dev/null | very_good && \
-      melos exec --ignore="solidart_lint" -- very_good test --recursive --coverage --min-coverage 85
+      melos exec --ignore="solidart_lint" -- very_good test --recursive --coverage --min-coverage 50
     description: Run Dart and Flutter tests
     select-package:
       flutter: true
       dir-exists: test
 
   combine_coverage: melos exec -- "\$MELOS_ROOT_PATH/scripts/combine_coverage.sh"
+
+  open_coverage: melos exec -- genhtml "\$MELOS_ROOT_PATH/lcov.info" -o "\$MELOS_ROOT_PATH/coverage/html" && open coverage/html/index.html

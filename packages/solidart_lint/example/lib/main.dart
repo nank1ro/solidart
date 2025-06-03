@@ -1,11 +1,18 @@
 // ignore_for_file: unused_local_variable
 
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
 void main() {
   runApp(MyApp());
 }
+
+final myClassProvider = Provider((_) => MyClass());
+final counterProvider = Provider((_) => Signal(0));
+final doubleCounterProvider = Provider.withArgument(
+  (_, Signal<int> counter) => Computed(() => counter.value * 2),
+);
 
 class MyClass {}
 
@@ -16,17 +23,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Solid(
+    return ProviderScope(
       providers: [
-        // expect_lint: avoid_dynamic_provider
-        Provider(create: () => MyClass()),
-        // expect_lint: avoid_dynamic_provider
-        Provider(create: () => Signal(0), id: 'counter'),
-        // expect_lint: avoid_dynamic_provider
-        Provider(
-          create: () => Computed(() => counter() * 2),
-          id: 'double-counter',
-        ),
+        myClassProvider,
+        counterProvider,
+        doubleCounterProvider(counter),
       ],
       child: const MaterialApp(
         title: 'Flutter Demo',
@@ -41,17 +42,13 @@ class MyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // expect_lint: missing_solid_get_type
-    final myClass = context.get();
-    // expect_lint: invalid_observe_type
-    final counter = context.observe<Signal<int>>('counter');
+    final myClass = myClassProvider.of(context);
+    final counter = counterProvider.of(context);
 
     return ElevatedButton(
       child: const Text('Increment'),
       onPressed: () {
-        // expect_lint: invalid_update_type
-        context.update<Signal<int>>(
-            (value) => throw UnimplementedError(), 'counter');
+        counter.updateValue((value) => throw UnimplementedError());
       },
     );
   }

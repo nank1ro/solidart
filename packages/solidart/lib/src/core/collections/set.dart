@@ -17,32 +17,55 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// {@macro set-signal}
   factory SetSignal(
     Iterable<E> initialValue, {
-    SignalOptions<Set<E>>? options,
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    ValueComparator<Set<E>?> comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('SetSignal');
-    final effectiveOptions =
-        (options ?? SignalOptions<Set<E>>(name: name)).copyWith(name: name);
     return SetSignal._internal(
       initialValue: initialValue.toSet(),
-      options: effectiveOptions,
-      name: name,
+      name: name ?? ReactiveName.nameFor('SetSignal'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      comparator: comparator,
+      trackPreviousValue:
+          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
     );
   }
 
   SetSignal._internal({
     required super.initialValue,
     required super.name,
-    required super.options,
+    required super.equals,
+    required super.autoDispose,
+    required super.trackInDevTools,
+    required super.comparator,
+    required super.trackPreviousValue,
   }) : super._internal();
 
   @override
-  void _setValue(Set<E> newValue) {
-    if (_areEqual(_value, newValue)) {
-      return;
+  Set<E> _setValue(Set<E> newValue) {
+    if (_compare(_value, newValue)) {
+      return newValue;
     }
     _setPreviousValue(Set<E>.of(_value));
-    _value = newValue;
+    _untrackedValue = _value = newValue;
     _notifyChanged();
+    return newValue;
   }
 
   @override
@@ -50,14 +73,14 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
       value = callback(Set<E>.of(_value));
 
   @override
-  bool _areEqual(Set<E>? oldValue, Set<E>? newValue) {
+  bool _compare(Set<E>? oldValue, Set<E>? newValue) {
     // skip if the value are equals
-    if (options.equals) {
+    if (equals) {
       return SetEquality<E>().equals(oldValue, newValue);
     }
 
     // return the [comparator] result
-    return options.comparator!(oldValue, newValue);
+    return comparator(oldValue, newValue);
   }
 
   /// Adds [value] to the set.
@@ -101,7 +124,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   bool contains(Object? element) {
-    _reportObserved();
+    value;
     return _value.contains(element);
   }
 
@@ -111,7 +134,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// but must be consistent between changes to the set.
   @override
   Iterator<E> get iterator {
-    _reportObserved();
+    value;
     return _value.iterator;
   }
 
@@ -121,7 +144,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// the elements.
   @override
   int get length {
-    _reportObserved();
+    value;
     return _value.length;
   }
 
@@ -142,7 +165,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   E elementAt(int index) {
-    _reportObserved();
+    value;
     return _value.elementAt(index);
   }
 
@@ -167,7 +190,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   E? lookup(Object? object) {
-    _reportObserved();
+    value;
     return _value.lookup(object);
   }
 
@@ -241,7 +264,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// the returned set will have the same order.
   @override
   Set<E> toSet() {
-    _reportObserved();
+    value;
     return _value.toSet();
   }
 
@@ -339,7 +362,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   List<E> toList({bool growable = true}) {
-    _reportObserved();
+    value;
     return _value.toList(growable: growable);
   }
 
@@ -366,7 +389,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// If [orElse] is omitted, it defaults to throwing a [StateError].
   @override
   E lastWhere(bool Function(E value) test, {E Function()? orElse}) {
-    _reportObserved();
+    value;
     return _value.lastWhere(test, orElse: orElse);
   }
 
@@ -389,7 +412,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// Stops iterating on the first matching element.
   @override
   E firstWhere(bool Function(E value) test, {E Function()? orElse}) {
-    _reportObserved();
+    value;
     return _value.firstWhere(test, orElse: orElse);
   }
 
@@ -399,7 +422,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// This operation will not iterate past the second element.
   @override
   E get single {
-    _reportObserved();
+    value;
     return _value.single;
   }
 
@@ -428,7 +451,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   E singleWhere(bool Function(E value) test, {E Function()? orElse}) {
-    _reportObserved();
+    value;
     return _value.singleWhere(test, orElse: orElse);
   }
 
@@ -439,7 +462,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// equivalent to `this.elementAt(0)`.
   @override
   E get first {
-    _reportObserved();
+    value;
     return _value.first;
   }
 
@@ -453,17 +476,16 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// without iterating through the previous ones).
   @override
   E get last {
-    _reportObserved();
+    value;
     return _value.last;
   }
 
   @override
   String toString() =>
-      '''SetSignal<$E>(value: $_value, previousValue: $_previousValue, options; $options)''';
+      '''SetSignal<$E>(value: $_value, previousValue: $_previousValue)''';
 
   void _notifyChanged() {
     _reportChanged();
-    _notifyListeners();
     _notifySignalUpdate();
   }
 }

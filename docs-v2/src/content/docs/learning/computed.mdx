@@ -1,0 +1,88 @@
+---
+title: Computed
+description: Learn computed in solidart
+sidebar:
+  order: 3
+---
+
+A computed is a signal that depends on other signals.
+To create a computed, you have to use the `Computed` class.
+
+A `Computed` automatically subscribes to any signal provided and reruns when any of them change.
+
+```dart
+final count = Signal(0);
+final doubleCount = Computed(() => count.value * 2);
+
+Effect(() {
+  print('The counter is ${count.value}');
+  print('The double counter is ${doubleCount.value}');
+});
+
+count
+  ..value = 1
+  ..value = 2;
+
+// The output will be:
+// The counter is 0
+// The double counter is 0
+// The counter is 1
+// The double counter is 2
+// The counter is 2
+// The double counter is 4
+```
+
+Or you may want to subscribe only to a sub-field of a `Signal` value.
+```dart
+// sample User class
+class User {
+  const User({
+    required this.name,
+    required this.age,
+  });
+
+  final String name;
+  final int age;
+
+  User copyWith({
+    String? name,
+    int? age,
+  }) {
+    return User(
+      name: name ?? this.name,
+      age: age ?? this.age,
+    );
+  }
+}
+
+// create a user signal
+final user = Signal(const User(name: "name", age: 20));
+
+// create a derived signal just for the age
+final age = Computed(() => user().age);
+
+// adding an effect to print the age
+Effect(() {
+  print('age changed from ${age.previousValue} into ${age.value}');
+});
+
+// just update the name, the effect above doesn't run because the age has not changed
+user.updateValue((value) => value.copyWith(name: 'new-name'));
+
+// just update the age, the effect above prints
+user.updateValue((value) => value.copyWith(age: 21));
+```
+
+A derived signal is not of type `Signal` but is a `ReadSignal`.
+The difference with a normal `Signal` is that a `ReadSignal` doesn't have a value setter, in other words it's a __read-only__ signal.
+
+With a `Computed` you can also transform the value type:
+```dart
+final counter = Signal(0); // type: int
+final isGreaterThan5 = Computed(() => counter() > 5); // type: bool
+```
+
+`isGreaterThan5` will update only when the `counter` value becomes lower/greater than `5`.
+- If the `counter` value is `0`, `isGreaterThan5` is equal to `false`.
+- If you update the value to `1`, `isGreaterThan5` doesn't emit a new value, but still contains `false`.
+- If you update the value to `6`, `isGreaterThan5` emits a new `true` value.

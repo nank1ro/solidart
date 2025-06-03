@@ -1,25 +1,5 @@
 part of 'core.dart';
 
-// coverage:ignore-start
-
-/// {@macro resource}
-@Deprecated('Use Resource instead')
-Resource<T> createResource<T>({
-  Future<T> Function()? fetcher,
-  Stream<T> Function()? stream,
-  SignalBase<dynamic>? source,
-  ResourceOptions? options,
-}) {
-  return Resource<T>(
-    fetcher: fetcher,
-    stream: stream,
-    source: source,
-    options: options,
-  );
-}
-
-// coverage:ignore-end
-
 /// {@template resource}
 /// `Resources` are special `Signal`s designed specifically to handle Async
 /// loading. Their purpose is wrap async values in a way that makes them easy
@@ -53,16 +33,12 @@ Resource<T> createResource<T>({
 /// }
 ///
 /// // The resource (source is optional)
-/// final user = Resource(fetcher: fetchUser, source: userId);
+/// final user = Resource(fetchUser, source: userId);
 /// ```
 ///
 /// A Resource can also be driven from a [stream] instead of a Future.
 /// In this case you just need to pass the `stream` field to the
-/// `Resource` method.
-///
-/// If you are using the `flutter_solidart` library, check
-/// `ResourceBuilder` to learn how to react to the state of the resource in the
-/// UI.
+/// `Resource.stream` constructor.
 ///
 /// The resource has a [state] named [ResourceState], that provides many useful
 /// convenience methods to correctly handle the state of the resource.
@@ -98,43 +74,106 @@ Resource<T> createResource<T>({
 /// {@endtemplate}
 class Resource<T> extends Signal<ResourceState<T>> {
   /// {@macro resource}
-  factory Resource({
-    Future<T> Function()? fetcher,
-    Stream<T>? Function()? stream,
-    ResourceOptions? options,
+  factory Resource(
+    Future<T> Function() fetcher, {
     SignalBase<dynamic>? source,
+
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// Indicates whether the resource should be computed lazily, defaults to
+    /// true.
+    bool lazy = true,
+
+    /// {@macro Resource.useRefreshing}
+    bool? useRefreshing,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('Resource');
-    final resourceOptions =
-        (options ?? ResourceOptions(name: name)).copyWith(name: name);
-    final signalOptions = resourceOptions.toSignalOptions<T>();
     return Resource._internal(
       fetcher: fetcher,
+      source: source,
+      name: name ?? ReactiveName.nameFor('Resource'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      lazy: lazy,
+      useRefreshing: useRefreshing ?? SolidartConfig.useRefreshing,
+    );
+  }
+
+  /// {@macro resource}
+  factory Resource.stream(
+    Stream<T> Function() stream, {
+    SignalBase<dynamic>? source,
+
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// Indicates whether the resource should be computed lazily, defaults to
+    /// true.
+    bool lazy = true,
+
+    /// {@macro Resource.useRefreshing}
+    bool? useRefreshing,
+  }) {
+    return Resource._internal(
       stream: stream,
       source: source,
-      name: name,
-      options: signalOptions,
-      resourceOptions: resourceOptions,
+      name: name ?? ReactiveName.nameFor('Resource'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      lazy: lazy,
+      useRefreshing: useRefreshing ?? SolidartConfig.useRefreshing,
     );
   }
 
   Resource._internal({
     required super.name,
-    required super.options,
-    required this.resourceOptions,
+    required super.equals,
+    required this.lazy,
+    required super.autoDispose,
+    required super.trackInDevTools,
+    required this.useRefreshing,
+
+    /// Whether to track the previous state of the resource, defaults to true.
+    bool? trackPreviousState,
     this.fetcher,
     this.stream,
     this.source,
-  }) : super._internal(initialValue: ResourceState<T>.loading()) {
-    if (this is! ResourceSelector) {
-      assert(
-        (fetcher != null) ^ (stream != null),
-        'Provide a fetcher or a stream',
-      );
-    }
+  })  : assert(
+          (fetcher != null) ^ (stream != null),
+          'Provide a fetcher or a stream',
+        ),
+        super._internal(
+          initialValue: ResourceState<T>.loading(),
+          trackPreviousValue:
+              trackPreviousState ?? SolidartConfig.trackPreviousValue,
+          comparator: identical,
+        ) {
     // resolve the resource immediately if not lazy
-    if (!resourceOptions.lazy) _resolve();
+    if (!lazy) _resolve();
   }
+
+  /// Indicates whether the resource should be computed lazily, defaults to true
+  final bool lazy;
 
   /// Reactive signal values passed to the fetcher, optional.
   final SignalBase<dynamic>? source;
@@ -142,11 +181,8 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// The asynchrounous function used to retrieve data.
   final Future<T> Function()? fetcher;
 
-  /// The resource options
-  final ResourceOptions resourceOptions;
-
   /// The stream used to retrieve data.
-  final Stream<T>? Function()? stream;
+  final Stream<T> Function()? stream;
   StreamSubscription<T>? _streamSubscription;
 
   // The source dispose observation
@@ -155,11 +191,24 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// Indicates if the resource has been resolved
   bool _resolved = false;
 
+  /// {@template Resource.useRefreshing}
+  /// Whether to use `isRefreshing` in the current state of the resource,
+  /// defaults to true.
+  ///
+  /// If you set to false, the state will always transition to `loading` when
+  /// refreshing.
+  /// {@endtemplate}
+  final bool useRefreshing;
+
   /// The current resource state
   ResourceState<T> get state {
     _resolveIfNeeded();
     return super.value;
   }
+
+  /// The current resource state
+  @override
+  ResourceState<T> call() => state;
 
   /// Updates the current resource state
   set state(ResourceState<T> state) => super.value = state;
@@ -177,6 +226,14 @@ class Resource<T> extends Signal<ResourceState<T>> {
   @override
   ResourceState<T>? get previousValue => previousState;
 
+  @Deprecated('Use untrackedState instead')
+  @override
+  ResourceState<T> get untrackedValue => untrackedState;
+
+  @Deprecated('Use untrackedPreviousState instead')
+  @override
+  ResourceState<T>? get untrackedPreviousValue => untrackedPreviousState;
+
   @Deprecated('Use update instead')
   @override
   ResourceState<T> updateValue(
@@ -192,9 +249,15 @@ class Resource<T> extends Signal<ResourceState<T>> {
     return super.previousValue;
   }
 
+  /// The previous resource state, without tracking
+  ResourceState<T>? get untrackedPreviousState => super.untrackedPreviousValue;
+
+  /// The resource state without tracking
+  ResourceState<T> get untrackedState => super.untrackedValue;
+
   // The stream trasformed in a broadcast stream, if needed
   Stream<T> get _stream {
-    final s = stream!()!;
+    final s = stream!();
     if (!_broadcastStreams.keys.contains(s)) {
       _broadcastStreams[s] = s.isBroadcast
           ? s
@@ -231,9 +294,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
     );
     _resolved = true;
 
-    // no need to resolve a resource selector
-    if (this is ResourceSelector) return;
-
     if (fetcher != null) {
       // start fetching
       await _fetch();
@@ -245,7 +305,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
     // react to the [source], if provided.
     if (source != null) {
-      _sourceDisposeObservation = source!.observe((_, __) => refresh());
+      _sourceDisposeObservation = source!.observe((p, v) {
+        refresh();
+      });
       source!.onDispose(_sourceDisposeObservation!);
     }
   }
@@ -256,9 +318,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
   }
 
   /// Runs the [fetcher] for the first time.
-  ///
-  /// You may not use this method directly on Flutter apps because the
-  /// operation is already performed by `ResourceBuilder`.
   Future<void> _fetch() async {
     assert(fetcher != null, 'You are trying to fetch, but fetcher is null');
     try {
@@ -311,24 +370,14 @@ class Resource<T> extends Signal<ResourceState<T>> {
     );
     _streamSubscription?.cancel();
     _streamSubscription = null;
-    state.map(
-      ready: (ready) {
-        state = ready.copyWith(isRefreshing: true);
-      },
-      error: (error) {
-        state = error.copyWith(isRefreshing: true);
-      },
-      loading: (_) {
-        state = ResourceState<T>.loading();
-      },
-    );
+    _transition();
     _listenStream();
   }
 
-  /// Force a refresh of the [fetcher].
-  Future<void> _refetch() async {
-    assert(fetcher != null, 'You are trying to refetch, but fetcher is null');
-    try {
+  // Transitions to the refreshing state, if enabled, otherwise sets the state
+  // to loading.
+  void _transition() {
+    if (useRefreshing) {
       state.map(
         ready: (ready) {
           state = ready.copyWith(isRefreshing: true);
@@ -340,27 +389,21 @@ class Resource<T> extends Signal<ResourceState<T>> {
           state = ResourceState<T>.loading();
         },
       );
+    } else {
+      state = ResourceState<T>.loading();
+    }
+  }
+
+  /// Force a refresh of the [fetcher].
+  Future<void> _refetch() async {
+    assert(fetcher != null, 'You are trying to refetch, but fetcher is null');
+    try {
+      _transition();
       final result = await fetcher!();
       state = ResourceState<T>.ready(result);
     } catch (e, s) {
       state = ResourceState<T>.error(e, stackTrace: s);
     }
-  }
-
-  /// The [select] function allows filtering the Resource's data by reading
-  /// only the properties that you care about.
-  ///
-  /// The advantage is that you keep handling the loading and error states.
-  Resource<Selected> select<Selected>(
-    Selected Function(T data) selector, {
-    String? name,
-  }) {
-    _resolveIfNeeded();
-    return ResourceSelector<T, Selected>(
-      resource: this,
-      selector: selector,
-      name: name ?? ReactiveContext.main.nameFor('ResourceSelector'),
-    );
   }
 
   /// Returns a future that completes with the value when the Resource is ready
@@ -391,7 +434,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     _streamSubscriptions.clear();
     // Dispose the source, if needed
     if (source != null) {
-      if (source!.options.autoDispose && source!.listenerCount == 0) {
+      if (source!.autoDispose && source!.listenerCount == 0) {
         source!.dispose();
       }
     }
@@ -400,7 +443,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   @override
   String toString() =>
-      '''Resource<$T>(state: $_value, previousState: $_previousValue, options; $options)''';
+      '''Resource<$T>(state: $_value, previousState: $_previousValue)''';
 }
 
 /// Manages all the different states of a [Resource]:
@@ -597,83 +640,6 @@ class ResourceError<T> implements ResourceState<T> {
   // coverage:ignore-end
 }
 
-/// {@template resource-selector}
-/// The [selector] function allows filtering the Resource's data by reading
-/// only the properties that you care about.
-///
-/// The advantage is that you keep handling the loading and error states.
-/// {@endtemplate}
-class ResourceSelector<Input, Output> extends Resource<Output> {
-  /// {@macro resource-selector}
-  ResourceSelector({
-    required this.resource,
-    required this.selector,
-    required super.name,
-  }) : super._internal(
-          options: SignalOptions<ResourceState<Output>>(
-            name: name,
-            autoDispose: resource.options.autoDispose,
-          ),
-          resourceOptions: resource.resourceOptions,
-        ) {
-    // set current state
-    state = _mapInputState(resource.state);
-    // listen next states
-    _addListener();
-    // dispose the selector when the input resource is disposed
-    resource.onDispose(dispose);
-  }
-
-  /// The input resource
-  final Resource<Input> resource;
-
-  /// The data selector
-  final Output Function(Input) selector;
-
-  late final DisposeObservation _disposeObservation;
-
-  void _addListener() {
-    _disposeObservation = resource.observe((_, curr) {
-      state = _mapInputState(curr);
-    });
-  }
-
-  @override
-  Future<void> _resolve() async {
-    if (!resource._resolved) return resource._resolve();
-  }
-
-  @override
-  Future<void> refresh() => resource.refresh();
-
-  ResourceState<Output> _mapInputState(ResourceState<Input> input) {
-    return input.map(
-      ready: (ready) {
-        return ResourceState<Output>.ready(
-          selector(ready.value),
-          isRefreshing: ready.isRefreshing,
-        );
-      },
-      error: (error) {
-        return ResourceState<Output>.error(
-          error.error,
-          stackTrace: error.stackTrace,
-          isRefreshing: error.isRefreshing,
-        );
-      },
-      loading: (loading) {
-        return ResourceState<Output>.loading();
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _disposeObservation();
-    super.dispose();
-  }
-}
-
 /// Some useful extension available on any [ResourceState].
 // coverage:ignore-start
 extension ResourceExtensions<T> on ResourceState<T> {
@@ -726,12 +692,6 @@ extension ResourceExtensions<T> on ResourceState<T> {
       loading: (_) => null,
     );
   }
-
-  /// Attempts to synchronously get the value of [ResourceReady].
-  ///
-  /// On error, this will rethrow the error.
-  /// If loading, will return `null`.
-  T? call() => value;
 
   /// Attempts to synchronously get the error of [ResourceError].
   ///

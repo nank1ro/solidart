@@ -1,17 +1,5 @@
 part of 'core.dart';
 
-// coverage:ignore-start
-
-/// {@macro computed}
-@Deprecated('Use Computed instead')
-Computed<T> createComputed<T>(
-  T Function() selector, {
-  SignalOptions<T>? options,
-}) =>
-    Computed<T>(selector, options: options);
-
-// coverage:ignore-end
-
 /// {@template computed}
 /// A special Signal that notifies only whenever the selected
 /// values change.
@@ -62,174 +50,212 @@ Computed<T> createComputed<T>(
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-class Computed<T> extends ReadSignal<T> implements Derivation {
+class Computed<T> extends ReadSignal<T> {
   /// {@macro computed}
   factory Computed(
     T Function() selector, {
-    SignalOptions<T>? options,
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    ValueComparator<T?> comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('Computed');
-    final effectiveOptions =
-        (options ?? SignalOptions<T>(name: name)).copyWith(name: name);
     return Computed._internal(
       selector: selector,
-      name: name,
-      options: effectiveOptions,
+      name: name ?? ReactiveName.nameFor('Computed'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      trackPreviousValue:
+          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
+      comparator: comparator,
     );
   }
 
   Computed._internal({
     required this.selector,
     required super.name,
-    required super.options,
-  }) : super._internal(initialValue: selector());
+    required super.equals,
+    required super.autoDispose,
+    required super.trackInDevTools,
+    required super.comparator,
+    required super.trackPreviousValue,
+  }) {
+    var runnedOnce = false;
+    _internalComputed = _AlienComputed(
+      (previousValue) {
+        if (trackPreviousValue && previousValue is T) {
+          _hasPreviousValue = true;
+          _untrackedPreviousValue = _previousValue = previousValue;
+        }
+
+        try {
+          _untrackedValue = selector();
+
+          if (runnedOnce) {
+            _notifySignalUpdate();
+          } else {
+            runnedOnce = true;
+          }
+          return _untrackedValue;
+        } catch (e, s) {
+          throw SolidartCaughtException(e, stackTrace: s);
+        }
+      },
+      parent: this,
+    );
+
+    _notifySignalCreation();
+  }
 
   /// The selector applied
   final T Function() selector;
 
+  late final _AlienComputed<T> _internalComputed;
+
+  bool _disposed = false;
+
+  late T _untrackedValue;
+
+  T? _previousValue;
+
+  T? _untrackedPreviousValue;
+
+  // Whether or not there is a previous value
+  bool _hasPreviousValue = false;
+
+  // Keeps track of all the callbacks passed to [onDispose].
+  // Used later to fire each callback when this signal is disposed.
+  final _onDisposeCallbacks = <VoidCallback>[];
+
+  // A computed signal is always initialized
   @override
-  SolidartCaughtException? _errorValue;
+  bool get hasValue => true;
 
-  final Set<Atom> __observables = {};
-
-  @override
-  Set<Atom> get _observables => __observables;
-
-  @override
-  set _observables(Set<Atom> value) {
-    __observables
-      ..clear()
-      ..addAll(value);
-  }
-
-  @override
-  Set<Atom>? _newObservables;
-
-  @override
-  // ignore: prefer_final_fields
-  DerivationState _dependenciesState = DerivationState.notTracking;
-
-  bool _isComputing = false;
+  final _deps = <alien.Dependency>{};
 
   @override
   void dispose() {
-    _context.clearObservables(this);
-    super.dispose();
-  }
+    if (_disposed) return;
 
-  @override
-  void _onBecomeStale() {
-    _context.propagatePossiblyChanged(this);
+    _disposed = true;
+    for (final dep in _deps) {
+      if (dep is _AlienSignal) dep.parent._mayDispose();
+      if (dep is _AlienComputed) dep.parent._mayDispose();
+    }
+
+    _deps.clear();
+
+    for (final cb in _onDisposeCallbacks) {
+      cb();
+    }
+    _onDisposeCallbacks.clear();
+    _notifySignalDisposal();
   }
 
   @override
   T get value {
-    if (_isComputing) {
-      // coverage:ignore-start
-      throw SolidartReactionException(
-        'Cycle detected in computation $name: $selector',
-      );
-      // coverage:ignore-end
+    if (_disposed) {
+      reactiveSystem.pauseTracking();
+      final value = _internalComputed();
+      reactiveSystem.resumeTracking();
+      return value;
     }
-
-    if (!_context.isWithinBatch && _observers.isEmpty) {
-      if (_context.shouldCompute(this)) {
-        _context.startBatch();
-        final newValue = _computeValue(track: false);
-        if (newValue is T) _setValue(newValue);
-        _context.endBatch();
-      }
-    } else {
-      _reportObserved();
-      if (_context.shouldCompute(this)) {
-        if (_trackAndCompute()) {
-          _context.propagateChangeConfirmed(this);
-        }
-      }
+    final value = _internalComputed();
+    if (autoDispose) {
+      Future.microtask(_mayDispose);
     }
-
-    if (_context.hasCaughtException(this)) {
-      throw _errorValue!;
-    }
-    return _value;
+    return value;
   }
 
   @override
-  T? get previousValue {
-    // cause observation
-    value;
-    return super.previousValue;
+  T call() {
+    return value;
   }
+
+  /// Returns the previous value of the computed.
+  @override
+  T? get previousValue {
+    if (!trackPreviousValue) return null;
+    // cause observation
+    if (!disposed) value;
+    return _previousValue;
+  }
+
+  /// Returns the untracked value of the computed.
+  @override
+  T get untrackedValue {
+    return _untrackedValue;
+  }
+
+  /// Returns the untracked previous value of the computed.
+  @override
+  T? get untrackedPreviousValue {
+    return _untrackedPreviousValue;
+  }
+
+  @override
+  void _mayDispose() {
+    if (_disposed) return;
+    if (_internalComputed.deps == null && _internalComputed.subs == null) {
+      dispose();
+    } else {
+      _deps.clear();
+
+      var link = _internalComputed.deps;
+      for (; link != null; link = link.nextDep) {
+        final dep = link.dep;
+        _deps.add(dep);
+      }
+    }
+  }
+
+  @override
+  bool get disposed => _disposed;
 
   @override
   bool get hasPreviousValue {
+    if (!trackPreviousValue) return false;
     // cause observation
     value;
-    return super._hasPreviousValue;
+    return _hasPreviousValue;
   }
 
   @override
-  DisposeObservation observe(
-    ObserveCallback<T> listener, {
-    bool fireImmediately = false,
-  }) {
-    // cause observation
-    final disposeEffect = Effect((_) {
-      value;
-    });
-    final disposeObservation = super.observe(
-      listener,
-      fireImmediately: fireImmediately,
-    );
+  int get listenerCount => _deps.length;
 
-    return () {
-      disposeEffect();
-      disposeObservation();
-    };
+  @override
+  void onDispose(VoidCallback cb) {
+    _onDisposeCallbacks.add(cb);
   }
 
-  T? _computeValue({required bool track}) {
-    _isComputing = true;
-    _context.pushComputation();
-
-    T? computedValue;
-    if (track) {
-      computedValue = _context.trackDerivation(this, selector);
-    } else {
-      try {
-        computedValue = selector();
-        _errorValue = null;
-      } on Object catch (e, s) {
-        _errorValue = SolidartCaughtException(e, stackTrace: s);
-      }
+  /// Indicates if the [oldValue] and the [newValue] are equal
+  @override
+  bool _compare(T? oldValue, T? newValue) {
+    // skip if the value are equals
+    if (equals) {
+      return oldValue == newValue;
     }
 
-    _context.popComputation();
-    _isComputing = false;
-
-    return computedValue;
-  }
-
-  bool _trackAndCompute() {
-    final oldValue = _value;
-    final wasSuspended = _dependenciesState == DerivationState.notTracking;
-    final hadCaughtException = _context.hasCaughtException(this);
-
-    final newValue = _computeValue(track: true);
-
-    final changedException =
-        hadCaughtException != _context.hasCaughtException(this);
-    final changed =
-        wasSuspended || changedException || !_areEqual(oldValue, newValue);
-
-    if (changed && newValue is T) {
-      _setValue(newValue);
-    }
-
-    return changed;
+    // return the [comparator] result
+    return comparator(oldValue, newValue);
   }
 
   @override
-  String toString() =>
-      '''Computed<$T>(value: $_value, previousValue: $_previousValue, options; $options)''';
+  String toString() {
+    value;
+    return '''Computed<$T>(value: $untrackedValue, previousValue: $untrackedPreviousValue)''';
+  }
 }

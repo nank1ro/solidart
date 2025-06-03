@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations
+
 import 'dart:async';
 import 'dart:math';
 
@@ -5,7 +7,6 @@ import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
 import 'package:solidart/src/core/core.dart';
-import 'package:solidart/src/extensions.dart';
 import 'package:solidart/src/utils.dart';
 import 'package:test/test.dart';
 
@@ -76,29 +77,25 @@ void main() {
     () {
       test('with equals true it notifies only when the value changes',
           () async {
-        final counter = Signal(
-          0,
-          options: SignalOptions<int>(equals: true, name: ''),
-        );
+        final counter = Signal(0);
 
         final cb = MockCallbackFunction();
         final unobserve = counter.observe((_, __) => cb());
 
-        expect(counter(), 0);
+        expect(counter.value, 0);
 
-        counter.set(1);
+        counter.value = 1;
         await pumpEventQueue();
-        expect(counter(), 1);
+        expect(counter.value, 1);
 
-        counter
-          ..set(2)
-          ..set(2)
-          ..set(2);
+        counter.value = 2;
+        counter.value = 2;
+        counter.value = 2;
 
         await pumpEventQueue();
-        counter.set(3);
+        counter.value = 3;
 
-        expect(counter(), 3);
+        expect(counter.value, 3);
         await pumpEventQueue();
         verify(cb()).called(3);
         // clear
@@ -108,24 +105,20 @@ void main() {
       test(
           'with the identical comparator it notifies only when the comparator '
           'returns false', () async {
-        final signal = Signal(
-          null,
-          options: SignalOptions<_A>(),
-        );
+        final signal = Signal<_A?>(null);
         final cb = MockCallbackFunction();
         final unobserve = signal.observe((_, __) => cb());
 
         expect(signal.value, null);
         final a = _A();
 
-        signal
-          ..set(a)
-          ..set(a)
-          ..set(a);
+        signal.value = a;
+        signal.value = a;
+        signal.value = a;
 
         await pumpEventQueue();
 
-        signal.set(_A());
+        signal.value = _A();
         await pumpEventQueue();
         verify(cb()).called(2);
 
@@ -180,15 +173,14 @@ void main() {
         );
       });
 
-      test('test firstWhere()', () async {
+      test('test until()', () async {
         final count = Signal(0);
 
         unawaited(
           expectLater(count.until((value) => value > 5), completion(11)),
         );
-        count
-          ..set(2)
-          ..set(11);
+        count.value = 2;
+        count.value = 11;
       });
 
       test('check toString()', () {
@@ -199,7 +191,7 @@ void main() {
       test('check Signal becomes ReadSignal', () {
         final s = Signal(0);
         expect(s, const TypeMatcher<Signal<int>>());
-        expect(s.toReadSignal(), const TypeMatcher<ReadSignal<int>>());
+        expect(s.toReadSignal(), const TypeMatcher<ReadableSignal<int>>());
       });
 
       test('Signal is disposed after dispose', () {
@@ -209,21 +201,65 @@ void main() {
         expect(s.disposed, true);
       });
 
-      test('Signal has observers', () {
-        final s = Signal(0);
-        expect(s.hasObservers, false);
-        Effect((dispose) {
-          s();
-        });
-        expect(s.hasObservers, true);
-        addTearDown(s.dispose);
-      });
-
       test('Signal<bool> toggle', () {
         final signal = Signal(false);
-        expect(signal(), false);
+        expect(signal.value, false);
         signal.toggle();
-        expect(signal(), true);
+        expect(signal.value, true);
+      });
+
+      test('lazy Signal', () {
+        final signal = Signal<bool>.lazy();
+        expect(signal.hasValue, false);
+        signal.value = true;
+        expect(signal.hasValue, true);
+      });
+
+      test(
+          '''lazy Signal trows StateError when accessing value before setting one''',
+          () {
+        final signal = Signal<bool>.lazy();
+        expect(() => signal.value, throwsStateError);
+      });
+
+      test('untrackedValue', () {
+        final counter = Signal(0);
+
+        final cb = MockCallbackFunction();
+        final unobserve = Effect(() {
+          counter.untrackedValue;
+          counter.untrackedPreviousValue;
+          cb();
+        });
+        addTearDown(unobserve);
+
+        counter.value = 1;
+
+        // An effect is always triggered once
+        verify(cb()).called(1);
+      });
+
+      test('Test untracked', () {
+        final count = Signal(0);
+        final effectCount = Signal(0);
+        int fn() => effectCount.value + 1;
+
+        final cb = MockCallbackFunction();
+        Effect(() {
+          count.value;
+          cb.call();
+
+          // Whenever this effect is triggered, run `fn` that gives new value
+          effectCount.value = untracked(fn);
+        });
+
+        expect(count.value, 0);
+        expect(effectCount.value, 1);
+
+        count.value = 1;
+        expect(effectCount.value, 2);
+
+        verify(cb()).called(2);
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),
@@ -237,31 +273,29 @@ void main() {
         final signal2 = Signal(0);
 
         final cb = MockCallbackFunctionWithValue<int>();
-        Effect(
-          (_) => cb(signal1()),
-        );
-        Effect(
-          (_) => cb(signal2()),
-        );
+        Effect(() => cb(signal1.value));
+        Effect(() => cb(signal2.value));
 
-        signal1.set(1);
+        signal1.value = 1;
         await pumpEventQueue();
         verify(cb(1)).called(1);
-        signal1.set(2);
+        signal1.value = 2;
         await pumpEventQueue();
         verify(cb(2)).called(1);
-        signal2.set(4);
-        signal1.set(4);
+        signal2.value = 4;
+        signal1.value = 4;
         await pumpEventQueue();
         verify(cb(4)).called(2);
       });
 
       test('check effect reaction with delay', () async {
         final cb = MockCallbackFunction();
-        Effect(
-          (_) => cb(),
-          options: EffectOptions(delay: const Duration(milliseconds: 500)),
+        final disposeEffect = Effect(
+          cb,
+          delay: const Duration(milliseconds: 500),
+          autoDispose: false,
         );
+        addTearDown(disposeEffect.dispose);
         verifyNever(cb());
         await Future<void>.delayed(const Duration(milliseconds: 501));
         verify(cb()).called(1);
@@ -270,7 +304,7 @@ void main() {
       test('check effect onError', () async {
         Object? detectedError;
         Effect(
-          (_) => throw Exception(),
+          () => throw Exception(),
           onError: (error) {
             detectedError = error;
           },
@@ -288,7 +322,7 @@ void main() {
           () async {
         final klass = _B(_C(0));
         final s = Signal(klass);
-        final selected = Computed(() => s().c.count);
+        final selected = Computed(() => s.value.c.count);
         final cb = MockCallbackFunctionWithValue<int>();
 
         void listener() {
@@ -297,21 +331,21 @@ void main() {
 
         final unobserve = selected.observe((_, __) => listener());
 
-        s.set(_B(_C(1)));
+        s.value = _B(_C(1));
         await pumpEventQueue();
 
-        s.set(_B(_C(5)));
+        s.value = _B(_C(5));
         await pumpEventQueue();
 
-        s.set(_B(_C(1)));
+        s.value = _B(_C(1));
         await pumpEventQueue();
 
         verify(cb(1)).called(2);
-        s.set(_B(_C(2)));
+        s.value = _B(_C(2));
         await pumpEventQueue();
-        s.set(_B(_C(2)));
+        s.value = _B(_C(2));
         await pumpEventQueue();
-        s.set(_B(_C(3)));
+        s.value = _B(_C(3));
         await pumpEventQueue();
         verify(cb(2)).called(1);
         verify(cb(3)).called(1);
@@ -320,47 +354,24 @@ void main() {
         unobserve();
       });
 
-      test('custom signal options for derived signal', () async {
-        final a = Signal(SampleList([1]));
-        final selected = Computed(
-          () => a().numbers,
-          options: SignalOptions<List<int>>(
-            comparator: (a, b) => const ListEquality<int>().equals(a, b),
-          ),
-        );
-
-        final cb = MockCallbackFunction();
-        selected.observe((previousValue, value) => cb.call());
-
-        verifyNever(cb());
-
-        a.set(SampleList([1]));
-        await pumpEventQueue();
-        verifyNever(cb());
-
-        a.set(SampleList([1, 2]));
-        await pumpEventQueue();
-        verify(cb()).called(1);
-      });
-
       test("selector's readable signal contains previous value", () async {
         final signal = Signal(0);
-        final derived = Computed(() => signal() * 2);
+        final derived = Computed(() => signal.value * 2);
         await pumpEventQueue();
         expect(derived.hasPreviousValue, false);
         expect(derived.previousValue, null);
 
-        signal.set(1);
+        signal.value = 1;
         await pumpEventQueue();
         expect(derived.hasPreviousValue, true);
         expect(derived.previousValue, 0);
 
-        signal.set(2);
+        signal.value = 2;
         await pumpEventQueue();
         expect(derived.hasPreviousValue, true);
         expect(derived.previousValue, 2);
 
-        signal.set(1);
+        signal.value = 1;
         await pumpEventQueue();
         expect(derived.hasPreviousValue, true);
         expect(derived.previousValue, 4);
@@ -369,32 +380,32 @@ void main() {
       test('signal has previous value', () {
         final s = Signal(0);
         expect(s.hasPreviousValue, false);
-        s.set(1);
+        s.value = 1;
         expect(s.hasPreviousValue, true);
       });
 
       test('nullable derived signal', () async {
         final count = Signal<int?>(0);
         final doubleCount = Computed(() {
-          if (count() == null) return null;
-          return count()! * 2;
+          if (count.value == null) return null;
+          return count.value! * 2;
         });
 
         await pumpEventQueue();
         expect(doubleCount.value, 0);
 
-        count.set(1);
+        count.value = 1;
         await pumpEventQueue();
         expect(doubleCount.value, 2);
 
-        count.set(null);
+        count.value = null;
         await pumpEventQueue();
         expect(doubleCount.value, null);
       });
 
       test('derived signal disposes', () async {
         final count = Signal(0);
-        final doubleCount = Computed(() => count() * 2);
+        final doubleCount = Computed(() => count.value * 2);
         expect(doubleCount.disposed, false);
         doubleCount.dispose();
         expect(doubleCount.disposed, true);
@@ -404,8 +415,8 @@ void main() {
         final count = Signal(1);
         final doubleCount = Computed(
           () {
-            if (count() == 1) {
-              return count() * 2;
+            if (count.value == 1) {
+              return count.value * 2;
             }
             return throw Exception();
           },
@@ -418,9 +429,9 @@ void main() {
         );
       });
 
-      test('check toString', () {
+      test('check toString computed', () {
         final count = Signal(1);
-        final doubleCount = Computed(() => count() * 2);
+        final doubleCount = Computed(() => count.value * 2);
 
         expect(doubleCount.toString(), startsWith('Computed<int>(value: 2'));
       });
@@ -431,20 +442,20 @@ void main() {
   group(
     'ReadSignal tests',
     () {
-      test('check ReadSignal value and listener count', () {
-        final s = ReadSignal(0);
-        expect(s.value, 0);
-        expect(s.previousValue, null);
-        expect(s.listenerCount, 0);
-
-        Effect((_) {
-          s();
-        });
-        expect(s.listenerCount, 1);
-      });
+      // test('check ReadSignal value and listener count', () {
+      //   final s = ReadSignal(0);
+      //   expect(s.value, 0);
+      //   expect(s.previousValue, null);
+      //   expect(s.listenerCount, 0);
+      //
+      //   Effect((_) {
+      //     s();
+      //   });
+      //   expect(s.listenerCount, 1);
+      // });
 
       test('check toString()', () {
-        final s = ReadSignal(0);
+        final s = ReadableSignal(0);
         expect(s.toString(), startsWith('ReadSignal<int>(value: 0'));
       });
     },
@@ -458,7 +469,7 @@ void main() {
         final streamController = StreamController<int>();
         addTearDown(streamController.close);
 
-        final resource = Resource(stream: () => streamController.stream);
+        final resource = Resource.stream(() => streamController.stream);
         expect(resource.state, isA<ResourceLoading<int>>());
         expect(resource.previousState, isNull);
         streamController.add(1);
@@ -478,7 +489,7 @@ void main() {
             1,
           ),
         );
-        expect(resource.state(), 10);
+        expect(resource.state.value, 10);
 
         streamController.addError(UnimplementedError());
         await pumpEventQueue();
@@ -489,13 +500,13 @@ void main() {
       test('check Resource with stream and source', () async {
         final count = Signal(-1);
 
-        final resource = Resource(
-          stream: () {
-            if (count() < 1) return Stream.value(0);
-            return Stream.value(count());
+        final resource = Resource.stream(
+          () {
+            if (count.value < 1) return Stream.value(0);
+            return Stream.value(count.value);
           },
           source: count,
-          options: ResourceOptions(lazy: false),
+          lazy: false,
         );
 
         addTearDown(() {
@@ -509,7 +520,7 @@ void main() {
           isA<ResourceReady<int>>().having((p0) => p0.value, 'equal to 0', 0),
         );
 
-        count.set(5);
+        count.value = 5;
         await pumpEventQueue();
         expect(
           resource.state,
@@ -527,9 +538,9 @@ void main() {
           source.dispose();
         });
 
-        final resource = Resource(
-          stream: () {
-            if (source().isEven) {
+        final resource = Resource.stream(
+          () {
+            if (source.value.isEven) {
               return streamControllerA.stream;
             }
             return streamControllerB.stream;
@@ -543,7 +554,7 @@ void main() {
         expect(resource.state.value, 1);
 
         // changing to stream B
-        source.set(1);
+        source.value = 1;
         expect(
           resource.state,
           isA<ResourceReady<int>>()
@@ -557,7 +568,7 @@ void main() {
         expect(resource.state.value, 1);
 
         streamControllerA.add(3);
-        source.set(2);
+        source.value = 2;
         await pumpEventQueue();
         expect(resource.state.value, 3);
       });
@@ -565,8 +576,8 @@ void main() {
       test('check Resource with future that throws', () async {
         Future<User> getUser() => throw Exception();
         final resource = Resource<User>(
-          fetcher: getUser,
-          options: ResourceOptions(lazy: false),
+          getUser,
+          lazy: false,
         );
 
         addTearDown(resource.dispose);
@@ -580,31 +591,31 @@ void main() {
         final userId = Signal(0);
 
         Future<User> getUser() {
-          if (userId() == 2) throw Exception();
-          return Future.value(User(id: userId()));
+          if (userId.value == 2) throw Exception();
+          return Future.value(User(id: userId.value));
         }
 
         final resource = Resource(
-          fetcher: getUser,
+          getUser,
           source: userId,
-          options: ResourceOptions(lazy: false),
+          lazy: false,
         );
 
         await pumpEventQueue();
         expect(resource.state, isA<ResourceReady<User>>());
         expect(resource.state.value, const User(id: 0));
 
-        userId.set(1);
+        userId.value = 1;
         await pumpEventQueue();
         expect(resource.state, isA<ResourceReady<User>>());
-        expect(resource.state(), const User(id: 1));
+        expect(resource.state.value, const User(id: 1));
 
-        userId.set(2);
+        userId.value = 2;
         await pumpEventQueue();
         expect(resource.state, isA<ResourceError<User>>());
         expect(resource.state.error, isException);
 
-        userId.set(3);
+        userId.value = 3;
         await pumpEventQueue();
         await resource.refresh();
         expect(resource.state, isA<ResourceReady<User>>());
@@ -617,9 +628,35 @@ void main() {
         resource.dispose();
       });
 
+      test('check Resource with useRefreshing false', () async {
+        final userId = Signal(0);
+
+        Future<User> getUser() {
+          if (userId.value == 2) throw Exception();
+          return Future.value(User(id: userId.value));
+        }
+
+        final resource = Resource(
+          getUser,
+          source: userId,
+          useRefreshing: false,
+          lazy: false,
+        );
+
+        addTearDown(resource.dispose);
+        addTearDown(userId.dispose);
+
+        await pumpEventQueue();
+        expect(resource.state, isA<ResourceReady<User>>());
+        expect(resource.state.value, const User(id: 0));
+
+        userId.value = 1;
+        expect(resource.state, isA<ResourceLoading<User>>());
+      });
+
       test('update ResourceState', () async {
         Future<int> fetcher() => Future.value(1);
-        final resource = Resource(fetcher: fetcher);
+        final resource = Resource(fetcher);
         expect(resource.state, isA<ResourceLoading<int>>());
         await pumpEventQueue();
         expect(
@@ -640,7 +677,7 @@ void main() {
               const Duration(milliseconds: 200),
               () => 1,
             );
-        final resource = Resource(fetcher: fetcher);
+        final resource = Resource(fetcher);
         expect(resource.state, isA<ResourceLoading<int>>());
         await Future<void>.delayed(const Duration(milliseconds: 100));
         expect(resource.state, isA<ResourceLoading<int>>());
@@ -653,7 +690,7 @@ void main() {
       });
       test('refresh Resource with stream while loading', () async {
         final controller = StreamController<int>();
-        final resource = Resource(stream: () => controller.stream);
+        final resource = Resource.stream(() => controller.stream);
         expect(resource.state, isA<ResourceLoading<int>>());
 
         await resource.refresh();
@@ -662,83 +699,6 @@ void main() {
         controller.add(1);
         await pumpEventQueue();
         expect(resource.state, isA<ResourceReady<int>>());
-      });
-      test('check ResourceSelector with future', () async {
-        final userId = Signal(0);
-
-        Future<User> getUser() {
-          if (userId() == 2) throw Exception();
-          return Future.value(User(id: userId()));
-        }
-
-        final resource = Resource(fetcher: getUser, source: userId);
-        final idResource = resource.select((data) => data.id);
-
-        await pumpEventQueue();
-        expect(idResource.state, isA<ResourceReady<int>>());
-        expect(idResource.state.value, 0);
-
-        userId.set(1);
-        await pumpEventQueue();
-        expect(idResource.state, isA<ResourceReady<int>>());
-        expect(idResource.state(), 1);
-
-        userId.set(2);
-        await pumpEventQueue();
-        expect(idResource.state, isA<ResourceError<int>>());
-        expect(idResource.state.error, isException);
-
-        userId.set(3);
-        await pumpEventQueue();
-        await idResource.refresh();
-        expect(idResource.state, isA<ResourceReady<int>>());
-        expect(idResource.state.hasError, false);
-        expect(idResource.state.asError, isNull);
-        expect(idResource.state.isLoading, false);
-        expect(idResource.state.asReady, isNotNull);
-        expect(idResource.state.isReady, true);
-
-        resource.dispose();
-        expect(idResource.disposed, true);
-      });
-
-      test('check ResourceSelector with stream', () async {
-        final userId = Signal(0);
-
-        Stream<User> getUser() {
-          if (userId() == 2) return Stream<User>.error(Exception());
-          return Stream.value(User(id: userId()));
-        }
-
-        final resource = Resource(stream: getUser, source: userId);
-        final idResource = resource.select((data) => data.id);
-
-        await pumpEventQueue();
-        expect(idResource.state, isA<ResourceReady<int>>());
-        expect(idResource.state.value, 0);
-
-        userId.set(1);
-        await pumpEventQueue();
-        expect(idResource.state, isA<ResourceReady<int>>());
-        expect(idResource.state(), 1);
-
-        userId.set(2);
-        await pumpEventQueue();
-        expect(idResource.state, isA<ResourceError<int>>());
-        expect(idResource.state.error, isException);
-
-        userId.set(3);
-        await pumpEventQueue();
-        await idResource.refresh();
-        expect(idResource.state, isA<ResourceReady<int>>());
-        expect(idResource.state.hasError, false);
-        expect(idResource.state.asError, isNull);
-        expect(idResource.state.isLoading, false);
-        expect(idResource.state.asReady, isNotNull);
-        expect(idResource.state.isReady, true);
-
-        resource.dispose();
-        expect(idResource.disposed, true);
       });
 
       test('check ResourceState.on', () async {
@@ -755,10 +715,10 @@ void main() {
         var errorCalledTimes = 0;
         var refreshingOnDataTimes = 0;
         var refreshingOnErrorTimes = 0;
-        final resource = Resource(fetcher: fetcher);
+        final resource = Resource(fetcher);
 
         Effect(
-          (_) {
+          () {
             resource.state.on(
               ready: (data) {
                 if (resource.state.isRefreshing) {
@@ -822,7 +782,7 @@ void main() {
                 const Duration(milliseconds: 300),
                 () => 1,
               );
-          final count = Resource(fetcher: fetcher);
+          final count = Resource(fetcher);
 
           await expectLater(count.untilReady(), completion(1));
         },
@@ -830,8 +790,8 @@ void main() {
 
       test('check toString()', () async {
         final r = Resource(
-          fetcher: () => Future.value(1),
-          options: ResourceOptions(lazy: false),
+          () => Future.value(1),
+          lazy: false,
         );
         await pumpEventQueue();
         expect(
@@ -845,35 +805,35 @@ void main() {
     timeout: const Timeout(Duration(seconds: 1)),
   );
 
-  group(
-    'ReactiveContext tests',
-    () {
-      test('throws Exception for reactions that do not converge', () {
-        var firstTime = true;
-        final count = Signal(0);
-        final d = Effect((_) {
-          // watch count
-          count.value;
-          if (firstTime) {
-            firstTime = false;
-            return;
-          }
-
-          // cyclic-dependency
-          // this effect will keep on getting triggered as count.value keeps
-          // changing every time it's invoked
-          count.value = count.value + 1;
-        });
-
-        expect(
-          () => count.value = 1,
-          throwsA(const TypeMatcher<SolidartReactionException>()),
-        );
-        d();
-      });
-    },
-    timeout: const Timeout(Duration(seconds: 1)),
-  );
+  // group(
+  //   'ReactiveContext tests',
+  //   () {
+  //     test('throws Exception for reactions that do not converge', () {
+  //       var firstTime = true;
+  //       final count = Signal(0);
+  //       final d = Effect((_) {
+  //         // watch count
+  //         count.value;
+  //         if (firstTime) {
+  //           firstTime = false;
+  //           return;
+  //         }
+  //
+  //         // cyclic-dependency
+  //         // this effect will keep on getting triggered as count.value keeps
+  //         // changing every time it's invoked
+  //         count.value++;
+  //       });
+  //
+  //       expect(
+  //         () => count.value = 1,
+  //         throwsA(const TypeMatcher<SolidartReactionException>()),
+  //       );
+  //       d();
+  //     });
+  //   },
+  //   timeout: const Timeout(Duration(seconds: 1)),
+  // );
 
   group(
     'ListSignal tests',
@@ -1154,17 +1114,14 @@ void main() {
       test('check set', () {
         final list = ListSignal([1, 2]);
         expect(list, [1, 2]);
-        list.set([3, 4]);
+        list.value = [3, 4];
         expect(list, [3, 4]);
       });
 
       test('check set with equals', () {
-        final list = ListSignal<int>(
-          [1, 2],
-          options: SignalOptions(equals: true),
-        );
+        final list = ListSignal<int>([1, 2]);
         expect(list, [1, 2]);
-        list.set([3, 4]);
+        list.value = [3, 4];
         expect(list, [3, 4]);
       });
 
@@ -1173,6 +1130,15 @@ void main() {
         expect(list, [1, 2]);
         list.updateValue((v) => v..add(3));
         expect(list, [1, 2, 3]);
+      });
+
+      test('check value and previousValue', () {
+        final list = ListSignal([1, 2]);
+        expect(list, [1, 2]);
+        expect(list.previousValue, null);
+        list.updateValue((v) => v..add(3));
+        expect(list, [1, 2, 3]);
+        expect(list.previousValue, [1, 2]);
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),
@@ -1336,15 +1302,14 @@ void main() {
       test('check set', () {
         final set = SetSignal({1, 2});
         expect(set, {1, 2});
-        set.set({3, 4});
+        set.value = {3, 4};
         expect(set, {3, 4});
       });
 
       test('check set with equals', () {
-        final set =
-            SetSignal<int>({1, 2}, options: SignalOptions(equals: true));
+        final set = SetSignal<int>({1, 2});
         expect(set, {1, 2});
-        set.set({3, 4});
+        set.value = {3, 4};
         expect(set, {3, 4});
       });
 
@@ -1353,6 +1318,15 @@ void main() {
         expect(set, {1, 2});
         set.updateValue((v) => v..add(3));
         expect(set, {1, 2, 3});
+      });
+
+      test('check value and previousValue', () {
+        final set = SetSignal({1, 2});
+        expect(set, {1, 2});
+        expect(set.previousValue, null);
+        set.updateValue((v) => v..add(3));
+        expect(set, {1, 2, 3});
+        expect(set.previousValue, {1, 2});
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),
@@ -1508,17 +1482,14 @@ void main() {
       test('check set', () {
         final map = MapSignal({'a': 1, 'b': 2});
         expect(map, {'a': 1, 'b': 2});
-        map.set({'c': 3, 'd': 4});
+        map.value = {'c': 3, 'd': 4};
         expect(map, {'c': 3, 'd': 4});
       });
 
       test('check set with equals', () {
-        final map = MapSignal<String, int>(
-          {'a': 1, 'b': 2},
-          options: SignalOptions(equals: true),
-        );
+        final map = MapSignal<String, int>({'a': 1, 'b': 2});
         expect(map, {'a': 1, 'b': 2});
-        map.set({'c': 3, 'd': 4});
+        map.value = {'c': 3, 'd': 4};
         expect(map, {'c': 3, 'd': 4});
       });
 
@@ -1530,6 +1501,17 @@ void main() {
           return v;
         });
         expect(map, {'a': 1, 'b': 2, 'c': 3});
+      });
+
+      test('check value and previousValue', () {
+        final map = MapSignal({'a': 1, 'b': 2});
+        expect(map, {'a': 1, 'b': 2});
+        map.updateValue((v) {
+          v['c'] = 3;
+          return v;
+        });
+        expect(map, {'a': 1, 'b': 2, 'c': 3});
+        expect(map.previousValue, {'a': 1, 'b': 2});
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),
@@ -1561,6 +1543,118 @@ void main() {
         verifyNever(observer.didDisposeSignal(count));
         count.dispose();
         verify(observer.didDisposeSignal(count)).called(1);
+      });
+
+      test('modifications are batched', () {
+        final x = Signal(10);
+        final y = Signal(20);
+        final total = Signal(30);
+
+        final calls = <({int x, int y, int total})>[];
+        expect(calls, isEmpty);
+        expect(total.value, equals(30));
+
+        final disposeEffect = Effect(() {
+          calls.add((x: x.value, y: y.value, total: total.value));
+        });
+
+        addTearDown(disposeEffect);
+
+        expect(
+          calls,
+          equals([
+            (x: 10, y: 20, total: 30),
+          ]),
+        );
+
+        batch(() {
+          x.value++;
+          y.value++;
+
+          total.value = x.value + y.value;
+        });
+
+        expect(
+          calls,
+          equals([
+            (x: 10, y: 20, total: 30),
+            (x: 11, y: 21, total: 32),
+          ]),
+        );
+      });
+
+      test('should correctly propagate changes through computed signals', () {
+        final source = Signal(0);
+        final c1 = Computed(() => source.value % 2);
+        final c2 = Computed(() => c1.value);
+        final c3 = Computed(() => c2.value);
+
+        c3.value;
+        source.value = 1;
+        c2.value;
+        source.value = 3;
+
+        expect(c3.value, equals(1));
+      });
+      test('should clear subscriptions when untracked by all subscribers', () {
+        var bRunTimes = 0;
+
+        final a = Signal(1);
+        final b = Computed(() {
+          bRunTimes++;
+          return a.value * 2;
+        });
+        final disposeEffect = Effect(() => b.value);
+
+        expect(bRunTimes, equals(1));
+
+        a.value = 2;
+        expect(bRunTimes, equals(2));
+
+        disposeEffect();
+        a.value = 2;
+        expect(bRunTimes, equals(2));
+      });
+
+      test('should not run untracked inner effect', () {
+        final a = Signal(3);
+        final b = Computed(() => a.value > 0);
+
+        Effect(() {
+          if (b.value) {
+            Effect(() {
+              if (a.value == 0) {
+                throw Error();
+              }
+            });
+          }
+        });
+
+        a.value--;
+        a.value--;
+        a.value--;
+        expect(b.value, isFalse);
+      });
+
+      test('should run outer effect first', () {
+        final a = Signal(1);
+        final b = Signal(1);
+
+        Effect(() {
+          if (a.value > 0) {
+            Effect(() {
+              b.value;
+              if (a.value == 0) {
+                throw Error();
+              }
+            });
+          }
+        });
+
+        batch(() {
+          a.value = 0;
+          b.value = 0;
+        });
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),

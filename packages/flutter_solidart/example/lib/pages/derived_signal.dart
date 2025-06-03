@@ -9,9 +9,8 @@ class DerivedSignalsPage extends StatefulWidget {
 }
 
 class _DerivedSignalsPageState extends State<DerivedSignalsPage> {
-  late final count = Signal(0, options: SignalOptions(name: 'count'));
-  late final doubleCount =
-      Computed(() => count() * 2, options: SignalOptions(name: 'doubleCount'));
+  late final count = Signal(0, name: 'count');
+  late final doubleCount = Computed(() => count.value * 2, name: 'doubleCount');
 
   @override
   Widget build(BuildContext context) {
@@ -20,22 +19,16 @@ class _DerivedSignalsPageState extends State<DerivedSignalsPage> {
         title: const Text('Derived Signals'),
       ),
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SignalBuilder(
-                signal: count,
-                builder: (_, value, __) {
-                  return Text('Count: $value');
-                }),
-            const SizedBox(height: 16),
-            SignalBuilder(
-                signal: doubleCount,
-                builder: (_, value, __) {
-                  return Text('Double Count: $value');
-                }),
-            const SizedBox(height: 16),
-          ],
+        child: SignalBuilder(
+          builder: (_, __) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Count: ${count.value}'),
+              const SizedBox(height: 16),
+              Text('Double Count: ${doubleCount.value}'),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(

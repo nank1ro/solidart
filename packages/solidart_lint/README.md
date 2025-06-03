@@ -36,10 +36,6 @@ dart run custom_lint
 
 ![Wrap with SignalBuilder sample](https://raw.githubusercontent.com/nank1ro/solidart/main/packages/solidart_lint/assets/wrap_with_signal_builder.gif)
 
-### Wrap with ResourceBuilder
-
-![Wrap with ResourceBuilder sample](https://raw.githubusercontent.com/nank1ro/solidart/main/packages/solidart_lint/assets/wrap_with_resource_builder.gif)
-
 ### Wrap with Show
 
 ![Wrap with Show sample](https://raw.githubusercontent.com/nank1ro/solidart/main/packages/solidart_lint/assets/wrap_with_show.gif)
@@ -150,25 +146,6 @@ final provider = context.get();
 
 ```dart
 final provider = context.get<MyClass>();
-```
-
----
-
-### invalid_observe_type
-
-The type you want to observe is invalid, must not implement `SignalBase`.
-You cannot observe a signal that implements `SignalBase`, like `Signal`, `ReadSignal` and `Resource`.
-
-**Bad**:
-
-```dart
-final counter = context.observe<Signal<int>>('counter');
-```
-
-**Good**:
-
-```dart
-final counter = context.observe<int>('counter');
 ```
 
 ---

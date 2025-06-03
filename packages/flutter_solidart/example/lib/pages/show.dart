@@ -10,8 +10,7 @@ class ShowPage extends StatefulWidget {
 }
 
 class _ShowPageState extends State<ShowPage> {
-  final loggedIn =
-      Signal<bool>(false, options: SignalOptions(name: 'loggedIn'));
+  final loggedIn = Signal<bool>(false, name: 'loggedIn');
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +22,7 @@ class _ShowPageState extends State<ShowPage> {
             style: TextButton.styleFrom(foregroundColor: Colors.white),
             onPressed: loggedIn.toggle,
             child: Show(
-              when: loggedIn,
+              when: () => loggedIn.value,
               builder: (_) => const Text('LOGIN'),
               fallback: (_) => const Text('LOGOUT'),
             ),
@@ -32,7 +31,7 @@ class _ShowPageState extends State<ShowPage> {
       ),
       body: Center(
         child: Show(
-          when: loggedIn,
+          when: () => loggedIn.value,
           builder: (_) => const Text('Logged In'),
           fallback: (_) => const Text('Logged out'),
         ),

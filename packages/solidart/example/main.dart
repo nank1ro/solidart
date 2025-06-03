@@ -1,19 +1,17 @@
 // ignore_for_file: avoid_print
 
-import 'dart:async';
-
 import 'package:solidart/solidart.dart';
 
-Future<void> main() async {
+void main() {
   final count = Signal(0);
-  final doubleCount = Computed(() => count() * 2);
+  final doubleCount = Computed(() => count.value * 2);
 
-  Effect((dispose) {
-    print('The counter is now: ${count()}');
-    print('The double counter is now: ${doubleCount()}');
+  Effect(() {
+    print('The counter is ${count.value}');
+    print('The double counter is ${doubleCount.value}');
   });
 
   count
-    ..set(1)
-    ..set(2);
+    ..value = 1
+    ..value = 2;
 }

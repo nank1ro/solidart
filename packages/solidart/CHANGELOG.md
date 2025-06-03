@@ -1,3 +1,44 @@
+## 2.0.0
+
+- **CHORE**: Improve the performance by using `alien_signals` for the reactive system.
+- **FEAT**: Expose `untracked`.
+- **REFACTOR**: Updated the reactive system from scratch, improving the performances.
+- **BREAKING CHANGE**: Remove `set` and `call` methods from Signals (Use an extension to have them back).
+- **FEAT**: Add `useRefreshing` to `Resource` to decide whether to update the current state with `isRefreshing` (defaults to true). If you set it to false, when refreshing, the resource will go directly to the loading state.
+- **FEAT**: Add `Signal.lazy` to allow the creation of a signal without an initial value. Be aware, the signal will throw an error if you try to read its value before it has been initialized.
+- **CHORE**: Remove deprecated `createSignal`, `createComputed`, `createEffect` and `createResource` helpers.
+- **CHORE**: Remove `SignalOptions` and `ResourceOptions` classes.
+- **FEAT**: Add `batch` function to execute a callback that will not side-effect until its top-most batch is completed. See docs [here](https://solidart.mariuti.com/learning/batch)
+- **CHORE**: Add `trackInDevTools` to `SignalOptions` and `ResourceOptions` to disable the DevTools tracking for specific signals and resources, defaults to `SolidartConfig.devToolsEnabled`.
+
+## 2.0.0-dev.6
+
+- **FEAT**: Expose `untracked`.
+
+## 2.0.0-dev.5
+
+- **CHORE**: Improve the performance
+
+## 2.0.0-dev.4
+
+- **REFACTOR**: Updated the reactive system from scratch, improving the performances.
+- **BREAKING CHANGE**: Remove `set` and `call` methods from Signals (Use an extension to have them back).
+- **FEAT**: Add `useRefreshing` to `Resource` to decide whether to update the current state with `isRefreshing` (defaults to true). If you set it to false, when refreshing, the resource will go directly to the loading state.
+
+## 2.0.0-dev.3
+
+- **FEAT**: Add `Signal.lazy` to allow the creation of a signal without an initial value. Be aware, the signal will throw an error if you try to read its value before it has been initialized.
+
+## 2.0.0-dev.2
+
+- **CHORE**: Remove deprecated `createSignal`, `createComputed`, `createEffect` and `createResource` helpers.
+- **CHORE**: Remove `SignalOptions` and `ResourceOptions` classes.
+
+## 2.0.0-dev.1
+
+- **FEAT**: Add `batch` function to execute a callback that will not side-effect until its top-most batch is completed. See docs [here](https://docs.page/nank1ro/solidart~dev/learning/batch)
+- **CHORE**: Add `trackInDevTools` to `SignalOptions` and `ResourceOptions` to disable the DevTools tracking for specific signals and resources, defaults to `SolidartConfig.devToolsEnabled`.
+
 ## 1.5.4
 
 - **CHORE**: Add `devToolsEnabled` option to manually disable the DevTools extension that defaults to `kDebugMode`
@@ -29,7 +70,7 @@
 
 ## 1.3.0
 
-- **FEAT**: Automatic disposal, [see the docs here](https://docs.page/nank1ro/solidart/advanced/automatic-disposal)
+- **FEAT**: Automatic disposal, [see the docs here](https://docs.page/nank1ro/solidart~dev/advanced/automatic-disposal)
 
 ## 1.2.2
 

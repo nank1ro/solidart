@@ -1,12 +1,4 @@
 part of 'core.dart';
-// coverage:ignore-start
-
-/// {@macro signal}
-@Deprecated('Use Signal instead')
-Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
-    Signal<T>(value, options: options);
-
-// coverage:ignore-end
 
 /// {@template signal}
 /// # Signals
@@ -109,48 +101,107 @@ Signal<T> createSignal<T>(T value, {SignalOptions<T>? options}) =>
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-class Signal<T> extends ReadSignal<T> {
+class Signal<T> extends ReadableSignal<T> {
   /// {@macro signal}
   factory Signal(
     T initialValue, {
-    SignalOptions<T>? options,
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    ValueComparator<T?> comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
   }) {
-    final name = options?.name ?? ReactiveContext.main.nameFor('Signal');
-    final effectiveOptions =
-        (options ?? SignalOptions<T>(name: name)).copyWith(name: name);
     return Signal._internal(
       initialValue: initialValue,
-      options: effectiveOptions,
-      name: name,
+      name: name ?? ReactiveName.nameFor('Signal'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      trackPreviousValue:
+          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
+      comparator: comparator,
+    );
+  }
+
+  /// {@macro signal}
+  ///
+  /// This is a lazy signal, it doesn't have a value at the moment of creation.
+  /// But would throw a StateError if you try to access the value before setting
+  /// one.
+  factory Signal.lazy({
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    ValueComparator<T?> comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
+  }) {
+    return Signal._internalLazy(
+      name: name ?? ReactiveName.nameFor('Signal'),
+      equals: equals ?? SolidartConfig.equals,
+      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
+      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
+      trackPreviousValue:
+          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
+      comparator: comparator,
     );
   }
 
   Signal._internal({
     required super.initialValue,
     required super.name,
-    required super.options,
+    required super.equals,
+    required super.autoDispose,
+    required super.trackInDevTools,
+    required super.comparator,
+    required super.trackPreviousValue,
   }) : super._internal();
 
-  /// {@macro set-signal-value}
-  set value(T newValue) => set(newValue);
+  Signal._internalLazy({
+    required super.name,
+    required super.equals,
+    required super.autoDispose,
+    required super.trackInDevTools,
+    required super.comparator,
+    required super.trackPreviousValue,
+  }) : super._internalLazy();
 
-  /// {@template set-signal-value}
-  /// Sets the current signal value with [newValue].
-  ///
-  /// This operation may be skipped if the value is equal to the previous one,
-  /// check [SignalOptions.equals] and [SignalOptions.comparator].
-  /// {@endtemplate}
-  void set(T newValue) => _setValue(newValue);
+  /// {@macro set-signal-value}
+  set value(T newValue) => _setValue(newValue);
 
   /// Calls a function with the current value and assigns the result as the
   /// new value.
-  T updateValue(T Function(T value) callback) => value = callback(_value);
+  T updateValue(T Function(T value) callback) =>
+      value = callback(_untrackedValue);
 
-  /// Converts this [Signal] into a [ReadSignal]
+  /// Converts this [Signal] into a [ReadableSignal]
   /// Use this method to remove the visility to the value setter.
-  ReadSignal<T> toReadSignal() => this;
+  ReadableSignal<T> toReadSignal() => this;
 
   @override
   String toString() =>
-      '''Signal<$T>(value: $_value, previousValue: $_previousValue, options: $options)''';
+      '''Signal<$T>(value: $_untrackedValue, previousValue: $_untrackedPreviousValue)''';
 }

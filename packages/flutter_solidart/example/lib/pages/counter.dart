@@ -9,7 +9,9 @@ class CounterPage extends StatefulWidget {
 }
 
 class _CounterPageState extends State<CounterPage> {
-  final counter = Signal(0, options: SignalOptions(name: 'counter'));
+  final counter = Signal(0, name: 'counter');
+  late final doubleCounter =
+      Computed(() => counter.value * 2, name: 'doubleCounter');
 
   @override
   Widget build(BuildContext context) {
@@ -17,9 +19,9 @@ class _CounterPageState extends State<CounterPage> {
       appBar: AppBar(title: const Text('Counter')),
       body: Center(
         child: SignalBuilder(
-          signal: counter,
-          builder: (context, count, _) {
-            return Text('Counter: $count');
+          builder: (_, __) {
+            return Text(
+                'Counter: ${counter.value}\nDouble: ${doubleCounter.value}');
           },
         ),
       ),

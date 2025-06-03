@@ -2,13 +2,13 @@ import 'dart:developer' as dev;
 
 import 'package:example/pages/counter.dart';
 import 'package:example/pages/derived_signal.dart';
-import 'package:example/pages/dual_signal_builder.dart';
 import 'package:example/pages/effects.dart';
+import 'package:example/pages/lazy_counter.dart';
 import 'package:example/pages/map_signal.dart';
 import 'package:example/pages/resource.dart';
 import 'package:example/pages/set_signal.dart';
 import 'package:example/pages/show.dart';
-import 'package:example/pages/solid/solid.dart';
+import 'package:example/pages/signal_builder.dart';
 import 'package:example/pages/list_signal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
@@ -18,19 +18,18 @@ import 'package:flutter_solidart/flutter_solidart.dart';
 class Logger implements SolidartObserver {
   @override
   void didCreateSignal(SignalBase<Object?> signal) {
-    dev.log(
-        'didCreateSignal(name: ${signal.options.name}, value: ${signal.value})');
+    dev.log('didCreateSignal(name: ${signal.name}, value: ${signal.value})');
   }
 
   @override
   void didDisposeSignal(SignalBase<Object?> signal) {
-    dev.log('didDisposeSignal(name: ${signal.options.name})');
+    dev.log('didDisposeSignal(name: ${signal.name})');
   }
 
   @override
   void didUpdateSignal(SignalBase<Object?> signal) {
     dev.log(
-        'didUpdateSignal(name: ${signal.options.name}, previousValue: ${signal.previousValue}, value: ${signal.value})');
+        'didUpdateSignal(name: ${signal.name}, previousValue: ${signal.previousValue}, value: ${signal.value})');
   }
 }
 
@@ -60,12 +59,12 @@ class MyApp extends StatelessWidget {
 // Maps the routes to the specific widget page.
 final routes = <String, WidgetBuilder>{
   '/counter': (_) => const CounterPage(),
+  '/lazy-counter': (_) => const LazyCounterPage(),
   '/show': (_) => const ShowPage(),
   '/derived-signal': (_) => const DerivedSignalsPage(),
   '/effects': (_) => const EffectsPage(),
-  '/dual-signal-builder': (_) => const DualSignalBuilderPage(),
+  '/signal-builder': (_) => const SignalBuilderPage(),
   '/resource': (_) => const ResourcePage(),
-  '/solid': (_) => const SolidPage(),
   '/list-signal': (_) => const ListSignalPage(),
   '/set-signal': (_) => const SetSignalPage(),
   '/map-signal': (_) => const MapSignalPage(),

@@ -1,5 +1,9 @@
+import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
+
+final themeModeProvider =
+    Provider<Signal<ThemeMode>>((_) => Signal(ThemeMode.dark));
 
 void main() {
   runApp(const MyApp());
@@ -11,16 +15,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Provide the theme mode signal to descendats
-    return Solid(
+    return ProviderScope(
       providers: [
-        Provider<Signal<ThemeMode>>(
-          create: () => Signal(ThemeMode.light),
-        ),
+        themeModeProvider,
       ],
       // using the builder method to immediately access the signal
-      builder: (context) {
+      child: SignalBuilder(builder: (context, _) {
         // observe the theme mode value this will rebuild every time the themeMode signal changes.
-        final themeMode = context.observe<ThemeMode>();
+        final themeMode = themeModeProvider.of(context).value;
         return MaterialApp(
           title: 'Toggle theme',
           themeMode: themeMode,
@@ -28,7 +30,7 @@ class MyApp extends StatelessWidget {
           darkTheme: ThemeData.dark(),
           home: const MyHomePage(),
         );
-      },
+      }),
     );
   }
 }
@@ -39,7 +41,7 @@ class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // retrieve the theme mode signal
-    final themeMode = context.get<Signal<ThemeMode>>();
+    final themeMode = themeModeProvider.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Toggle theme'),
@@ -48,8 +50,8 @@ class MyHomePage extends StatelessWidget {
         child:
             // Listen to the theme mode signal rebuilding only the IconButton
             SignalBuilder(
-          signal: themeMode,
-          builder: (_, mode, __) {
+          builder: (_, __) {
+            final mode = themeMode.value;
             return IconButton(
               onPressed: () {
                 // toggle the theme mode
@@ -60,7 +62,7 @@ class MyHomePage extends StatelessWidget {
                 }
               },
               icon: Icon(
-                mode == ThemeMode.light ? Icons.dark_mode : Icons.light_mode,
+                mode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
               ),
             );
           },
