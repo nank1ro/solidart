@@ -19,7 +19,7 @@ The objectives of this project are:
 
 ## Learning
 
-For a comprehensive and updated documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart~dev)
+For a comprehensive and updated documentation go to [The Official Documentation](https://solidart.mariuti.com)
 
 There are 5 main concepts you should be aware:
 
@@ -77,14 +77,25 @@ To create a computed signal, you have to use the `Computed` class.
 A `Computed` automatically subscribes to any signal provided and reruns when any of them change.
 
 ```dart
-final name = Signal('John');
-final lastName = Signal('Doe');
-final fullName = Computed(() => '${name.value} ${lastName.value}');
-print(fullName()); // prints "John Doe"
+final count = Signal(0);
+final doubleCount = Computed(() => count.value * 2);
 
-// Update the name
-name.set('Jane');
-print(fullName()); // prints "Jane Doe"
+Effect(() {
+  print('The counter is ${count.value}');
+  print('The double counter is ${doubleCount.value}');
+});
+
+count
+  ..value = 1
+  ..value = 2;
+
+// The output will be:
+// The counter is 0
+// The double counter is 0
+// The counter is 1
+// The double counter is 2
+// The counter is 2
+// The double counter is 4
 ```
 
 ### Resource
@@ -113,7 +124,7 @@ Future<String> fetchUser() async {
 final user = Resource(fetchUser, source: userId);
 ```
 
-A Resource can also be driven from a [stream] instead of a Future.
+A Resource can also be driven from a `Stream` instead of a `Future`, and can be created with `Resource.stream(() => stream)`.
 In this case you just need to pass the `stream` field to the `Resource` class.
 
 If you're using `SignalBuilder` you can react to the state of the resource:
@@ -182,28 +193,6 @@ This replaced the `Solid` widget which was used in the previous versions of `flu
 <img src="https://raw.githubusercontent.com/nank1ro/solidart/main/assets/devtools.png" width="100%">
 
 You can debug your application using the Solidart DevTools extension and filter your signals.
-
-## Examples
-
-### Sample features using flutter_solidart:
-
-- [Counter](https://zapp.run/github/nank1ro/solidart/tree/main/examples/counter)
-- [Toggle theme (dark/light mode)](https://zapp.run/github/nank1ro/solidart/tree/main/examples/toggle_theme)
-- [Todos](https://zapp.run/github/nank1ro/solidart/tree/main/examples/todos)
-- [Github Search](https://zapp.run/github/nank1ro/solidart/tree/main/examples/github_search)
-
-### Showcase of all flutter_solidart features
-
-- [Showcase of all features](https://zapp.run/github/nank1ro/solidart/tree/main/packages/flutter_solidart/example)
-
-Learn every feature of `flutter_solidart` including:
-
-1. `Signal`
-2. `Show` widget
-3. `Computed`
-4. `Effect`s
-5. `SignalBuilder`, `DualSignalBuilder` and `TripleSignalBuilder`
-6. `Resource`
 
 ## Contributors
 

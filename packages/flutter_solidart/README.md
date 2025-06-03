@@ -19,7 +19,7 @@ The objectives of this project are:
 
 ## Learning
 
-For a comprehensive and updated documentation go to [The Official Documentation](https://docs.page/nank1ro/solidart~dev)
+For a comprehensive and updated documentation go to [The Official Documentation](https://solidart.mariuti.com)
 
 There are 5 main concepts you should be aware:
 
@@ -182,28 +182,6 @@ This replaced the `Solid` widget which was used in the previous versions of `flu
 <img src="https://raw.githubusercontent.com/nank1ro/solidart/main/assets/devtools.png" width="100%">
 
 You can debug your application using the Solidart DevTools extension and filter your signals.
-
-## Examples
-
-### Sample features using flutter_solidart:
-
-- [Counter](https://zapp.run/github/nank1ro/solidart/tree/main/examples/counter)
-- [Toggle theme (dark/light mode)](https://zapp.run/github/nank1ro/solidart/tree/main/examples/toggle_theme)
-- [Todos](https://zapp.run/github/nank1ro/solidart/tree/main/examples/todos)
-- [Github Search](https://zapp.run/github/nank1ro/solidart/tree/main/examples/github_search)
-
-### Showcase of all flutter_solidart features
-
-- [Showcase of all features](https://zapp.run/github/nank1ro/solidart/tree/main/packages/flutter_solidart/example)
-
-Learn every feature of `flutter_solidart` including:
-
-1. `Signal`
-2. `Show` widget
-3. `Computed`
-4. `Effect`s
-5. `SignalBuilder`, `DualSignalBuilder` and `TripleSignalBuilder`
-6. `Resource`
 
 ## Contributors
 
