@@ -39,7 +39,16 @@ export default defineConfig({
         },
         {
           label: 'Getting started',
-          autogenerate: { directory: 'getting-started' },
+          items: [
+            {
+              label: 'Overview',
+              link: '',
+            },
+            {
+              label: 'Setup',
+              link: '/getting-started/setup',
+            },
+          ],
         },
         {
           label: 'Learning',
@@ -53,6 +62,10 @@ export default defineConfig({
           label: 'Advanced',
           autogenerate: { directory: 'advanced' },
         },
+        {
+          label: 'Examples',
+          link: '/examples',
+        }
       ],
     }),
   ],
