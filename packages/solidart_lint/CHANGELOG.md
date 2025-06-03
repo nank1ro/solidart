@@ -1,5 +1,6 @@
 ## 2.0.0
 
+- Replace `Wrap with Solid` assist with `Wrap with ProviderScope` (if you use `disco`)
 - Fix `LintCode` issue (thanks to @manuel-plavsic)
 - Remove the deprecated `invalid_observe_type` lint
 - Remove `Wrap with ResourceBuilder` assist
