@@ -84,18 +84,6 @@ class ReactiveSystem extends alien.ReactiveSystem<_Computed<dynamic>> {
     }
   }
 
-  void runEffectScope(preset.EffectScope scope, void Function() fn) {
-    final prevSub = activeScope;
-    activeScope = scope;
-    startTracking(scope);
-    try {
-      fn();
-    } finally {
-      activeScope = prevSub;
-      endTracking(scope);
-    }
-  }
-
   void pauseTracking() {
     pauseStack.add(activeSub);
     activeSub = null;
