@@ -16,7 +16,7 @@ dependencies:
   flutter_solidart:
     path: ../flutter_solidart
   collection: ^1.18.0
-  shadcn_ui: ^0.22.5
+  shadcn_ui: ^0.27.0
 
 dev_dependencies:
   flutter_test:

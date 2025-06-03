@@ -7,8 +7,8 @@ void main() {
   final doubleCount = Computed(() => count.value * 2);
 
   Effect(() {
-    print('The counter is now: ${count.value}');
-    print('The double counter is now: ${doubleCount.value}');
+    print('The counter is ${count.value}');
+    print('The double counter is ${doubleCount.value}');
   });
 
   count

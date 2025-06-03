@@ -2,26 +2,37 @@
 title: Computed
 description: Learn computed in solidart
 sidebar:
-  order: 2
+  order: 3
 ---
 
-A computed signal is a signal that depends on other signals.
-To create a computed signal, you have to use the `Computed` class.
+A computed is a signal that depends on other signals.
+To create a computed, you have to use the `Computed` class.
 
 A `Computed` automatically subscribes to any signal provided and reruns when any of them change.
 
 ```dart
-final name = Signal('John');
-final lastName = Signal('Doe');
-final fullName = Computed(() => '${name.value} ${lastName.value}');
-print(fullName()); // prints "John Doe"
+final count = Signal(0);
+final doubleCount = Computed(() => count.value * 2);
 
-// Update the name
-name.set('Jane');
-print(fullName()); // prints "Jane Doe"
+Effect(() {
+  print('The counter is ${count.value}');
+  print('The double counter is ${doubleCount.value}');
+});
+
+count
+  ..value = 1
+  ..value = 2;
+
+// The output will be:
+// The counter is 0
+// The double counter is 0
+// The counter is 1
+// The double counter is 2
+// The counter is 2
+// The double counter is 4
 ```
 
-You may want to subscribe only to a sub-field of a `Signal` value.
+Or you may want to subscribe only to a sub-field of a `Signal` value.
 ```dart
 // sample User class
 class User {
@@ -65,15 +76,7 @@ user.updateValue((value) => value.copyWith(age: 21));
 A derived signal is not of type `Signal` but is a `ReadSignal`.
 The difference with a normal `Signal` is that a `ReadSignal` doesn't have a value setter, in other words it's a __read-only__ signal.
 
-You can also use derived signals in other ways, like here:
-```dart
-final counter = Signal(0);
-final doubleCounter = Computed(() => counter() * 2);
-```
-
-Every time the `counter` signal changes, the doubleCounter updates with the new doubled `counter` value.
-
-You can also transform the value type into a `bool`:
+With a `Computed` you can also transform the value type:
 ```dart
 final counter = Signal(0); // type: int
 final isGreaterThan5 = Computed(() => counter() > 5); // type: bool
