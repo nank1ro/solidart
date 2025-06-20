@@ -1,3 +1,7 @@
+## 2.0.1
+
+- **FIX**: DevTools extension not working.
+
 ## 2.0.0
 
 - **CHORE**: Improve the performance by using `alien_signals` for the reactive system.
