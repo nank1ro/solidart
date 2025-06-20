@@ -64,6 +64,11 @@ enum SignalType {
   }
 }
 
+enum FilterType {
+  name,
+  lastUpdate,
+}
+
 class SignalData {
   const SignalData({
     required this.value,
@@ -104,6 +109,7 @@ class _SignalsState extends State<Signals> {
   final searchController = SearchController();
   final searchText = Signal<String>('');
   final filterType = Signal<SignalType?>(null);
+  final sortBy = Signal<FilterType>(FilterType.name);
   final showDisposed = Signal<bool>(true);
   final signals = MapSignal<String, SignalData>({});
 
@@ -123,15 +129,23 @@ class _SignalsState extends State<Signals> {
   @override
   void initState() {
     super.initState();
-    sub = serviceManager.service?.onExtensionEvent.where((e) {
-      return e.extensionKind?.startsWith('solidart.signal') ?? false;
+    initialize();
+  }
+
+  Future<void> initialize() async {
+    final vmService = await serviceManager.onServiceAvailable;
+    print('serviceManager: ${serviceManager.service}');
+    sub = vmService.onExtensionEvent.where((e) {
+      print('got event: ${e.extensionKind}');
+      return e.extensionKind?.startsWith('ext.solidart.signal') ?? false;
     }).listen((event) {
+      print('got event: ${event.extensionKind}');
       final data = event.extensionData?.data;
       if (data == null) return;
       switch (event.extensionKind) {
-        case 'solidart.signal.created':
-        case 'solidart.signal.updated':
-        case 'solidart.signal.disposed':
+        case 'ext.solidart.signal.created':
+        case 'ext.solidart.signal.updated':
+        case 'ext.solidart.signal.disposed':
           signals[data['name']] = SignalData(
             value: jsonDecode(data['value'] ?? 'null'),
             hasPreviousValue: data['hasPreviousValue'],
@@ -190,6 +204,7 @@ class _SignalsState extends State<Signals> {
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Column(
+                      spacing: 2,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ShadInput(
@@ -215,35 +230,67 @@ class _SignalsState extends State<Signals> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            SignalBuilder(builder: (context, _) {
-                              return ShadSelect<SignalType>(
-                                selectedOptionBuilder: (context, v) {
-                                  return Text(v.name.capitalizeFirst());
-                                },
-                                allowDeselection: true,
-                                placeholder: const Text('Type'),
-                                initialValue: filterType.value,
-                                options: SignalType.values
-                                    .map((e) => ShadOption(
-                                          value: e,
-                                          child: Text(e.name.capitalizeFirst()),
-                                        ))
-                                    .toList(),
-                                onChanged: (v) => filterType.value = v,
-                              );
-                            }),
-                            SizedBox(
-                                height: 20,
-                                child: const ShadSeparator.vertical()),
-                            SignalBuilder(
-                              builder: (context, _) {
-                                return ShadCheckbox(
-                                  value: showDisposed.value,
-                                  label: const Text('Show disposed'),
-                                  padding: EdgeInsets.only(left: 4),
-                                  onChanged: (v) => showDisposed.value = v,
+                            Flexible(
+                              child: SignalBuilder(builder: (context, _) {
+                                return ShadSelect<SignalType>(
+                                  selectedOptionBuilder: (context, v) {
+                                    return Text(v.name.capitalizeFirst());
+                                  },
+                                  allowDeselection: true,
+                                  placeholder: const Text('Type'),
+                                  initialValue: filterType.value,
+                                  options: SignalType.values
+                                      .map((e) => ShadOption(
+                                            value: e,
+                                            child:
+                                                Text(e.name.capitalizeFirst()),
+                                          ))
+                                      .toList(),
+                                  onChanged: (v) => filterType.value = v,
                                 );
-                              },
+                              }),
+                            ),
+                            SizedBox(
+                              height: 20,
+                              child: const ShadSeparator.vertical(),
+                            ),
+                            Flexible(
+                              child: SignalBuilder(builder: (context, _) {
+                                return ShadSelect(
+                                  selectedOptionBuilder: (context, v) {
+                                    return Text(v.name.capitalizeFirst());
+                                  },
+                                  placeholder: const Text('Sort by'),
+                                  initialValue: sortBy.value,
+                                  options: FilterType.values
+                                      .map((e) => ShadOption(
+                                            value: e,
+                                            child:
+                                                Text(e.name.capitalizeFirst()),
+                                          ))
+                                      .toList(),
+                                  onChanged: (v) {
+                                    if (v == null) return;
+                                    sortBy.value = v;
+                                  },
+                                );
+                              }),
+                            ),
+                            SizedBox(
+                              height: 20,
+                              child: const ShadSeparator.vertical(),
+                            ),
+                            Flexible(
+                              child: SignalBuilder(
+                                builder: (context, _) {
+                                  return ShadCheckbox(
+                                    value: showDisposed.value,
+                                    label: const Text('Show disposed'),
+                                    padding: EdgeInsets.only(left: 4),
+                                    onChanged: (v) => showDisposed.value = v,
+                                  );
+                                },
+                              ),
                             ),
                           ],
                         ),
@@ -262,11 +309,22 @@ class _SignalsState extends State<Signals> {
                         const SizedBox(height: 8),
                         Expanded(
                           child: SignalBuilder(builder: (context, _) {
+                            final sortedBy = sortBy.value;
                             return ListView.separated(
                               itemCount: filteredSignals.value.length,
                               itemBuilder: (BuildContext context, int index) {
-                                final entry =
-                                    filteredSignals.value.elementAt(index);
+                                final sortedSignals = filteredSignals.value
+                                  ..sort((a, b) {
+                                    if (sortedBy == FilterType.name) {
+                                      return a.key.compareTo(b.key);
+                                    } else if (sortedBy ==
+                                        FilterType.lastUpdate) {
+                                      return b.value.lastUpdate
+                                          .compareTo(a.value.lastUpdate);
+                                    }
+                                    return 0;
+                                  });
+                                final entry = sortedSignals.elementAt(index);
                                 final name = entry.key;
                                 final signal = entry.value;
                                 return SignalBuilder(
@@ -284,6 +342,7 @@ class _SignalsState extends State<Signals> {
                                               selectedSignalName.value = name;
                                             },
                                             child: ShadCard(
+                                              width: double.infinity,
                                               padding:
                                                   const EdgeInsets.symmetric(
                                                       vertical: 16,
@@ -296,7 +355,9 @@ class _SignalsState extends State<Signals> {
                                                   ? const Icon(
                                                       LucideIcons.chevronRight)
                                                   : null,
-                                              description: Row(
+                                              description: Wrap(
+                                                spacing: 4,
+                                                runSpacing: 4,
                                                 children: [
                                                   ShadBadge(
                                                     child: Text(
@@ -308,10 +369,25 @@ class _SignalsState extends State<Signals> {
                                                           name;
                                                     },
                                                   ),
-                                                  const SizedBox(width: 4),
                                                   ShadBadge(
                                                     child:
                                                         Text(signal.valueType),
+                                                    onPressed: () {
+                                                      selectedSignalName.value =
+                                                          name;
+                                                    },
+                                                  ),
+                                                  ShadBadge(
+                                                    child: Text(
+                                                      DateFormat(
+                                                              'yyyy-MM-dd hh:mm:ss',
+                                                              Localizations
+                                                                      .localeOf(
+                                                                          context)
+                                                                  .toLanguageTag())
+                                                          .format(signal
+                                                              .lastUpdate),
+                                                    ),
                                                     onPressed: () {
                                                       selectedSignalName.value =
                                                           name;
