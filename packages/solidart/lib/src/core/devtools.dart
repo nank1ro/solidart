@@ -65,7 +65,7 @@ void _notifyDevToolsAboutSignal(
   required DevToolsEventType eventType,
 }) {
   if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
-  final eventName = 'solidart.signal.${eventType.name}';
+  final eventName = 'ext.solidart.signal.${eventType.name}';
   var value = signal.value;
   var previousValue = signal.previousValue;
   if (signal is Resource) {

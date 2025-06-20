@@ -1,7 +1,7 @@
 name: solidart_devtools_extension
 description: "solidart DevTools extension"
 publish_to: "none"
-version: 0.2.1
+version: 1.0.0
 
 environment:
   sdk: ^3.6.0
@@ -11,11 +11,11 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
-  devtools_extensions: ^0.3.1
-  devtools_app_shared: ^0.3.1
+  devtools_extensions: ^0.4.0
+  devtools_app_shared: ^0.4.0
   flutter_solidart:
     path: ../flutter_solidart
-  collection: ^1.18.0
+  collection: ^1.19.1
   shadcn_ui: ^0.27.0
 
 dev_dependencies:
