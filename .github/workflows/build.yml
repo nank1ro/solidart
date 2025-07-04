@@ -28,23 +28,23 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Install melos
-        run: dart pub global activate melos
+      # - name: Install melos
+      #   run: dart pub global activate melos
 
-      - name: Install VeryGoodCLI
-        run: dart pub global activate very_good_cli
+      # - name: Install VeryGoodCLI
+      #   run: dart pub global activate very_good_cli
 
       - name: Analyze packages
-        run: melos run analyze
+        run: flutter analyze packages
 
       - name: Test packages
-        run: melos run test
+        run: flutter test packages
 
-      - name: Combine coverage
-        run: melos run combine_coverage
+      # - name: Combine coverage
+      #   run: melos run combine_coverage
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./lcov.info
-          token: ${{ secrets.CODECOV_TOKEN }}
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     files: ./lcov.info
+      #     token: ${{ secrets.CODECOV_TOKEN }}
