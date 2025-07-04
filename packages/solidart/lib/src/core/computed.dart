@@ -95,6 +95,7 @@ class Computed<T> extends ReadSignal<T> {
   }) {
     var runnedOnce = false;
     _internalComputed = _AlienComputed(
+      this,
       (previousValue) {
         if (trackPreviousValue && previousValue is T) {
           _hasPreviousValue = true;
@@ -114,7 +115,6 @@ class Computed<T> extends ReadSignal<T> {
           throw SolidartCaughtException(e, stackTrace: s);
         }
       },
-      parent: this,
     );
 
     _notifySignalCreation();
@@ -144,7 +144,7 @@ class Computed<T> extends ReadSignal<T> {
   @override
   bool get hasValue => true;
 
-  final _deps = <alien.Dependency>{};
+  final _deps = <alien.ReactiveNode>{};
 
   @override
   void dispose() {
@@ -168,15 +168,16 @@ class Computed<T> extends ReadSignal<T> {
   @override
   T get value {
     if (_disposed) {
-      reactiveSystem.pauseTracking();
-      final value = _internalComputed();
-      reactiveSystem.resumeTracking();
-      return value;
+      return untracked(
+        () => reactiveSystem.getComputedValue(_internalComputed),
+      );
     }
-    final value = _internalComputed();
+
+    final value = reactiveSystem.getComputedValue(_internalComputed);
     if (autoDispose) {
       Future.microtask(_mayDispose);
     }
+
     return value;
   }
 

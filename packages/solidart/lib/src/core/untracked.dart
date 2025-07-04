@@ -4,11 +4,11 @@ part of 'core.dart';
 ///
 /// This can be useful inside Effects or Observations to prevent a signal from
 /// being tracked.
-T untracked<T>(T Function() fn) {
+T untracked<T>(T Function() callback) {
+  final prevSub = reactiveSystem.setCurrentSub(null);
   try {
-    reactiveSystem.pauseTracking();
-    return fn();
+    return callback();
   } finally {
-    reactiveSystem.resumeTracking();
+    reactiveSystem.setCurrentSub(prevSub);
   }
 }
