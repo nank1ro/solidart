@@ -66,7 +66,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
     required this.comparator,
     required this.trackPreviousValue,
   }) : _hasValue = true {
-    _internalSignal = _AlienSignal(Some(initialValue), parent: this);
+    _internalSignal = _AlienSignal(this, Some(initialValue));
     _untrackedValue = initialValue;
     _notifySignalCreation();
   }
@@ -79,7 +79,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
     required this.comparator,
     required this.trackPreviousValue,
   }) : _hasValue = false {
-    _internalSignal = _AlienSignal(None<T>(), parent: this);
+    _internalSignal = _AlienSignal(this, None<T>());
   }
 
   /// {@macro SignalBase.name}
@@ -125,18 +125,19 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   T get _value {
     if (_disposed) {
-      return untracked(() => _internalSignal().unwrap());
+      return untracked(
+        () => reactiveSystem.getSignalValue(_internalSignal).unwrap(),
+      );
     }
     _reportObserved();
-    final value = _internalSignal().unwrap();
+    final value = reactiveSystem.getSignalValue(_internalSignal).unwrap();
 
     if (autoDispose) {
       _subs.clear();
 
       var link = _internalSignal.subs;
       for (; link != null; link = link.nextSub) {
-        final sub = link.sub;
-        _subs.add(sub);
+        _subs.add(link.sub);
       }
     }
     return value;
@@ -167,8 +168,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
     if (_compare(_untrackedValue, newValue)) return;
     _untrackedPreviousValue = _untrackedValue;
     _untrackedValue = newValue;
-    _internalSignal.currentValue = Some(newValue);
-    _reportChanged();
+    reactiveSystem.setSignalValue(_internalSignal, Some(newValue));
   }
 
   @override
@@ -253,7 +253,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   @override
   int get listenerCount => _subs.length;
 
-  final _subs = <alien.Subscriber>{};
+  final _subs = <alien.ReactiveNode>{};
 
   @override
   void dispose() {
@@ -262,9 +262,9 @@ class ReadableSignal<T> implements ReadSignal<T> {
     _disposed = true;
 
     // This will dispose the signal to _disposed being true
-    reactiveSystem.pauseTracking();
-    _internalSignal();
-    reactiveSystem.resumeTracking();
+    untracked(() {
+      reactiveSystem.getSignalValue(_internalSignal);
+    });
 
     if (SolidartConfig.autoDispose) {
       for (final sub in _subs) {
@@ -337,11 +337,22 @@ class ReadableSignal<T> implements ReadSignal<T> {
     }
   }
 
+  /// Forces a change notification even when the value
+  /// hasn't substantially changed.
+  ///
+  /// This should only be used when you need to force
+  /// trigger reactions despite no
+  /// actual value change. For normal value updates,
+  // ignore: comment_references
+  /// use [reactiveSystem.setSignalValue] instead.
   void _reportChanged() {
-    if (_internalSignal.subs != null) {
-      reactiveSystem.propagate(_internalSignal.subs);
+    _internalSignal.forceDirty = true;
+    _internalSignal.flags = 17 as alien.ReactiveFlags;
+    final subs = _internalSignal.subs;
+    if (subs != null) {
+      reactiveSystem.propagate(subs);
       if (reactiveSystem.batchDepth == 0) {
-        reactiveSystem.processEffectNotifications();
+        reactiveSystem.flush();
       }
     }
   }

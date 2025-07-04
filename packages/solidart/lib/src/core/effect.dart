@@ -142,7 +142,7 @@ class Effect implements ReactionInterface {
     required this.autoDispose,
     ErrorCallback? onError,
   }) : _onError = onError {
-    _internalEffect = _AlienEffect(callback, parent: this);
+    _internalEffect = _AlienEffect(this, callback);
   }
 
   /// The name of the effect, useful for logging purposes.
@@ -158,21 +158,27 @@ class Effect implements ReactionInterface {
 
   late final _AlienEffect _internalEffect;
 
-  final _deps = <alien.Dependency>{};
+  final _deps = <alien.ReactiveNode>{};
 
   /// The subscriber of the effect, do not use it directly.
   @protected
-  alien.Subscriber get subscriber => _internalEffect;
+  alien.ReactiveNode get subscriber => _internalEffect;
 
   @override
   bool get disposed => _disposed;
 
   void _schedule() {
+    if (reactiveSystem.activeSub != null) {
+      reactiveSystem.link(_internalEffect, reactiveSystem.activeSub!);
+    }
+    final prevSub = reactiveSystem.setCurrentSub(_internalEffect);
+
     try {
       _internalEffect.run();
     } catch (e, s) {
       _onError?.call(SolidartCaughtException(e, stackTrace: s));
     } finally {
+      reactiveSystem.setCurrentSub(prevSub);
       if (SolidartConfig.autoDispose) {
         Future.microtask(_mayDispose);
       }
