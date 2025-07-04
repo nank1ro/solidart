@@ -47,9 +47,16 @@ class _AlienSignal<T> extends alien.ReactiveNode implements _AlienUpdatable {
   T previousValue;
   T value;
 
+  bool forceDirty = false;
+
   @override
   bool update() {
     flags = alien.ReactiveFlags.mutable;
+    if (forceDirty) {
+      forceDirty = false;
+      return true;
+    }
+
     return previousValue != (previousValue = value);
   }
 }

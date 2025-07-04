@@ -244,6 +244,7 @@ class Computed<T> extends ReadSignal<T> {
 
   /// Indicates if the [oldValue] and the [newValue] are equal
   @override
+  // ignore: unused_element
   bool _compare(T? oldValue, T? newValue) {
     // skip if the value are equals
     if (equals) {

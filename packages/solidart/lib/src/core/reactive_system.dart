@@ -172,7 +172,7 @@ class ReactiveSystem extends alien.ReactiveSystem {
       while (notifyIndex < queuedEffectsLength) {
         final effect = queuedEffects[notifyIndex];
         queuedEffects[notifyIndex++] = null;
-        run(effect!, effect.flags);
+        run(effect!, effect.flags &= -65 /* ~EffectFlags.queued */);
       }
     } finally {
       notifyIndex = queuedEffectsLength = 0;

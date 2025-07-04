@@ -169,7 +169,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
     _untrackedPreviousValue = _untrackedValue;
     _untrackedValue = newValue;
     reactiveSystem.setSignalValue(_internalSignal, Some(newValue));
-    _reportChanged();
   }
 
   @override
@@ -338,7 +337,17 @@ class ReadableSignal<T> implements ReadSignal<T> {
     }
   }
 
+  /// Forces a change notification even when the value
+  /// hasn't substantially changed.
+  ///
+  /// This should only be used when you need to force
+  /// trigger reactions despite no
+  /// actual value change. For normal value updates,
+  // ignore: comment_references
+  /// use [reactiveSystem.setSignalValue] instead.
   void _reportChanged() {
+    _internalSignal.forceDirty = true;
+    _internalSignal.flags = 17 as alien.ReactiveFlags;
     final subs = _internalSignal.subs;
     if (subs != null) {
       reactiveSystem.propagate(subs);
