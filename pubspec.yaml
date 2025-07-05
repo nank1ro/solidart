@@ -16,5 +16,7 @@ workspace:
   - examples/toggle_theme
 
 dev_dependencies:
-  melos: ^3.4.0
   reactivity_benchmark: ^0.0.1
+
+flutter:
+  uses-material-design: true

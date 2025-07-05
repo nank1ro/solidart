@@ -134,12 +134,12 @@ class _SignalsState extends State<Signals> {
 
   Future<void> initialize() async {
     final vmService = await serviceManager.onServiceAvailable;
-    print('serviceManager: ${serviceManager.service}');
+    debugPrint('serviceManager: ${serviceManager.service}');
     sub = vmService.onExtensionEvent.where((e) {
-      print('got event: ${e.extensionKind}');
+      debugPrint('got event: ${e.extensionKind}');
       return e.extensionKind?.startsWith('ext.solidart.signal') ?? false;
     }).listen((event) {
-      print('got event: ${event.extensionKind}');
+      debugPrint('got event: ${event.extensionKind}');
       final data = event.extensionData?.data;
       if (data == null) return;
       switch (event.extensionKind) {
