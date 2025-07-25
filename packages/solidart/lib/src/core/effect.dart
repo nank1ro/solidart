@@ -88,6 +88,9 @@ class Effect implements ReactionInterface {
     /// This happens automatically when all the tracked dependencies are
     /// disposed.
     bool? autoDispose,
+
+    /// Detach effect, default value is [SolidartConfig.detachEffects]
+    bool? detach,
   }) {
     late Effect effect;
     final effectiveName = name ?? ReactiveName.nameFor('Effect');
@@ -98,6 +101,7 @@ class Effect implements ReactionInterface {
         onError: onError,
         name: effectiveName,
         autoDispose: effectiveAutoDispose,
+        detach: detach,
       );
     } else {
       final scheduler = createDelayedScheduler(delay);
@@ -129,6 +133,7 @@ class Effect implements ReactionInterface {
         onError: onError,
         name: effectiveName,
         autoDispose: effectiveAutoDispose,
+        detach: detach,
       );
     }
     effect._schedule();
@@ -141,8 +146,9 @@ class Effect implements ReactionInterface {
     required this.name,
     required this.autoDispose,
     ErrorCallback? onError,
+    bool? detach,
   }) : _onError = onError {
-    _internalEffect = _AlienEffect(this, callback);
+    _internalEffect = _AlienEffect(this, callback, detach: detach);
   }
 
   /// The name of the effect, useful for logging purposes.
@@ -168,8 +174,13 @@ class Effect implements ReactionInterface {
   bool get disposed => _disposed;
 
   void _schedule() {
-    if (!SolidartConfig.detachEffects && reactiveSystem.activeSub != null) {
-      reactiveSystem.link(_internalEffect, reactiveSystem.activeSub!);
+    final currentSub = reactiveSystem.activeSub;
+    if (!SolidartConfig.detachEffects && currentSub != null) {
+      if (currentSub is! _AlienEffect ||
+          !_internalEffect.detach ||
+          !currentSub.detach) {
+        reactiveSystem.link(_internalEffect, currentSub);
+      }
     }
     final prevSub = reactiveSystem.setCurrentSub(_internalEffect);
 

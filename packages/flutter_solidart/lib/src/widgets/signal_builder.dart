@@ -116,6 +116,7 @@ class SignalBuilderElement extends ComponentElement {
       _invalidate,
       onError: onError,
       autoDispose: false,
+      detach: true,
     );
     // mounting intentionally after effect is initialized and widget is built
     super.mount(parent, newSlot);
@@ -160,9 +161,6 @@ class SignalBuilderElement extends ComponentElement {
 
   @override
   Widget build() {
-    final prevDetachEffects = SolidartConfig.detachEffects;
-    SolidartConfig.detachEffects = true;
-
     final prevSub = reactiveSystem.activeSub;
     // ignore: invalid_use_of_protected_member
     reactiveSystem.activeSub = _effect?.subscriber;
@@ -171,7 +169,6 @@ class SignalBuilderElement extends ComponentElement {
       return _widget.build(_parent!);
     } finally {
       reactiveSystem.activeSub = prevSub;
-      SolidartConfig.detachEffects = prevDetachEffects;
     }
   }
 }

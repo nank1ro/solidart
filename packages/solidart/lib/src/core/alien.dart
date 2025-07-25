@@ -28,9 +28,11 @@ class _AlienComputed<T> extends alien.ReactiveNode implements _AlienUpdatable {
 }
 
 class _AlienEffect extends alien.ReactiveNode {
-  _AlienEffect(this.parent, this.run)
-      : super(flags: alien.ReactiveFlags.watching);
+  _AlienEffect(this.parent, this.run, {bool? detach})
+      : detach = detach ?? SolidartConfig.detachEffects,
+        super(flags: alien.ReactiveFlags.watching);
 
+  final bool detach;
   final Effect parent;
   final void Function() run;
 
