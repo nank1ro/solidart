@@ -168,7 +168,7 @@ class Effect implements ReactionInterface {
   bool get disposed => _disposed;
 
   void _schedule() {
-    if (reactiveSystem.activeSub != null) {
+    if (!SolidartConfig.detachEffects && reactiveSystem.activeSub != null) {
       reactiveSystem.link(_internalEffect, reactiveSystem.activeSub!);
     }
     final prevSub = reactiveSystem.setCurrentSub(_internalEffect);
