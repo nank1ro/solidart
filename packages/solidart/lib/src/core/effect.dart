@@ -177,8 +177,7 @@ class Effect implements ReactionInterface {
     final currentSub = reactiveSystem.activeSub;
     if (!SolidartConfig.detachEffects && currentSub != null) {
       if (currentSub is! _AlienEffect ||
-          !_internalEffect.detach ||
-          !currentSub.detach) {
+          (!_internalEffect.detach && !currentSub.detach)) {
         reactiveSystem.link(_internalEffect, currentSub);
       }
     }
