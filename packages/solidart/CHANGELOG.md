@@ -1,4 +1,4 @@
-## 2.1.0-pre.1
+## 2.1.0
 
 - **BREAKING**: Update `alien_signals` dependency from `^0.2.1` to `^0.4.3` with significant performance improvements.
 - **REFACTOR**: Replace custom reactive node implementations with `alien.ReactiveNode` for better compatibility and performance.
