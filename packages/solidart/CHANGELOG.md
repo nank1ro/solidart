@@ -1,15 +1,13 @@
 ## 2.1.0
 
-- **BREAKING**: Update `alien_signals` dependency from `^0.2.1` to `^0.4.3` with significant performance improvements.
-- **REFACTOR**: Replace custom reactive node implementations with `alien.ReactiveNode` for better compatibility and performance.
-- **REFACTOR**: Simplify signal, computed and effect implementations by leveraging new `alien_signals` API.
-- **PERFORMANCE**: Improve performance by removing redundant tracking operations in the reactive system.
-- **FIX**: Add proper cleanup for disposed nodes to prevent memory leaks.
-- **FIX**: Fix potential memory leaks in auto-dispose scenarios.
-- **FEAT**: Add `forceDirty` flag to `_AlienSignal` to manually trigger signal updates when needed.
-- **FIX**: Remove equality check and automatic reporting in `ReadableSignal` to fix notification issues.
-- **FIX**: Clear queued flag when running effects in `ReactiveSystem` to ensure proper effect execution.
-- **CHORE**: Reorder dev_dependencies in pubspec.yaml for improved organization and readability.
+- **REFACTOR**: Update `alien_signals` dependency from `^0.2.1` to `^0.4.3` with significant performance improvements (thanks to @medz).
+- **REFACTOR**: Replace custom reactive node implementations with `alien.ReactiveNode` for better compatibility and performance (thanks to @medz).
+- **REFACTOR**: Simplify signal, computed and effect implementations by leveraging new `alien_signals` API (thanks to @medz).
+- **PERFORMANCE**: Improve performance by removing redundant tracking operations in the reactive system  (thanks to @medz).
+- **FIX**: Add proper cleanup for disposed nodes to prevent memory leaks  (thanks to @medz).
+- **FIX**: Fix potential memory leaks in auto-dispose scenarios (thanks to @medz).
+- **FIX**: Clear queued flag when running effects in `ReactiveSystem` to ensure proper effect execution (thanks to @medz).
+- **CHORE**: Reorder dev_dependencies in pubspec.yaml for improved organization and readability (thanks to @medz).
 
 ## 2.0.1
 
