@@ -5,8 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 class MyEffectClass {
   MyEffectClass(this.signal) {
     Effect(() {
+      signal.value;
       effectRun++;
-      debugPrint('Signal value: ${signal.value}');
     });
   }
 
