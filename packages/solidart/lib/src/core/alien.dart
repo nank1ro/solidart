@@ -46,8 +46,8 @@ class _AlienSignal<T> extends alien.ReactiveNode implements _AlienUpdatable {
 
   final SignalBase<dynamic> parent;
 
-  T previousValue;
-  T value;
+  Option<T> previousValue;
+  Option<T> value;
 
   bool forceDirty = false;
 
@@ -58,8 +58,12 @@ class _AlienSignal<T> extends alien.ReactiveNode implements _AlienUpdatable {
       forceDirty = false;
       return true;
     }
+    if (!parent._compare(previousValue.safeUnwrap(), value.safeUnwrap())) {
+      previousValue = value;
+      return true;
+    }
 
-    return previousValue != (previousValue = value);
+    return false;
   }
 }
 

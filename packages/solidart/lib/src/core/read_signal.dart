@@ -107,7 +107,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   final ValueComparator<T?> comparator;
 
   /// Tracks the internal value
-  late final _AlienSignal<Option<T>> _internalSignal;
+  late final _AlienSignal<T> _internalSignal;
 
   @override
   bool get hasValue {

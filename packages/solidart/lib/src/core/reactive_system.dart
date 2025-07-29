@@ -103,7 +103,7 @@ class ReactiveSystem extends alien.ReactiveSystem {
     return computed.value as T;
   }
 
-  T getSignalValue<T>(_AlienSignal<T> signal) {
+  Option<T> getSignalValue<T>(_AlienSignal<T> signal) {
     final value = signal.value;
     if ((signal.flags & alien.ReactiveFlags.dirty) != 0) {
       if (signal.update()) {
@@ -116,7 +116,7 @@ class ReactiveSystem extends alien.ReactiveSystem {
     return value;
   }
 
-  void setSignalValue<T>(_AlienSignal<T> signal, T value) {
+  void setSignalValue<T>(_AlienSignal<T> signal, Option<T> value) {
     if (signal.value != (signal.value = value)) {
       signal.flags = 17
           as alien.ReactiveFlags; // ReactiveFlags.mutable | ReactiveFlags.dirty
