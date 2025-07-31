@@ -349,7 +349,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   /// use [reactiveSystem.setSignalValue] instead.
   void _reportChanged() {
     _internalSignal.forceDirty = true;
-    _internalSignal.flags = 17 as alien.ReactiveFlags;
+    _internalSignal.flags = 17 /* Mutable | Dirty */;
     final subs = _internalSignal.subs;
     if (subs != null) {
       // coverage:ignore-start
