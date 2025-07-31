@@ -1,6 +1,9 @@
 {
   "files": [
-    "README.md"
+    "README.md",
+    "packages/solidart/README.md",
+    "packages/flutter_solidart/README.md",
+    "packages/solidart_lint/README.md"
   ],
   "imageSize": 100,
   "commit": false,
