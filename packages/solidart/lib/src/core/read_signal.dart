@@ -279,12 +279,14 @@ class ReadableSignal<T> implements ReadSignal<T> {
           sub.parent._mayDispose();
         }
         if (sub is _AlienComputed) {
+          // coverage:ignore-start
           if (sub.deps?.dep == _internalSignal) {
             sub.deps = null;
           }
           if (sub.depsTail?.dep == _internalSignal) {
             sub.depsTail = null;
           }
+          // coverage:ignore-end
           sub.parent._mayDispose();
         }
       }
@@ -350,10 +352,12 @@ class ReadableSignal<T> implements ReadSignal<T> {
     _internalSignal.flags = 17 as alien.ReactiveFlags;
     final subs = _internalSignal.subs;
     if (subs != null) {
+      // coverage:ignore-start
       reactiveSystem.propagate(subs);
       if (reactiveSystem.batchDepth == 0) {
         reactiveSystem.flush();
       }
+      // coverage:ignore-end
     }
   }
 

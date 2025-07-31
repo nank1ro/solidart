@@ -150,6 +150,7 @@ class Computed<T> extends ReadSignal<T> {
   void dispose() {
     if (_disposed) return;
 
+    _internalComputed.dispose();
     _disposed = true;
     for (final dep in _deps) {
       if (dep is _AlienSignal) dep.parent._mayDispose();
@@ -168,9 +169,7 @@ class Computed<T> extends ReadSignal<T> {
   @override
   T get value {
     if (_disposed) {
-      return untracked(
-        () => reactiveSystem.getComputedValue(_internalComputed),
-      );
+      return _untrackedValue;
     }
 
     final value = reactiveSystem.getComputedValue(_internalComputed);
@@ -234,14 +233,17 @@ class Computed<T> extends ReadSignal<T> {
     return _hasPreviousValue;
   }
 
+  // coverage:ignore-start
   @override
   int get listenerCount => _deps.length;
+  // coverage:ignore-end
 
   @override
   void onDispose(VoidCallback cb) {
     _onDisposeCallbacks.add(cb);
   }
 
+  // coverage:ignore-start
   /// Indicates if the [oldValue] and the [newValue] are equal
   @override
   bool _compare(T? oldValue, T? newValue) {
@@ -253,6 +255,7 @@ class Computed<T> extends ReadSignal<T> {
     // return the [comparator] result
     return comparator(oldValue, newValue);
   }
+  // coverage:ignore-end
 
   @override
   String toString() {

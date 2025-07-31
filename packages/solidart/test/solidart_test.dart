@@ -82,7 +82,7 @@ void main() {
         final cb = MockCallbackFunction();
         final unobserve = counter.observe((_, __) => cb());
 
-        expect(counter.value, 0);
+        expect(counter(), 0);
 
         counter.value = 1;
         await pumpEventQueue();
@@ -261,6 +261,21 @@ void main() {
 
         verify(cb()).called(2);
       });
+
+      test("Check signal disposed isn't tracked by Computed", () {
+        final count = Signal(1);
+        final doubleCount = Computed(() => count.value * 2);
+
+        expect(doubleCount.value, 2);
+        expect(count.disposed, false);
+
+        count.dispose();
+        expect(count.disposed, true);
+        expect(doubleCount.disposed, true);
+
+        count.value = 2;
+        expect(doubleCount.value, 2);
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
@@ -324,6 +339,9 @@ void main() {
         final s = Signal(klass);
         final selected = Computed(() => s.value.c.count);
         final cb = MockCallbackFunctionWithValue<int>();
+
+        // A computed always has a value
+        expect(selected.hasValue, true);
 
         void listener() {
           cb(selected.value);
@@ -435,6 +453,34 @@ void main() {
 
         expect(doubleCount.toString(), startsWith('Computed<int>(value: 2'));
       });
+
+      test("check disposed Computed won't react", () {
+        final count = Signal(0);
+        final doubleCount = Computed(() => count.value * 2);
+        var onDisposeCalled = false;
+        doubleCount.onDispose(() {
+          onDisposeCalled = true;
+        });
+        final cb = MockCallbackFunctionWithValue<int>();
+        doubleCount.observe((_, __) {
+          cb(doubleCount.value);
+        });
+
+        expect(doubleCount.disposed, false);
+        expect(onDisposeCalled, false);
+
+        count.value = 1;
+        expect(doubleCount.value, 2);
+        verify(cb(2)).called(1);
+
+        doubleCount.dispose();
+        expect(doubleCount.disposed, true);
+        expect(onDisposeCalled, true);
+
+        count.value = 2;
+        expect(doubleCount(), 2);
+        verifyNever(cb(2));
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
@@ -458,6 +504,11 @@ void main() {
         final s = ReadableSignal(0);
         expect(s.toString(), startsWith('ReadSignal<int>(value: 0'));
       });
+
+      test('check untrackedValue throws if no value', () {
+        final count = Signal<int>.lazy();
+        expect(() => count.untrackedValue, throwsStateError);
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
@@ -471,16 +522,21 @@ void main() {
 
         final resource = Resource.stream(() => streamController.stream);
         expect(resource.state, isA<ResourceLoading<int>>());
+        expect(resource.untrackedState, isA<ResourceLoading<int>>());
         expect(resource.previousState, isNull);
+        expect(resource.untrackedPreviousState, isNull);
         streamController.add(1);
         await pumpEventQueue();
         expect(resource.state, isA<ResourceReady<int>>());
+        expect(resource.untrackedState, isA<ResourceReady<int>>());
         expect(resource.previousState, isA<ResourceLoading<int>>());
+        expect(resource.untrackedPreviousState, isA<ResourceLoading<int>>());
         expect(resource.state.value, 1);
+        expect(resource.untrackedState.value, 1);
 
         streamController.add(10);
         await pumpEventQueue();
-        expect(resource.state, isA<ResourceReady<int>>());
+        expect(resource(), isA<ResourceReady<int>>());
         expect(
           resource.previousState,
           isA<ResourceReady<int>>().having(
@@ -1140,6 +1196,13 @@ void main() {
         expect(list, [1, 2, 3]);
         expect(list.previousValue, [1, 2]);
       });
+
+      test('check equals', () {
+        final list = ListSignal([1], equals: true);
+        expect(list, [1]);
+        list.value = [1, 2];
+        expect(list, [1, 2]);
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
@@ -1328,6 +1391,13 @@ void main() {
         expect(set, {1, 2, 3});
         expect(set.previousValue, {1, 2});
       });
+
+      test('check equals', () {
+        final set = SetSignal({1}, equals: true);
+        expect(set, {1});
+        set.value = {1, 2};
+        expect(set, {1, 2});
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
@@ -1512,6 +1582,13 @@ void main() {
         });
         expect(map, {'a': 1, 'b': 2, 'c': 3});
         expect(map.previousValue, {'a': 1, 'b': 2});
+      });
+
+      test('check equals', () {
+        final map = MapSignal({'a': 1}, equals: true);
+        expect(map, {'a': 1});
+        map.value = {'b': 2};
+        expect(map, {'b': 2});
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),

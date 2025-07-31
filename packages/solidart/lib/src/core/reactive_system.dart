@@ -8,7 +8,6 @@ typedef ReactionErrorHandler = void Function(
 );
 
 class ReactiveName {
-  factory ReactiveName() => _instance;
   ReactiveName._internal();
   static final _instance = ReactiveName._internal();
 
