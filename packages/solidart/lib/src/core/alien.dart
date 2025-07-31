@@ -1,9 +1,8 @@
 part of 'core.dart';
 
 class _AlienComputed<T> extends alien.ReactiveNode implements _AlienUpdatable {
-  // flags: ReactiveFlags.mutable | ReactiveFlags.dirty
   _AlienComputed(this.parent, this.getter)
-      : super(flags: 17 as alien.ReactiveFlags);
+      : super(flags: 17 /* Mutable | Dirty */);
 
   final Computed<T> parent;
   final T Function(T? oldValue) getter;
@@ -30,7 +29,7 @@ class _AlienComputed<T> extends alien.ReactiveNode implements _AlienUpdatable {
 class _AlienEffect extends alien.ReactiveNode {
   _AlienEffect(this.parent, this.run, {bool? detach})
       : detach = detach ?? SolidartConfig.detachEffects,
-        super(flags: alien.ReactiveFlags.watching);
+        super(flags: 2 /* Watching */);
 
   final bool detach;
   final Effect parent;
@@ -42,7 +41,7 @@ class _AlienEffect extends alien.ReactiveNode {
 class _AlienSignal<T> extends alien.ReactiveNode implements _AlienUpdatable {
   _AlienSignal(this.parent, this.value)
       : previousValue = value,
-        super(flags: alien.ReactiveFlags.mutable);
+        super(flags: 1 /* Mutable */);
 
   final SignalBase<dynamic> parent;
 
@@ -53,7 +52,7 @@ class _AlienSignal<T> extends alien.ReactiveNode implements _AlienUpdatable {
 
   @override
   bool update() {
-    flags = alien.ReactiveFlags.mutable;
+    flags = 1 /* Mutable */;
     if (forceDirty) {
       forceDirty = false;
       return true;
