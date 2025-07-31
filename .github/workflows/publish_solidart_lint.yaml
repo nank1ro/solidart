@@ -1,0 +1,16 @@
+name: Publish solidart_lint to pub.dev
+
+on:
+  push:
+    tags:
+      - 'solidart_lint-v[0-9]+.[0-9]+.[0-9]+'          # Matches solidart_lint-v1.2.3
+      - 'solidart_lint-v[0-9]+.[0-9]+.[0-9]+\+[0-9]+'  # Matches solidart_lint-v1.2.3+1
+
+# Publish using the reusable workflow from dart-lang.
+jobs:
+  publish:
+    permissions:
+      id-token: write # Required for authentication using OIDC
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    with:
+      environment: pub.dev
