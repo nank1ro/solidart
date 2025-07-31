@@ -1,6 +1,6 @@
 name: solidart
 description: A simple State Management solution for Dart applications inspired by SolidJS
-version: 2.0.1
+version: 2.1.0
 repository: https://github.com/nank1ro/solidart
 documentation: https://solidart.mariuti.com
 topics:
@@ -14,7 +14,7 @@ resolution: workspace
 
 dependencies:
   # we depend on the alien signals reactivity implementation because it's the fastest available right now (30/12/2024)
-  alien_signals: ^0.2.1
+  alien_signals: ^0.4.3
   collection: ^1.18.0
   meta: ^1.11.0
 

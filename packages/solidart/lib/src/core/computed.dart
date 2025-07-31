@@ -95,6 +95,7 @@ class Computed<T> extends ReadSignal<T> {
   }) {
     var runnedOnce = false;
     _internalComputed = _AlienComputed(
+      this,
       (previousValue) {
         if (trackPreviousValue && previousValue is T) {
           _hasPreviousValue = true;
@@ -114,7 +115,6 @@ class Computed<T> extends ReadSignal<T> {
           throw SolidartCaughtException(e, stackTrace: s);
         }
       },
-      parent: this,
     );
 
     _notifySignalCreation();
@@ -144,12 +144,13 @@ class Computed<T> extends ReadSignal<T> {
   @override
   bool get hasValue => true;
 
-  final _deps = <alien.Dependency>{};
+  final _deps = <alien.ReactiveNode>{};
 
   @override
   void dispose() {
     if (_disposed) return;
 
+    _internalComputed.dispose();
     _disposed = true;
     for (final dep in _deps) {
       if (dep is _AlienSignal) dep.parent._mayDispose();
@@ -168,15 +169,14 @@ class Computed<T> extends ReadSignal<T> {
   @override
   T get value {
     if (_disposed) {
-      reactiveSystem.pauseTracking();
-      final value = _internalComputed();
-      reactiveSystem.resumeTracking();
-      return value;
+      return _untrackedValue;
     }
-    final value = _internalComputed();
+
+    final value = reactiveSystem.getComputedValue(_internalComputed);
     if (autoDispose) {
       Future.microtask(_mayDispose);
     }
+
     return value;
   }
 
@@ -233,14 +233,17 @@ class Computed<T> extends ReadSignal<T> {
     return _hasPreviousValue;
   }
 
+  // coverage:ignore-start
   @override
   int get listenerCount => _deps.length;
+  // coverage:ignore-end
 
   @override
   void onDispose(VoidCallback cb) {
     _onDisposeCallbacks.add(cb);
   }
 
+  // coverage:ignore-start
   /// Indicates if the [oldValue] and the [newValue] are equal
   @override
   bool _compare(T? oldValue, T? newValue) {
@@ -252,6 +255,7 @@ class Computed<T> extends ReadSignal<T> {
     // return the [comparator] result
     return comparator(oldValue, newValue);
   }
+  // coverage:ignore-end
 
   @override
   String toString() {

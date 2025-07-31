@@ -5,6 +5,9 @@ import 'dart:developer' as dev;
 import 'dart:math';
 
 import 'package:alien_signals/alien_signals.dart' as alien;
+// ignore: implementation_imports
+import 'package:alien_signals/src/preset.dart' as alien show EffectFlags;
+
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:solidart/src/utils.dart';

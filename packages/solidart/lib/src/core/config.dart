@@ -23,6 +23,11 @@ abstract class SolidartConfig {
 
   /// The list of observers.
   static final observers = <SolidartObserver>[];
+
+  /// If you want nested effects to have their own independent behavior, you can
+  /// set this to true so that the Reactive system creates a dependency chain
+  /// for nested inner effects. Defaults to false.
+  static bool detachEffects = false;
 }
 
 /// {@template solidart-observer}

@@ -21,7 +21,7 @@ class AvoidDynamicProvider extends DartLintRule {
     CustomLintContext context,
   ) {
     context.registry.addInstanceCreationExpression((node) {
-      if (node.staticParameterElement != null) return;
+      if (node.correspondingParameter != null) return;
 
       final type = node.staticType;
       if (type == null) return;

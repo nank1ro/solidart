@@ -116,6 +116,7 @@ class SignalBuilderElement extends ComponentElement {
       _invalidate,
       onError: onError,
       autoDispose: false,
+      detach: true,
     );
     // mounting intentionally after effect is initialized and widget is built
     super.mount(parent, newSlot);

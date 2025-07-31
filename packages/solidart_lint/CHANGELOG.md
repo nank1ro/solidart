@@ -1,3 +1,7 @@
+## 2.0.1
+
+- Rename `Wrap with Solid` assist to `Wrap with ProviderScope`
+
 ## 2.0.0
 
 - Replace `Wrap with Solid` assist with `Wrap with ProviderScope` (if you use `disco`)

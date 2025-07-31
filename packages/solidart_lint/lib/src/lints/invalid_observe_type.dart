@@ -30,12 +30,12 @@ class InvalidObserveType extends DartLintRule {
           if (node.staticType == null) return;
           final typeArgument = node.typeArguments?.arguments.firstOrNull?.type;
           if (typeArgument == null) {
-            return reporter.reportErrorForNode(_code, node);
+            return reporter.atNode(node, _code);
           }
           final isSignalBase =
               signalBaseType.isAssignableFromType(node.staticType!);
           if (isSignalBase) {
-            reporter.reportErrorForNode(_code, node);
+            reporter.atNode(node, _code);
           }
         }
       },
