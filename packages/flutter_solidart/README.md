@@ -3,8 +3,8 @@
 [![Coverage](https://codecov.io/gh/nank1ro/solidart/branch/main/graph/badge.svg?token=HvJYtaixiW)](https://codecov.io/gh/nank1ro/solidart)
 [![GitHub issues](https://img.shields.io/github/issues/nank1ro/solidart)](https://github.com/nank1ro/solidart/issues/)
 [![GitHub pull-requests](https://img.shields.io/github/issues-pr/nank1ro/solidart.svg)](https://gitHub.com/nank1ro/solidart/pull/)
-[![solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/solidart?include_prereleases)](https://pub.dev/packages/solidart)
-[![flutter_solidart Pub Version (including pre-releases)](https://img.shields.io/pub/v/flutter_solidart?include_prereleases)](https://pub.dev/packages/flutter_solidart)
+[![solidart Pub Version](https://img.shields.io/pub/v/solidart?label=solidart)](https://pub.dev/packages/solidart)
+[![flutter_solidart Pub Version](https://img.shields.io/pub/v/flutter_solidart?label=flutter_solidart)](https://pub.dev/packages/flutter_solidart)
 [![All Contributors](https://img.shields.io/github/all-contributors/nank1ro/solidart?color=ee8449&style=flat-square)](#contributors)
 [![](https://dcbadge.vercel.app/api/server/2JBzeeQShh)](https://discord.gg/2JBzeeQShh)
 
@@ -41,13 +41,14 @@ final counter = Signal(0);
 
 The argument passed to the class is the initial value, and the return value is the signal.
 
-
 To retrieve the current value, you can use:
+
 ```dart
 print(counter.value); // prints 0
 ```
 
 To change the value, you can use:
+
 ```dart
 // Set the value to 2
 counter.value = 2;
