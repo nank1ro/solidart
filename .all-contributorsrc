@@ -48,6 +48,17 @@
         "bug",
         "doc"
       ]
+    },
+    {
+      "login": "medz",
+      "name": "Seven Du",
+      "avatar_url": "https://avatars.githubusercontent.com/u/5564821?v=4",
+      "profile": "https://medz.dev",
+      "contributions": [
+        "code",
+        "bug",
+        "doc"
+      ]
     }
   ],
   "contributorsPerLine": 7,
