@@ -88,6 +88,9 @@ class Effect implements ReactionInterface {
     /// This happens automatically when all the tracked dependencies are
     /// disposed.
     bool? autoDispose,
+
+    /// Detach effect, default value is [SolidartConfig.detachEffects]
+    bool? detach,
   }) {
     late Effect effect;
     final effectiveName = name ?? ReactiveName.nameFor('Effect');
@@ -98,6 +101,7 @@ class Effect implements ReactionInterface {
         onError: onError,
         name: effectiveName,
         autoDispose: effectiveAutoDispose,
+        detach: detach,
       );
     } else {
       final scheduler = createDelayedScheduler(delay);
@@ -129,6 +133,7 @@ class Effect implements ReactionInterface {
         onError: onError,
         name: effectiveName,
         autoDispose: effectiveAutoDispose,
+        detach: detach,
       );
     }
     effect._schedule();
@@ -141,8 +146,9 @@ class Effect implements ReactionInterface {
     required this.name,
     required this.autoDispose,
     ErrorCallback? onError,
+    bool? detach,
   }) : _onError = onError {
-    _internalEffect = _AlienEffect(callback, parent: this);
+    _internalEffect = _AlienEffect(this, callback, detach: detach);
   }
 
   /// The name of the effect, useful for logging purposes.
@@ -158,21 +164,31 @@ class Effect implements ReactionInterface {
 
   late final _AlienEffect _internalEffect;
 
-  final _deps = <alien.Dependency>{};
+  final _deps = <alien.ReactiveNode>{};
 
   /// The subscriber of the effect, do not use it directly.
   @protected
-  alien.Subscriber get subscriber => _internalEffect;
+  alien.ReactiveNode get subscriber => _internalEffect;
 
   @override
   bool get disposed => _disposed;
 
   void _schedule() {
+    final currentSub = reactiveSystem.activeSub;
+    if (!SolidartConfig.detachEffects && currentSub != null) {
+      if (currentSub is! _AlienEffect ||
+          (!_internalEffect.detach && !currentSub.detach)) {
+        reactiveSystem.link(_internalEffect, currentSub);
+      }
+    }
+    final prevSub = reactiveSystem.setCurrentSub(_internalEffect);
+
     try {
       _internalEffect.run();
     } catch (e, s) {
       _onError?.call(SolidartCaughtException(e, stackTrace: s));
     } finally {
+      reactiveSystem.setCurrentSub(prevSub);
       if (SolidartConfig.autoDispose) {
         Future.microtask(_mayDispose);
       }

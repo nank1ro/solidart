@@ -22,7 +22,7 @@ class WrapWithProviderScope extends DartAssist {
       }
 
       final changeBuilder = reporter.createChangeBuilder(
-        message: 'Wrap with Solid',
+        message: 'Wrap with ProviderScope',
         priority: 0,
       );
 

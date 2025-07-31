@@ -77,6 +77,14 @@ sealed class Option<T> {
       _ => throw Exception('Cannot unwrap None'),
     };
   }
+
+  /// Safe unwraps the option, yielding the content of a `Some` or `null`.
+  T? safeUnwrap() {
+    return switch (this) {
+      final Some<T> some => some.value,
+      _ => null,
+    };
+  }
 }
 
 /// {@template some}

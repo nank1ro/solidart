@@ -1,123 +1,73 @@
 part of 'core.dart';
 
-abstract interface class _Effect implements alien.Dependency, alien.Subscriber {
-  void Function() get fn;
-}
+class _AlienComputed<T> extends alien.ReactiveNode implements _AlienUpdatable {
+  // flags: ReactiveFlags.mutable | ReactiveFlags.dirty
+  _AlienComputed(this.parent, this.getter)
+      : super(flags: 17 as alien.ReactiveFlags);
 
-abstract interface class _Signal<T> implements alien.Dependency {
-  abstract T currentValue;
-  T call();
-}
+  final Computed<T> parent;
+  final T Function(T? oldValue) getter;
 
-abstract interface class _WriteableSignal<T> extends _Signal<T> {
-  @override
-  T call([T value]);
-}
+  T? value;
 
-abstract interface class _Computed<T> extends _Signal<T?>
-    implements alien.Subscriber {
-  @override
-  abstract T? currentValue;
+  void dispose() => reactiveSystem.stopEffect(this);
 
   @override
-  T call();
-
-  bool notify();
+  bool update() {
+    final prevSub = reactiveSystem.setCurrentSub(this);
+    reactiveSystem.startTracking(this);
+    try {
+      final oldValue = value;
+      return oldValue != (value = getter(oldValue));
+    } finally {
+      reactiveSystem
+        ..setCurrentSub(prevSub)
+        ..endTracking(this);
+    }
+  }
 }
 
-class _AlienSignal<T> with alien.Dependency implements _WriteableSignal<T> {
-  _AlienSignal(
-    this.currentValue, {
-    required this.parent,
-  });
+class _AlienEffect extends alien.ReactiveNode {
+  _AlienEffect(this.parent, this.run, {bool? detach})
+      : detach = detach ?? SolidartConfig.detachEffects,
+        super(flags: alien.ReactiveFlags.watching);
 
-  @override
-  T currentValue;
+  final bool detach;
+  final Effect parent;
+  final void Function() run;
+
+  void dispose() => reactiveSystem.stopEffect(this);
+}
+
+class _AlienSignal<T> extends alien.ReactiveNode implements _AlienUpdatable {
+  _AlienSignal(this.parent, this.value)
+      : previousValue = value,
+        super(flags: alien.ReactiveFlags.mutable);
 
   final SignalBase<dynamic> parent;
 
-  @override
-  T call([T? _]) {
-    if (reactiveSystem.activeSub != null) {
-      reactiveSystem.link(this, reactiveSystem.activeSub!);
-    }
+  Option<T> previousValue;
+  Option<T> value;
 
-    return currentValue;
-  }
-}
-
-class _AlienComputed<T>
-    with alien.Dependency, alien.Subscriber
-    implements _Computed<T> {
-  _AlienComputed(this.getter, {required this.parent});
-
-  final T Function(T? oldValue) getter;
-
-  final Computed<T> parent;
+  bool forceDirty = false;
 
   @override
-  T? currentValue;
-
-  @override
-  int flags = alien.SubscriberFlags.computed | alien.SubscriberFlags.dirty;
-
-  @override
-  T call() {
-    if ((flags &
-            (alien.SubscriberFlags.dirty |
-                alien.SubscriberFlags.pendingComputed)) !=
-        0) {
-      reactiveSystem.processComputedUpdate(this, flags);
-    }
-    if (reactiveSystem.activeSub != null) {
-      reactiveSystem.link(this, reactiveSystem.activeSub!);
-    } else if (reactiveSystem.activeScope != null) {
-      reactiveSystem.link(this, reactiveSystem.activeScope!);
-    }
-
-    return currentValue as T;
-  }
-
-  @override
-  bool notify() {
-    final oldValue = currentValue;
-    final newValue = getter(oldValue);
-    if (!parent._compare(oldValue, newValue)) {
-      currentValue = newValue;
+  bool update() {
+    flags = alien.ReactiveFlags.mutable;
+    if (forceDirty) {
+      forceDirty = false;
       return true;
     }
-    return false;
-  }
+    if (!parent._compare(previousValue.safeUnwrap(), value.safeUnwrap())) {
+      previousValue = value;
+      return true;
+    }
 
-  void dispose() {
-    reactiveSystem.disposeSub(this);
+    return false;
   }
 }
 
-class _AlienEffect with alien.Dependency, alien.Subscriber implements _Effect {
-  _AlienEffect(
-    this.fn, {
-    required this.parent,
-  });
-
-  @override
-  final void Function() fn;
-
-  final Effect parent;
-
-  @override
-  int flags = alien.SubscriberFlags.effect;
-
-  void dispose() {
-    reactiveSystem.disposeSub(this);
-  }
-
-  void run() {
-    if (reactiveSystem.activeSub != null) {
-      reactiveSystem.link(this, reactiveSystem.activeSub!);
-    } else if (reactiveSystem.activeScope != null) {
-      reactiveSystem.link(this, reactiveSystem.activeScope!);
-    }
-    reactiveSystem.runEffect(this);
-  }
+// ignore: one_member_abstracts
+abstract interface class _AlienUpdatable {
+  bool update();
 }
