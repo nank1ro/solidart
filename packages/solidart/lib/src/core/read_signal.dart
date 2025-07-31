@@ -261,7 +261,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
     if (_disposed) return;
     _disposed = true;
 
-    // This will dispose the signal to _disposed being true
+    // This will dispose the signal
     untracked(() {
       reactiveSystem.getSignalValue(_internalSignal);
     });
