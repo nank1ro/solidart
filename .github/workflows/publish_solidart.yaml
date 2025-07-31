@@ -9,9 +9,16 @@ on:
 # Publish using the reusable workflow from dart-lang.
 jobs:
   publish:
+    runs-on: ubuntu-latest
     permissions:
       id-token: write # Required for authentication using OIDC
-    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
-    with:
-      working-directory: packages/solidart
-      environment: pub.dev
+    steps:
+      - uses: dart-lang/setup-dart@v1
+      - run: |
+          dart pub get
+          cd packages/solidart_devtools_extension
+          dart run devtools_extensions build_and_copy --source=. --dest=../solidart/extension/devtools
+      - uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+        with:
+          working-directory: packages/solidart
+          environment: pub.dev
