@@ -1,6 +1,6 @@
 ## 2.0.1
 
-- **CHORE**: Update the `solidart` dependency to `^2.0.1`.
+- **CHORE**: Update the `solidart` dependency to `^2.1.0`.
 
 ### Changes from solidart
 
