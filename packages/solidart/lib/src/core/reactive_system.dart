@@ -27,13 +27,10 @@ class ReactiveName {
 final reactiveSystem = ReactiveSystem();
 
 class ReactiveSystem extends alien.ReactiveSystem {
-  final queuedEffects = <int, alien.ReactiveNode?>{};
-  final pauseStack = <alien.ReactiveNode>[];
-
   int batchDepth = 0;
-  int notifyIndex = 0;
-  int queuedEffectsLength = 0;
   alien.ReactiveNode? activeSub;
+  _AlienEffect? queuedEffects;
+  _AlienEffect? queuedEffectsTail;
 
   @override
   void notify(alien.ReactiveNode node) {
@@ -43,8 +40,11 @@ class ReactiveSystem extends alien.ReactiveSystem {
       final subs = node.subs;
       if (subs != null) {
         notify(subs.sub);
+      } else if (queuedEffectsTail != null) {
+        queuedEffectsTail =
+            queuedEffectsTail!.nextEffect = node as _AlienEffect;
       } else {
-        queuedEffects[queuedEffectsLength++] = node;
+        queuedEffectsTail = queuedEffects = node as _AlienEffect;
       }
     }
   }
@@ -166,14 +166,15 @@ class ReactiveSystem extends alien.ReactiveSystem {
   }
 
   void flush() {
-    try {
-      while (notifyIndex < queuedEffectsLength) {
-        final effect = queuedEffects[notifyIndex];
-        queuedEffects[notifyIndex++] = null;
-        run(effect!, effect.flags &= -65 /* ~Queued */);
+    while (queuedEffects != null) {
+      final effect = queuedEffects!;
+      if ((queuedEffects = effect.nextEffect) != null) {
+        effect.nextEffect = null;
+      } else {
+        queuedEffectsTail = null;
       }
-    } finally {
-      notifyIndex = queuedEffectsLength = 0;
+
+      run(effect, effect.flags &= -65 /* ~Queued */);
     }
   }
 }

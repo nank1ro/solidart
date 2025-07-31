@@ -31,6 +31,8 @@ class _AlienEffect extends alien.ReactiveNode {
       : detach = detach ?? SolidartConfig.detachEffects,
         super(flags: 2 /* Watching */);
 
+  _AlienEffect? nextEffect;
+
   final bool detach;
   final Effect parent;
   final void Function() run;
