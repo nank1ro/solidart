@@ -1,3 +1,7 @@
+## 2.1.1
+
+- **CHORE**: Bump the `alien_signals` dependency to `^0.5.1` for slight performance improvements (thanks to @medz).
+
 ## 2.1.0
 
 - **REFACTOR**: Update `alien_signals` dependency from `^0.2.1` to `^0.4.3` with significant performance improvements (thanks to @medz).
