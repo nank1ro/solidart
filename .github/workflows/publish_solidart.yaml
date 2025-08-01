@@ -23,6 +23,7 @@ jobs:
       - run: flutter pub get
       - run: |
           cd packages/solidart_devtools_extension
+          flutter create . --platforms=web
           dart run devtools_extensions build_and_copy --source=. --dest=../solidart/extension/devtools
       - name: Publish to pub.dev
         working-directory: packages/solidart
