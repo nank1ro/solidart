@@ -1,3 +1,7 @@
+## 2.1.1+1
+
+- **CHORE**: Update `README.md` with new contributors.
+
 ## 2.1.1
 
 - **CHORE**: Bump the `alien_signals` dependency to `^0.5.1` for slight performance improvements (thanks to @medz).

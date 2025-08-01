@@ -6,11 +6,24 @@ on:
       - 'solidart-v[0-9]+.[0-9]+.[0-9]+'          # Matches solidart-v1.2.3
       - 'solidart-v[0-9]+.[0-9]+.[0-9]+\+[0-9]+'  # Matches solidart-v1.2.3+1
 
+
 jobs:
   publish:
     permissions:
       id-token: write # Required for authentication using OIDC
-    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
-    with:
-      working-directory: packages/solidart
-      environment: pub.dev
+    environment: pub.dev
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+      - run: flutter pub get
+      - run: |
+          cd packages/solidart_devtools_extension
+          dart run devtools_extensions build_and_copy --source=. --dest=../solidart/extension/devtools
+      - name: Publish to pub.dev
+        working-directory: packages/solidart
+        run: dart pub publish -f
