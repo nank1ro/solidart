@@ -28,15 +28,14 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  disco: ^1.0.0
+  disco: ^1.0.3
   flutter:
     sdk: flutter
-  flutter_solidart: ^2.0.0
+  flutter_solidart: ^2.1.0
 
 dev_dependencies:
-  custom_lint: ^0.7.0
-  solidart_lint:
-    path: ../
+  custom_lint: ^0.8.0
+  solidart_lint: ^2.0.0
   flutter_test:
     sdk: flutter
 

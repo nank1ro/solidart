@@ -16,7 +16,7 @@ dependencies:
   uuid: ^4.5.1
 
 dev_dependencies:
-  custom_lint: ^0.7.0
+  custom_lint: ^0.8.0
   flutter_test:
     sdk: flutter
   solidart_lint: ^2.0.0

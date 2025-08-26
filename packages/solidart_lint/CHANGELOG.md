@@ -1,3 +1,7 @@
+## 2.0.2
+
+- Fix lints not working with latest Dart versions.
+
 ## 2.0.1
 
 - Rename `Wrap with Solid` assist to `Wrap with ProviderScope`
