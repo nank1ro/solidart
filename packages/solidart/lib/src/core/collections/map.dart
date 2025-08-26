@@ -422,7 +422,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   @override
   void updateAll(V Function(K key, V value) update) {
     final changes = <K, V>{};
-    for (final key in this.keys) {
+    for (final key in keys) {
       final oldValue = _value[key];
       final newValue = update(key, _value[key] as V);
       if (oldValue != newValue) {
@@ -431,7 +431,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
     }
     if (changes.isNotEmpty) {
       _setPreviousValue(Map<K, V>.of(_value));
-      for (final key in this.keys) {
+      for (final key in keys) {
         _value[key] = changes[key] as V;
       }
       _notifyChanged();

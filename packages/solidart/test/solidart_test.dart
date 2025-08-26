@@ -183,7 +183,7 @@ void main() {
         count.value = 11;
       });
 
-      test('test until() with timeout - condition met before timeout', 
+      test('test until() with timeout - condition met before timeout',
           () async {
         final count = Signal(0);
 
@@ -201,7 +201,7 @@ void main() {
         count.value = 11;
       });
 
-      test('test until() with timeout - timeout occurs before condition', 
+      test('test until() with timeout - timeout occurs before condition',
           () async {
         final count = Signal(0);
 
@@ -214,12 +214,13 @@ void main() {
             throwsA(isA<TimeoutException>()),
           ),
         );
-        
+
         // Don't update the value, let it timeout
         await Future<void>.delayed(const Duration(milliseconds: 200));
       });
 
-      test('test until() with timeout - condition already met returns immediately', 
+      test(
+          '''test until() with timeout - condition already met returns immediately''',
           () async {
         final count = Signal(10); // Value already meets condition
 
@@ -227,60 +228,62 @@ void main() {
           (value) => value > 5,
           timeout: const Duration(milliseconds: 100),
         );
-        
+
         expect(result, 10);
       });
 
       test('test until() with timeout - proper cleanup on timeout', () async {
         final count = Signal(0);
-        
+
         // Create an until that will timeout
         unawaited(
-          Future.value(count.until(
-            (value) => value > 5,
-            timeout: const Duration(milliseconds: 50),
-          )).catchError((_) {
+          Future.value(
+            count.until(
+              (value) => value > 5,
+              timeout: const Duration(milliseconds: 50),
+            ),
+          ).catchError((_) {
             // Expected to timeout, return a dummy value
             return 0;
           }),
         );
-        
+
         // Wait for timeout to occur
         await Future<void>.delayed(const Duration(milliseconds: 100));
-        
-        // Now update the value - if cleanup worked properly, 
+
+        // Now update the value - if cleanup worked properly,
         // no additional effects should trigger
         count.value = 10;
-        
+
         // Give time for any potential side effects
         await Future<void>.delayed(const Duration(milliseconds: 50));
-        
+
         // If we reach here without issues, cleanup worked
         expect(count.value, 10);
       });
 
       test('test until() with timeout - proper cleanup on success', () async {
         final count = Signal(0);
-        
+
         final future = count.until(
           (value) => value > 5,
           timeout: const Duration(milliseconds: 200),
         );
-        
+
         // Update value to meet condition
         count.value = 10;
-        
+
         // Wait for completion
         final result = await future;
         expect(result, 10);
-        
+
         // Give time for cleanup
         await Future<void>.delayed(const Duration(milliseconds: 50));
-        
-        // Additional changes shouldn't affect anything since effect was 
+
+        // Additional changes shouldn't affect anything since effect was
         // disposed
         count.value = 15;
-        
+
         // If we reach here without issues, cleanup worked
         expect(count.value, 15);
       });
