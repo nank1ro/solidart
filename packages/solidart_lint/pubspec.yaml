@@ -1,6 +1,6 @@
 name: solidart_lint
 description: solidart_lint is a developer tool for users of solidart, designed to help stop common issues and simplify repetitive tasks
-version: 2.0.1
+version: 2.0.2
 repository: https://github.com/nank1ro/solidart
 documentation: https://solidart.mariuti.com
 topics:
@@ -14,10 +14,10 @@ environment:
 resolution: workspace
 
 dependencies:
-  analyzer: ^7.3.0
+  analyzer: ^7.5.0
   analyzer_plugin: ^0.13.4
-  collection: ^1.18.0
-  custom_lint_builder: ^0.7.0
+  collection: ^1.19.1
+  custom_lint_builder: ^0.8.0
 
 dev_dependencies:
   lints: ^5.0.0
