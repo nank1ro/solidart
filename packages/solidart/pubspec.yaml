@@ -10,6 +10,7 @@ topics:
 environment:
   sdk: ^3.6.0
 
+resolution: workspace
 
 dependencies:
   # we depend on the alien signals reactivity implementation because it's the fastest available right now (30/12/2024)
