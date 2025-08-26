@@ -93,15 +93,23 @@ count.observe((previousValue, value) {
 // prints "The count changed from null to 0"
 ```
 
-## `FutureOr<T> until(bool Function(T value) condition)`
+## `FutureOr<T> until(bool Function(T value) condition, {Duration? timeout})`
 
 Returns the future that completes when the __condition__ evalutes to true.
 If the __condition__ is already true, it completes immediately.
+
+The optional __timeout__ parameter specifies the maximum time to wait for the condition to be met. If provided and the timeout is reached before the condition is met, the future will complete with a __TimeoutException__.
 
 For example:
 ```dart
 final count = Signal(0);
 await count.until((value) => value >= 10); // await until value >= 10
+
+// With timeout - will throw TimeoutException if condition not met in 5 seconds
+await count.until(
+  (value) => value >= 10, 
+  timeout: Duration(seconds: 5),
+);
 ```
 
 ## `bool get disposed`
