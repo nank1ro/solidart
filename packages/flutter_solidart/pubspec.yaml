@@ -18,7 +18,7 @@ dependencies:
   flutter:
     sdk: flutter
   meta: ^1.11.0
-  solidart: ^2.1.0
+  solidart: ^2.2.0
 
 dev_dependencies:
   disco: ^1.0.0
