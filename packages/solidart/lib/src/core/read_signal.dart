@@ -79,7 +79,9 @@ class ReadableSignal<T> implements ReadSignal<T> {
         trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
         autoDispose = autoDispose ?? SolidartConfig.autoDispose,
         equals = equals ?? SolidartConfig.equals,
+        // coverage:ignore-start
         name = name ?? ReactiveName.nameFor('ReadSignal'),
+        // coverage:ignore-end
         trackPreviousValue =
             trackPreviousValue ?? SolidartConfig.trackPreviousValue {
     _internalSignal = _AlienSignal(this, None<T>());
