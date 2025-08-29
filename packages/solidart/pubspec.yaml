@@ -6,6 +6,9 @@ documentation: https://solidart.mariuti.com
 topics:
   - state-management
   - signals
+  - signal
+  - reactivity
+  - effect
 
 environment:
   sdk: ^3.6.0
