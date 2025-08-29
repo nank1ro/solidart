@@ -1,3 +1,7 @@
+## 2.3.0
+
+- **FEAT**: Allow extending signal, computed, resource, list-signal, set-signal and map-signal.
+
 ## 2.2.0
 
 - **FEAT**: Add `timeout` parameter to `Signal.until` method to specify a timeout duration. If the condition is not met within the specified duration, the returned future will complete with a `TimeoutException`.
