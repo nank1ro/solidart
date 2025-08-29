@@ -74,96 +74,75 @@ part of 'core.dart';
 /// {@endtemplate}
 class Resource<T> extends Signal<ResourceState<T>> {
   /// {@macro resource}
-  factory Resource(
-    Future<T> Function() fetcher, {
-    SignalBase<dynamic>? source,
+  Resource(
+    this.fetcher, {
+    this.source,
 
     /// {@macro SignalBase.name}
     String? name,
 
     /// {@macro SignalBase.equals}
-    bool? equals,
+    super.equals,
 
     /// {@macro SignalBase.autoDispose}
-    bool? autoDispose,
+    super.autoDispose,
 
     /// {@macro SignalBase.trackInDevTools}
-    bool? trackInDevTools,
+    super.trackInDevTools,
 
     /// Indicates whether the resource should be computed lazily, defaults to
     /// true.
-    bool lazy = true,
+    this.lazy = true,
 
     /// {@macro Resource.useRefreshing}
     bool? useRefreshing,
-  }) {
-    return Resource._internal(
-      fetcher: fetcher,
-      source: source,
-      name: name ?? ReactiveName.nameFor('Resource'),
-      equals: equals ?? SolidartConfig.equals,
-      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
-      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
-      lazy: lazy,
-      useRefreshing: useRefreshing ?? SolidartConfig.useRefreshing,
-    );
-  }
-
-  /// {@macro resource}
-  factory Resource.stream(
-    Stream<T> Function() stream, {
-    SignalBase<dynamic>? source,
-
-    /// {@macro SignalBase.name}
-    String? name,
-
-    /// {@macro SignalBase.equals}
-    bool? equals,
-
-    /// {@macro SignalBase.autoDispose}
-    bool? autoDispose,
-
-    /// {@macro SignalBase.trackInDevTools}
-    bool? trackInDevTools,
-
-    /// Indicates whether the resource should be computed lazily, defaults to
-    /// true.
-    bool lazy = true,
-
-    /// {@macro Resource.useRefreshing}
-    bool? useRefreshing,
-  }) {
-    return Resource._internal(
-      stream: stream,
-      source: source,
-      name: name ?? ReactiveName.nameFor('Resource'),
-      equals: equals ?? SolidartConfig.equals,
-      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
-      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
-      lazy: lazy,
-      useRefreshing: useRefreshing ?? SolidartConfig.useRefreshing,
-    );
-  }
-
-  Resource._internal({
-    required super.name,
-    required super.equals,
-    required this.lazy,
-    required super.autoDispose,
-    required super.trackInDevTools,
-    required this.useRefreshing,
 
     /// Whether to track the previous state of the resource, defaults to true.
     bool? trackPreviousState,
-    this.fetcher,
-    this.stream,
+  })  : useRefreshing = useRefreshing ?? SolidartConfig.useRefreshing,
+        stream = null,
+        super(
+          ResourceState<T>.loading(),
+          name: name ?? ReactiveName.nameFor('Resource'),
+          trackPreviousValue:
+              trackPreviousState ?? SolidartConfig.trackPreviousValue,
+          comparator: identical,
+        ) {
+    // resolve the resource immediately if not lazy
+    if (!lazy) _resolve();
+  }
+
+  /// {@macro resource}
+  Resource.stream(
+    this.stream, {
     this.source,
-  })  : assert(
-          (fetcher != null) ^ (stream != null),
-          'Provide a fetcher or a stream',
-        ),
-        super._internal(
-          initialValue: ResourceState<T>.loading(),
+
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    super.equals,
+
+    /// {@macro SignalBase.autoDispose}
+    super.autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    super.trackInDevTools,
+
+    /// Indicates whether the resource should be computed lazily, defaults to
+    /// true.
+    this.lazy = true,
+
+    /// {@macro Resource.useRefreshing}
+    bool? useRefreshing,
+
+    /// Whether to track the previous state of the resource, defaults to true.
+    bool? trackPreviousState,
+  })  : useRefreshing = useRefreshing ?? SolidartConfig.useRefreshing,
+        fetcher = null,
+        super(
+          ResourceState<T>.loading(),
+          name: name ?? ReactiveName.nameFor('Resource'),
           trackPreviousValue:
               trackPreviousState ?? SolidartConfig.trackPreviousValue,
           comparator: identical,
