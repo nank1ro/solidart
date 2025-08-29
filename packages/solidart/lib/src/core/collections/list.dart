@@ -15,47 +15,29 @@ part of '../core.dart';
 /// {@endtemplate}
 class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// {@macro list-signal}
-  factory ListSignal(
+  ListSignal(
     Iterable<E> initialValue, {
     /// {@macro SignalBase.name}
     String? name,
 
     /// {@macro SignalBase.equals}
-    bool? equals,
+    super.equals,
 
     /// {@macro SignalBase.autoDispose}
-    bool? autoDispose,
+    super.autoDispose,
 
     /// {@macro SignalBase.trackInDevTools}
-    bool? trackInDevTools,
+    super.trackInDevTools,
 
     /// {@macro SignalBase.comparator}
-    ValueComparator<List<E>?> comparator = identical,
+    super.comparator = identical,
 
     /// {@macro SignalBase.trackPreviousValue}
-    bool? trackPreviousValue,
-  }) {
-    return ListSignal._internal(
-      initialValue: initialValue.toList(),
-      name: name ?? ReactiveName.nameFor('ListSignal'),
-      equals: equals ?? SolidartConfig.equals,
-      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
-      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
-      trackPreviousValue:
-          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
-      comparator: comparator,
-    );
-  }
-
-  ListSignal._internal({
-    required super.initialValue,
-    required super.name,
-    required super.equals,
-    required super.autoDispose,
-    required super.trackInDevTools,
-    required super.comparator,
-    required super.trackPreviousValue,
-  }) : super._internal();
+    super.trackPreviousValue,
+  }) : super(
+          initialValue.toList(),
+          name: name ?? ReactiveName.nameFor('ListSignal'),
+        );
 
   @override
   List<E> _setValue(List<E> newValue) {

@@ -15,47 +15,28 @@ part of '../core.dart';
 /// {@endtemplate}
 class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// {@macro map-signal}
-  factory MapSignal(
-    Map<K, V> initialValue, {
+  MapSignal(
+    super.initialValue, {
     /// {@macro SignalBase.name}
     String? name,
 
     /// {@macro SignalBase.equals}
-    bool? equals,
+    super.equals,
 
     /// {@macro SignalBase.autoDispose}
-    bool? autoDispose,
+    super.autoDispose,
 
     /// {@macro SignalBase.trackInDevTools}
-    bool? trackInDevTools,
+    super.trackInDevTools,
 
     /// {@macro SignalBase.comparator}
-    ValueComparator<Map<K, V>?> comparator = identical,
+    super.comparator = identical,
 
     /// {@macro SignalBase.trackPreviousValue}
-    bool? trackPreviousValue,
-  }) {
-    return MapSignal._internal(
-      initialValue: Map<K, V>.of(initialValue),
-      name: name ?? ReactiveName.nameFor('MapSignal'),
-      equals: equals ?? SolidartConfig.equals,
-      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
-      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
-      trackPreviousValue:
-          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
-      comparator: comparator,
-    );
-  }
-
-  MapSignal._internal({
-    required super.initialValue,
-    required super.name,
-    required super.equals,
-    required super.autoDispose,
-    required super.trackInDevTools,
-    required super.comparator,
-    required super.trackPreviousValue,
-  }) : super._internal();
+    super.trackPreviousValue,
+  }) : super(
+          name: name ?? ReactiveName.nameFor('MapSignal'),
+        );
 
   @override
   Map<K, V> _setValue(Map<K, V> newValue) {

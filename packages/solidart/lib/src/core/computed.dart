@@ -52,47 +52,26 @@ part of 'core.dart';
 /// {@endtemplate}
 class Computed<T> extends ReadSignal<T> {
   /// {@macro computed}
-  factory Computed(
-    T Function() selector, {
+  Computed(
+    this.selector, {
     /// {@macro SignalBase.name}
     String? name,
 
     /// {@macro SignalBase.equals}
-    bool? equals,
+    super.equals,
 
     /// {@macro SignalBase.autoDispose}
-    bool? autoDispose,
+    super.autoDispose,
 
     /// {@macro SignalBase.trackInDevTools}
-    bool? trackInDevTools,
+    super.trackInDevTools,
 
     /// {@macro SignalBase.comparator}
-    ValueComparator<T?> comparator = identical,
+    super.comparator = identical,
 
     /// {@macro SignalBase.trackPreviousValue}
-    bool? trackPreviousValue,
-  }) {
-    return Computed._internal(
-      selector: selector,
-      name: name ?? ReactiveName.nameFor('Computed'),
-      equals: equals ?? SolidartConfig.equals,
-      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
-      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
-      trackPreviousValue:
-          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
-      comparator: comparator,
-    );
-  }
-
-  Computed._internal({
-    required this.selector,
-    required super.name,
-    required super.equals,
-    required super.autoDispose,
-    required super.trackInDevTools,
-    required super.comparator,
-    required super.trackPreviousValue,
-  }) {
+    super.trackPreviousValue,
+  }) : super(name: name ?? ReactiveName.nameFor('Computed')) {
     var runnedOnce = false;
     _internalComputed = _AlienComputed(
       this,
