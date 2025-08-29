@@ -1,3 +1,9 @@
+## 2.2.0
+
+### Changes from solidart
+
+- **FEAT**: Allow extending signal, computed, resource, list-signal, set-signal and map-signal.
+
 ## 2.1.0
 
 ### Changes from solidart
