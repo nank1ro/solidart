@@ -15,47 +15,29 @@ part of '../core.dart';
 /// {@endtemplate}
 class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// {@macro set-signal}
-  factory SetSignal(
+  SetSignal(
     Iterable<E> initialValue, {
     /// {@macro SignalBase.name}
     String? name,
 
     /// {@macro SignalBase.equals}
-    bool? equals,
+    super.equals,
 
     /// {@macro SignalBase.autoDispose}
-    bool? autoDispose,
+    super.autoDispose,
 
     /// {@macro SignalBase.trackInDevTools}
-    bool? trackInDevTools,
+    super.trackInDevTools,
 
     /// {@macro SignalBase.comparator}
-    ValueComparator<Set<E>?> comparator = identical,
+    super.comparator = identical,
 
     /// {@macro SignalBase.trackPreviousValue}
-    bool? trackPreviousValue,
-  }) {
-    return SetSignal._internal(
-      initialValue: initialValue.toSet(),
-      name: name ?? ReactiveName.nameFor('SetSignal'),
-      equals: equals ?? SolidartConfig.equals,
-      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
-      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
-      comparator: comparator,
-      trackPreviousValue:
-          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
-    );
-  }
-
-  SetSignal._internal({
-    required super.initialValue,
-    required super.name,
-    required super.equals,
-    required super.autoDispose,
-    required super.trackInDevTools,
-    required super.comparator,
-    required super.trackPreviousValue,
-  }) : super._internal();
+    super.trackPreviousValue,
+  }) : super(
+          initialValue.toSet(),
+          name: name ?? ReactiveName.nameFor('SetSignal'),
+        );
 
   @override
   Set<E> _setValue(Set<E> newValue) {

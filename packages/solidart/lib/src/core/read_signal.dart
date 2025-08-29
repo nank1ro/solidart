@@ -25,7 +25,7 @@ abstract class ReadSignal<T> extends SignalBase<T> {
 /// {@endtemplate}
 class ReadableSignal<T> implements ReadSignal<T> {
   /// {@macro readsignal}
-  factory ReadableSignal(
+  ReadableSignal(
     T initialValue, {
     /// {@macro SignalBase.name}
     String? name,
@@ -40,45 +40,50 @@ class ReadableSignal<T> implements ReadSignal<T> {
     bool? trackInDevTools,
 
     /// {@macro SignalBase.comparator}
-    ValueComparator<T?> comparator = identical,
+    this.comparator = identical,
 
     /// {@macro SignalBase.trackPreviousValue}
     bool? trackPreviousValue,
-  }) {
-    return ReadableSignal._internal(
-      initialValue: initialValue,
-      name: name ?? ReactiveName.nameFor('ReadSignal'),
-      equals: equals ?? SolidartConfig.equals,
-      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
-      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
-      trackPreviousValue:
-          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
-      comparator: comparator,
-    );
-  }
-
-  ReadableSignal._internal({
-    required T initialValue,
-    required this.name,
-    required this.equals,
-    required this.autoDispose,
-    required this.trackInDevTools,
-    required this.comparator,
-    required this.trackPreviousValue,
-  }) : _hasValue = true {
+  })  : _hasValue = true,
+        trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
+        autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+        equals = equals ?? SolidartConfig.equals,
+        name = name ?? ReactiveName.nameFor('ReadSignal'),
+        trackPreviousValue =
+            trackPreviousValue ?? SolidartConfig.trackPreviousValue {
     _internalSignal = _AlienSignal(this, Some(initialValue));
     _untrackedValue = initialValue;
     _notifySignalCreation();
   }
 
-  ReadableSignal._internalLazy({
-    required this.name,
-    required this.equals,
-    required this.autoDispose,
-    required this.trackInDevTools,
-    required this.comparator,
-    required this.trackPreviousValue,
-  }) : _hasValue = false {
+  /// {@macro readsignal}
+  ReadableSignal.lazy({
+    /// {@macro SignalBase.name}
+    String? name,
+
+    /// {@macro SignalBase.equals}
+    bool? equals,
+
+    /// {@macro SignalBase.autoDispose}
+    bool? autoDispose,
+
+    /// {@macro SignalBase.trackInDevTools}
+    bool? trackInDevTools,
+
+    /// {@macro SignalBase.comparator}
+    this.comparator = identical,
+
+    /// {@macro SignalBase.trackPreviousValue}
+    bool? trackPreviousValue,
+  })  : _hasValue = false,
+        trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
+        autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+        equals = equals ?? SolidartConfig.equals,
+        // coverage:ignore-start
+        name = name ?? ReactiveName.nameFor('ReadSignal'),
+        // coverage:ignore-end
+        trackPreviousValue =
+            trackPreviousValue ?? SolidartConfig.trackPreviousValue {
     _internalSignal = _AlienSignal(this, None<T>());
   }
 
@@ -316,9 +321,9 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   /// Returns the future that completes when the [condition] evalutes to true.
   /// If the [condition] is already true, it completes immediately.
-  /// 
-  /// The [timeout] parameter specifies the maximum time to wait for the 
-  /// condition to be met. If provided and the timeout is reached before the 
+  ///
+  /// The [timeout] parameter specifies the maximum time to wait for the
+  /// condition to be met. If provided and the timeout is reached before the
   /// condition is met, the future will complete with a [TimeoutException].
   FutureOr<T> until(
     bool Function(T value) condition, {
@@ -329,12 +334,12 @@ class ReadableSignal<T> implements ReadSignal<T> {
     final completer = Completer<T>();
     Timer? timer;
     late final Effect effect;
-    
+
     void dispose() {
       effect.dispose();
       timer?.cancel();
     }
-    
+
     effect = Effect(
       () {
         if (condition(value)) {
@@ -344,7 +349,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
       },
       autoDispose: false,
     );
-    
+
     // Start timeout timer if specified
     if (timeout != null) {
       timer = Timer(timeout, () {
@@ -354,7 +359,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
         }
       });
     }
-    
+
     return completer.future;
   }
 

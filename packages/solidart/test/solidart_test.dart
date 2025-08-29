@@ -293,6 +293,16 @@ void main() {
         expect(s.toString(), startsWith('Signal<int>(value: 0'));
       });
 
+      test('check custom name', () {
+        final s = ReadableSignal(0, name: 'custom-name');
+        expect(s.name, 'custom-name');
+      });
+
+      test('check custom name when lazy', () {
+        final s = ReadableSignal<int>.lazy(name: 'lazy-custom-name');
+        expect(s.name, 'lazy-custom-name');
+      });
+
       test('check Signal becomes ReadSignal', () {
         final s = Signal(0);
         expect(s, const TypeMatcher<Signal<int>>());
