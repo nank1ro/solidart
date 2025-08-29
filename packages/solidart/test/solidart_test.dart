@@ -294,12 +294,12 @@ void main() {
       });
 
       test('check custom name', () {
-        final s = Signal(0, name: 'custom-name');
+        final s = ReadableSignal(0, name: 'custom-name');
         expect(s.name, 'custom-name');
       });
 
       test('check custom name when lazy', () {
-        final s = Signal<int>.lazy(name: 'lazy-custom-name');
+        final s = ReadableSignal<int>.lazy(name: 'lazy-custom-name');
         expect(s.name, 'lazy-custom-name');
       });
 
