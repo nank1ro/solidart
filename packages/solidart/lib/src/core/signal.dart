@@ -103,91 +103,55 @@ part of 'core.dart';
 /// {@endtemplate}
 class Signal<T> extends ReadableSignal<T> {
   /// {@macro signal}
-  factory Signal(
-    T initialValue, {
+  Signal(
+    super.initialValue, {
     /// {@macro SignalBase.name}
     String? name,
 
     /// {@macro SignalBase.equals}
-    bool? equals,
+    super.equals,
 
     /// {@macro SignalBase.autoDispose}
-    bool? autoDispose,
+    super.autoDispose,
 
     /// {@macro SignalBase.trackInDevTools}
-    bool? trackInDevTools,
+    super.trackInDevTools,
 
     /// {@macro SignalBase.comparator}
-    ValueComparator<T?> comparator = identical,
+    super.comparator = identical,
 
     /// {@macro SignalBase.trackPreviousValue}
-    bool? trackPreviousValue,
-  }) {
-    return Signal._internal(
-      initialValue: initialValue,
-      name: name ?? ReactiveName.nameFor('Signal'),
-      equals: equals ?? SolidartConfig.equals,
-      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
-      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
-      trackPreviousValue:
-          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
-      comparator: comparator,
-    );
-  }
+    super.trackPreviousValue,
+  }) : super(
+          name: name ?? ReactiveName.nameFor('Signal'),
+        );
 
   /// {@macro signal}
   ///
   /// This is a lazy signal, it doesn't have a value at the moment of creation.
   /// But would throw a StateError if you try to access the value before setting
   /// one.
-  factory Signal.lazy({
+  Signal.lazy({
     /// {@macro SignalBase.name}
     String? name,
 
     /// {@macro SignalBase.equals}
-    bool? equals,
+    super.equals,
 
     /// {@macro SignalBase.autoDispose}
-    bool? autoDispose,
+    super.autoDispose,
 
     /// {@macro SignalBase.trackInDevTools}
-    bool? trackInDevTools,
+    super.trackInDevTools,
 
     /// {@macro SignalBase.comparator}
-    ValueComparator<T?> comparator = identical,
+    super.comparator = identical,
 
     /// {@macro SignalBase.trackPreviousValue}
-    bool? trackPreviousValue,
-  }) {
-    return Signal._internalLazy(
-      name: name ?? ReactiveName.nameFor('Signal'),
-      equals: equals ?? SolidartConfig.equals,
-      autoDispose: autoDispose ?? SolidartConfig.autoDispose,
-      trackInDevTools: trackInDevTools ?? SolidartConfig.devToolsEnabled,
-      trackPreviousValue:
-          trackPreviousValue ?? SolidartConfig.trackPreviousValue,
-      comparator: comparator,
-    );
-  }
-
-  Signal._internal({
-    required super.initialValue,
-    required super.name,
-    required super.equals,
-    required super.autoDispose,
-    required super.trackInDevTools,
-    required super.comparator,
-    required super.trackPreviousValue,
-  }) : super._internal();
-
-  Signal._internalLazy({
-    required super.name,
-    required super.equals,
-    required super.autoDispose,
-    required super.trackInDevTools,
-    required super.comparator,
-    required super.trackPreviousValue,
-  }) : super._internalLazy();
+    super.trackPreviousValue,
+  }) : super.lazy(
+          name: name ?? ReactiveName.nameFor('Signal'),
+        );
 
   /// {@macro set-signal-value}
   set value(T newValue) => _setValue(newValue);
