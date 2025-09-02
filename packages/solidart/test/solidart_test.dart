@@ -972,6 +972,43 @@ void main() {
           ),
         );
       });
+
+      test('check Resource debounceDelay for source that triggers very often',
+          () async {
+        final source = Signal(0);
+
+        Future<int> fetcher() => Future.value(42);
+
+        final resource = Resource(
+          fetcher,
+          source: source,
+          debounceDelay: const Duration(milliseconds: 100),
+          lazy: false, // Start immediately so we get an initial load
+        );
+
+        addTearDown(() {
+          resource.dispose();
+          source.dispose();
+        });
+
+        // Wait for initial load to complete
+        await pumpEventQueue();
+        expect(resource.state, isA<ResourceReady<int>>());
+
+        // Rapidly change the source value multiple times
+        for (var i = 1; i < 10; i++) {
+          source.value = i;
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+        }
+
+        // Wait enough time to ensure the debounce delay has passed
+        // and the Future completes
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+
+        // At this point, the resource should still be ready after debounced
+        // refresh
+        expect(resource.state, isA<ResourceReady<int>>());
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
