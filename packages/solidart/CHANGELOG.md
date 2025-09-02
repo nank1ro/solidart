@@ -1,3 +1,7 @@
+## 2.4.0
+
+- **FEAT**: Add `Debouncer` utility class to easily debounce operations and `debounceDelay` to `Resource` to debounce source changes if they fire very often.
+
 ## 2.3.0
 
 - **FEAT**: Allow extending signal, computed, resource, list-signal, set-signal and map-signal.
