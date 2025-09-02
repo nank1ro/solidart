@@ -1,3 +1,9 @@
+## 2.3.0
+
+### Changes from solidart
+
+- **FEAT**: Add `Debouncer` utility class to easily debounce operations and `debounceDelay` to `Resource` to debounce source changes if they fire very often.
+
 ## 2.2.0
 
 ### Changes from solidart

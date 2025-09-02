@@ -99,6 +99,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
     /// Whether to track the previous state of the resource, defaults to true.
     bool? trackPreviousState,
+
+    /// The debounce delay when the source changes, optional.
+    this.debounceDelay,
   })  : useRefreshing = useRefreshing ?? SolidartConfig.useRefreshing,
         stream = null,
         super(
@@ -138,6 +141,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
     /// Whether to track the previous state of the resource, defaults to true.
     bool? trackPreviousState,
+    this.debounceDelay,
   })  : useRefreshing = useRefreshing ?? SolidartConfig.useRefreshing,
         fetcher = null,
         super(
@@ -162,6 +166,10 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   /// The stream used to retrieve data.
   final Stream<T> Function()? stream;
+
+  /// The debounce delay when the source changes, optional.
+  final Duration? debounceDelay;
+
   StreamSubscription<T>? _streamSubscription;
 
   // The source dispose observation
@@ -285,7 +293,15 @@ class Resource<T> extends Signal<ResourceState<T>> {
     // react to the [source], if provided.
     if (source != null) {
       _sourceDisposeObservation = source!.observe((p, v) {
-        refresh();
+        if (debounceDelay != null) {
+          Debouncer.debounce(
+            source!.name,
+            debounceDelay!,
+            refresh,
+          );
+        } else {
+          refresh();
+        }
       });
       source!.onDispose(_sourceDisposeObservation!);
     }
