@@ -27,7 +27,8 @@ part of 'core.dart';
 /// // The fetcher
 /// Future<String> fetchUser() async {
 ///   final response = await http.get(
-///     Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
+///     Uri.parse('https://jsonplaceholder.typicode.com/users/${userId.value}/'),
+///     headers: {'Accept': 'application/json'},
 ///   );
 ///   return response.body;
 /// }
