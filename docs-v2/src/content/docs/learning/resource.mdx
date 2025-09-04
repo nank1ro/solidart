@@ -5,11 +5,9 @@ sidebar:
   order: 4
 ---
 
-`Resources` are special `Signal`s designed specifically to handle __async loading__. Their purpose is wrap async values in a way that makes them easy to interact with handling the common states of a future __data__, __error__ and __loading__.
+`Resources` are special `Signal`s designed specifically to handle __async loading__.
 
-Resources can be driven by a `source` signal that provides the query to an async data.
-
-The contents of the function can be anything. You can hit typical REST endpoints or GraphQL or anything that generates a future or a stream. Resources are not opinionated on the means of loading the data, only that they are driven by futures and streams.
+Their purpose is wrap async values in a way that makes them easy to interact with handling the common states of an async value: __data__, __error__ and __loading__.
 
 Let's create a Resource:
 
@@ -17,40 +15,183 @@ Let's create a Resource:
 // Using http as a client
 import 'package:http/http.dart' as http;
 
-// The source
-final userId = Signal(1);
-
 // The fetcher
 Future<String> fetchUser() async {
     final response = await http.get(
-      Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
+      Uri.parse('https://jsonplaceholder.typicode.com/users/1'),
+      headers: {'Accept': 'application/json'},      
     );
     return response.body;
 }
 
-// The resource (source is optional)
-final user = Resource(fetchUser, source: userId);
+final user = Resource(fetchUser);
+
+// and use it in a widget:
+SignalBuilder(
+  builder: (context, child) {
+    return user.state.on(
+      ready: (data) => Text(data),
+      error: (error, stackTrace) => Text('Error: $error'),
+      loading: () => const Text('Loading...'),
+    );
+  },
+),
 ```
 
-A Resource can also be driven from a `Stream` instead of a `Future`, and can be created with `Resource.stream(() => stream)`.
+A Resource can also be driven by a `Stream`.
 
-The resource has a value named `ResourceState`, that provides many useful convenience methods to correctly handle the state of the resource.
+```dart
+final stream = Stream.periodic(
+  const Duration(seconds: 1),
+  (count) => 'Tick: $count',
+);
 
-The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
-The are also other convenience methods to handle only specific states:
-- `on` forces you to handle all the states of a Resource
-- `maybeOn` lets you decide which states to handle and provide an `orElse` action for unhandled states
-- `map` equal to `on` but gives access to the `ResourceState` data class
-- `maybeMap` equal to `maybeOn` but gives access to the `ResourceState` data class
-- `isReady` indicates if the `Resource` is in the ready state
-- `isLoading` indicates if the `Resource` is in the loading state
-- `hasError` indicates if the `Resource` is in the error state
-- `asReady` upcast `ResourceState` into a `ResourceReady`, or return null if the `ResourceState` is in loading/error state
-- `asError` upcast `ResourceState` into a `ResourceError`, or return null if the `ResourceState` is in loading/ready state
-- `value` attempts to synchronously get the value of `ResourceReady`
-- `error` attempts to synchronously get the error of `ResourceError`
+final resource = Resource.stream(() => stream);
 
-A `Resource` provides the `fetch` and `refresh` methods.
+// the widget usage is the same as above, no changes needed
+```
 
-The `refresh` method forces an update and calls the `fetcher` function again or subscribes again to the `stream`.
+You may ask yourself: why not just use a `Future` or a `Stream` directly?
 
+## FutureBuilder is overcomplicated
+
+In my experience, `FutureBuilder` is overcomplicated and hard to use correctly.
+Even experienced Flutter developers cause side effects, like this:
+```dart
+FutureBuilder<String>(
+  future: downloadData(), // function where you call your api
+  ...
+),
+```
+
+which causes the `downloadData` function to be called multiple times, because the `build` method is called multiple times.
+Additionally `AsyncSnapshot` is a complex class, why do you need to deal with `ConnectionState`? Things are overcomplicated.
+
+## Stream
+
+Ever wanted to get the latest value of a `Stream` synchronously?
+You don't have a way, because `Stream` is a pipeline, if you start listening to it too later, you miss the previous values.
+
+That's why people starts using `rxdart` with the `BehaviorSubject`, which is a `Stream` that also holds the latest value.
+
+But `Resource` will hold the current and also the previous states.
+
+## Resources can switch the async source at runtime
+
+This is a very powerful feature of `Resource`.
+You can create a `Resource` that depends on another `Signal`, and when that `Signal` changes, the `Resource` will automatically fetch the new data.
+
+For example, you can get the user data based on a user id `Signal`:
+
+```dart
+final userId = Signal<String?>(null);
+late final userData = Resource(
+  () {
+    return switch (userId.value) {
+      // If userId is null, return null
+      null => Future.value(null),
+      // Otherwise fetch the user data
+      final id => getUserData(id),
+    };
+  },
+  // Everytime the userId changes, the resource will be triggered to fetch new data
+  source: userId,
+);
+```
+
+This let's you achieve complex async flows with very little code.
+The same works for `Resource.stream`:
+
+```dart
+final userId = Signal<String?>(null);
+late final userData = Resource.stream(
+  () {
+    return switch (userId.value) {
+      // If userId is null, return an empty stream
+      null => Stream.value(null),
+      // Otherwise fetch the user data stream
+      final id => getUserDataStream(id),
+    };
+  },
+  // Everytime the userId changes, the resource will be triggered to fetch new data
+  source: userId,
+);
+```
+
+If your `Resource` depends on multiple `Signal`s, you can use a `Computed` as source:
+
+```dart
+final userId = Signal<String?>(null);
+final authToken = Signal<String?>(null);
+final source = Computed(() => (userId.value, authToken.value));
+```
+
+## Resource.debounceDelay
+
+You can debounce a `Resource` by using `debounceDelay` parameter:
+
+```dart
+Resource(
+  ...,
+  debounceDelay: const Duration(seconds: 1),
+)
+```
+
+This will wait for 1 second after the last change of the `source` before triggering the fetcher.
+Use it when you want to avoid multiple calls in a short time, for example when the `source` is driven by a text field.
+
+## Resource.refresh()
+
+You can manually refresh a `Resource` by calling the `refresh` method.
+
+## Resource.useRefreshing
+
+By default, when the Resource refreshes, the state will NOT transition to `loading`.
+Instead, it will set `isRefreshing` to true, and the state will remain in the current state (either `ready` or `error`).
+This allows you to keep showing the current data or error while the new data is being fetched.
+
+```dart
+SignalBuilder(builder: (context, child) {
+  final userState = user.state;
+  return userState.on(
+    ready: (data) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(data),
+          userState.isRefreshing
+              ? const CircularProgressIndicator()
+              : ElevatedButton(
+                  onPressed: user.refresh,
+                  child: const Text('Refresh'),
+                ),
+        ],
+      );
+    },
+    error: (e, _) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(e.toString()),
+          userState.isRefreshing
+              ? const CircularProgressIndicator()
+              : ElevatedButton(
+                  onPressed: user.refresh,
+                  child: const Text('Refresh'),
+                ),
+        ],
+      );
+    },
+    loading: () => CircularProgressIndicator(),
+  );
+}),
+```
+
+By setting `useRefreshing` to false, the state will always transition to `loading` when refreshing.
+You can also update it globally:
+```dart
+void main() {
+  SolidartConfig.useRefreshing = false;
+  runApp(const MyApp());
+}
+```

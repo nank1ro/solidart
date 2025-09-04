@@ -59,5 +59,12 @@
         "--dart-define=use_simulated_environment=true"
       ]
     },
+    {
+      "name": "Docs",
+      "cwd": "${workspaceFolder}/docs-v2",
+      "command": "./node_modules/.bin/astro dev",
+      "request": "launch",
+      "type": "node-terminal"
+    },
   ]
 }

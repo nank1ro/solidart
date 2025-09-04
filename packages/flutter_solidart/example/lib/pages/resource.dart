@@ -19,7 +19,8 @@ class _ResourcePageState extends State<ResourcePage> {
     await Future.delayed(const Duration(seconds: 2));
 
     final response = await http.get(
-      Uri.parse('https://swapi.dev/api/people/${userId.value}/'),
+      Uri.parse('https://jsonplaceholder.typicode.com/users/${userId.value}/'),
+      headers: {'Accept': 'application/json'},
     );
     return response.body;
   }
@@ -30,7 +31,7 @@ class _ResourcePageState extends State<ResourcePage> {
       appBar: AppBar(
         title: const Text('Resource'),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
