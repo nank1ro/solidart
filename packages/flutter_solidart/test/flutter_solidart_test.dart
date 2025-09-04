@@ -258,11 +258,13 @@ void main() {
 
   testWidgets('SignalBuilder works properly (1 Signal)', (tester) async {
     final s = Signal(0);
+    var buildsCount = 0;
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: SignalBuilder(
             builder: (context, child) {
+              buildsCount++;
               return Text(s.value.toString());
             },
           ),
@@ -272,9 +274,17 @@ void main() {
     Finder dataFinder(int value) => find.text('$value');
 
     expect(dataFinder(0), findsOneWidget);
+    expect(buildsCount, 1);
+
     s.value++;
     await tester.pumpAndSettle();
     expect(dataFinder(1), findsOneWidget);
+    expect(buildsCount, 2);
+
+    s.value++;
+    await tester.pumpAndSettle();
+    expect(dataFinder(2), findsOneWidget);
+    expect(buildsCount, 3);
   });
 
   testWidgets('SignalBuilder works properly (2 Signals)', (tester) async {
