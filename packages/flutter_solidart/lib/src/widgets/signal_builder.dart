@@ -108,6 +108,7 @@ class SignalBuilderElement extends ComponentElement {
   Effect? _effect;
 
   SignalBuilder get _widget => widget as SignalBuilder;
+  Widget? _builtWidget;
 
   @override
   void mount(Element? parent, Object? newSlot) {
@@ -142,7 +143,7 @@ class SignalBuilderElement extends ComponentElement {
   Future<void> _invalidate() async {
     // // if the element is already dirty, we don't need to ask another rebuild
     if (dirty) return;
-    _widget.build(_parent!);
+    _builtWidget = _widget.build(_parent!);
 
     if (_shouldWaitScheduler) {
       await SchedulerBinding.instance.endOfFrame;
@@ -166,7 +167,7 @@ class SignalBuilderElement extends ComponentElement {
     reactiveSystem.activeSub = _effect?.subscriber;
 
     try {
-      return _widget.build(_parent!);
+      return _builtWidget ??= _widget.build(_parent!);
     } finally {
       reactiveSystem.activeSub = prevSub;
     }
