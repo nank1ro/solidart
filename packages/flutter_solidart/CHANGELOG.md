@@ -1,3 +1,7 @@
+## 2.3.1
+
+- **FIX**: `SignalBuilder` rebuilded twice when a signal changed, added unit test to prevent this from happening again.
+
 ## 2.3.0
 
 ### Changes from solidart
