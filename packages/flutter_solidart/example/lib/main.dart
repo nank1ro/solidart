@@ -18,8 +18,6 @@ import 'package:flutter_solidart/flutter_solidart.dart';
 class Logger implements SolidartObserver {
   @override
   void didCreateSignal(SignalBase<Object?> signal) {
-    print(
-        'Logger: didCreateSignal(name: ${signal.name} hasValue: ${signal.hasValue})');
     final value = signal.hasValue ? signal.value : 'undefined';
     dev.log('didCreateSignal(name: ${signal.name}, value: $value)');
   }
