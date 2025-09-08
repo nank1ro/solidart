@@ -1,3 +1,8 @@
+## 2.3.2
+
+- **FIX**: `Signal.lazy` which caused an exception.
+- **CHORE**: Improve `SignalBuilder` error handling and rebuilding.
+
 ## 2.3.1
 
 - **FIX**: `SignalBuilder` rebuilded twice when a signal changed, added unit test to prevent this from happening again.

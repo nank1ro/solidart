@@ -40,9 +40,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ProviderScope(
-            providers: [
-              counterProvider,
-            ],
+            providers: [counterProvider],
             child: SignalBuilder(
               builder: (context, _) {
                 final counter = invalidCounterProvider.of(context);
@@ -756,7 +754,6 @@ void main() {
         );
         expect(counter.disposed, isFalse);
         await tester.pumpWidget(const SizedBox());
-        await tester.pumpAndSettle();
         expect(counter.disposed, isTrue);
       },
       timeout: const Timeout(Duration(seconds: 1)),
