@@ -1,3 +1,7 @@
+## 2.3.3
+
+- **FIX**: Bump the `solidart` dependency to `^2.4.1`.
+
 ## 2.3.2
 
 - **FIX**: `Signal.lazy` which caused an exception.
