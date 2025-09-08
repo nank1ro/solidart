@@ -1,3 +1,7 @@
+## 2.4.1
+
+- **FIX**: `Signal.lazy` which caused an exception.
+
 ## 2.4.0
 
 - **FEAT**: Add `Debouncer` utility class to easily debounce operations and `debounceDelay` to `Resource` to debounce source changes if they fire very often.

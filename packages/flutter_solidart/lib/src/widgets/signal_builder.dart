@@ -109,16 +109,19 @@ class SignalBuilderElement extends ComponentElement {
 
   SignalBuilder get _widget => widget as SignalBuilder;
   Widget? _builtWidget;
+  Object? _error;
 
   @override
   void mount(Element? parent, Object? newSlot) {
     _parent = parent;
     _effect = Effect(
       _invalidate,
-      onError: onError,
       autoDispose: false,
+      onError: onError,
       detach: true,
+      autorun: false,
     );
+    _effect!.run();
     // mounting intentionally after effect is initialized and widget is built
     super.mount(parent, newSlot);
   }
@@ -141,9 +144,12 @@ class SignalBuilderElement extends ComponentElement {
 
   // coverage:ignore-start
   Future<void> _invalidate() async {
-    // // if the element is already dirty, we don't need to ask another rebuild
-    if (dirty) return;
-    _builtWidget = _widget.build(_parent!);
+    try {
+      _builtWidget = _widget.build(_parent!);
+      // ignore: avoid_catches_without_on_clauses
+    } catch (error) {
+      _error = error;
+    }
 
     if (_shouldWaitScheduler) {
       await SchedulerBinding.instance.endOfFrame;
@@ -166,8 +172,10 @@ class SignalBuilderElement extends ComponentElement {
     // ignore: invalid_use_of_protected_member
     reactiveSystem.activeSub = _effect?.subscriber;
 
+    // ignore: only_throw_errors
+    if (_error != null) throw _error!;
     try {
-      return _builtWidget ??= _widget.build(_parent!);
+      return _builtWidget!;
     } finally {
       reactiveSystem.activeSub = prevSub;
     }

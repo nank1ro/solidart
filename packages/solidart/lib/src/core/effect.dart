@@ -91,53 +91,60 @@ class Effect implements ReactionInterface {
 
     /// Detach effect, default value is [SolidartConfig.detachEffects]
     bool? detach,
+
+    /// Whether to automatically run the effect (defaults to true).
+    bool? autorun,
   }) {
     late Effect effect;
-    final effectiveName = name ?? ReactiveName.nameFor('Effect');
-    final effectiveAutoDispose = autoDispose ?? SolidartConfig.autoDispose;
-    if (delay == null) {
-      effect = Effect._internal(
-        callback: () => callback(),
-        onError: onError,
-        name: effectiveName,
-        autoDispose: effectiveAutoDispose,
-        detach: detach,
-      );
-    } else {
-      final scheduler = createDelayedScheduler(delay);
-      var isScheduled = false;
-      Timer? timer;
 
-      effect = Effect._internal(
-        callback: () {
-          if (!isScheduled) {
-            isScheduled = true;
+    try {
+      final effectiveName = name ?? ReactiveName.nameFor('Effect');
+      final effectiveAutoDispose = autoDispose ?? SolidartConfig.autoDispose;
+      if (delay == null) {
+        effect = Effect._internal(
+          callback: () => callback(),
+          onError: onError,
+          name: effectiveName,
+          autoDispose: effectiveAutoDispose,
+          detach: detach,
+        );
+      } else {
+        final scheduler = createDelayedScheduler(delay);
+        var isScheduled = false;
+        Timer? timer;
 
-            // coverage:ignore-start
-            timer?.cancel();
-            // coverage:ignore-end
-            timer = null;
+        effect = Effect._internal(
+          callback: () {
+            if (!isScheduled) {
+              isScheduled = true;
 
-            timer = scheduler(() {
-              isScheduled = false;
-              if (!effect.disposed) {
-                callback();
-              } else {
-                // coverage:ignore-start
-                timer?.cancel();
-                // coverage:ignore-end
-              }
-            });
-          }
-        },
-        onError: onError,
-        name: effectiveName,
-        autoDispose: effectiveAutoDispose,
-        detach: detach,
-      );
+              // coverage:ignore-start
+              timer?.cancel();
+              // coverage:ignore-end
+              timer = null;
+
+              timer = scheduler(() {
+                isScheduled = false;
+                if (!effect.disposed) {
+                  callback();
+                } else {
+                  // coverage:ignore-start
+                  timer?.cancel();
+                  // coverage:ignore-end
+                }
+              });
+            }
+          },
+          onError: onError,
+          name: effectiveName,
+          autoDispose: effectiveAutoDispose,
+          detach: detach,
+        );
+      }
+      return effect;
+    } finally {
+      if (autorun ?? true) effect.run();
     }
-    effect._schedule();
-    return effect;
   }
 
   /// {@macro effect}
@@ -173,7 +180,8 @@ class Effect implements ReactionInterface {
   @override
   bool get disposed => _disposed;
 
-  void _schedule() {
+  /// Runs the effect, tracking any signal read during the execution.
+  void run() {
     final currentSub = reactiveSystem.activeSub;
     if (!SolidartConfig.detachEffects && currentSub != null) {
       if (currentSub is! _AlienEffect ||
@@ -186,7 +194,11 @@ class Effect implements ReactionInterface {
     try {
       _internalEffect.run();
     } catch (e, s) {
-      _onError?.call(SolidartCaughtException(e, stackTrace: s));
+      if (_onError != null) {
+        _onError.call(SolidartCaughtException(e, stackTrace: s));
+      } else {
+        rethrow;
+      }
     } finally {
       reactiveSystem.setCurrentSub(prevSub);
       if (SolidartConfig.autoDispose) {
@@ -211,8 +223,6 @@ class Effect implements ReactionInterface {
     _internalEffect.dispose();
 
     for (final dep in _deps) {
-      // if (dep is Signal) dep._mayDispose();
-      // if (dep is Computed) dep._mayDispose();
       if (dep is _AlienSignal) dep.parent._mayDispose();
       if (dep is _AlienComputed) dep.parent._mayDispose();
     }

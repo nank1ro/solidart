@@ -170,7 +170,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
   }
 
   set _value(T newValue) {
-    if (_compare(_untrackedValue, newValue)) return;
     _untrackedPreviousValue = _untrackedValue;
     _untrackedValue = newValue;
     reactiveSystem.setSignalValue(_internalSignal, Some(newValue));
@@ -205,7 +204,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
       _hasValue = true;
     }
 
-    // // skip if the values are equal
+    // skip if the values are equal
     if (!firstValue && _compare(_untrackedValue, newValue)) {
       return newValue;
     }
