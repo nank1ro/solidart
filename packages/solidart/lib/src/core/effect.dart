@@ -1,5 +1,21 @@
 part of 'core.dart';
 
+/// {@template EffectWithoutDependenciesException}
+/// This exception would be fired when an effect is created without tracking
+/// any dependencies.
+/// {@endtemplate}
+class EffectWithoutDependenciesException implements Exception {
+  /// {@macro EffectWithoutDependenciesException}
+  const EffectWithoutDependenciesException({required this.name});
+
+  /// The name of the effect
+  final String name;
+
+  @override
+  String toString() =>
+      '''EffectWithoutDependenciesException: Effect ($name) was created without tracking any dependencies. Make sure to access at least one reactive value (Signal, Computed, etc.) inside the effect callback.''';
+}
+
 /// Dispose function
 typedef DisposeEffect = void Function();
 
@@ -32,7 +48,7 @@ abstract class ReactionInterface {
 /// final counter = Signal(0);
 ///
 /// // effect creation
-/// Effect((_) {
+/// Effect(() {
 ///     print("The count is now ${counter.value}");
 /// });
 /// // The effect prints `The count is now 0`;
@@ -52,19 +68,12 @@ abstract class ReactionInterface {
 /// ```
 ///
 /// Whenever you want to stop the effect from running, you just have to call
-/// the `dispose()` callback
-///
-/// You can also dispose an effect inside the callback
+/// the returned callback of the `Effect` method:
 /// ```dart
-/// Effect((dispose) {
-///     print("The count is now ${counter.value}");
-///     if (counter.value == 1) dispose();
-/// });
+/// final disposeEffect = Effect(() { /* your code */ });
+/// // later
+/// disposeEffect(); // this will stop the effect from running
 /// ```
-///
-/// In the example above the effect is disposed when the counter value is equal
-/// to 1
-///
 ///
 /// Any effect runs at least once immediately when is created with the current
 /// signals values.
@@ -173,6 +182,8 @@ class Effect implements ReactionInterface {
 
   final _deps = <alien.ReactiveNode>{};
 
+  bool _firstRun = true;
+
   /// The subscriber of the effect, do not use it directly.
   @protected
   alien.ReactiveNode get subscriber => _internalEffect;
@@ -237,11 +248,23 @@ class Effect implements ReactionInterface {
     if (SolidartConfig.autoDispose) {
       _deps.clear();
       var link = _internalEffect.deps;
-      for (; link != null; link = link.nextDep) {
-        final dep = link.dep;
 
-        _deps.add(dep);
+      for (; link != null; link = link.nextDep) {
+        _deps.add(link.dep);
       }
+
+      if (_firstRun) {
+        _firstRun = false;
+
+        if (_deps.isEmpty) {
+          if (_onError != null) {
+            _onError.call(EffectWithoutDependenciesException(name: name));
+          } else {
+            throw EffectWithoutDependenciesException(name: name);
+          }
+        }
+      }
+
       if (!autoDispose || _disposed) return;
       if (_internalEffect.deps?.dep == null) {
         dispose();

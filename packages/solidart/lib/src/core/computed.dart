@@ -236,6 +236,15 @@ class Computed<T> extends ReadSignal<T> {
   }
   // coverage:ignore-end
 
+  /// Manually runs the computed to update its value.
+  /// This is usually not necessary, as the computed will automatically
+  /// update when its dependencies change.
+  /// However, in some cases, you may want to force an update.
+  void run() {
+    if (_disposed) return;
+    _internalComputed.update();
+  }
+
   @override
   String toString() {
     value;
