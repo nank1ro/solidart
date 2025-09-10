@@ -341,11 +341,16 @@ void main() {
         final counter = Signal(0);
 
         final cb = MockCallbackFunction();
-        final unobserve = Effect(() {
-          counter.untrackedValue;
-          counter.untrackedPreviousValue;
-          cb();
-        });
+        final unobserve = Effect(
+          () {
+            counter.untrackedValue;
+            counter.untrackedPreviousValue;
+            cb();
+          },
+          onError: (error) {
+            //ignore
+          },
+        );
         addTearDown(unobserve);
 
         counter.value = 1;
@@ -424,6 +429,9 @@ void main() {
           cb,
           delay: const Duration(milliseconds: 500),
           autoDispose: false,
+          onError: (error) {
+            // ignore
+          },
         );
         addTearDown(disposeEffect.dispose);
         verifyNever(cb());
@@ -441,14 +449,29 @@ void main() {
         );
         expect(detectedError, isA<SolidartCaughtException>());
       });
+
+      test('Effect without dependencies throws and is caught in onError',
+          () async {
+        Object? detectedError;
+        Effect(
+          () {
+            // No dependencies accessed here
+          },
+          onError: (error) {
+            detectedError = error;
+          },
+        );
+        await pumpEventQueue();
+        expect(detectedError, isA<EffectWithoutDependenciesError>());
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
 
   group(
-    'signalSelector tests - ',
+    'Computed tests - ',
     () {
-      test('check that a signal selector updates only for the selected value',
+      test('check that a Computed updates only for the selected value',
           () async {
         final klass = _B(_C(0));
         final s = Signal(klass);
@@ -487,7 +510,7 @@ void main() {
         unobserve();
       });
 
-      test("selector's readable signal contains previous value", () async {
+      test('Computed contains previous value', () async {
         final signal = Signal(0);
         final derived = Computed(() => signal.value * 2);
         await pumpEventQueue();
@@ -595,6 +618,23 @@ void main() {
         count.value = 2;
         expect(doubleCount(), 2);
         verifyNever(cb(2));
+      });
+
+      test('Check Computed runs manually by counting the number of runs',
+          () async {
+        final cb = MockCallbackFunction();
+        final count = Signal(0);
+        final doubleCount = Computed(() {
+          cb();
+          return count.value * 2;
+        });
+        // trigger reactive value
+        doubleCount.value;
+        // run manually twice
+        doubleCount.run();
+        doubleCount.run();
+        // 3 times in total, 1 automatically and 2 manually
+        verify(cb()).called(3);
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),
@@ -1849,14 +1889,31 @@ void main() {
         final a = Signal(3);
         final b = Computed(() => a.value > 0);
 
-        Effect(() {
-          if (b.value) {
-            Effect(() {
-              if (a.value == 0) {
-                throw Error();
-              }
-            });
-          }
+        late VoidCallback disposeInnerEffect;
+
+        final disposeEffect = Effect(
+          () {
+            if (b.value) {
+              disposeInnerEffect = Effect(
+                () {
+                  if (a.value == 0) {
+                    throw Error();
+                  }
+                },
+                name: 'inner',
+              );
+            } else {
+              disposeInnerEffect();
+            }
+          },
+          name: 'outer',
+        );
+
+        addTearDown(() {
+          a.dispose();
+          b.dispose();
+          disposeEffect();
+          disposeInnerEffect();
         });
 
         a.value--;
@@ -1869,15 +1926,24 @@ void main() {
         final a = Signal(1);
         final b = Signal(1);
 
-        Effect(() {
+        late VoidCallback disposeInnerEffect;
+        final disposeEffect = Effect(() {
           if (a.value > 0) {
-            Effect(() {
+            disposeInnerEffect = Effect(() {
               b.value;
               if (a.value == 0) {
                 throw Error();
               }
             });
+          } else {
+            disposeInnerEffect();
           }
+        });
+
+        addTearDown(() {
+          disposeEffect();
+          a.dispose();
+          b.dispose();
         });
 
         batch(() {

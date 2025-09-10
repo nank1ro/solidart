@@ -1,7 +1,7 @@
 import 'dart:developer' as dev;
 
 import 'package:example/pages/counter.dart';
-import 'package:example/pages/derived_signal.dart';
+import 'package:example/pages/computed.dart';
 import 'package:example/pages/effects.dart';
 import 'package:example/pages/lazy_counter.dart';
 import 'package:example/pages/map_signal.dart';
@@ -62,7 +62,7 @@ final routes = <String, WidgetBuilder>{
   '/counter': (_) => const CounterPage(),
   '/lazy-counter': (_) => const LazyCounterPage(),
   '/show': (_) => const ShowPage(),
-  '/derived-signal': (_) => const DerivedSignalsPage(),
+  '/computed': (_) => const ComputedPage(),
   '/effects': (_) => const EffectsPage(),
   '/signal-builder': (_) => const SignalBuilderPage(),
   '/resource': (_) => const ResourcePage(),

@@ -1,23 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-class DerivedSignalsPage extends StatefulWidget {
-  const DerivedSignalsPage({super.key});
+class ComputedPage extends StatefulWidget {
+  const ComputedPage({super.key});
 
   @override
-  State<DerivedSignalsPage> createState() => _DerivedSignalsPageState();
+  State<ComputedPage> createState() => _ComputedPageState();
 }
 
-class _DerivedSignalsPageState extends State<DerivedSignalsPage> {
+class _ComputedPageState extends State<ComputedPage> {
   late final count = Signal(0, name: 'count');
   late final doubleCount = Computed(() => count.value * 2, name: 'doubleCount');
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Derived Signals'),
-      ),
+      appBar: AppBar(title: const Text('Computed')),
       body: Center(
         child: SignalBuilder(
           builder: (_, __) => Column(
