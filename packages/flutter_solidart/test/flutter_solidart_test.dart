@@ -582,17 +582,12 @@ void main() {
           builder: (dialogContext) {
             return ProviderScopePortal(
               mainContext: context,
-              child: Builder(
-                builder: (innerContext) {
-                  return SignalBuilder(
-                    builder: (_, __) {
-                      final counter = counterProvider.of(innerContext);
-                      final doubleCounter =
-                          doubleCounterProvider.of(innerContext);
-                      return Text(
-                        '''Dialog counter: ${counter.value} doubleCounter: ${doubleCounter.value}''',
-                      );
-                    },
+              child: SignalBuilder(
+                builder: (innerContext, __) {
+                  final counter = counterProvider.of(innerContext);
+                  final doubleCounter = doubleCounterProvider.of(innerContext);
+                  return Text(
+                    '''Dialog counter: ${counter.value} doubleCounter: ${doubleCounter.value}''',
                   );
                 },
               ),
