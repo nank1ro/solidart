@@ -11,9 +11,11 @@ class EffectWithoutDependenciesException implements Exception {
   /// The name of the effect
   final String name;
 
+  // coverage:ignore-start
   @override
   String toString() =>
       '''EffectWithoutDependenciesException: Effect ($name) was created without tracking any dependencies. Make sure to access at least one reactive value (Signal, Computed, etc.) inside the effect callback.''';
+  // coverage:ignore-end
 }
 
 /// Dispose function
@@ -260,7 +262,9 @@ class Effect implements ReactionInterface {
           if (_onError != null) {
             _onError.call(EffectWithoutDependenciesException(name: name));
           } else {
+            // coverage:ignore-start
             throw EffectWithoutDependenciesException(name: name);
+            //  coverage:ignore-end
           }
         }
       }
