@@ -1,6 +1,6 @@
 ## 2.4.0
 
-- **CHORE**: Detect if `SignalBuilder` didn't track any reactive value and throw a `SignalBuilderWithoutDependenciesException` exception.
+- **CHORE**: Detect if `SignalBuilder` didn't track any reactive value and throw a `SignalBuilderWithoutDependenciesError`.
 
 ### Changes from solidart
 

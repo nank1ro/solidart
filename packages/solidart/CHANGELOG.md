@@ -2,8 +2,8 @@
 
 - **FEAT**: Add `run` method to `Computed` to manually trigger an update of its value.
 - **FEAT**: Add `run` method to `Effect` to manually re-run the effect.
-- **CHORE**: Detect if `Effect` didn't track any reactive value and throw an `EffectWithoutDependenciesException` exception.
-- **CHORE**: Detect if `SignalBuilder` didn't track any reactive value and throw a `SignalBuilderWithoutDependenciesException` exception.
+- **CHORE**: Detect if `Effect` didn't track any reactive value and throw an `EffectWithoutDependenciesError`.
+- **CHORE**: Detect if `SignalBuilder` didn't track any reactive value and throw a `SignalBuilderWithoutDependenciesError`.
 
 ## 2.4.1
 

@@ -5,14 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:solidart/solidart.dart';
 
-/// {@template SignalBuilderWithoutDependenciesException}
+/// {@template SignalBuilderWithoutDependenciesError}
 /// This exception would be fired when an effect is created without tracking
 /// any dependencies.
 /// {@endtemplate}
-class SignalBuilderWithoutDependenciesException implements Exception {
+class SignalBuilderWithoutDependenciesError extends Error {
   @override
   String toString() => '''
-SignalBuilderWithoutDependenciesException: SignalBuilder was created without tracking any dependencies.
+SignalBuilderWithoutDependenciesError: SignalBuilder was created without tracking any dependencies.
 Make sure to access at least one reactive value (Signal, Computed, etc.) inside the builder callback.
 This might happen if inside your `SignalBuilder.builder` method you are returning a `Builder` widget which won't track reactive values because it is considered a different function because it requires another `builder` function.
       ''';
@@ -116,8 +116,8 @@ class SignalBuilderElement extends ComponentElement {
       autoDispose: false,
       onError: (error) {
         final effectiveError = switch (error) {
-          EffectWithoutDependenciesException() =>
-            SignalBuilderWithoutDependenciesException(),
+          EffectWithoutDependenciesError() =>
+            SignalBuilderWithoutDependenciesError(),
           _ => error,
         };
         _error = effectiveError;
