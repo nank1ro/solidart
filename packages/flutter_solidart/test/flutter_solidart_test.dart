@@ -897,7 +897,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.takeException(),
-      const TypeMatcher<SignalBuilderWithoutDependenciesException>(),
+      const TypeMatcher<SignalBuilderWithoutDependenciesError>(),
     );
   });
 }

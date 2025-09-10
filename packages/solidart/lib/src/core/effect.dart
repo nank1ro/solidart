@@ -1,12 +1,12 @@
 part of 'core.dart';
 
-/// {@template EffectWithoutDependenciesException}
+/// {@template EffectWithoutDependenciesError}
 /// This exception would be fired when an effect is created without tracking
 /// any dependencies.
 /// {@endtemplate}
-class EffectWithoutDependenciesException implements Exception {
+class EffectWithoutDependenciesError extends Error {
   /// {@macro EffectWithoutDependenciesException}
-  const EffectWithoutDependenciesException({required this.name});
+  EffectWithoutDependenciesError({required this.name});
 
   /// The name of the effect
   final String name;
@@ -260,10 +260,10 @@ class Effect implements ReactionInterface {
 
         if (_deps.isEmpty) {
           if (_onError != null) {
-            _onError.call(EffectWithoutDependenciesException(name: name));
+            _onError.call(EffectWithoutDependenciesError(name: name));
           } else {
             // coverage:ignore-start
-            throw EffectWithoutDependenciesException(name: name);
+            throw EffectWithoutDependenciesError(name: name);
             //  coverage:ignore-end
           }
         }

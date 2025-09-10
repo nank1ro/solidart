@@ -462,7 +462,7 @@ void main() {
           },
         );
         await pumpEventQueue();
-        expect(detectedError, isA<EffectWithoutDependenciesException>());
+        expect(detectedError, isA<EffectWithoutDependenciesError>());
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),
