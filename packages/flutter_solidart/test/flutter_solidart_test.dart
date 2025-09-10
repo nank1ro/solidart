@@ -880,4 +880,24 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
+
+  testWidgets('SignalBuilder without dependencies throws an error',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SignalBuilder(
+            builder: (_, __) {
+              return const Text('No dependencies here');
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.takeException(),
+      const TypeMatcher<SignalBuilderWithoutDependenciesException>(),
+    );
+  });
 }

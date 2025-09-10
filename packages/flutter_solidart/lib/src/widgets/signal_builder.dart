@@ -5,6 +5,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:solidart/solidart.dart';
 
+/// {@template SignalBuilderWithoutDependenciesException}
+/// This exception would be fired when an effect is created without tracking
+/// any dependencies.
+/// {@endtemplate}
+class SignalBuilderWithoutDependenciesException implements Exception {
+  @override
+  String toString() => '''
+SignalBuilderWithoutDependenciesException: SignalBuilder was created without tracking any dependencies.
+Make sure to access at least one reactive value (Signal, Computed, etc.) inside the builder callback.
+This might happen if inside your `SignalBuilder.builder` method you are returning a `Builder` widget which won't track reactive values because it is considered a different function because it requires another `builder` function.
+      ''';
+}
+
 /// The [SignalBuilder] function used to build the widget tracking the signals.
 typedef SignalBuilderFn = Widget Function(
   BuildContext context,
@@ -20,8 +33,6 @@ typedef SignalBuilderOnError = void Function(Object error);
 /// The [builder] argument must not be null.
 /// The [child] is optional but is good practice to use if part of the widget
 /// subtree does not depend on the values of the signals.
-/// The [onError] callback is optional and is called when an error occurs in the
-/// [builder] function.
 /// Example:
 ///
 /// ```dart
@@ -47,7 +58,6 @@ class SignalBuilder extends Widget {
   const SignalBuilder({
     super.key,
     required this.builder,
-    this.onError,
     this.child,
   });
 
@@ -69,20 +79,13 @@ class SignalBuilder extends Widget {
   /// {@endtemplate}
   final Widget? child;
 
-  /// {@template signalbuilder.onerror}
-  /// An optional callback that is called when an error occurs in the underlying
-  /// effect when running [builder].
-  /// {@endtemplate}
-  final SignalBuilderOnError? onError;
-
   /// The widget that the [builder] builds.
   @protected
   Widget build(BuildContext context) => builder(context, child);
 
   /// Creates the [SignalBuilderElement] element.
   @override
-  SignalBuilderElement createElement() =>
-      SignalBuilderElement(this, onError: onError);
+  SignalBuilderElement createElement() => SignalBuilderElement(this);
 }
 
 /// {@template signal-builder-element}
@@ -96,13 +99,7 @@ class SignalBuilder extends Widget {
 /// {@endtemplate}
 class SignalBuilderElement extends ComponentElement {
   /// {@macro signal-builder-element}
-  SignalBuilderElement(
-    SignalBuilder super.widget, {
-    this.onError,
-  });
-
-  /// {@macro signalbuilder.onerror}
-  final void Function(Object error)? onError;
+  SignalBuilderElement(SignalBuilder super.widget);
 
   Element? _parent;
   Effect? _effect;
@@ -117,7 +114,14 @@ class SignalBuilderElement extends ComponentElement {
     _effect = Effect(
       _invalidate,
       autoDispose: false,
-      onError: onError,
+      onError: (error) {
+        final effectiveError = switch (error) {
+          EffectWithoutDependenciesException() =>
+            SignalBuilderWithoutDependenciesException(),
+          _ => error,
+        };
+        _error = effectiveError;
+      },
       detach: true,
       autorun: false,
     );
