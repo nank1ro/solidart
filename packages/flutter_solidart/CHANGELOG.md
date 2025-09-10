@@ -1,3 +1,13 @@
+## 2.4.0
+
+- **CHORE**: Detect if `SignalBuilder` didn't track any reactive value and throw a `SignalBuilderWithoutDependenciesError`.
+
+### Changes from solidart
+
+- **FEAT**: Add `run` method to `Computed` to manually trigger an update of its value.
+- **FEAT**: Add `run` method to `Effect` to manually re-run the effect.
+- **CHORE**: Detect if `Effect` didn't track any reactive value and throw an `EffectWithoutDependenciesException` exception.
+
 ## 2.3.3
 
 - **FIX**: Bump the `solidart` dependency to `^2.4.1`.
