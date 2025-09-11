@@ -53,3 +53,72 @@ counter.value = 2;
 // Update the value based on the current value
 counter.updateValue((value) => value * 2);
 ```
+
+## Make a read-only signal
+
+If you want to create a signal that can only be read but not modified directly, you can use the `toReadSignal` method.
+
+```dart
+final counter = Signal(0);
+final readOnlyCounter = counter.toReadSignal();
+print(readOnlyCounter.value); // prints 0
+// The code below is invalid and will cause a compile-time error because no setter is present
+readOnlyCounter.value = 2;
+```
+
+## Observe the signal
+
+To react to changes in a Signal you can use the `observe` method:
+```dart {2-4}
+final counter = Signal(0);
+counter.observe((previousValue, value) {
+  print("Counter changed from $previousValue to $value");
+});
+```
+
+Or use an `Effect` if you need to react to multiple signals:
+```dart {3-5}
+final counter = Signal(0);
+final doubleCounter = Signal(0);
+Effect(() {
+  print('Counter is ${counter.value}, double is ${doubleCounter.value}');
+});
+```
+
+## Access the previous value
+
+A `Signal` contains the previous value in addition to the current value. You can access it using the `previousValue` property:
+```dart
+final counter = Signal(0);
+print(counter.hasPreviousValue); // prints false (no previous value is present)
+print(counter.previousValue); // prints null (no previous value is present)
+counter.value = 1;
+print(counter.hasPreviousValue); // prints true (previous value is present)
+print(counter.previousValue); // prints 0
+```
+
+As you can see the `previousValue` is `null` until the first time the value is changed.
+You can check if a previous value is present using the `hasPreviousValue` property.
+
+By default the previous value is tracked.
+If you want to disable it, you can pass `trackPreviousValue: false` to the `Signal` constructor:
+```dart
+final counter = Signal(0, trackPreviousValue: false);
+```
+
+or globally using the `SolidartConfig`:
+```dart
+SolidartConfig.trackPreviousValue = false;
+// do it before runApp()
+```
+
+## Await until a condition is met
+
+You can use the `until` method to wait for a signal to meet a specific condition:
+```dart
+final counter = Signal(0);
+await counter.until((value) => value >= 5, timeout: Duration(seconds: 10));
+```
+
+By default no timeout is set, so the `until` method will wait indefinitely until the condition is met.
+This is useful when you want to wait for a signal to reach a certain value before proceeding with your code.
