@@ -76,6 +76,13 @@ counter.observe((previousValue, value) {
 });
 ```
 
+By default the observer is called for the next value change, but you can also call it immediately with the current value by passing `fireImmediately: true`:
+```dart {3}
+counter.observe((previousValue, value) {
+  print("Counter changed from $previousValue to $value");
+}, fireImmediately: true);
+```
+
 Or use an `Effect` if you need to react to multiple signals:
 ```dart {3-5}
 final counter = Signal(0);
@@ -84,6 +91,8 @@ Effect(() {
   print('Counter is ${counter.value}, double is ${doubleCounter.value}');
 });
 ```
+
+The effect will run immediately.
 
 ## Access the previous value
 
