@@ -1,6 +1,6 @@
 name: solidart_hooks
 description: Flutter Hooks bindings for Solidart, suitable for ephemeral state and for writing less boilerplate.
-version: 1.0.
+version: 1.0.0+1
 repository: https://github.com/nank1ro/solidart
 documentation: https://solidart.mariuti.com
 topics:
