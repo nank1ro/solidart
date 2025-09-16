@@ -15,6 +15,7 @@ class SignalBuilderWithoutDependenciesError extends Error {
 SignalBuilderWithoutDependenciesError: SignalBuilder was created without tracking any dependencies.
 Make sure to access at least one reactive value (Signal, Computed, etc.) inside the builder callback.
 This might happen if inside your `SignalBuilder.builder` method you are returning a `Builder` widget which won't track reactive values because it is considered a different function because it requires another `builder` function.
+Or if the signals are disposed ().
       ''';
 }
 
