@@ -4,10 +4,11 @@ description: How to install solidart in your project
 ---
 import { Aside } from '@astrojs/starlight/components';
 
-The library is made up of three packages:
+The library is made up of four packages:
 1. [solidart](#solidart)
 2. [flutter_solidart](#flutter_solidart)
-2. [solidart_lint](#solidart_lint)
+3. [solidart_hooks](#solidart_hooks)
+4. [solidart_lint](#solidart_lint)
 
 ## solidart
 
@@ -41,6 +42,23 @@ flutter pub add flutter_solidart
 
 ```dart
 import 'package:flutter_solidart/flutter_solidart.dart';
+```
+
+## solidart_hooks
+
+`flutter_hooks` bindings for solidart good for ephemeral state.
+
+### Install
+
+Run this command in the root of your project:
+```sh
+flutter pub add solidart_hooks
+```
+
+### Import it
+
+```dart
+import 'package:solidart_hooks/solidart_hooks.dart';
 ```
 
 ## solidart_lint
@@ -80,4 +98,5 @@ linter:
   rules:
     use_late_for_private_fields_and_variables: false
     implicit_call_tearoffs: false
+    specify_nonobvious_property_types: false
 ```

@@ -3,6 +3,7 @@ include: package:very_good_analysis/analysis_options.yaml
 analyzer:
   errors:
     inference_failure_on_instance_creation: error
+    specify_nonobvious_property_types: ignore
 
 linter:
   rules:

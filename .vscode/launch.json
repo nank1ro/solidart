@@ -15,6 +15,13 @@
       "cwd": "packages/flutter_solidart/example",
     },
     {
+      "name": "solidart_hooks Example",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "packages/solidart_hooks/solidart_hooks_example",
+    },
+    {
       "name": "Flutter: Run all Tests",
       "type": "dart",
       "request": "launch",
