@@ -160,7 +160,7 @@ class _SignalHookState<T, S extends ReadSignal<T>>
     // ignore: implicit_call_tearoffs
     _cleanup = Effect(() {
       _instance.value;
-      setState(() {});
+      if (context.mounted) setState(() {});
     });
     super.initHook();
   }
