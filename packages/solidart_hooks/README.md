@@ -1,0 +1,110 @@
+# solidart_hooks
+
+For a comprehensive and updated documentation go to [The Official Documentation](https://solidart.mariuti.com)
+
+---
+
+Helper library to make working with [solidart](https://pub.dev/packages/solidart) in [flutter_hooks](https://pub.dev/packages/flutter_hooks) easier.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:solidart_hooks/solidart_hooks.dart';
+
+class Example extends HookWidget {
+  const Example({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final count = useSignal(0);
+    final doubleCount = useComputed(() => count.value * 2);
+    useSolidartEffect(() {
+      debugPrint(
+        'Effect count: ${count.value}, doubleCount: ${doubleCount.value}',
+      );
+    });
+    return Scaffold(
+      body: Center(
+        child: Text('Count: ${count.value}\nDouble: ${doubleCount.value}'),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => count.value++,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+```
+
+## useSignal
+
+How to create a new signal inside of a hook widget:
+
+```dart
+class Example extends HookWidget {
+  @override
+  Widget build(BuildContext context) {
+    final count = useSignal(0);
+    return Text('Count: ${count.value}');
+  }
+}
+```
+
+The widget will automatically rebuild when the value changes.
+The signal will get disposed when the widget gets unmounted.
+
+## useComputed
+
+How to create a new computed signal inside of a hook widget:
+
+```dart
+class Example extends HookWidget {
+  @override
+  Widget build(BuildContext context) {
+    final count = useSignal(0);
+    final doubleCount = useComputed(() => count.value * 2);
+    return Text('Count: ${count.value}, Double: ${doubleCount.value}');
+  }
+}
+```
+
+The widget will automatically rebuild when the value changes.
+The computed will get disposed when the widget gets unmounted.
+
+## useSolidartEffect
+
+How to create a new effect inside of a hook widget:
+
+```dart
+class Example extends HookWidget {
+  @override
+  Widget build(BuildContext context) {
+    final count = useSignal(0);
+    useSolidartEffect(() {
+        print('count: ${count.value}');
+    });
+    return Text('Count: ${count.value}');
+  }
+}
+```
+
+## useExistingSignal
+
+How to bind an existing signal inside of a hook widget:
+
+```dart
+class Example extends HookWidget {
+  final Signal<int> count;
+
+  Example(this.count);
+
+  @override
+  Widget build(BuildContext context) {
+    final counter = useExistingSignal(count);
+    return Text('Count: ${counter.value}');
+  }
+}
+```
+
+The widget will automatically rebuild when the value changes.
+The signal will NOT get disposed when the widget gets unmounted (unless autoDispose is true).
