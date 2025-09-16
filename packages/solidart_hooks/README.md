@@ -36,8 +36,6 @@ class Example extends HookWidget {
 }
 ```
 
-All of the signals and effects created will get cleaned up when the widget gets unmounted.
-
 ## useSignal
 
 How to create a new signal inside of a hook widget:
@@ -52,7 +50,7 @@ class Example extends HookWidget {
 }
 ```
 
-The value will auto rebuild the widget when it changes.
+The widget will automatically rebuild when the value changes.
 The signal will get disposed when the widget gets unmounted.
 
 ## useComputed
@@ -70,7 +68,7 @@ class Example extends HookWidget {
 }
 ```
 
-The value will auto rebuild the widget when it changes.
+The widget will automatically rebuild when the value changes.
 The computed will get disposed when the widget gets unmounted.
 
 ## useSolidartEffect
@@ -108,5 +106,5 @@ class Example extends HookWidget {
 }
 ```
 
-The value will auto rebuild the widget when it changes.
+The widget will automatically rebuild when the value changes.
 The signal will NOT get disposed when the widget gets unmounted (unless autoDispose is true).
