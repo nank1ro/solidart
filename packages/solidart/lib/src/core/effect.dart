@@ -14,7 +14,7 @@ class EffectWithoutDependenciesError extends Error {
   // coverage:ignore-start
   @override
   String toString() =>
-      '''EffectWithoutDependenciesException: Effect ($name) was created without tracking any dependencies. Make sure to access at least one reactive value (Signal, Computed, etc.) inside the effect callback.''';
+      '''EffectWithoutDependenciesException: Effect ($name) was created without tracking any dependencies. Make sure to access at least one active reactive value (Signal, Computed, etc.) inside the effect callback.''';
   // coverage:ignore-end
 }
 
