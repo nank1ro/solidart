@@ -53,6 +53,7 @@ class Example extends HookWidget {
 ```
 
 The value will auto rebuild the widget when it changes.
+The signal will get disposed when the widget gets unmounted.
 
 ## useComputed
 
@@ -70,6 +71,7 @@ class Example extends HookWidget {
 ```
 
 The value will auto rebuild the widget when it changes.
+The computed will get disposed when the widget gets unmounted.
 
 ## useSolidartEffect
 
@@ -107,3 +109,4 @@ class Example extends HookWidget {
 ```
 
 The value will auto rebuild the widget when it changes.
+The signal will NOT get disposed when the widget gets unmounted (unless autoDispose is true).
