@@ -1,4 +1,4 @@
-# solidart_hooks_example
+# example
 
 A new Flutter project.
 
