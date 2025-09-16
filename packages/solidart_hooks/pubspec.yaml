@@ -1,28 +1,30 @@
-name: flutter_solidart
-description: A simple State Management solution for Flutter applications inspired by SolidJS
-version: 2.4.0
+name: solidart_hooks
+description: Flutter Hooks bindings for Solidart, suitable for ephemeral state and for writing less boilerplate.
+publish_to: none
+version: 1.0.0
 repository: https://github.com/nank1ro/solidart
 documentation: https://solidart.mariuti.com
 topics:
   - state-management
   - signals
+  - hooks
 
 environment:
-  sdk: ^3.6.0
+  sdk: ^3.9.2
   flutter: ">=1.17.0"
 
 resolution: workspace
 
 dependencies:
-  collection: ^1.18.0
   flutter:
     sdk: flutter
-  meta: ^1.11.0
   solidart: ^2.5.0
+  flutter_hooks: ^0.21.3+1
 
 dev_dependencies:
-  disco: ^1.0.0
   flutter_test:
     sdk: flutter
-  mockito: ^5.4.4
   very_good_analysis: ^9.0.0
+
+flutter:
+  uses-material-design: true

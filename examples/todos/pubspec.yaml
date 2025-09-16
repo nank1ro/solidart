@@ -20,7 +20,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   solidart_lint: ^2.0.0
-  very_good_analysis: ^7.0.0
+  very_good_analysis: ^9.0.0
 
 dependency_overrides:
   dart_style: ^3.0.1
