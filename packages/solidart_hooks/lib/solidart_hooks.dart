@@ -122,7 +122,7 @@ void useSolidartEffect(
   instance.value = cb;
   useEffect(
     () => Effect(
-      instance.value,
+      () => instance.value(),
       onError: onError,
       name: name,
       delay: delay,
