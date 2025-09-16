@@ -5,9 +5,11 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:solidart/solidart.dart';
 
 /// Bind an existing signal to the hook widget
+///
+/// This will not dispose the signal when the widget is unmounted
 T useExistingSignal<T extends ReadSignal>(T value) {
-  final target = useMemoized(() => value, []);
-  return use(_SignalHook('useExistingSignal', target));
+  final target = useMemoized(() => value, [value]);
+  return use(_SignalHook('useExistingSignal', target, disposeOnUnmount: false));
 }
 
 /// {macro signal}
@@ -45,7 +47,9 @@ Signal<T> useSignal<T>(
     ),
     [],
   );
-  return use(_SignalHook('useSignal', target));
+  return use(
+    _SignalHook('useSignal', target, disposeOnUnmount: autoDispose ?? true),
+  );
 }
 
 /// Create a new computed signal
@@ -85,7 +89,9 @@ Computed<T> useComputed<T>(
     ),
     [],
   );
-  return use(_SignalHook('useComputed', target));
+  return use(
+    _SignalHook('useComputed', target, disposeOnUnmount: autoDispose ?? true),
+  );
 }
 
 /// Create a signal effect
@@ -130,10 +136,15 @@ void useSolidartEffect(
 }
 
 class _SignalHook<T, S extends ReadSignal<T>> extends Hook<S> {
-  const _SignalHook(this.type, this.initialData);
+  const _SignalHook(
+    this.type,
+    this.initialData, {
+    this.disposeOnUnmount = true,
+  });
 
   final String type;
   final S initialData;
+  final bool disposeOnUnmount;
 
   @override
   _SignalHookState<T, S> createState() => _SignalHookState();
@@ -156,8 +167,10 @@ class _SignalHookState<T, S extends ReadSignal<T>>
 
   @override
   void dispose() {
-    _instance.dispose();
     _cleanup.call();
+    if (hook.disposeOnUnmount) {
+      _instance.dispose();
+    }
   }
 
   @override

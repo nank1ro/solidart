@@ -1,5 +1,9 @@
 # solidart_hooks
 
+For a comprehensive and updated documentation go to [The Official Documentation](https://solidart.mariuti.com)
+
+---
+
 Helper library to make working with [solidart](https://pub.dev/packages/solidart) in [flutter_hooks](https://pub.dev/packages/flutter_hooks) easier.
 
 ```dart

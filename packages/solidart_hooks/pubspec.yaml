@@ -1,5 +1,5 @@
 name: solidart_hooks
-description: flutter_hooks bindings for solidart (a reactive state management library for Flutter) good for ephemeral state.
+description: Flutter Hooks bindings for Solidart, suitable for ephemeral state and for writing less boilerplate.
 publish_to: none
 version: 1.0.0
 repository: https://github.com/nank1ro/solidart
@@ -7,6 +7,7 @@ documentation: https://solidart.mariuti.com
 topics:
   - state-management
   - signals
+  - hooks
 
 environment:
   sdk: ^3.9.2

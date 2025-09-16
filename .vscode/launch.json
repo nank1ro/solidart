@@ -5,56 +5,56 @@
       "type": "dart",
       "request": "launch",
       "program": "main.dart",
-      "cwd": "packages/solidart/example",
+      "cwd": "packages/solidart/example"
     },
     {
       "name": "flutter_solidart Example",
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart",
-      "cwd": "packages/flutter_solidart/example",
+      "cwd": "packages/flutter_solidart/example"
     },
     {
       "name": "solidart_hooks Example",
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart",
-      "cwd": "packages/solidart_hooks/solidart_hooks_example",
+      "cwd": "packages/solidart_hooks/solidart_hooks_example"
     },
     {
       "name": "Flutter: Run all Tests",
       "type": "dart",
       "request": "launch",
       "program": "./test/",
-      "cwd": "packages/solidart",
+      "cwd": "packages/solidart"
     },
     {
       "name": "Todos",
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart",
-      "cwd": "examples/todos/",
+      "cwd": "examples/todos/"
     },
     {
       "name": "Counter",
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart",
-      "cwd": "examples/counter/",
+      "cwd": "examples/counter/"
     },
     {
       "name": "Toggle Theme",
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart",
-      "cwd": "examples/toggle_theme/",
+      "cwd": "examples/toggle_theme/"
     },
     {
       "name": "Github search",
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart",
-      "cwd": "examples/github_search/",
+      "cwd": "examples/github_search/"
     },
     {
       "name": "DevTools extension",
