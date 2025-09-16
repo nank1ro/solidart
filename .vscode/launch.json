@@ -19,7 +19,7 @@
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart",
-      "cwd": "packages/solidart_hooks/solidart_hooks_example"
+      "cwd": "packages/solidart_hooks/example"
     },
     {
       "name": "Flutter: Run all Tests",

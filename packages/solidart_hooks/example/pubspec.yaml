@@ -1,4 +1,4 @@
-name: solidart_hooks_example
+name: example
 description: A new Flutter project.
 publish_to: none
 version: 1.0.0+1
@@ -16,7 +16,7 @@ dependencies:
     path: ../../solidart
   solidart_hooks:
     path: ../
-
+    
 dev_dependencies:
   flutter_test:
     sdk: flutter

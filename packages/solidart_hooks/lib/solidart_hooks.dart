@@ -1,3 +1,4 @@
+/// A Dart library for Solidart Hooks, providing Flutter Hooks bindings for Solidart.
 library;
 
 import 'package:flutter/widgets.dart';
