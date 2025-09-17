@@ -198,7 +198,7 @@ class SignalBuilderElement extends ComponentElement {
   }
 }
 
-class SignalBuilder2<T extends Widget> extends StatefulWidget {
+class SignalBuilder2 extends StatefulWidget {
   const SignalBuilder2({
     super.key,
     required this.builder,
@@ -206,15 +206,15 @@ class SignalBuilder2<T extends Widget> extends StatefulWidget {
   });
 
   /// The widget to rebuild when any signals change
-  final T Function(BuildContext context, Widget? child) builder;
+  final TransitionBuilder builder;
 
   final Widget? child;
 
   @override
-  State<SignalBuilder2<T>> createState() => _SignalBuilder2State<T>();
+  State<SignalBuilder2> createState() => _SignalBuilder2State();
 }
 
-class _SignalBuilder2State<T extends Widget> extends State<SignalBuilder2<T>> {
+class _SignalBuilder2State extends State<SignalBuilder2> {
   late final result = Computed(() {
     print('SignalBuilder computed');
     return widget.builder(context, widget.child);
@@ -255,7 +255,7 @@ class _SignalBuilder2State<T extends Widget> extends State<SignalBuilder2<T>> {
   }
 
   @override
-  void didUpdateWidget(covariant SignalBuilder2<T> oldWidget) {
+  void didUpdateWidget(covariant SignalBuilder2 oldWidget) {
     print('SignalBuilder didUpdateWidget');
     super.didUpdateWidget(oldWidget);
     if (oldWidget.builder != widget.builder) {
