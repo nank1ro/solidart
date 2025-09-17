@@ -197,3 +197,81 @@ class SignalBuilderElement extends ComponentElement {
     }
   }
 }
+
+class SignalBuilder2<T extends Widget> extends StatefulWidget {
+  const SignalBuilder2({
+    super.key,
+    required this.builder,
+    this.child,
+  });
+
+  /// The widget to rebuild when any signals change
+  final T Function(BuildContext context, Widget? child) builder;
+
+  final Widget? child;
+
+  @override
+  State<SignalBuilder2<T>> createState() => _SignalBuilder2State<T>();
+}
+
+class _SignalBuilder2State<T extends Widget> extends State<SignalBuilder2<T>> {
+  late final result = Computed(() {
+    print('SignalBuilder computed');
+    return widget.builder(context, widget.child);
+  }, autoDispose: true);
+  bool _init = true;
+
+  @override
+  void initState() {
+    super.initState();
+    result.onDispose(() {
+      print('SignalBuilder computed disposed');
+    });
+  }
+
+  // coverage:ignore-start
+  @override
+  void reassemble() {
+    super.reassemble();
+    print('SignalBuilder reassemble');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      result.run();
+      if (mounted) setState(() {});
+      result.value;
+    });
+  }
+  // coverage:ignore-end
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    print('SignalBuilder didChangeDependencies');
+    if (_init) {
+      // Called on first build (we do not need to rebuild yet)
+      _init = false;
+      return;
+    }
+    result.run();
+  }
+
+  @override
+  void didUpdateWidget(covariant SignalBuilder2<T> oldWidget) {
+    print('SignalBuilder didUpdateWidget');
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.builder != widget.builder) {
+      result.run();
+    }
+  }
+
+  @override
+  void dispose() {
+    result.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    print('SignalBuilder build');
+    return result.value;
+  }
+}

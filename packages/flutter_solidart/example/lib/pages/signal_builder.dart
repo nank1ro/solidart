@@ -24,7 +24,7 @@ class _SignalBuilderPageState extends State<SignalBuilderPage> {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SignalBuilder(builder: (_, __) {
+            SignalBuilder2(builder: (_, __) {
               return ListTile(
                 title: Text(
                   'First counter: ${counter1.value}',
