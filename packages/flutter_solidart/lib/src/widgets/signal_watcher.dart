@@ -39,10 +39,15 @@ class _SignalWatcherElement extends StatelessElement {
   Widget build() {
     final prevSub = reactiveSystem.activeSub;
     // ignore: invalid_use_of_protected_member
-    reactiveSystem.activeSub = effect.subscriber;
+    final node = reactiveSystem.activeSub = effect.subscriber;
 
     try {
-      return super.build();
+      final built = super.build();
+      if (node.deps == null) {
+        throw AssertionError('SignalWatcher must be used inside a Signal');
+      }
+
+      return built;
     } finally {
       reactiveSystem.activeSub = prevSub;
     }

@@ -82,14 +82,17 @@ class TabsSection extends StatelessWidget {
         ),
         Expanded(
           child: SignalWatcher(
-            builder: (context, child) => FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: index.value == 1
-                    ? Theme.of(context).primaryColor
-                    : Colors.grey,
+            builder: (context, child) => Builder(
+              // An exception will definitely be thrown
+              builder: (context) => FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: index.value == 1
+                      ? Theme.of(context).primaryColor
+                      : Colors.grey,
+                ),
+                onPressed: () => index.value = 1,
+                child: child,
               ),
-              onPressed: () => index.value = 1,
-              child: child,
             ),
             child: const Text('Tab 2'),
           ),
