@@ -108,6 +108,7 @@ class SignalBuilderElement extends ComponentElement {
   SignalBuilder get _widget => widget as SignalBuilder;
   Widget? _builtWidget;
   Object? _error;
+  bool _firstBuild = true;
 
   @override
   void mount(Element? parent, Object? newSlot) {
@@ -126,7 +127,6 @@ class SignalBuilderElement extends ComponentElement {
       detach: true,
       autorun: false,
     );
-    _effect!.run();
     // mounting intentionally after effect is initialized and widget is built
     super.mount(parent, newSlot);
   }
@@ -135,8 +135,14 @@ class SignalBuilderElement extends ComponentElement {
   @override
   void update(SignalBuilder newWidget) {
     super.update(newWidget);
-    assert(widget == newWidget, 'The widget and newWidget must be the same');
-    rebuild(force: true);
+    _effect?.run();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_firstBuild) return;
+    _effect?.run();
   }
   // coverage:ignore-end
 
@@ -176,6 +182,11 @@ class SignalBuilderElement extends ComponentElement {
     final prevSub = reactiveSystem.activeSub;
     // ignore: invalid_use_of_protected_member
     reactiveSystem.activeSub = _effect?.subscriber;
+
+    if (_firstBuild) {
+      _firstBuild = false;
+      _effect?.run();
+    }
 
     // ignore: only_throw_errors
     if (_error != null) throw _error!;
