@@ -1,3 +1,7 @@
+## 2.4.1
+
+- **FIX**: `SignalBuilder` not working with inherited widgets. This is just a temporary patch, a better solution needs to be found, because inherited widgets tracked inside the builder won't react.
+
 ## 2.4.0
 
 - **CHORE**: Detect if `SignalBuilder` didn't track any reactive value and throw a `SignalBuilderWithoutDependenciesError`.
