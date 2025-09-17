@@ -21,7 +21,7 @@ class ExampleApp extends StatelessWidget {
       useMaterial3: true,
     );
 
-    return SignalWatcher(
+    return SignalBuilder(
       builder: (_, _) => MaterialApp(
         themeMode: mode.value,
         theme: lightTheme,
@@ -40,7 +40,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       body: ListView(
         children: [
-          SignalWatcher(
+          SignalBuilder(
             builder: (_, _) => SwitchListTile(
               title: const Text("Change Theme"),
               value: mode.value == ThemeMode.light,
@@ -67,7 +67,7 @@ class TabsSection extends StatelessWidget {
       spacing: 6,
       children: [
         Expanded(
-          child: SignalWatcher(
+          child: SignalBuilder(
             builder: (context, child) => FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: index.value == 0
@@ -81,24 +81,21 @@ class TabsSection extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: SignalWatcher(
-            builder: (context, child) => Builder(
-              // An exception will definitely be thrown
-              builder: (context) => FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: index.value == 1
-                      ? Theme.of(context).primaryColor
-                      : Colors.grey,
-                ),
-                onPressed: () => index.value = 1,
-                child: child,
+          child: SignalBuilder(
+            builder: (context, child) => FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: index.value == 1
+                    ? Theme.of(context).primaryColor
+                    : Colors.grey,
               ),
+              onPressed: () => index.value = 1,
+              child: child,
             ),
             child: const Text('Tab 2'),
           ),
         ),
         Expanded(
-          child: SignalWatcher(
+          child: SignalBuilder(
             builder: (context, child) => FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: index.value == 2
