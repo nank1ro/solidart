@@ -5,18 +5,15 @@
 part of 'core.dart';
 
 extension MayDisposeDependencies on alien.ReactiveNode {
-  List<alien.ReactiveNode> getDependencies() {
-    final deps = <alien.ReactiveNode>[];
-    var link = this.deps;
+  Iterable<alien.ReactiveNode> getDependencies() sync* {
+    var link = deps;
     for (; link != null; link = link.nextDep) {
-      deps.add(link.dep);
+      yield link.dep;
     }
-    return deps;
   }
 
   void mayDisposeDependencies([Iterable<alien.ReactiveNode>? include]) {
-    final dependencies =
-        Set<alien.ReactiveNode>.from(getDependencies()..addAll(include ?? []));
+    final dependencies = {...getDependencies(), ...?include};
     for (final dep in dependencies) {
       switch (dep) {
         case _AlienSignal():
