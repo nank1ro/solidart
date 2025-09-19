@@ -897,7 +897,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.takeException(),
-      const TypeMatcher<SignalBuilderWithoutDependenciesError>(),
+      isAssertionError.having(
+        (error) => error.message,
+        'SignalBuilder must detect at least one Signal/Computed during build.',
+        contains('SignalBuilder must detect at least one Signal/Computed'),
+      ),
     );
   });
 }

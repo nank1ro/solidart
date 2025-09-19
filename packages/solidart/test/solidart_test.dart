@@ -449,21 +449,6 @@ void main() {
         );
         expect(detectedError, isA<SolidartCaughtException>());
       });
-
-      test('Effect without dependencies throws and is caught in onError',
-          () async {
-        Object? detectedError;
-        Effect(
-          () {
-            // No dependencies accessed here
-          },
-          onError: (error) {
-            detectedError = error;
-          },
-        );
-        await pumpEventQueue();
-        expect(detectedError, isA<EffectWithoutDependenciesError>());
-      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );

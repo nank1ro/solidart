@@ -4,6 +4,30 @@
 // Reactive flags map: https://github.com/medz/alien-signals-dart/blob/main/flags.md
 part of 'core.dart';
 
+extension MayDisposeDependencies on alien.ReactiveNode {
+  List<alien.ReactiveNode> getDependencies() {
+    final deps = <alien.ReactiveNode>[];
+    var link = this.deps;
+    for (; link != null; link = link.nextDep) {
+      deps.add(link.dep);
+    }
+    return deps;
+  }
+
+  void mayDisposeDependencies([Iterable<alien.ReactiveNode>? include]) {
+    final dependencies =
+        Set<alien.ReactiveNode>.from(getDependencies()..addAll(include ?? []));
+    for (final dep in dependencies) {
+      switch (dep) {
+        case _AlienSignal():
+          dep.parent._mayDispose();
+        case _AlienComputed():
+          dep.parent._mayDispose();
+      }
+    }
+  }
+}
+
 typedef ReactionErrorHandler = void Function(
   Object error,
   ReactionInterface reaction,
