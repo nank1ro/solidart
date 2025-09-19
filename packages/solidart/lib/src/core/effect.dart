@@ -221,7 +221,7 @@ class Effect implements ReactionInterface {
     if (_disposed) return;
     _disposed = true;
 
-    final dependencies = subscriber.getDependencies()..addAll(_deps);
+    final dependencies = {...subscriber.getDependencies(), ..._deps};
     _internalEffect.dispose();
     subscriber.mayDisposeDependencies(dependencies);
   }

@@ -88,7 +88,10 @@ class _SignalBuilderElement extends StatelessElement {
       if (SolidartConfig.assertSignalBuilderWithoutDependencies) {
         assert(
           node.deps != null,
-          'SignalBuilder must detect at least one Signal/Computed/Resource during build.',
+          '''
+          SignalBuilder must detect at least one Signal/Computed/Resource during build.
+          You can disable this check by setting `SolidartConfig.assertSignalBuilderWithoutDependencies = false` before `runApp()`'
+          ''',
         );
       }
       // ignore: invalid_use_of_internal_member
