@@ -1,3 +1,12 @@
+## 2.5.0
+
+- **REFACTOR**: Improve and simplify the `SignalBuilder` implementation (thanks to @medz).
+- **FEAT**: Add `assertSignalBuilderWithoutDependencies` to `SolidartConfig` to manually disable the assertion thrown when a `SignalBuilder` doesn't track any reactive value. (By default it's true, so it will raise an assertion).
+
+### Changes from solidart
+
+- **REFACTOR**: Make auto disposal synchronous.
+
 ## 2.4.1
 
 - **FIX**: `SignalBuilder` not working with inherited widgets. This is just a temporary patch, a better solution needs to be found, because inherited widgets tracked inside the builder won't react.

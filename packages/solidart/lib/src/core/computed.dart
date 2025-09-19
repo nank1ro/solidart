@@ -153,7 +153,7 @@ class Computed<T> extends ReadSignal<T> {
 
     final value = reactiveSystem.getComputedValue(_internalComputed);
     if (autoDispose) {
-      Future.microtask(_mayDispose);
+      _mayDispose();
     }
 
     return value;

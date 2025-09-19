@@ -5,6 +5,8 @@ sidebar:
   order: 1
 ---
 
+import { Aside } from '@astrojs/starlight/components';
+
 A magic widget builder that automatically rebuilds everytime a signal used inside its builder changes.
 
 Reacts to any number of *signals* calling the `builder` each time.
@@ -36,3 +38,9 @@ class _SampleCounterState extends State<SampleCounter> {
 }
 ```
 
+<Aside type="caution">
+By default, if no __active__ signals are detected inside the builder method, an assertion error will be thrown in debug mode.
+This is to help catch mistakes where you might have forgotten to use an __active__ signal inside the builder.
+
+There may be cases where you want to disable this behavior, for example if you want it to build with the latest value of a disposed signal, in that case you can use `SolidartConfig.assertSignalBuilderWithoutDependencies = false` before `runApp`.
+</Aside>

@@ -21,6 +21,19 @@ abstract class SolidartConfig {
   /// {@macro Resource.useRefreshing}
   static bool useRefreshing = true;
 
+  // coverage:ignore-start
+  /// Whether to assert that SignalBuilder has at least one dependency during
+  /// its build. Defaults to true.
+  ///
+  /// If you set this to false, you must ensure that the SignalBuilder has at
+  /// least one dependency, otherwise it won't rebuild when the signals change.
+  ///
+  /// The ability to disable this assertion is provided for advanced use cases
+  /// where you might have a SignalBuilder that builds something based on
+  /// disposed signals where you might be interested in their latest values.
+  static bool assertSignalBuilderWithoutDependencies = true;
+  // coverage:ignore-end
+
   /// The list of observers.
   static final observers = <SolidartObserver>[];
 

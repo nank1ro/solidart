@@ -1,3 +1,7 @@
+## 2.6.0
+
+- **REFACTOR**: Make auto disposal synchronous.
+
 ## 2.5.0
 
 - **FEAT**: Add `run` method to `Computed` to manually trigger an update of its value.
