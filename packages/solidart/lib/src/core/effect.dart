@@ -184,8 +184,6 @@ class Effect implements ReactionInterface {
 
   final _deps = <alien.ReactiveNode>{};
 
-  bool _firstRun = true;
-
   /// The subscriber of the effect, do not use it directly.
   @protected
   alien.ReactiveNode get subscriber => _internalEffect;
@@ -215,9 +213,17 @@ class Effect implements ReactionInterface {
     } finally {
       reactiveSystem.setCurrentSub(prevSub);
       if (SolidartConfig.autoDispose) {
-        Future.microtask(_mayDispose);
+        _mayDispose();
       }
     }
+  }
+
+  /// Sets the dependencies of the effect, do not use it directly.
+  @internal
+  void setDependencies(alien.ReactiveNode node) {
+    _deps
+      ..clear()
+      ..addAll(node.getDependencies());
   }
 
   /// Invalidates the effect.
@@ -233,14 +239,9 @@ class Effect implements ReactionInterface {
     if (_disposed) return;
     _disposed = true;
 
+    final dependencies = subscriber.getDependencies()..addAll(_deps);
     _internalEffect.dispose();
-
-    for (final dep in _deps) {
-      if (dep is _AlienSignal) dep.parent._mayDispose();
-      if (dep is _AlienComputed) dep.parent._mayDispose();
-    }
-
-    _deps.clear();
+    subscriber.mayDisposeDependencies(dependencies);
   }
 
   @override
@@ -248,29 +249,8 @@ class Effect implements ReactionInterface {
     if (_disposed) return;
 
     if (SolidartConfig.autoDispose) {
-      _deps.clear();
-      var link = _internalEffect.deps;
-
-      for (; link != null; link = link.nextDep) {
-        _deps.add(link.dep);
-      }
-
-      if (_firstRun) {
-        _firstRun = false;
-
-        if (_deps.isEmpty) {
-          if (_onError != null) {
-            _onError.call(EffectWithoutDependenciesError(name: name));
-          } else {
-            // coverage:ignore-start
-            throw EffectWithoutDependenciesError(name: name);
-            //  coverage:ignore-end
-          }
-        }
-      }
-
       if (!autoDispose || _disposed) return;
-      if (_internalEffect.deps?.dep == null) {
+      if (subscriber.deps?.dep == null) {
         dispose();
       }
     }
