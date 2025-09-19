@@ -18,11 +18,12 @@ extension MayDisposeDependencies on alien.ReactiveNode {
     final dependencies =
         Set<alien.ReactiveNode>.from(getDependencies()..addAll(include ?? []));
     for (final dep in dependencies) {
-      return switch (dep) {
-        _AlienSignal() => dep.parent._mayDispose(),
-        _AlienComputed() => dep.parent._mayDispose(),
-        _ => null,
-      };
+      switch (dep) {
+        case _AlienSignal():
+          dep.parent._mayDispose();
+        case _AlienComputed():
+          dep.parent._mayDispose();
+      }
     }
   }
 }
