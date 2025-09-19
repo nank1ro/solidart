@@ -1,23 +1,5 @@
 part of 'core.dart';
 
-/// {@template EffectWithoutDependenciesError}
-/// This exception would be fired when an effect is created without tracking
-/// any dependencies.
-/// {@endtemplate}
-class EffectWithoutDependenciesError extends Error {
-  /// {@macro EffectWithoutDependenciesException}
-  EffectWithoutDependenciesError({required this.name});
-
-  /// The name of the effect
-  final String name;
-
-  // coverage:ignore-start
-  @override
-  String toString() =>
-      '''EffectWithoutDependenciesException: Effect ($name) was created without tracking any dependencies. Make sure to access at least one active reactive value (Signal, Computed, etc.) inside the effect callback.''';
-  // coverage:ignore-end
-}
-
 /// Dispose function
 typedef DisposeEffect = void Function();
 
