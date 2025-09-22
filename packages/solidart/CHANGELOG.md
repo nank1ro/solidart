@@ -1,3 +1,7 @@
+## 2.6.1
+
+- **FIX**: Fix auto disposal of `Computed` which happened even if `autoDispose` was set to false.
+
 ## 2.6.0
 
 - **REFACTOR**: Make auto disposal synchronous.
