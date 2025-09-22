@@ -5,11 +5,13 @@
 part of 'core.dart';
 
 extension MayDisposeDependencies on alien.ReactiveNode {
-  Iterable<alien.ReactiveNode> getDependencies() sync* {
+  Iterable<alien.ReactiveNode> getDependencies() {
     var link = deps;
+    final foundDeps = <alien.ReactiveNode>{};
     for (; link != null; link = link.nextDep) {
-      yield link.dep;
+      foundDeps.add(link.dep);
     }
+    return foundDeps;
   }
 
   void mayDisposeDependencies([Iterable<alien.ReactiveNode>? include]) {
@@ -109,6 +111,7 @@ class ReactiveSystem extends alien.ReactiveSystem {
     final flags = computed.flags;
     if ((flags & 16 /* Dirty */) != 0 ||
         ((flags & 32 /* Pending */) != 0 &&
+            computed.deps != null &&
             checkDirty(computed.deps!, computed))) {
       if (computed.update()) {
         final subs = computed.subs;

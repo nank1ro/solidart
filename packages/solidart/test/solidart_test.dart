@@ -396,6 +396,33 @@ void main() {
         count.value = 2;
         expect(doubleCount.value, 2);
       });
+
+      test('Check Signal autoDisposes if no longer used', () {
+        final count = Signal(0, autoDispose: true);
+        final effect = Effect(() => count.value);
+
+        expect(count.disposed, false);
+        expect(effect.disposed, false);
+
+        effect.dispose();
+        expect(effect.disposed, true);
+        expect(count.disposed, true);
+      });
+    
+    test('Check Signal do not autoDisposes if no longer used', () {
+        final count = Signal(0, autoDispose: false);
+        final effect = Effect(() => count.value);
+
+        expect(count.disposed, false);
+        expect(effect.disposed, false);
+
+        effect.dispose();
+        expect(effect.disposed, true);
+        expect(count.disposed, false);
+
+        count.value = 1;
+        expect(count.value, 1);
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
@@ -620,6 +647,49 @@ void main() {
         doubleCount.run();
         // 3 times in total, 1 automatically and 2 manually
         verify(cb()).called(3);
+      });
+
+      test('Check Computed autoDisposes if no longer used', () {
+        final count = Signal(0);
+        final doubleCount = Computed(() => count.value * 2, autoDispose: true);
+
+        expect(count.disposed, false);
+        expect(doubleCount.disposed, false);
+
+        count.value = 1;
+        expect(count.value, 1);
+        expect(doubleCount.value, 2);
+
+        count.dispose();
+        expect(count.disposed, true);
+        // After disposing, the Computed should be disposed
+        expect(doubleCount.disposed, true);
+
+        // Changing the source signal should not trigger the Computed anymore
+        count.value = 2;
+        expect(doubleCount.value, 2);
+      });
+
+      test('Check Computed do not autoDisposes if no longer used', () {
+        final count = Signal(0);
+        final doubleCount = Computed(() => count.value * 2, autoDispose: false);
+
+        expect(count.disposed, false);
+        expect(doubleCount.disposed, false);
+
+        count.value = 1;
+        expect(count.value, 1);
+        expect(doubleCount.value, 2);
+
+        count.dispose();
+        expect(count.disposed, true);
+        // After disposing, the Computed should NOT be disposed
+        expect(doubleCount.disposed, false);
+
+        // Changing the source signal should not trigger the Computed anymore
+        // because the count signal is disposed
+        count.value = 2;
+        expect(doubleCount.value, 2);
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),
