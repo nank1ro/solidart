@@ -1,6 +1,7 @@
 import 'package:solidart/solidart.dart';
 
-import '../solidart_hooks.dart';
+import 'core/solidart_widget.dart';
+import 'hooks/use_effect.dart';
 
 @Deprecated('useSolidartEffect is deprecated. Use useEffect instead.')
 const useSolidartEffect = useEffect;
