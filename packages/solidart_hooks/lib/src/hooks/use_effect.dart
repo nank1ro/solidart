@@ -3,9 +3,6 @@ import 'package:solidart/solidart.dart';
 import '../_internal/active_element.dart';
 import 'use_memoized.dart';
 
-@Deprecated('useSolidartEffect is deprecated. Use useEffect instead.')
-const useSolidartEffect = useEffect;
-
 // Create a signal effect
 Effect useEffect(
   void Function() run, {

@@ -43,8 +43,3 @@ Signal<T> useSignal<T>(
     ),
   );
 }
-
-@Deprecated(
-  'Now, you can directly use Solidart\'s Signal/Computed, No need for additional packaging',
-)
-T useExistingSignal<T extends ReadSignal>(T existing) => existing;

@@ -7,3 +7,5 @@ export 'src/hooks/use_memoized.dart';
 export 'src/hooks/use_signal.dart';
 
 export 'src/widgets/signal_builder.dart';
+
+export 'src/deprecated.dart';
