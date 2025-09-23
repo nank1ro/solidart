@@ -52,12 +52,13 @@ class SolidartElement extends StatelessElement
       final built = super.build();
       // ignore: invalid_use_of_internal_member
       widgetEffect.setDependencies(dep);
-      memoized = memoized.head;
 
       return built;
     } finally {
-      reactiveSystem.activeSub = prevSub;
       setCurrentElement(prevElement);
+
+      reactiveSystem.activeSub = prevSub;
+      memoized = memoized.head;
     }
   }
 }
