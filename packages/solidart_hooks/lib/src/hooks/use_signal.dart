@@ -8,7 +8,7 @@ Signal<T> useSignal<T>(
   T initialValue, {
   String? name,
   bool? equals,
-  bool? autoDispose = false,
+  bool autoDispose = false,
   bool Function(T? a, T? b) comparator = identical,
   bool? trackInDevTools,
   bool? trackPreviousValue,
