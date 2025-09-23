@@ -26,6 +26,7 @@ class SolidartElement extends StatelessElement
   @override
   @mustCallSuper
   void unmount() {
+    widgetEffect.dispose();
     for (
       SolidartMemoized? node = memoized.head;
       node != null;
