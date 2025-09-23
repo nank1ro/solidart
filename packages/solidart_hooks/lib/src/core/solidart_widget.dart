@@ -4,6 +4,9 @@ import 'package:solidart/solidart.dart';
 import '../_internal/active_element.dart';
 import 'memoized.dart';
 
+@Deprecated('Use SolidartWidget instead')
+typedef HookWidget = SolidartWidget;
+
 abstract class SolidartWidget extends StatelessWidget {
   const SolidartWidget({super.key});
 
