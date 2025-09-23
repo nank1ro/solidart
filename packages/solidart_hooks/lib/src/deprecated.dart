@@ -7,7 +7,7 @@ import 'hooks/use_effect.dart';
 const useSolidartEffect = useEffect;
 
 @Deprecated(
-  'Now, you can directly use Solidart\'s Signal/Computed, No need for additional packaging',
+  'You can use Solidart\'s Signal/Computed directly; no additional wrapper is needed.',
 )
 T useExistingSignal<T extends ReadSignal>(T existing) => existing;
 
