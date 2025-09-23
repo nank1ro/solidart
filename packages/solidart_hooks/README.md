@@ -2,9 +2,11 @@
 
 For a comprehensive and updated documentation go to [The Official Documentation](https://solidart.mariuti.com)
 
+[![solidart_hooks Pub Version](https://img.shields.io/pub/v/solidart_hooks)](https://pub.dev/packages/solidart_hooks)
+
 ---
 
-Helper library to make working with [solidart](https://pub.dev/packages/solidart) in [flutter_hooks](https://pub.dev/packages/flutter_hooks) easier.
+Helper library to make working with [Solidart](https://pub.dev/packages/solidart) in Flutter easier.
 
 ```dart
 import 'package:flutter/material.dart';
