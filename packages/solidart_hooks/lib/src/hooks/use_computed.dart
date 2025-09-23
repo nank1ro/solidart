@@ -14,12 +14,9 @@ Computed<T> useComputed<T>(
   bool? trackPreviousValue,
 }) {
   if (getCurrentElement() == null) {
-    // TODO: Implement global signal creation
-    // This is a call outside of SolidartWidget, assuming it is on a global scale.
-    //
-    // At present, Dart lacks a detection mechanism to determine whether it is a Widget build, global, or external.
-    //
-    // Therefore, the authority should be used globally, and there is an alternative solution, which is to detach from SolidartWidget and not allow memory calling, and instead directly use Solidart exported Signal/Calculated/Effects, etc.
+    // Called outside SolidartWidget: treat as a global effect.
+    // Dart can’t reliably detect build/global/external contexts.
+    // Prefer using Solidart’s Effect directly when not in a SolidartWidget.
     return Computed(
       selector,
       name: name,
