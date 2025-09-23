@@ -17,6 +17,7 @@ T useMemoized<T>(T Function() factory) {
     value: factory(),
     head: prev.head,
     prev: prev,
+    next: current, // Always add to the tail to prevent node isolation.
   );
 
   element.memoized = prev.next = memoized;
