@@ -408,8 +408,8 @@ void main() {
         expect(effect.disposed, true);
         expect(count.disposed, true);
       });
-    
-    test('Check Signal do not autoDisposes if no longer used', () {
+
+      test('Check Signal do not autoDisposes if no longer used', () {
         final count = Signal(0, autoDispose: false);
         final effect = Effect(() => count.value);
 
@@ -1042,7 +1042,7 @@ void main() {
       });
 
       test(
-        'test firstWhereReady()',
+        'test untilReady()',
         () async {
           Future<int> fetcher() => Future.delayed(
                 const Duration(milliseconds: 300),
@@ -1053,6 +1053,14 @@ void main() {
           await expectLater(count.untilReady(), completion(1));
         },
       );
+
+      test('until syncronously fires the then callback if condition is met',
+          () async {
+        final count = Resource<int>(() => Future.value(1), lazy: false);
+        var fired = false;
+        count.until((v) => true).then((value) => fired = true);
+        expect(fired, true);
+      });
 
       test('check toString()', () async {
         final r = Resource(

@@ -1,3 +1,7 @@
+## 2.7.0
+
+- **FEAT**: Add `then` extension method to `FutureOr`. This allows you to use the `then` method on both `Future` and `FutureOr` values seamlessly. Mainly needed to simplify the usage of `ReadableSignal.until` and `Resource.untilReady` methods.
+
 ## 2.6.1
 
 - **FIX**: Fix auto disposal of `Computed` which happened even if `autoDispose` was set to false.

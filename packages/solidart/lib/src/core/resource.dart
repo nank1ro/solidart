@@ -1,5 +1,22 @@
 part of 'core.dart';
 
+/// {@template FutureOrThenExtension}
+/// Extension to add a `then` method to `FutureOr`.
+/// This is used internally to handle both `Future` and synchronous values
+/// uniformly.
+/// {@endtemplate}
+extension FutureOrThenExtension<T> on FutureOr<T> {
+  /// Extension method to add a `then` method to `FutureOr`.
+  FutureOr<R> then<R>(FutureOr<R> Function(T value) onValue) {
+    final v = this;
+    if (v is Future<T>) {
+      return v.then(onValue);
+    } else {
+      return onValue(v);
+    }
+  }
+}
+
 /// {@template resource}
 /// `Resources` are special `Signal`s designed specifically to handle Async
 /// loading. Their purpose is wrap async values in a way that makes them easy
