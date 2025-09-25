@@ -7,10 +7,11 @@ part of 'core.dart';
 /// {@endtemplate}
 extension FutureOrThenExtension<T> on FutureOr<T> {
   /// Extension method to add a `then` method to `FutureOr`.
-  FutureOr<R> then<R>(FutureOr<R> Function(T value) onValue) {
+  FutureOr<R> then<R>(FutureOr<R> Function(T value) onValue,
+      {Function? onError}) {
     final v = this;
     if (v is Future<T>) {
-      return v.then(onValue);
+      return v.then(onValue, onError: onError);
     } else {
       return onValue(v);
     }

@@ -1062,6 +1062,16 @@ void main() {
         expect(fired, true);
       });
 
+      test('until asynchronously fires the then callback if condition is met',
+          () async {
+        final count = Signal(0);
+        var fired = false;
+        count.until((v) => v == 1).then((value) => fired = true);
+        count.value = 1;
+        await pumpEventQueue();
+        expect(fired, true);
+      });
+
       test('check toString()', () async {
         final r = Resource(
           () => Future.value(1),
