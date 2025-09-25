@@ -1,6 +1,12 @@
 ## 2.7.0
 
 - **FEAT**: Add `then` extension method to `FutureOr`. This allows you to use the `then` method on both `Future` and `FutureOr` values seamlessly. Mainly needed to simplify the usage of `ReadableSignal.until` and `Resource.untilReady` methods.
+  ```dart
+  final count = createSignal(10);
+  count.until((value) => value > 5).then((value) {
+    print('The count is now greater than 5: $value');
+  });
+  ```
 
 ## 2.6.1
 
