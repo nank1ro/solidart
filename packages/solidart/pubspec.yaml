@@ -13,12 +13,10 @@ environment:
 resolution: workspace
 
 dependencies:
-  # we depend on the alien signals reactivity implementation because it's the fastest available right now (30/12/2024)
-  alien_signals: ^0.5.3
-  collection: ^1.18.0
-  meta: ^1.11.0
+  alien_signals: ">=1.0.1 <2.0.0"
+  collection: any
+  meta: any
 
 dev_dependencies:
-  mockito: ^5.4.4
   test: ^1.25.3
   very_good_analysis: ^9.0.0
