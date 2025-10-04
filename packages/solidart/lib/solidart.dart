@@ -13,4 +13,5 @@ export 'src/config.dart';
 export 'src/effect.dart' show Effect;
 export 'src/observer.dart';
 export 'src/signal.dart' show Signal;
+export 'src/until.dart';
 export 'src/utils.dart';

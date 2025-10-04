@@ -5,6 +5,9 @@
 import 'dart:convert';
 import 'dart:developer' as dev;
 
+import 'package:solidart/src/collections/list.dart';
+import 'package:solidart/src/collections/map.dart';
+import 'package:solidart/src/collections/set.dart';
 import 'package:solidart/src/computed.dart';
 import 'package:solidart/src/config.dart';
 import 'package:solidart/src/signal.dart';
@@ -89,9 +92,9 @@ void _notifyDevToolsAboutSignal(
     'hasPreviousValue': signal.hasPreviousValue,
     'type': switch (signal) {
       // Resource() => 'Resource',
-      // ListSignal() => 'ListSignal',
-      // MapSignal() => 'MapSignal',
-      // SetSignal() => 'SetSignal',
+      ListSignal() => 'ListSignal',
+      MapSignal() => 'MapSignal',
+      SetSignal() => 'SetSignal',
       Signal() => 'Signal',
       Computed() => 'Computed',
       ReadonlySignal() => 'ReadSignal',

@@ -16,6 +16,12 @@ extension BooleanSignalOpers on Signal<bool> {
   void toggle() => value = !value;
 }
 
+extension UpdatableSignalOpers<T> on Signal<T> {
+  void updateValue(T Function(T value) updates) {
+    value = updates(untrackedValue);
+  }
+}
+
 /// A callback that is fired when the signal value changes
 extension ObserveSignal<T> on ReadonlySignal<T> {
   /// Observe the signal and trigger the [listener] every time the value changes
