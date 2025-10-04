@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:alien_signals/alien_signals.dart' as alien;
 
 /// Execute a callback that will not side-effect until its top-most batch is
@@ -39,5 +41,23 @@ T untracked<T>(T Function() callback) {
     return callback();
   } finally {
     alien.setActiveSub(prevSub);
+  }
+}
+
+/// {@template FutureOrThenExtension}
+/// Extension to add a `then` method to `FutureOr`.
+/// This is used internally to handle both `Future` and synchronous values
+/// uniformly.
+/// {@endtemplate}
+extension FutureOrThenExtension<T> on FutureOr<T> {
+  /// Extension method to add a `then` method to `FutureOr`.
+  FutureOr<R> then<R>(FutureOr<R> Function(T value) onValue,
+      {Function? onError}) {
+    final v = this;
+    if (v is Future<T>) {
+      return v.then(onValue, onError: onError);
+    } else {
+      return onValue(v);
+    }
   }
 }
