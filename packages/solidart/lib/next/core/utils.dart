@@ -1,4 +1,4 @@
-part of 'core.dart';
+import 'package:alien_signals/alien_signals.dart' as alien;
 
 /// Execute a callback that will not side-effect until its top-most batch is
 /// completed.
@@ -20,11 +20,24 @@ part of 'core.dart';
 /// As you can see, the effect is not executed until the batch is completed.
 /// So when `x` changes, the effect is paused and you never see it printing:
 /// "x = 11, y = 20".
-T batch<T>(T Function() fn) {
-  reactiveSystem.startBatch();
+T batch<T>(T Function() callback) {
+  alien.startBatch();
   try {
-    return fn();
+    return callback();
   } finally {
-    reactiveSystem.endBatch();
+    alien.endBatch();
+  }
+}
+
+/// Execute a callback that will not be tracked by the reactive system.
+///
+/// This can be useful inside Effects or Observations to prevent a signal from
+/// being tracked.
+T untracked<T>(T Function() callback) {
+  final prevSub = alien.setActiveSub(null);
+  try {
+    return callback();
+  } finally {
+    alien.setActiveSub(prevSub);
   }
 }
