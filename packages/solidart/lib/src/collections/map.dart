@@ -22,7 +22,7 @@ abstract interface class MapSignal<K, V>
       equals: equals,
       name: name,
     );
-    return _MapImpl<K, V>(reactive: reactive, raw: initialValue);
+    return _MapImpl<K, V>(reactive: reactive);
   }
 }
 
@@ -39,10 +39,14 @@ class _ReactiveImpl<K, V> extends SolidartSignal<Map<K, V>>
 }
 
 class _MapImpl<K, V> with MapBase<K, V> implements MapSignal<K, V> {
-  const _MapImpl({required this.reactive, required this.raw});
+  const _MapImpl({required this.reactive});
 
   final _ReactiveImpl<K, V> reactive;
-  final Map<K, V> raw;
+
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  Map<K, V> get raw => reactive.latestValue!;
 
   @override
   @pragma('vm:prefer-inline')
