@@ -35,6 +35,12 @@ extension UpdatableSignalOpers<T> on Signal<T> {
   void updateValue(T Function(T value) updates) {
     value = updates(untrackedValue);
   }
+
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  @Deprecated('Use .toReadonly() instead')
+  ReadonlySignal<T> toReadSignal() => toReadonly();
 }
 
 /// A callback that is fired when the signal value changes
