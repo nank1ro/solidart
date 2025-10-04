@@ -31,7 +31,7 @@ class _ResourceImpl<T> implements Resource<T> {
 
   late final Signal<ResourceState<T>> signal;
   late final effect =
-      Effect(refresh, detach: true, autorun: false, autoDispose: false)
+      Effect(debounceRefresh, detach: true, autorun: false, autoDispose: false)
           as alien.ReactiveNode;
 
   @override
