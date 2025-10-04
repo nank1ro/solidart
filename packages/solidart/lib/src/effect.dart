@@ -17,6 +17,7 @@ abstract interface class Effect {
     bool? autoDispose,
     bool? detach,
     bool? autorun,
+    Duration? delay,
   }) = SolidartEffect;
 
   /// Whether to automatically dispose the effect (defaults to true).
