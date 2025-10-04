@@ -1,6 +1,10 @@
-part of 'core.dart';
-
 // coverage:ignore-start
+
+import 'dart:convert';
+
+import 'package:solidart/next/computed.dart';
+import 'package:solidart/next/config.dart';
+import 'package:solidart/next/signal.dart';
 
 /// The type of the event emitted to the devtools
 enum DevToolsEventType {
@@ -34,7 +38,7 @@ dynamic _toJson(Object? obj) {
 }
 
 /// Extension for the devtools
-extension DevToolsExt<T> on SignalBase<T> {
+extension DevToolsExt<T> on ReadonlySignal<T> {
   void _notifySignalCreation() {
     for (final obs in SolidartConfig.observers) {
       obs.didCreateSignal(this);
@@ -61,7 +65,7 @@ extension DevToolsExt<T> on SignalBase<T> {
 }
 
 void _notifyDevToolsAboutSignal(
-  SignalBase<dynamic> signal, {
+  ReadonlySignal<dynamic> signal, {
   required DevToolsEventType eventType,
 }) {
   if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
@@ -87,7 +91,7 @@ void _notifyDevToolsAboutSignal(
       SetSignal() => 'SetSignal',
       Signal() => 'Signal',
       Computed() => 'Computed',
-      ReadableSignal() => 'ReadSignal',
+      ReadonlySignal() => 'ReadSignal',
       _ => 'Unknown',
     },
     'valueType': value.runtimeType.toString(),

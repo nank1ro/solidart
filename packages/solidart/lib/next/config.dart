@@ -1,4 +1,4 @@
-import 'package:solidart/next/core/observer.dart';
+import 'package:solidart/next/observer.dart';
 
 /// {@template solidart-config}
 /// The global configuration of the reactive system.
