@@ -10,6 +10,9 @@ typedef SignalBase<T> = ReadonlySignal<T>;
 @Deprecated('Use ReadonlySignal instead')
 typedef ReadSignal<T> = ReadonlySignal<T>;
 
+@Deprecated('Use Signal instead')
+typedef ReadableSignal<T> = Signal<T>;
+
 @Deprecated('Use `void Function()` instead')
 typedef DisposeEffect = void Function();
 

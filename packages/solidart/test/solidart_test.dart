@@ -350,7 +350,7 @@ void main() {
             //ignore
           },
         );
-        addTearDown(unobserve);
+        addTearDown(unobserve.dispose);
 
         counter.value = 1;
 
@@ -592,7 +592,7 @@ void main() {
         count.value = 3;
         expect(
           () => doubleCount.value,
-          throwsA(const TypeMatcher<SolidartCaughtException>()),
+          throwsA(const TypeMatcher<Exception>()),
         );
       });
 

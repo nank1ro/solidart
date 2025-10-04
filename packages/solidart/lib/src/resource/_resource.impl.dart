@@ -2,22 +2,24 @@ part of 'resource.dart';
 
 class _ResourceImpl<T> implements Resource<T> {
   _ResourceImpl(
-      {this.fetcher,
-      required this.lazy,
+      {required this.lazy,
+      required this.useRefreshing,
+      required this.signal,
+      this.fetcher,
       this.source,
       this.stream,
-      this.debounceDelay,
-      required this.useRefreshing,
-      required this.signal});
+      this.debounceDelay}) {
+    if (!lazy) refresh();
+  }
 
   /// Indicates whether the resource should be computed lazily, defaults to true
   final bool lazy;
 
   /// Reactive signal values passed to the fetcher, optional.
-  final Signal<dynamic>? source;
+  final ReadonlySignal<dynamic>? source;
 
   /// The asynchrounous function used to retrieve data.
-  final Future<T> Function()? fetcher;
+  final FutureOr<T> Function()? fetcher;
 
   /// The stream used to retrieve data.
   final Stream<T> Function()? stream;
@@ -28,6 +30,9 @@ class _ResourceImpl<T> implements Resource<T> {
   final bool useRefreshing;
 
   late final Signal<ResourceState<T>> signal;
+  late final effect =
+      Effect(refresh, detach: true, autorun: false, autoDispose: false)
+          as alien.ReactiveNode;
 
   @override
   bool get autoDispose => signal.autoDispose;
@@ -38,7 +43,16 @@ class _ResourceImpl<T> implements Resource<T> {
 
   @override
   void dispose() {
+    completer = null;
+
+    subscription?.cancel().ignore();
+    subscription = null;
+
+    timer?.cancel();
+    timer = null;
+
     signal.dispose();
+    (effect as Effect).dispose();
   }
 
   @override
@@ -83,5 +97,99 @@ class _ResourceImpl<T> implements Resource<T> {
   ResourceState<T> get untrackedValue => signal.untrackedValue;
 
   @override
-  ResourceState<T> get value => state;
+  ResourceState<T> get value {
+    if (lazy) refetch().ignore();
+    return signal.value;
+  }
+
+  Timer? timer;
+  void debounceRefresh() {
+    if (debounceDelay == null) {
+      return Future.microtask(refresh).ignore();
+    }
+
+    timer?.cancel();
+    timer = Timer(debounceDelay!, () {
+      Future.microtask(refresh).ignore();
+      timer = null;
+    });
+  }
+
+  @override
+  Future<void> refresh() async {
+    if (source != null) {
+      final prevSub = alien.setActiveSub(effect);
+      try {
+        source!.value;
+      } finally {
+        alien.setActiveSub(prevSub);
+      }
+    }
+
+    if (fetcher != null) return refetch();
+    return resubscribe();
+  }
+
+  @override
+  FutureOr<T> untilReady() async {
+    final state = await signal.until((e) => e.isReady);
+    return state.asReady!.value;
+  }
+
+  @override
+  ResourceState<T> update(
+      ResourceState<T> Function(ResourceState<T> state) callback) {
+    return signal.value = callback(signal.untrackedValue);
+  }
+
+  void transition() {
+    if (useRefreshing) {
+      signal.value = signal.untrackedValue.map(
+        ready: (ready) => ready.copyWith(isRefreshing: true),
+        error: (error) => error.copyWith(isRefreshing: true),
+        loading: (_) => ResourceState<T>.loading(),
+      );
+    } else {
+      signal.value = ResourceState<T>.loading();
+    }
+  }
+
+  Completer<void>? completer;
+  Future<void> refetch() async {
+    if (completer != null && !completer!.isCompleted) {
+      return completer!.future;
+    }
+
+    transition();
+    final prevSub = alien.setActiveSub(null);
+    try {
+      final result = await fetcher!();
+      signal.value = ResourceState<T>.ready(result);
+    } catch (error, stackTrace) {
+      signal.value = ResourceState<T>.error(error, stackTrace: stackTrace);
+    } finally {
+      alien.setActiveSub(prevSub);
+    }
+  }
+
+  late Stream<T> broadcast = stream!().asBroadcastStream();
+  StreamSubscription<T>? subscription;
+  Future<void> resubscribe() async {
+    await subscription?.cancel();
+    transition();
+    subscription = broadcast.listen((state) {
+      signal.value = ResourceState.ready(state);
+    }, onError: (Object error, StackTrace stackTrace) {
+      signal.value = ResourceState.error(error, stackTrace: stackTrace);
+    });
+  }
+
+  @override
+  ResourceState<T>? get previousState => previousValue;
+
+  @override
+  ResourceState<T>? get untrackedPreviousState => untrackedPreviousValue;
+
+  @override
+  ResourceState<T> get untrackedState => untrackedValue;
 }
