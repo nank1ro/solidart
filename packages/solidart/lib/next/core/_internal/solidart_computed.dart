@@ -66,6 +66,9 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
   T get value => super();
 
   @override
+  bool get disposed => isDisposed;
+
+  @override
   bool update() {
     if (isDisposed) return false;
 

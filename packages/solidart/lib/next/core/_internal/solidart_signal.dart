@@ -116,6 +116,9 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
   }
 
   @override
+  bool get disposed => isDisposed;
+
+  @override
   set value(T newValue) {
     if (isDisposed) return;
     super(newValue, true);

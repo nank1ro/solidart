@@ -80,6 +80,9 @@ abstract interface class ReadonlySignal<T> {
   /// The total number of listeners subscribed to the signal.
   int get listenerCount;
 
+  /// Indicates if the signal has been disposed.
+  bool get disposed;
+
   /// Fired when the signal is disposing
   void onDispose(void Function() callback);
 

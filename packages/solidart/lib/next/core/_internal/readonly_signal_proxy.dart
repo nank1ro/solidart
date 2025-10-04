@@ -51,4 +51,7 @@ final class ReadonlySignalProxy<T> implements ReadonlySignal<T> {
 
   @override
   T get value => upstream.value;
+
+  @override
+  bool get disposed => upstream.disposed;
 }
