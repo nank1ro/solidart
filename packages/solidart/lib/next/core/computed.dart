@@ -56,4 +56,13 @@ part '_internal/solidart_computed.dart';
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-abstract interface class Computed<T> implements ReadonlySignal<T> {}
+abstract interface class Computed<T> implements ReadonlySignal<T> {
+  /// {@macro solidart.Computed}
+  factory Computed(T Function() selector,
+      {bool? autoDispose,
+      bool Function(T?, T?)? comparator,
+      String? name,
+      bool? equals,
+      bool? trackInDevTools,
+      bool? trackPreviousValue}) = SolidartComputed;
+}

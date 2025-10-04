@@ -194,11 +194,12 @@ abstract interface class ReadonlySignal<T> {
 abstract interface class Signal<T> implements ReadonlySignal<T> {
   /// {@macro solidart.Signal}
   factory Signal(T initialValue,
-      {bool autoDispose,
-      bool Function(T?, T?) comparator,
-      bool equals,
-      bool trackInDevTools,
-      bool trackPreviousValue}) = SolidartSignal;
+      {String? name,
+      bool? autoDispose,
+      bool Function(T?, T?)? comparator,
+      bool? equals,
+      bool? trackInDevTools,
+      bool? trackPreviousValue}) = SolidartSignal;
 
   /// This is a lazy signal, it doesn't have a value at the moment of creation.
   /// But would throw a StateError if you try to access the value before setting
@@ -206,11 +207,12 @@ abstract interface class Signal<T> implements ReadonlySignal<T> {
   ///
   /// {@macro solidart.Signal}
   factory Signal.lazy(
-      {bool autoDispose,
-      bool Function(T?, T?) comparator,
-      bool equals,
-      bool trackInDevTools,
-      bool trackPreviousValue}) = SolidartSignal.lazy;
+      {String? name,
+      bool? autoDispose,
+      bool Function(T?, T?)? comparator,
+      bool? equals,
+      bool? trackInDevTools,
+      bool? trackPreviousValue}) = SolidartSignal.lazy;
 
   /// Sets the current signal value with [newValue].
   ///

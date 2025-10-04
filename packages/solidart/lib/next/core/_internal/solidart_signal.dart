@@ -7,12 +7,13 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
     implements Signal<T> {
   SolidartSignal._internal(T? initialValue,
       {bool? autoDispose,
-      this.comparator = identical,
+      bool Function(T?, T?)? comparator,
       String? name,
       bool? equals,
       bool? trackInDevTools,
       bool? trackPreviousValue})
       : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+        comparator = comparator ?? identical,
         equals = equals ?? SolidartConfig.equals,
         name = name ?? nameFor('Signal'),
         trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
@@ -22,7 +23,7 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
 
   SolidartSignal(T initialValue,
       {bool? autoDispose,
-      bool Function(T?, T?) comparator = identical,
+      bool Function(T?, T?)? comparator,
       String? name,
       bool? equals,
       bool? trackInDevTools,
@@ -37,13 +38,15 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
 
   SolidartSignal.lazy(
       {bool? autoDispose,
-      bool Function(T?, T?) comparator = identical,
+      bool Function(T?, T?)? comparator,
+      String? name,
       bool? equals,
       bool? trackInDevTools,
       bool? trackPreviousValue})
       : this._internal(null,
             autoDispose: autoDispose,
             comparator: comparator,
+            name: name,
             equals: equals,
             trackInDevTools: trackInDevTools,
             trackPreviousValue: trackPreviousValue);

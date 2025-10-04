@@ -7,12 +7,13 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
     implements Computed<T> {
   SolidartComputed(this.selector,
       {bool? autoDispose,
-      this.comparator = identical,
+      bool Function(T?, T?)? comparator,
       String? name,
       bool? equals,
       bool? trackInDevTools,
       bool? trackPreviousValue})
       : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+        comparator = comparator ?? identical,
         name = name ?? nameFor('Computed'),
         equals = equals ?? SolidartConfig.equals,
         trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
