@@ -146,7 +146,7 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
     if (isDisposed) return;
     for (var link = subs; link != null; link = link.nextSub) {
       if (link.sub case final Disposable disposable) {
-        disposable.dispose();
+        disposable.maybeDispose();
       }
     }
 

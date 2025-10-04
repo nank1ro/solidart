@@ -86,4 +86,16 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
     untrackedPreviousValue = oldValue;
     return true;
   }
+
+  @override
+  void dispose() {
+    if (isDisposed) return;
+    for (var link = subs; link != null; link = link.nextSub) {
+      if (link.sub case final Disposable disposable) {
+        disposable.maybeDispose();
+      }
+    }
+
+    super.dispose();
+  }
 }

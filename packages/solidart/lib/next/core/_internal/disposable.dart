@@ -5,6 +5,7 @@ mixin Disposable {
 
   bool _isDisposed = false;
   bool get isDisposed => _isDisposed;
+  bool get autoDispose;
 
   void onDispose(void Function() callback) {
     if (isDisposed) return;
@@ -13,11 +14,16 @@ mixin Disposable {
 
   void dispose() {
     if (isDisposed) return;
+
+    _isDisposed = true;
     for (final callback in _callbacks) {
       callback();
     }
 
     _callbacks.clear();
-    _isDisposed = true;
+  }
+
+  void maybeDispose() {
+    if (autoDispose) dispose();
   }
 }
