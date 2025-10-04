@@ -1,9 +1,9 @@
 import 'package:alien_signals/preset_developer.dart' as alien;
-import 'package:solidart/next/_internal/devtools.dart';
-import 'package:solidart/next/_internal/disposable.dart';
-import 'package:solidart/next/_internal/name_for.dart';
-import 'package:solidart/next/config.dart';
-import 'package:solidart/next/signal.dart';
+import 'package:solidart/src/_internal/devtools.dart';
+import 'package:solidart/src/_internal/disposable.dart';
+import 'package:solidart/src/_internal/name_for.dart';
+import 'package:solidart/src/config.dart';
+import 'package:solidart/src/signal.dart';
 
 part '_internal/solidart_computed.dart';
 

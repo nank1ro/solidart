@@ -5,9 +5,9 @@
 import 'dart:convert';
 import 'dart:developer' as dev;
 
-import 'package:solidart/next/computed.dart';
-import 'package:solidart/next/config.dart';
-import 'package:solidart/next/signal.dart';
+import 'package:solidart/src/computed.dart';
+import 'package:solidart/src/config.dart';
+import 'package:solidart/src/signal.dart';
 
 /// The type of the event emitted to the devtools
 enum DevToolsEventType {

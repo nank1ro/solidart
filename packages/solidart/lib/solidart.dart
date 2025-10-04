@@ -3,9 +3,9 @@
 /// More dartdocs go here.
 library;
 
-export 'next/computed.dart' show Computed;
-export 'next/config.dart';
-export 'next/effect.dart' show Effect;
-export 'next/observer.dart';
-export 'next/signal.dart' show Signal;
-export 'next/utils.dart';
+export 'src/computed.dart' show Computed;
+export 'src/config.dart';
+export 'src/effect.dart' show Effect;
+export 'src/observer.dart';
+export 'src/signal.dart' show Signal;
+export 'src/utils.dart';

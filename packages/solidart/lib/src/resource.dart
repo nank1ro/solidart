@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:solidart/next/_internal/name_for.dart';
-import 'package:solidart/next/config.dart';
-import 'package:solidart/next/signal.dart';
+import 'package:solidart/src/_internal/name_for.dart';
+import 'package:solidart/src/config.dart';
+import 'package:solidart/src/signal.dart';
 
 /// {@template FutureOrThenExtension}
 /// Extension to add a `then` method to `FutureOr`.
