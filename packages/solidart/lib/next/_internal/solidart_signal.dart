@@ -5,7 +5,7 @@ part of '../signal.dart';
 class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
     with Disposable
     implements Signal<T> {
-  SolidartSignal._internal(T? initialValue,
+  SolidartSignal.internal(T? initialValue,
       {bool? autoDispose,
       bool Function(T?, T?)? comparator,
       String? name,
@@ -28,7 +28,7 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
       bool? equals,
       bool? trackInDevTools,
       bool? trackPreviousValue})
-      : this._internal(initialValue,
+      : this.internal(initialValue,
             autoDispose: autoDispose,
             comparator: comparator,
             name: name,
@@ -43,7 +43,7 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
       bool? equals,
       bool? trackInDevTools,
       bool? trackPreviousValue})
-      : this._internal(null,
+      : this.internal(null,
             autoDispose: autoDispose,
             comparator: comparator,
             name: name,
