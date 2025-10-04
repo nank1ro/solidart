@@ -7,6 +7,7 @@ mixin Disposable {
   bool get isDisposed => _isDisposed;
 
   void onDispose(void Function() callback) {
+    if (isDisposed) return;
     _callbacks.add(callback);
   }
 

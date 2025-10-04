@@ -24,6 +24,18 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
   final T Function() selector;
 
   @override
+  final bool trackInDevTools;
+
+  @override
+  final bool trackPreviousValue;
+
+  @override
+  final String name;
+
+  @override
+  T? untrackedPreviousValue;
+
+  @override
   final bool autoDispose;
 
   @override
@@ -33,35 +45,41 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
   final bool equals;
 
   @override
-  // TODO: implement hasPreviousValue
-  bool get hasPreviousValue => throw UnimplementedError();
+  bool get hasPreviousValue => untrackedPreviousValue != null && flags != 0;
 
   @override
   bool get hasValue => true;
 
   @override
-  // TODO: implement listenerCount
   int get listenerCount => throw UnimplementedError();
 
   @override
-  final String name;
+  T? get previousValue {
+    if (trackPreviousValue) super();
+    return untrackedPreviousValue;
+  }
 
   @override
-  // TODO: implement previousValue
-  T? get previousValue => throw UnimplementedError();
-
-  @override
-  final bool trackInDevTools;
-
-  @override
-  final bool trackPreviousValue;
-
-  @override
-  T? untrackedPreviousValue;
-
-  @override
-  T get untrackedValue => super.cachedValue as T;
+  T get untrackedValue => cachedValue as T;
 
   @override
   T get value => super();
+
+  @override
+  bool update() {
+    if (isDisposed) return false;
+
+    final oldValue = cachedValue;
+    final result = super.update();
+    final newValue = cachedValue;
+    if (equals) {
+      if (result) untrackedPreviousValue = oldValue;
+      return result;
+    } else if (comparator(oldValue, newValue)) {
+      return false;
+    }
+
+    untrackedPreviousValue = oldValue;
+    return true;
+  }
 }
