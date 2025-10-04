@@ -14,9 +14,9 @@ class SolidartEffect extends alien.PresetEffect implements Effect, Disposable {
         name = name ?? nameFor('Effect'),
         super(callback: callback) {
     if (detach != true) {
-      final sub = alien.setActiveSub(null);
-      if (sub != null) {
-        alien.system.link(this, sub, 0);
+      final prevSub = alien.getActiveSub();
+      if (prevSub != null) {
+        alien.system.link(this, prevSub, 0);
       }
     }
 
