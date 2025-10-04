@@ -4,9 +4,17 @@ mixin Disposable {
   late final _callbacks = <void Function()>[];
 
   bool _isDisposed = false;
+
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool get isDisposed => _isDisposed;
+
   bool get autoDispose;
 
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void onDispose(void Function() callback) {
     if (isDisposed) return;
     _callbacks.add(callback);
@@ -23,6 +31,9 @@ mixin Disposable {
     _callbacks.clear();
   }
 
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void maybeDispose() {
     if (autoDispose) dispose();
   }

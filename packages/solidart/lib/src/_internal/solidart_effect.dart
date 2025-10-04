@@ -40,6 +40,9 @@ class SolidartEffect extends alien.PresetEffect implements Effect, Disposable {
   late final callbacks = <void Function()>[];
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void onDispose(void Function() callback) {
     if (isDisposed) return;
     callbacks.add(callback);
@@ -77,6 +80,9 @@ class SolidartEffect extends alien.PresetEffect implements Effect, Disposable {
   }
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void maybeDispose() {
     if (autoDispose) dispose();
   }

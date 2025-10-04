@@ -72,12 +72,21 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
   final bool trackPreviousValue;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool get hasPreviousValue => super.previousValue != null;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool get hasValue => super.latestValue != null;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   T? get untrackedPreviousValue => super.previousValue;
 
   @override
@@ -121,9 +130,15 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
   }
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool get disposed => isDisposed;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   set value(T newValue) {
     if (isDisposed) return;
     super(newValue, true);
@@ -158,5 +173,8 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
   }
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   ReadonlySignal<T> toReadonly() => ReadonlySignalProxy(this);
 }

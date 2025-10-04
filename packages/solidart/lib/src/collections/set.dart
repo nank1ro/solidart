@@ -39,6 +39,9 @@ class _ReactiveSetImpl<E> extends SolidartSignal<Set<E>>
   final Set<E> raw;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool add(E value) {
     final result = raw.add(value);
     if (result) trigger();
@@ -46,22 +49,37 @@ class _ReactiveSetImpl<E> extends SolidartSignal<Set<E>>
   }
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool contains(Object? element) {
     return value.contains(element);
   }
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   Iterator<E> get iterator => value.iterator;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   int get length => value.length;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   E? lookup(Object? element) {
     return value.lookup(element);
   }
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool remove(Object? value) {
     final result = raw.remove(value);
     if (result) trigger();
@@ -69,5 +87,8 @@ class _ReactiveSetImpl<E> extends SolidartSignal<Set<E>>
   }
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   Set<E> toSet() => value.toSet();
 }

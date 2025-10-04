@@ -48,27 +48,52 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
   final bool equals;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool get hasPreviousValue => untrackedPreviousValue != null && flags != 0;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool get hasValue => true;
 
   @override
-  int get listenerCount => throw UnimplementedError();
+  int get listenerCount {
+    var count = 0;
+    for (var link = subs; link != null; link = link.nextSub) {
+      count++;
+    }
+
+    return count;
+  }
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   T? get previousValue {
     if (trackPreviousValue) super();
     return untrackedPreviousValue;
   }
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   T get untrackedValue => cachedValue as T;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   T get value => super();
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   bool get disposed => isDisposed;
 
   @override

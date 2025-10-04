@@ -2,7 +2,7 @@
 
 import 'package:alien_signals/alien_signals.dart' as alien;
 import 'package:alien_signals/preset_developer.dart' as alien;
-// TODO: wait alien_signal expotr
+// TODO: wait alien_signal export
 // ignore: implementation_imports
 import 'package:alien_signals/src/preset.dart' as alien show flush;
 import 'package:alien_signals/system.dart' as alien;

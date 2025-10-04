@@ -31,6 +31,9 @@ class _ReactiveListImpl<E> extends SolidartSignal<List<E>>
   final List<E> raw;
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   int get length => value.length;
 
   @override
@@ -42,15 +45,24 @@ class _ReactiveListImpl<E> extends SolidartSignal<List<E>>
   }
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   E operator [](int index) => value[index];
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void operator []=(int index, E value) {
     raw[index] = value;
     trigger();
   }
 
   @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
   void add(E element) {
     raw.add(element);
     trigger();
