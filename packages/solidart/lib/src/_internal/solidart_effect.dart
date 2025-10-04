@@ -10,16 +10,25 @@ class SolidartEffect extends alien.PresetEffect implements Effect, Disposable {
     bool? autoDispose,
     bool? detach,
     bool? autorun,
+    Duration? delay,
   })  : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
         name = name ?? nameFor('Effect'),
         super(callback: callback) {
+    if (delay != null) {
+      Timer(delay, () => _init(detach: detach, autorun: autorun));
+      return;
+    }
+
+    _init(detach: detach, autorun: autorun);
+  }
+
+  void _init({bool? detach, bool? autorun}) {
     if (detach != true) {
       final prevSub = alien.getActiveSub();
       if (prevSub != null) {
         alien.system.link(this, prevSub, 0);
       }
     }
-
     if (autorun ?? true) run();
   }
 

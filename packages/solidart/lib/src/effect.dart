@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:alien_signals/alien_signals.dart' as alien;
 import 'package:alien_signals/preset_developer.dart' as alien;
 import 'package:solidart/src/_internal/disposable.dart';
