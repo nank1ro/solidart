@@ -35,7 +35,9 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
         trackPreviousValue =
             trackPreviousValue ?? SolidartConfig.trackPreviousValue,
         super(initialValue: initialValue) {
-    notifySignalCreation();
+    if (this.trackInDevTools) {
+      notifySignalCreation();
+    }
   }
 
   SolidartSignal.lazy(
@@ -152,7 +154,10 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
     if ((equals && super.previousValue != latestValue) ||
         (!equals && !comparator(super.previousValue, latestValue))) {
       super.previousValue = latestValue;
-      notifySignalUpdate();
+      if (trackInDevTools) {
+        notifySignalUpdate();
+      }
+
       return true;
     }
 
@@ -169,7 +174,9 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
     }
 
     super.dispose();
-    notifySignalDisposal();
+    if (trackInDevTools) {
+      notifySignalDisposal();
+    }
   }
 
   @override

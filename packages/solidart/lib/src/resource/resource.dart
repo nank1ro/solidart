@@ -2,4 +2,6 @@
 
 import 'package:solidart/src/signal.dart';
 
+part '_resource.impl.dart';
+
 abstract interface class Resource<T> implements ReadonlySignal<T> {}

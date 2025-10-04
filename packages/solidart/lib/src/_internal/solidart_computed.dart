@@ -20,7 +20,9 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
         trackPreviousValue =
             trackPreviousValue ?? SolidartConfig.trackPreviousValue,
         super(getter: (_) => selector()) {
-    notifySignalCreation();
+    if (this.trackInDevTools) {
+      notifySignalCreation();
+    }
   }
 
   /// The selector applied
@@ -106,7 +108,9 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
     if (equals) {
       if (result) {
         untrackedPreviousValue = oldValue;
-        notifySignalUpdate();
+        if (trackInDevTools) {
+          notifySignalUpdate();
+        }
       }
       return result;
     } else if (comparator(oldValue, newValue)) {
@@ -114,7 +118,9 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
     }
 
     untrackedPreviousValue = oldValue;
-    notifySignalUpdate();
+    if (trackInDevTools) {
+      notifySignalUpdate();
+    }
 
     return true;
   }
@@ -129,5 +135,8 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
     }
 
     super.dispose();
+    if (trackInDevTools) {
+      notifySignalDisposal();
+    }
   }
 }
