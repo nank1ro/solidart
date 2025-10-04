@@ -4,6 +4,10 @@ import 'package:solidart/src/effect.dart';
 import 'package:solidart/src/signal.dart';
 import 'package:solidart/src/utils.dart';
 
+typedef SignalBase<T> = ReadonlySignal<T>;
+typedef ReadSignal<T> = ReadonlySignal<T>;
+typedef DisposeEffect = Effect;
+
 extension SolidartSignalCall<T> on ReadonlySignal<T> {
   T call() => value;
 }
@@ -34,4 +38,8 @@ extension ObserveSignal<T> on ReadonlySignal<T> {
 
     return effect.dispose;
   }
+}
+
+extension DisposeEffectCall on Effect {
+  void call() => dispose();
 }
