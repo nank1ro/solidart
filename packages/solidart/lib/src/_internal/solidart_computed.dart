@@ -139,4 +139,12 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
       notifySignalDisposal();
     }
   }
+
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  void run() {
+    selector();
+  }
 }

@@ -66,4 +66,7 @@ abstract interface class Computed<T> implements ReadonlySignal<T> {
       bool? equals,
       bool? trackInDevTools,
       bool? trackPreviousValue}) = SolidartComputed<T>;
+
+  // ignore: public_member_api_docs
+  void run();
 }

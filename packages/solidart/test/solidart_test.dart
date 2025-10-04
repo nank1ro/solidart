@@ -1899,7 +1899,7 @@ void main() {
           calls.add((x: x.value, y: y.value, total: total.value));
         });
 
-        addTearDown(disposeEffect);
+        addTearDown(disposeEffect.dispose);
 
         expect(
           calls,
@@ -1961,7 +1961,7 @@ void main() {
         final a = Signal(3);
         final b = Computed(() => a.value > 0);
 
-        late VoidCallback disposeInnerEffect;
+        late Effect disposeInnerEffect;
 
         final disposeEffect = Effect(
           () {

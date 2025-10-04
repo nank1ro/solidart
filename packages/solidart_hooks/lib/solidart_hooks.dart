@@ -99,7 +99,7 @@ Computed<T> useComputed<T>(
 void useSolidartEffect(
   dynamic Function() cb, {
 
-  void Function(Object error)? onError,
+  void Function(Object? error)? onError,
 
   /// The name of the effect, useful for logging
   String? name,
