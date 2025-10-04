@@ -1,4 +1,8 @@
-part of 'core.dart';
+import 'dart:async';
+
+import 'package:solidart/next/_internal/name_for.dart';
+import 'package:solidart/next/config.dart';
+import 'package:solidart/next/signal.dart';
 
 /// {@template FutureOrThenExtension}
 /// Extension to add a `then` method to `FutureOr`.
@@ -91,7 +95,7 @@ extension FutureOrThenExtension<T> on FutureOr<T> {
 /// The `refresh` method forces an update and calls the `fetcher` function
 /// again or subscribes againg to the [stream].
 /// {@endtemplate}
-class Resource<T> extends Signal<ResourceState<T>> {
+class Resource<T> extends SolidartSignal<ResourceState<T>> {
   /// {@macro resource}
   Resource(
     this.fetcher, {
@@ -125,7 +129,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
         stream = null,
         super(
           ResourceState<T>.loading(),
-          name: name ?? ReactiveName.nameFor('Resource'),
+          name: name ?? nameFor('Resource'),
           trackPreviousValue:
               trackPreviousState ?? SolidartConfig.trackPreviousValue,
           comparator: identical,
@@ -165,7 +169,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
         fetcher = null,
         super(
           ResourceState<T>.loading(),
-          name: name ?? ReactiveName.nameFor('Resource'),
+          name: name ?? nameFor('Resource'),
           trackPreviousValue:
               trackPreviousState ?? SolidartConfig.trackPreviousValue,
           comparator: identical,
@@ -178,7 +182,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   final bool lazy;
 
   /// Reactive signal values passed to the fetcher, optional.
-  final SignalBase<dynamic>? source;
+  final Signal<dynamic>? source;
 
   /// The asynchrounous function used to retrieve data.
   final Future<T> Function()? fetcher;

@@ -8,6 +8,15 @@ part '_internal/solidart_effect.dart';
 
 /// Abstract interface for an effect.
 abstract interface class Effect {
+  factory Effect(
+    void Function() callback, {
+    void Function(Object? error)? onError,
+    String? name,
+    bool? autoDispose,
+    bool? detach,
+    bool? autorun,
+  }) = SolidartEffect;
+
   /// Whether to automatically dispose the effect (defaults to true).
   bool get autoDispose;
 

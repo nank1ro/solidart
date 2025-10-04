@@ -3,12 +3,9 @@
 /// More dartdocs go here.
 library;
 
-export 'src/core/core.dart'
-    hide ReactionErrorHandler, ReactionInterface, ReactiveName, ValueComparator;
-export 'src/utils.dart'
-    show
-        DebounceOperation,
-        Debouncer,
-        SolidartCaughtException,
-        SolidartException,
-        SolidartReactionException;
+export 'next/computed.dart' show Computed;
+export 'next/config.dart';
+export 'next/effect.dart' show Effect;
+export 'next/observer.dart';
+export 'next/signal.dart' show Signal;
+export 'next/utils.dart';
