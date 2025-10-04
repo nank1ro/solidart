@@ -6,8 +6,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
-import 'package:solidart/src/core/core.dart';
-import 'package:solidart/src/utils.dart';
+import 'package:solidart/solidart.dart';
 import 'package:test/test.dart';
 
 sealed class MyEvent {}
