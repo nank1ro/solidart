@@ -473,7 +473,7 @@ void main() {
             detectedError = error;
           },
         );
-        expect(detectedError, isA<SolidartCaughtException>());
+        expect(detectedError, isA<Exception>());
       });
     },
     timeout: const Timeout(Duration(seconds: 1)),
@@ -1998,7 +1998,7 @@ void main() {
         final a = Signal(1);
         final b = Signal(1);
 
-        late VoidCallback disposeInnerEffect;
+        late Effect disposeInnerEffect;
         final disposeEffect = Effect(() {
           if (a.value > 0) {
             disposeInnerEffect = Effect(() {

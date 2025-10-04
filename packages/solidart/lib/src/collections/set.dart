@@ -4,8 +4,7 @@ import 'package:solidart/src/_internal/reactive.dart';
 import 'package:solidart/src/signal.dart';
 
 // ignore: public_member_api_docs
-abstract interface class SetSignal<E>
-    implements Set<E>, ReadonlySignal<Set<E>> {
+abstract interface class SetSignal<E> implements Set<E>, Signal<Set<E>> {
   factory SetSignal(Iterable<E> initialValue,
       {bool? autoDispose,
       bool? trackInDevTools,
@@ -36,7 +35,16 @@ class _ReactiveSetImpl<E> extends SolidartSignal<Set<E>>
       : raw = initialValue,
         super(name: name ?? 'ListSignal');
 
-  final Set<E> raw;
+  Set<E> raw;
+
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  set value(Set<E> newValue) {
+    raw = newValue;
+    super.value = newValue;
+  }
 
   @override
   @pragma('vm:prefer-inline')

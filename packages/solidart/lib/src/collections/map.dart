@@ -5,7 +5,7 @@ import 'package:solidart/src/signal.dart';
 
 // ignore: public_member_api_docs
 abstract interface class MapSignal<K, V>
-    implements Map<K, V>, ReadonlySignal<Map<K, V>> {
+    implements Map<K, V>, Signal<Map<K, V>> {
   factory MapSignal(Map<K, V> initialValue,
       {bool? autoDispose,
       bool? trackInDevTools,
@@ -185,4 +185,20 @@ class _MapImpl<K, V> with MapBase<K, V> implements MapSignal<K, V> {
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   Map<K, V> get value => reactive.value;
+
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  ReadonlySignal<Map<K, V>> toReadonly() {
+    return reactive.toReadonly();
+  }
+
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  set value(Map<K, V> newValue) {
+    reactive.value = newValue;
+  }
 }

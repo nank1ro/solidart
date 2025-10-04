@@ -4,8 +4,7 @@ import 'package:solidart/src/_internal/reactive.dart';
 import 'package:solidart/src/signal.dart';
 
 // ignore: public_member_api_docs
-abstract interface class ListSignal<E>
-    implements List<E>, ReadonlySignal<List<E>> {
+abstract interface class ListSignal<E> implements List<E>, Signal<List<E>> {
   factory ListSignal(List<E> initialValue,
       {bool? autoDispose,
       bool? trackInDevTools,
@@ -28,7 +27,16 @@ class _ReactiveListImpl<E> extends SolidartSignal<List<E>>
       : raw = initialValue,
         super(name: name ?? 'ListSignal');
 
-  final List<E> raw;
+  List<E> raw;
+
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  set value(List<E> newValue) {
+    raw = newValue;
+    super.value = newValue;
+  }
 
   @override
   @pragma('vm:prefer-inline')
