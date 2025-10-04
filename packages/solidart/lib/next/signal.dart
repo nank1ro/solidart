@@ -199,7 +199,7 @@ abstract interface class Signal<T> implements ReadonlySignal<T> {
       bool Function(T?, T?)? comparator,
       bool? equals,
       bool? trackInDevTools,
-      bool? trackPreviousValue}) = SolidartSignal;
+      bool? trackPreviousValue}) = SolidartSignal<T>;
 
   /// This is a lazy signal, it doesn't have a value at the moment of creation.
   /// But would throw a StateError if you try to access the value before setting
@@ -212,7 +212,7 @@ abstract interface class Signal<T> implements ReadonlySignal<T> {
       bool Function(T?, T?)? comparator,
       bool? equals,
       bool? trackInDevTools,
-      bool? trackPreviousValue}) = SolidartSignal.lazy;
+      bool? trackPreviousValue}) = SolidartSignal<T>.lazy;
 
   /// Sets the current signal value with [newValue].
   ///

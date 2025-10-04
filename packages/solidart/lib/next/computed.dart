@@ -64,5 +64,5 @@ abstract interface class Computed<T> implements ReadonlySignal<T> {
       String? name,
       bool? equals,
       bool? trackInDevTools,
-      bool? trackPreviousValue}) = SolidartComputed;
+      bool? trackPreviousValue}) = SolidartComputed<T>;
 }
