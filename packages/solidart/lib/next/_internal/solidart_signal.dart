@@ -1,26 +1,10 @@
-// ignore_for_file: public_member_api_docs, sort_unnamed_constructors_first
+// ignore_for_file: public_member_api_docs
 
 part of '../signal.dart';
 
 class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
     with Disposable
     implements Signal<T> {
-  SolidartSignal.internal(T? initialValue,
-      {bool? autoDispose,
-      bool Function(T?, T?)? comparator,
-      String? name,
-      bool? equals,
-      bool? trackInDevTools,
-      bool? trackPreviousValue})
-      : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
-        comparator = comparator ?? identical,
-        equals = equals ?? SolidartConfig.equals,
-        name = name ?? nameFor('Signal'),
-        trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
-        trackPreviousValue =
-            trackPreviousValue ?? SolidartConfig.trackPreviousValue,
-        super(initialValue: initialValue);
-
   SolidartSignal(T initialValue,
       {bool? autoDispose,
       bool Function(T?, T?)? comparator,
@@ -35,6 +19,24 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
             equals: equals,
             trackInDevTools: trackInDevTools,
             trackPreviousValue: trackPreviousValue);
+
+  SolidartSignal.internal(T? initialValue,
+      {bool? autoDispose,
+      bool Function(T?, T?)? comparator,
+      String? name,
+      bool? equals,
+      bool? trackInDevTools,
+      bool? trackPreviousValue})
+      : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+        comparator = comparator ?? identical,
+        equals = equals ?? SolidartConfig.equals,
+        name = name ?? nameFor('Signal'),
+        trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
+        trackPreviousValue =
+            trackPreviousValue ?? SolidartConfig.trackPreviousValue,
+        super(initialValue: initialValue) {
+    notifySignalCreation();
+  }
 
   SolidartSignal.lazy(
       {bool? autoDispose,
@@ -135,6 +137,7 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
     if ((equals && super.previousValue == latestValue) ||
         (!equals && !comparator(super.previousValue, latestValue))) {
       super.previousValue = latestValue;
+      notifySignalUpdate();
       return true;
     }
 
@@ -151,6 +154,7 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
     }
 
     super.dispose();
+    notifySignalDisposal();
   }
 
   @override

@@ -1,5 +1,7 @@
 // coverage:ignore-start
 
+// ignore_for_file: public_member_api_docs
+
 import 'dart:convert';
 import 'dart:developer' as dev;
 
@@ -40,7 +42,7 @@ dynamic _toJson(Object? obj) {
 
 /// Extension for the devtools
 extension DevToolsExt<T> on ReadonlySignal<T> {
-  void _notifySignalCreation() {
+  void notifySignalCreation() {
     for (final obs in SolidartConfig.observers) {
       obs.didCreateSignal(this);
     }
@@ -48,7 +50,7 @@ extension DevToolsExt<T> on ReadonlySignal<T> {
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.created);
   }
 
-  void _notifySignalUpdate() {
+  void notifySignalUpdate() {
     for (final obs in SolidartConfig.observers) {
       obs.didUpdateSignal(this);
     }
@@ -56,7 +58,7 @@ extension DevToolsExt<T> on ReadonlySignal<T> {
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
   }
 
-  void _notifySignalDisposal() {
+  void notifySignalDisposal() {
     for (final obs in SolidartConfig.observers) {
       obs.didDisposeSignal(this);
     }
@@ -73,10 +75,10 @@ void _notifyDevToolsAboutSignal(
   final eventName = 'ext.solidart.signal.${eventType.name}';
   var value = signal.value;
   var previousValue = signal.previousValue;
-  if (signal is Resource) {
-    value = signal._value.asReady?.value;
-    previousValue = signal._previousValue?.asReady?.value;
-  }
+  // if (signal is Resource) {
+  //   value = signal._value.asReady?.value;
+  //   previousValue = signal._previousValue?.asReady?.value;
+  // }
   final jsonValue = _toJson(value);
   final jsonPreviousValue = _toJson(previousValue);
 
@@ -86,14 +88,14 @@ void _notifyDevToolsAboutSignal(
     'previousValue': jsonPreviousValue,
     'hasPreviousValue': signal.hasPreviousValue,
     'type': switch (signal) {
-      Resource() => 'Resource',
-      ListSignal() => 'ListSignal',
-      MapSignal() => 'MapSignal',
-      SetSignal() => 'SetSignal',
+      // Resource() => 'Resource',
+      // ListSignal() => 'ListSignal',
+      // MapSignal() => 'MapSignal',
+      // SetSignal() => 'SetSignal',
       Signal() => 'Signal',
       Computed() => 'Computed',
       ReadonlySignal() => 'ReadSignal',
-      _ => 'Unknown',
+      // _ => 'Unknown',
     },
     'valueType': value.runtimeType.toString(),
     if (signal.hasPreviousValue)
