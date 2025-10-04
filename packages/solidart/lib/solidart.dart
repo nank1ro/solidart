@@ -3,6 +3,7 @@
 /// More dartdocs go here.
 library;
 
+export 'src/compatibility.dart';
 export 'src/computed.dart' show Computed;
 export 'src/config.dart';
 export 'src/effect.dart' show Effect;
