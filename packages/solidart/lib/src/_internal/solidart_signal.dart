@@ -149,7 +149,7 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
     if (isDisposed) return false;
 
     flags = 1 /* Mutable */;
-    if ((equals && super.previousValue == latestValue) ||
+    if ((equals && super.previousValue != latestValue) ||
         (!equals && !comparator(super.previousValue, latestValue))) {
       super.previousValue = latestValue;
       notifySignalUpdate();
