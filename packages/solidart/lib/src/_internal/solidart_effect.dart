@@ -52,6 +52,12 @@ class SolidartEffect extends alien.PresetEffect implements Effect, Disposable {
     final prevSub = alien.setActiveSub(this);
     try {
       callback();
+    } catch (e) {
+      if (onError == null) {
+        rethrow;
+      }
+
+      onError!(e);
     } finally {
       alien.setActiveSub(prevSub);
     }

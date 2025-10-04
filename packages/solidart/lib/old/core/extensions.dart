@@ -1,5 +1,3 @@
-part of 'core.dart';
-
 /// Adds the [toggle] method to boolean signals
 extension ToggleBoolSignal on Signal<bool> {
   /// Toggles the signal boolean value.
