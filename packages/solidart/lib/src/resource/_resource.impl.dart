@@ -161,12 +161,15 @@ class _ResourceImpl<T> implements Resource<T> {
     }
 
     transition();
+    completer = Completer<void>();
     final prevSub = alien.setActiveSub(null);
     try {
       final result = await fetcher!();
       signal.value = ResourceState<T>.ready(result);
+      completer!.complete(null);
     } catch (error, stackTrace) {
       signal.value = ResourceState<T>.error(error, stackTrace: stackTrace);
+      completer!.completeError(error, stackTrace);
     } finally {
       alien.setActiveSub(prevSub);
     }
