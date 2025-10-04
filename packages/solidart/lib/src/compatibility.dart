@@ -6,7 +6,7 @@ import 'package:solidart/src/utils.dart';
 
 typedef SignalBase<T> = ReadonlySignal<T>;
 typedef ReadSignal<T> = ReadonlySignal<T>;
-typedef DisposeEffect = Effect;
+typedef DisposeEffect = void Function();
 
 extension SolidartSignalCall<T> on ReadonlySignal<T> {
   T call() => value;
