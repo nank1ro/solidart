@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-import 'package:solidart/src2/core/signal.dart';
+import 'package:solidart/next/core/signal.dart';
 
 final class ReadonlySignalProxy<T> implements ReadonlySignal<T> {
   const ReadonlySignalProxy(this.upstream);

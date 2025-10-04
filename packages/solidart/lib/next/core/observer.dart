@@ -1,4 +1,4 @@
-import 'package:solidart/src2/core/signal.dart';
+import 'package:solidart/next/core/signal.dart';
 
 /// {@template solidart-observer}
 /// An object that listens to the changes of the reactive system.
