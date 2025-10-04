@@ -28,8 +28,6 @@ class _ReactiveListImpl<E> extends SolidartSignal<List<E>>
       : raw = initialValue,
         super(name: name ?? 'ListSignal');
 
-  bool dirty = false;
-
   final List<E> raw;
 
   @override

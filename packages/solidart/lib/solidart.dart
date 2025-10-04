@@ -4,6 +4,8 @@
 library;
 
 export 'src/collections/list.dart' show ListSignal;
+export 'src/collections/map.dart' show MapSignal;
+export 'src/collections/set.dart' show SetSignal;
 
 export 'src/compatibility.dart';
 export 'src/computed.dart' show Computed;
