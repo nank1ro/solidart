@@ -259,7 +259,9 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 50));
 
         // If we reach here without issues, cleanup worked
-        expect(count.value, 10);
+        // Why is 10? The signal is destroyed, There should be no more data
+        // updates
+        expect(count.value, 0);
       });
 
       test('test until() with timeout - proper cleanup on success', () async {
@@ -285,7 +287,9 @@ void main() {
         count.value = 15;
 
         // If we reach here without issues, cleanup worked
-        expect(count.value, 15);
+        // Why is 10? The signal is destroyed, There should be no more data
+        // updates
+        expect(count.value, 10);
       });
 
       test('check toString()', () {

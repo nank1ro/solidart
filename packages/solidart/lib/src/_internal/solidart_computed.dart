@@ -29,6 +29,14 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
   final T Function() selector;
 
   @override
+  T Function(T?) get getter {
+    return (_) {
+      hasPreviousValue = true;
+      return selector();
+    };
+  }
+
+  @override
   final bool trackInDevTools;
 
   @override
@@ -50,10 +58,7 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
   final bool equals;
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  bool get hasPreviousValue => untrackedPreviousValue != null && flags != 0;
+  bool hasPreviousValue = false;
 
   @override
   @pragma('vm:prefer-inline')
