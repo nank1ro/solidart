@@ -981,7 +981,7 @@ void main() {
         }
 
         var dataCalledTimes = 0;
-        var loadingCalledTimes = 0;
+        var loadingCallbackCount = 0;
         var errorCalledTimes = 0;
         var refreshingOnDataTimes = 0;
         var refreshingOnErrorTimes = 0;
@@ -1005,15 +1005,14 @@ void main() {
                 }
               },
               loading: () {
-                loadingCalledTimes++;
+                loadingCallbackCount++;
               },
             );
           },
         );
 
         await Future<void>.delayed(const Duration(milliseconds: 40));
-
-        expect(loadingCalledTimes, 1);
+        expect(loadingCallbackCount, 1);
         await Future<void>.delayed(const Duration(milliseconds: 150));
 
         expect(dataCalledTimes, 1);
@@ -1044,7 +1043,7 @@ void main() {
         expect(errorCalledTimes, 2);
         expect(dataCalledTimes, 3);
 
-        expect(loadingCalledTimes, 1);
+        expect(loadingCallbackCount, 1);
       });
 
       test(

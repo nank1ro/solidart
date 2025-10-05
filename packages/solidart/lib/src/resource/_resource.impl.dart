@@ -12,6 +12,9 @@ class _ResourceImpl<T> implements Resource<T> {
     if (!lazy) refresh();
   }
 
+  /// Tracks whether initial refresh has started for lazy resources
+  bool _hasStartedInitialRefresh = false;
+
   /// Indicates whether the resource should be computed lazily, defaults to true
   final bool lazy;
 
@@ -104,7 +107,10 @@ class _ResourceImpl<T> implements Resource<T> {
 
   @override
   ResourceState<T> get value {
-    if (lazy) refresh();
+    if (lazy && !_hasStartedInitialRefresh) {
+      _hasStartedInitialRefresh = true;
+      refresh();
+    }
     return signal.value;
   }
 
@@ -158,14 +164,23 @@ class _ResourceImpl<T> implements Resource<T> {
   }
 
   void transition() {
+    final currentState = signal.untrackedValue;
+
     if (useRefreshing) {
-      signal.value = signal.untrackedValue.map(
+      final newState = currentState.map(
         ready: (ready) => ready.copyWith(isRefreshing: true),
         error: (error) => error.copyWith(isRefreshing: true),
         loading: (_) => ResourceState<T>.loading(),
       );
+      // Only update if the state actually changes
+      if (newState != currentState) {
+        signal.value = newState;
+      }
     } else {
-      signal.value = ResourceState<T>.loading();
+      // Only set to loading if not already loading
+      if (!currentState.isLoading) {
+        signal.value = ResourceState<T>.loading();
+      }
     }
   }
 
@@ -177,7 +192,6 @@ class _ResourceImpl<T> implements Resource<T> {
 
     transition();
     completer = Completer<void>();
-    final prevSub = alien.setActiveSub(null);
     try {
       final result = await fetcher!();
       signal.value = ResourceState<T>.ready(result);
@@ -189,8 +203,6 @@ class _ResourceImpl<T> implements Resource<T> {
       if (!completer!.isCompleted) {
         completer!.complete();
       }
-    } finally {
-      alien.setActiveSub(prevSub);
     }
   }
 
