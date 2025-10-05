@@ -98,7 +98,7 @@ class _ResourceImpl<T> implements Resource<T> {
 
   @override
   ResourceState<T> get value {
-    if (lazy) refresh().ignore();
+    if (lazy) refresh();
     return signal.value;
   }
 
@@ -126,7 +126,7 @@ class _ResourceImpl<T> implements Resource<T> {
       }
     }
 
-    if (fetcher != null && stream == null) {
+    if (fetcher != null) {
       return refetch();
     }
     return resubscribe();
@@ -171,7 +171,7 @@ class _ResourceImpl<T> implements Resource<T> {
       completer!.complete(null);
     } catch (error, stackTrace) {
       signal.value = ResourceState<T>.error(error, stackTrace: stackTrace);
-      completer!.completeError(error, stackTrace);
+      completer!.complete();
     } finally {
       alien.setActiveSub(prevSub);
     }
@@ -181,6 +181,14 @@ class _ResourceImpl<T> implements Resource<T> {
   Future<void> resubscribe() async {
     transition();
 
+    // If we have a source, we need to recreate the subscription
+    // because the stream function might return a different stream
+    if (source != null) {
+      await subscription?.cancel();
+      subscription = null;
+    }
+
+    // If subscription exists and no source, just update callbacks
     if (subscription != null) {
       subscription!.onData((data) {
         signal.value = ResourceState.ready(data);
@@ -190,6 +198,7 @@ class _ResourceImpl<T> implements Resource<T> {
       });
     }
 
+    // Create new subscription if needed
     subscription ??= stream!().listen((state) {
       signal.value = ResourceState.ready(state);
     }, onError: (Object error, StackTrace stackTrace) {
