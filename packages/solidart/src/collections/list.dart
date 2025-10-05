@@ -18,8 +18,8 @@ class SolidartReactiveList<E> extends SolidartSignal<List<E>>
   int get length => value.length;
 
   set length(int newLength) {
-    if (latestValue.length == newLength) return;
-    latestValue.length = newLength;
+    if (latestValue!.length == newLength) return;
+    latestValue!.length = newLength;
     trigger();
   }
 
@@ -28,13 +28,13 @@ class SolidartReactiveList<E> extends SolidartSignal<List<E>>
 
   @override
   void operator []=(int index, E value) {
-    latestValue[index] = value;
+    latestValue![index] = value;
     trigger();
   }
 
   @override
   void add(E element) {
-    latestValue.add(element);
+    latestValue!.add(element);
     trigger();
   }
 }
