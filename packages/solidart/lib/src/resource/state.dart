@@ -325,3 +325,4 @@ extension ResourceExtensions<T> on ResourceState<T> {
     );
   }
 }
+// coverage:ignore-end
