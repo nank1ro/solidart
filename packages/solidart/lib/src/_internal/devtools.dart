@@ -82,7 +82,7 @@ void _notifyDevToolsAboutSignal(
   var previousValue = signal.previousValue;
   if (signal is Resource) {
     value = signal.state.asReady?.value;
-    previousValue = signal.state.asReady?.value;
+    previousValue = signal.previousState?.asReady?.value;
   }
   final jsonValue = _toJson(value);
   final jsonPreviousValue = _toJson(previousValue);
