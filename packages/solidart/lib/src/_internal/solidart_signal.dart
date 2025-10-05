@@ -179,6 +179,13 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
   }
 
   @override
+  void maybeDispose() {
+    if (autoDispose && listenerCount == 0) {
+      dispose();
+    }
+  }
+
+  @override
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')

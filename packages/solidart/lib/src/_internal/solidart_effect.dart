@@ -80,12 +80,24 @@ class SolidartEffect extends alien.PresetEffect implements Effect, Disposable {
     if (isDisposed) return;
 
     isDisposed = true;
+    final deps = <Disposable>[];
+
+    for (var link = this.deps; link != null; link = link.nextDep) {
+      if (link.dep case final Disposable disposable) {
+        deps.add(disposable);
+      }
+    }
+
     for (final callback in callbacks) {
       callback();
     }
-    callbacks.clear();
 
+    callbacks.clear();
     super.dispose();
+
+    for (final dep in deps) {
+      dep.maybeDispose();
+    }
   }
 
   @override
