@@ -10,7 +10,10 @@ import 'disposable.dart';
 
 abstract interface class Effect implements Disposable, Debuggable {
   factory Effect(void Function() callback,
-      {bool? autoDispose, String? debugLabel}) = SolidartEffect;
+      {bool? autoDispose,
+      String? debugLabel,
+      bool? autorun,
+      Duration? delay}) = SolidartEffect;
 
   void run();
 }
@@ -19,15 +22,19 @@ class SolidartEffect extends alien.PresetEffect
     with AutoDisposable
     implements Effect {
   SolidartEffect(void Function() callback,
-      {bool? autoDispose, String? debugLabel, bool? autorun, Duration? delay})
+      {bool? autoDispose,
+      String? debugLabel,
+      bool? autorun,
+      Duration? delay,
+      bool? detach})
       : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
         debugLabel = createDebugLabel(debugLabel),
         super(callback: callback) {
     void init() {
       timer = null;
       final prevSub = alien.getActiveSub();
-
-      if (prevSub != null) {
+      if (prevSub != null &&
+          (detach ?? SolidartConfig.detachEffects) == false) {
         alien.system.link(this, prevSub, 0);
       }
       if (autorun == true) run();
