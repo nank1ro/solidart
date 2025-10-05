@@ -1012,8 +1012,10 @@ void main() {
         );
 
         await Future<void>.delayed(const Duration(milliseconds: 40));
+
         expect(loadingCalledTimes, 1);
         await Future<void>.delayed(const Duration(milliseconds: 150));
+
         expect(dataCalledTimes, 1);
         expect(errorCalledTimes, 0);
 

@@ -27,6 +27,12 @@ class _ResourceImpl<T> implements Resource<T> {
   /// The debounce delay when the source changes, optional.
   final Duration? debounceDelay;
 
+  /// Cached current stream to avoid unnecessary resubscriptions
+  Stream<T>? _currentStream;
+
+  /// Cached broadcast stream mapped by original stream to allow re-subscription
+  final Map<Stream<T>, Stream<T>> _broadcastStreamCache = {};
+
   final bool useRefreshing;
 
   late final Signal<ResourceState<T>> signal;
@@ -129,7 +135,14 @@ class _ResourceImpl<T> implements Resource<T> {
     if (fetcher != null) {
       return refetch();
     }
-    return resubscribe();
+
+    // For stream resources, either resubscribe (if source exists) or create initial subscription
+    if (source != null) {
+      resubscribe();
+    } else if (subscription == null) {
+      // Create initial subscription for sourceless stream resources
+      resubscribe();
+    }
   }
 
   @override
@@ -168,42 +181,56 @@ class _ResourceImpl<T> implements Resource<T> {
     try {
       final result = await fetcher!();
       signal.value = ResourceState<T>.ready(result);
-      completer!.complete(null);
+      if (!completer!.isCompleted) {
+        completer!.complete();
+      }
     } catch (error, stackTrace) {
       signal.value = ResourceState<T>.error(error, stackTrace: stackTrace);
-      completer!.complete();
+      if (!completer!.isCompleted) {
+        completer!.complete();
+      }
     } finally {
       alien.setActiveSub(prevSub);
     }
   }
 
   StreamSubscription<T>? subscription;
-  Future<void> resubscribe() async {
-    transition();
+  bool _resubscribing = false;
 
-    // If we have a source, we need to recreate the subscription
-    // because the stream function might return a different stream
-    if (source != null) {
-      await subscription?.cancel();
-      subscription = null;
+  void resubscribe() {
+    if (_resubscribing) return;
+    _resubscribing = true;
+
+    try {
+      transition();
+
+      final newStream = stream!();
+
+      // Only resubscribe if stream has changed or no existing subscription
+      if (subscription == null || _currentStream != newStream) {
+        // Cancel old subscription if it exists
+        subscription?.cancel();
+
+        // Create new subscription to the new stream immediately
+        // Use cached broadcast stream for this specific stream
+        _currentStream = newStream;
+
+        // Get or create broadcast stream for this specific stream
+        final broadcastStream = _broadcastStreamCache.putIfAbsent(
+          newStream,
+          () =>
+              newStream.isBroadcast ? newStream : newStream.asBroadcastStream(),
+        );
+
+        subscription = broadcastStream.listen((state) {
+          signal.value = ResourceState.ready(state);
+        }, onError: (Object error, StackTrace stackTrace) {
+          signal.value = ResourceState.error(error, stackTrace: stackTrace);
+        });
+      }
+    } finally {
+      _resubscribing = false;
     }
-
-    // If subscription exists and no source, just update callbacks
-    if (subscription != null) {
-      subscription!.onData((data) {
-        signal.value = ResourceState.ready(data);
-      });
-      subscription!.onError((Object error, StackTrace stackTrace) {
-        signal.value = ResourceState.error(error, stackTrace: stackTrace);
-      });
-    }
-
-    // Create new subscription if needed
-    subscription ??= stream!().listen((state) {
-      signal.value = ResourceState.ready(state);
-    }, onError: (Object error, StackTrace stackTrace) {
-      signal.value = ResourceState.error(error, stackTrace: stackTrace);
-    });
   }
 
   @override
