@@ -4,6 +4,9 @@ import 'config.dart';
 import 'disposable.dart';
 
 abstract interface class ReadonlySignal<T> implements Disposable {
+  factory ReadonlySignal(T initialValue, {bool? autoDispose}) =
+      SolidartReadonlySignal<T>;
+
   T get value;
 }
 
@@ -12,6 +15,8 @@ abstract interface class Signal<T> implements ReadonlySignal<T> {
   factory Signal.lazy({bool? autoDispose}) = SolidartLazySignal<T>;
 
   set value(T newValue);
+
+  ReadonlySignal<T> toReadonly();
 }
 
 class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
@@ -49,6 +54,9 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
   void maybeDispose() {
     if (subs == null) super.maybeDispose();
   }
+
+  @override
+  ReadonlySignal<T> toReadonly() => this;
 }
 
 class SolidartLazySignal<T> extends SolidartSignal<T> {
@@ -66,5 +74,15 @@ class SolidartLazySignal<T> extends SolidartSignal<T> {
   set value(T newValue) {
     if (!isInitialized) isInitialized = true;
     super.value = newValue;
+  }
+}
+
+class SolidartReadonlySignal<T> extends SolidartSignal<T> {
+  SolidartReadonlySignal(super.initialValue, {super.autoDispose});
+
+  @override
+  set value(_) {
+    throw UnsupportedError(
+        'Read-only signals do not allow new values to be written');
   }
 }
