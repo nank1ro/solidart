@@ -82,7 +82,7 @@ class _ResourceImpl<T> implements Resource<T> {
   ResourceState<T>? get previousValue => signal.previousValue;
 
   @override
-  ResourceState<T> get state => signal.value;
+  ResourceState<T> get state => value;
 
   @override
   bool get trackInDevTools => signal.trackInDevTools;
@@ -98,19 +98,19 @@ class _ResourceImpl<T> implements Resource<T> {
 
   @override
   ResourceState<T> get value {
-    if (lazy) refetch().ignore();
+    if (lazy) refresh().ignore();
     return signal.value;
   }
 
   Timer? timer;
   void debounceRefresh() {
     if (debounceDelay == null) {
-      return Future.microtask(refresh).ignore();
+      return refresh().ignore();
     }
 
     timer?.cancel();
     timer = Timer(debounceDelay!, () {
-      Future.microtask(refresh).ignore();
+      refresh().ignore();
       timer = null;
     });
   }
@@ -126,7 +126,9 @@ class _ResourceImpl<T> implements Resource<T> {
       }
     }
 
-    if (fetcher != null) return refetch();
+    if (fetcher != null && stream == null) {
+      return refetch();
+    }
     return resubscribe();
   }
 
@@ -175,12 +177,20 @@ class _ResourceImpl<T> implements Resource<T> {
     }
   }
 
-  late Stream<T> broadcast = stream!().asBroadcastStream();
   StreamSubscription<T>? subscription;
   Future<void> resubscribe() async {
-    await subscription?.cancel();
     transition();
-    subscription = broadcast.listen((state) {
+
+    if (subscription != null) {
+      subscription!.onData((data) {
+        signal.value = ResourceState.ready(data);
+      });
+      subscription!.onError((Object error, StackTrace stackTrace) {
+        signal.value = ResourceState.error(error, stackTrace: stackTrace);
+      });
+    }
+
+    subscription ??= stream!().listen((state) {
       signal.value = ResourceState.ready(state);
     }, onError: (Object error, StackTrace stackTrace) {
       signal.value = ResourceState.error(error, stackTrace: stackTrace);
