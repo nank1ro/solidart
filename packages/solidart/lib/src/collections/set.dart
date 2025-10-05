@@ -33,7 +33,7 @@ class _ReactiveSetImpl<E> extends SolidartSignal<Set<E>>
       super.equals,
       String? name})
       : raw = initialValue,
-        super(name: name ?? 'ListSignal');
+        super(name: name ?? 'SetSignal');
 
   Set<E> raw;
 
