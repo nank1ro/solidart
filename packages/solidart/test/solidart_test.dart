@@ -1063,7 +1063,11 @@ void main() {
           () async {
         final count = Resource<int>(() => Future.value(1), lazy: false);
         var fired = false;
-        count.until((v) => true).then((value) => fired = true);
+        count.until((v) => true).then((value) {
+          fired = true;
+        });
+        // Wait for microtask queue to process
+        await Future.value();
         expect(fired, true);
       });
 

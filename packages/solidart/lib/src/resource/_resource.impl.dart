@@ -153,6 +153,11 @@ class _ResourceImpl<T> implements Resource<T> {
 
   @override
   FutureOr<T> untilReady() async {
+    // Ensure lazy resource starts executing
+    if (lazy && !_hasStartedInitialRefresh) {
+      _hasStartedInitialRefresh = true;
+      await refresh();
+    }
     final state = await signal.until((e) => e.isReady);
     return state.asReady!.value;
   }
@@ -253,4 +258,9 @@ class _ResourceImpl<T> implements Resource<T> {
 
   @override
   ResourceState<T> get untrackedState => untrackedValue;
+
+  @override
+  String toString() {
+    return 'Resource<$T>(state: ${signal.value})';
+  }
 }
