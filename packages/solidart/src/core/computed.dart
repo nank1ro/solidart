@@ -1,3 +1,4 @@
+import '_utils.dart';
 import 'config.dart';
 import 'disposable.dart';
 import 'signal.dart';
@@ -13,11 +14,16 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
     return (_) => callback();
   }
 
-  SolidartComputed(T Function() callback, {bool? autoDispose})
+  SolidartComputed(T Function() callback,
+      {bool? autoDispose, String? debugLabel})
       : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+        debugLabel = createDebugLabel(debugLabel),
         super(getter: toAlienGetter<T>(callback));
 
   late final dependencies = <AutoDisposable>[];
+
+  @override
+  final String debugLabel;
 
   @override
   final bool autoDispose;

@@ -1,18 +1,23 @@
 import 'package:alien_signals/preset_developer.dart' as alien;
 
+import '_utils.dart';
 import 'config.dart';
+import 'debuggable.dart';
 import 'disposable.dart';
 
-abstract interface class ReadonlySignal<T> implements Disposable {
-  factory ReadonlySignal(T initialValue, {bool? autoDispose}) =
-      SolidartReadonlySignal<T>;
+abstract interface class ReadonlySignal<T> implements Disposable, Debuggable {
+  factory ReadonlySignal(T initialValue,
+      {bool? autoDispose, String? debugLabel}) = SolidartReadonlySignal<T>;
 
   T get value;
 }
 
 abstract interface class Signal<T> implements ReadonlySignal<T> {
-  factory Signal(T initialValue, {bool? autoDispose}) = SolidartSignal<T>;
-  factory Signal.lazy({bool? autoDispose}) = SolidartLazySignal<T>;
+  factory Signal(T initialValue, {bool? autoDispose, String? debugLabel}) =
+      SolidartSignal<T>;
+
+  factory Signal.lazy({bool? autoDispose, String? debugLabel}) =
+      SolidartLazySignal<T>;
 
   set value(T newValue);
 
@@ -22,12 +27,16 @@ abstract interface class Signal<T> implements ReadonlySignal<T> {
 class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
     with AutoDisposable
     implements Signal<T> {
-  SolidartSignal(T? initialValue, {bool? autoDispose})
+  SolidartSignal(T? initialValue, {bool? autoDispose, String? debugLabel})
       : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+        debugLabel = createDebugLabel<Signal<T>>(debugLabel),
         super(initialValue: initialValue);
 
   @override
   final bool autoDispose;
+
+  @override
+  final String debugLabel;
 
   @override
   bool disposed = false;
@@ -60,7 +69,7 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
 }
 
 class SolidartLazySignal<T> extends SolidartSignal<T> {
-  SolidartLazySignal({super.autoDispose}) : super(null);
+  SolidartLazySignal({super.autoDispose, super.debugLabel}) : super(null);
 
   bool isInitialized = false;
 
@@ -78,7 +87,9 @@ class SolidartLazySignal<T> extends SolidartSignal<T> {
 }
 
 class SolidartReadonlySignal<T> extends SolidartSignal<T> {
-  SolidartReadonlySignal(super.initialValue, {super.autoDispose});
+  SolidartReadonlySignal(super.initialValue,
+      {super.autoDispose, String? debugLabel})
+      : super(debugLabel: createDebugLabel<ReadonlySignal<T>>(debugLabel));
 
   @override
   set value(_) {

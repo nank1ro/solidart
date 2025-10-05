@@ -1,31 +1,53 @@
+import 'dart:async';
+
 import 'package:alien_signals/alien_signals.dart' as alien;
 import 'package:alien_signals/preset_developer.dart' as alien;
 
+import '_utils.dart';
 import 'config.dart';
+import 'debuggable.dart';
 import 'disposable.dart';
 
-abstract interface class Effect implements Disposable {}
+abstract interface class Effect implements Disposable, Debuggable {
+  factory Effect(void Function() callback,
+      {bool? autoDispose, String? debugLabel}) = SolidartEffect;
+
+  void run();
+}
 
 class SolidartEffect extends alien.PresetEffect
     with AutoDisposable
     implements Effect {
-  SolidartEffect(void Function() callback, {bool? autoDispose})
+  SolidartEffect(void Function() callback,
+      {bool? autoDispose, String? debugLabel, bool? autorun, Duration? delay})
       : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+        debugLabel = createDebugLabel(debugLabel),
         super(callback: callback) {
-    final prevSub = alien.setActiveSub(this);
-    if (prevSub != null) {
-      alien.system.link(this, prevSub, 0);
+    void init() {
+      timer = null;
+      final prevSub = alien.getActiveSub();
+
+      if (prevSub != null) {
+        alien.system.link(this, prevSub, 0);
+      }
+      if (autorun == true) run();
     }
 
-    try {
-      callback();
-    } finally {
-      alien.setActiveSub(prevSub);
+    if (delay == null) {
+      init();
+      return;
     }
+
+    timer = Timer(delay, init);
   }
 
   @override
   final bool autoDispose;
+
+  @override
+  final String debugLabel;
+
+  Timer? timer;
 
   @override
   bool disposed = false;
@@ -35,6 +57,8 @@ class SolidartEffect extends alien.PresetEffect
     if (disposed) return;
 
     disposed = true;
+    timer?.cancel();
+
     for (var link = subs; link != null; link = link.nextSub) {
       if (link.sub case final AutoDisposable disposable) {
         disposable.maybeDispose();
@@ -50,5 +74,15 @@ class SolidartEffect extends alien.PresetEffect
 
     super.dispose();
     deps.forEach((dep) => dep.maybeDispose());
+  }
+
+  @override
+  void run() {
+    final prevSub = alien.setActiveSub(this);
+    try {
+      callback();
+    } finally {
+      alien.setActiveSub(prevSub);
+    }
   }
 }
