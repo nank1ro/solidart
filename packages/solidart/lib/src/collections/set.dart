@@ -51,8 +51,10 @@ class _ReactiveSetImpl<E> extends SolidartSignal<Set<E>>
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   bool add(E value) {
+    if (raw.contains(value)) return false;
+    untrackedPreviousValue = Set<E>.from(raw);
     final result = raw.add(value);
-    if (result) trigger();
+    trigger();
     return result;
   }
 
@@ -89,8 +91,10 @@ class _ReactiveSetImpl<E> extends SolidartSignal<Set<E>>
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   bool remove(Object? value) {
+    if (!raw.contains(value)) return false;
+    untrackedPreviousValue = Set<E>.from(raw);
     final result = raw.remove(value);
-    if (result) trigger();
+    trigger();
     return result;
   }
 

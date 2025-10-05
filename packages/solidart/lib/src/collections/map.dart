@@ -59,6 +59,7 @@ class _MapImpl<K, V> with MapBase<K, V> implements MapSignal<K, V> {
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   void operator []=(K key, V value) {
+    reactive.untrackedPreviousValue = Map<K, V>.from(raw);
     raw[key] = value;
     reactive.trigger();
   }
@@ -68,6 +69,7 @@ class _MapImpl<K, V> with MapBase<K, V> implements MapSignal<K, V> {
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   void clear() {
+    reactive.untrackedPreviousValue = Map<K, V>.from(raw);
     raw.clear();
     reactive.trigger();
   }
@@ -83,6 +85,8 @@ class _MapImpl<K, V> with MapBase<K, V> implements MapSignal<K, V> {
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   V? remove(Object? key) {
+    if (!raw.containsKey(key)) return null;
+    reactive.untrackedPreviousValue = Map<K, V>.from(raw);
     final result = raw.remove(key);
     reactive.trigger();
     return result;

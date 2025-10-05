@@ -40,7 +40,7 @@ extension UpdatableSignalOpers<T> on Signal<T> {
   @pragma('dart2js:prefer-inline')
   void updateValue(T Function(T value) updates) {
     if (this is ListSignal || this is MapSignal || this is SetSignal) {
-      updates(this as T);
+      batch(() => updates(this as T));
     } else {
       value = updates(untrackedValue);
     }
