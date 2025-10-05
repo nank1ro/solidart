@@ -183,4 +183,7 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   ReadonlySignal<T> toReadonly() => ReadonlySignalProxy(this);
+
+  @override
+  String toString() => 'Signal<$T>(value: $untrackedValue)';
 }

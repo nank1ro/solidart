@@ -7,6 +7,7 @@ import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
 import 'package:solidart/solidart.dart';
+import 'package:solidart/src/signal.dart';
 import 'package:test/test.dart';
 
 sealed class MyEvent {}
@@ -305,7 +306,7 @@ void main() {
       test('check Signal becomes ReadSignal', () {
         final s = Signal(0);
         expect(s, const TypeMatcher<Signal<int>>());
-        expect(s.toReadSignal(), const TypeMatcher<ReadableSignal<int>>());
+        expect(s.toReadSignal(), const TypeMatcher<ReadonlySignal<int>>());
       });
 
       test('Signal is disposed after dispose', () {
