@@ -74,10 +74,7 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
   final bool trackPreviousValue;
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  bool get hasPreviousValue => untrackedPreviousValue != null;
+  bool hasPreviousValue = false;
 
   @override
   @pragma('vm:prefer-inline')
@@ -135,6 +132,7 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
   @pragma('dart2js:prefer-inline')
   set value(T newValue) {
     if (isDisposed) return;
+    hasPreviousValue = true;
     super(newValue, true);
   }
 
