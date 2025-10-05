@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:alien_signals/alien_signals.dart' as alien;
 import 'package:alien_signals/preset_developer.dart' as alien;
 
-import '_utils.dart';
+import '_internal.dart';
 import 'config.dart';
 import 'debuggable.dart';
 import 'disposable.dart';

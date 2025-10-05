@@ -1,4 +1,4 @@
-import '_utils.dart';
+import '_internal.dart';
 import 'config.dart';
 import 'disposable.dart';
 import 'signal.dart';
