@@ -201,4 +201,7 @@ class _MapImpl<K, V> with MapBase<K, V> implements MapSignal<K, V> {
   set value(Map<K, V> newValue) {
     reactive.value = newValue;
   }
+
+  @override
+  String toString() => 'MapSignal<$K, $V>(value: $untrackedValue)';
 }

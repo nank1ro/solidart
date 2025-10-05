@@ -99,4 +99,7 @@ class _ReactiveSetImpl<E> extends SolidartSignal<Set<E>>
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   Set<E> toSet() => value.toSet();
+
+  @override
+  String toString() => 'SetSignal<$E>(value: $untrackedValue)';
 }

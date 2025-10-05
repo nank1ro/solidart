@@ -30,6 +30,9 @@ class _ReactiveListImpl<E> extends SolidartSignal<List<E>>
   List<E> raw;
 
   @override
+  List<E>? untrackedPreviousValue;
+
+  @override
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
@@ -47,6 +50,7 @@ class _ReactiveListImpl<E> extends SolidartSignal<List<E>>
   @override
   set length(int newLength) {
     if (raw.length != newLength) {
+      untrackedPreviousValue = [...raw];
       raw.length = newLength;
       trigger();
     }
@@ -63,6 +67,7 @@ class _ReactiveListImpl<E> extends SolidartSignal<List<E>>
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   void operator []=(int index, E value) {
+    untrackedPreviousValue = [...raw];
     raw[index] = value;
     trigger();
   }
@@ -72,7 +77,11 @@ class _ReactiveListImpl<E> extends SolidartSignal<List<E>>
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   void add(E element) {
+    untrackedPreviousValue = [...raw];
     raw.add(element);
     trigger();
   }
+
+  @override
+  String toString() => 'ListSignal<$E>(value: $untrackedValue)';
 }

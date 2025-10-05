@@ -13,7 +13,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  alien_signals: ">=1.0.1 <2.0.0"
+  alien_signals: ^1.0.1
   collection: any
   meta: any
 
