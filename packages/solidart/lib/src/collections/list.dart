@@ -30,9 +30,6 @@ class _ReactiveListImpl<E> extends SolidartSignal<List<E>>
   List<E> raw;
 
   @override
-  List<E>? untrackedPreviousValue;
-
-  @override
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')

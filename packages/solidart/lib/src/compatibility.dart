@@ -1,5 +1,8 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:solidart/src/collections/list.dart';
+import 'package:solidart/src/collections/map.dart';
+import 'package:solidart/src/collections/set.dart';
 import 'package:solidart/src/effect.dart';
 import 'package:solidart/src/signal.dart';
 import 'package:solidart/src/utils.dart';
@@ -36,7 +39,11 @@ extension UpdatableSignalOpers<T> on Signal<T> {
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   void updateValue(T Function(T value) updates) {
-    value = updates(untrackedValue);
+    if (this is ListSignal || this is MapSignal || this is SetSignal) {
+      updates(this as T);
+    } else {
+      value = updates(untrackedValue);
+    }
   }
 
   @pragma('vm:prefer-inline')
