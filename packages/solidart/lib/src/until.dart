@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:solidart/src/effect.dart';
 import 'package:solidart/src/signal.dart';
 
 extension Until<T> on ReadonlySignal<T> {
@@ -15,21 +16,32 @@ extension Until<T> on ReadonlySignal<T> {
       {Duration? timeout}) async {
     final locals = value;
     if (condition(locals)) return locals;
-    if (timeout == null) {
-      throw TimeoutException(null, timeout);
-    }
 
+    Timer? timer;
+    late final Effect effect;
     final completer = Completer<T>();
-    Timer(timeout, () {
-      if (completer.isCompleted) return;
 
-      final locals = value;
-      if (condition(locals)) {
-        return completer.complete(locals);
+    effect = Effect(() {
+      if (condition(value)) {
+        timer?.cancel();
+        effect.dispose();
+        return completer.complete(value);
       }
+    }, autoDispose: false);
 
-      completer.completeError(TimeoutException(null, timeout));
-    });
+    if (timeout != null) {
+      timer = Timer(timeout, () {
+        if (completer.isCompleted) return;
+        effect.dispose();
+
+        final locals = value;
+        if (condition(locals)) {
+          return completer.complete(locals);
+        }
+
+        completer.completeError(TimeoutException(null, timeout));
+      });
+    }
 
     return completer.future;
   }
