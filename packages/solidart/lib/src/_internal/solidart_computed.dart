@@ -149,7 +149,8 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
   @pragma('vm:prefer-inline')
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
-  void run() {
-    selector();
-  }
+  void run() => selector();
+
+  @override
+  String toString() => 'Computed<$T>(value: $value)';
 }

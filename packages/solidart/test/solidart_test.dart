@@ -716,7 +716,7 @@ void main() {
 
       test('check toString()', () {
         final s = ReadableSignal(0);
-        expect(s.toString(), startsWith('ReadSignal<int>(value: 0'));
+        expect(s.toString(), startsWith('Signal<int>(value: 0'));
       });
 
       test('check untrackedValue throws if no value', () {
