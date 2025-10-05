@@ -15,7 +15,7 @@ class SolidartEffect extends alien.PresetEffect implements Effect, Disposable {
         name = name ?? nameFor('Effect'),
         super(callback: callback) {
     if (delay != null) {
-      Timer(delay, () => _init(detach: detach, autorun: autorun));
+      timer = Timer(delay, () => _init(detach: detach, autorun: autorun));
       return;
     }
 
@@ -32,6 +32,7 @@ class SolidartEffect extends alien.PresetEffect implements Effect, Disposable {
     if (autorun ?? true) run();
   }
 
+  Timer? timer;
   final void Function(Object? error)? onError;
 
   @override
@@ -79,6 +80,7 @@ class SolidartEffect extends alien.PresetEffect implements Effect, Disposable {
   void dispose() {
     if (isDisposed) return;
 
+    timer?.cancel();
     isDisposed = true;
     final deps = <Disposable>[];
 
