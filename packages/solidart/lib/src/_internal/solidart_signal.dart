@@ -38,6 +38,11 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
     if (this.trackInDevTools) {
       notifySignalCreation();
     }
+
+    // Notify observers of signal creation
+    for (final observer in SolidartConfig.observers) {
+      observer.didCreateSignal(this);
+    }
   }
 
   SolidartSignal.lazy(
@@ -132,8 +137,18 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
   @pragma('dart2js:prefer-inline')
   set value(T newValue) {
     if (isDisposed) return;
+
+    // Store previous value for observer notification
+    final oldValue = super.latestValue;
     hasPreviousValue = true;
     super(newValue, true);
+
+    // Notify observers if the value actually changed
+    if (oldValue != newValue) {
+      for (final observer in SolidartConfig.observers) {
+        observer.didUpdateSignal(this);
+      }
+    }
   }
 
   @override
@@ -173,6 +188,11 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
     super.dispose();
     if (trackInDevTools) {
       notifySignalDisposal();
+    }
+
+    // Notify observers of signal disposal
+    for (final observer in SolidartConfig.observers) {
+      observer.didDisposeSignal(this);
     }
   }
 

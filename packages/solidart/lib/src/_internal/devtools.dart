@@ -10,6 +10,8 @@ import 'package:solidart/src/collections/map.dart';
 import 'package:solidart/src/collections/set.dart';
 import 'package:solidart/src/computed.dart';
 import 'package:solidart/src/config.dart';
+import 'package:solidart/src/resource/resource.dart';
+import 'package:solidart/src/resource/state.dart';
 import 'package:solidart/src/signal.dart';
 
 /// The type of the event emitted to the devtools
@@ -78,10 +80,10 @@ void _notifyDevToolsAboutSignal(
   final eventName = 'ext.solidart.signal.${eventType.name}';
   var value = signal.value;
   var previousValue = signal.previousValue;
-  // if (signal is Resource) {
-  //   value = signal._value.asReady?.value;
-  //   previousValue = signal._previousValue?.asReady?.value;
-  // }
+  if (signal is Resource) {
+    value = signal.state.asReady?.value;
+    previousValue = signal.state.asReady?.value;
+  }
   final jsonValue = _toJson(value);
   final jsonPreviousValue = _toJson(previousValue);
 
@@ -91,7 +93,7 @@ void _notifyDevToolsAboutSignal(
     'previousValue': jsonPreviousValue,
     'hasPreviousValue': signal.hasPreviousValue,
     'type': switch (signal) {
-      // Resource() => 'Resource',
+      Resource() => 'Resource',
       ListSignal() => 'ListSignal',
       MapSignal() => 'MapSignal',
       SetSignal() => 'SetSignal',

@@ -1067,6 +1067,7 @@ void main() {
           fired = true;
         });
         // Wait for microtask queue to process
+        // ignore: inference_failure_on_instance_creation
         await Future.value();
         expect(fired, true);
       });
@@ -1871,6 +1872,8 @@ void main() {
   group(
     'SolidartObserver',
     () {
+      tearDown(SolidartConfig.observers.clear);
+
       test('didCreateSignal is fired on signal creation', () {
         final observer = MockSolidartObserver();
         SolidartConfig.observers.add(observer);
