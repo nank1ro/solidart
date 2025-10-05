@@ -133,6 +133,15 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
   @override
   void dispose() {
     if (isDisposed) return;
+
+    // Collect dependencies before super.dispose() clears them
+    final deps = <Disposable>[];
+    for (var link = this.deps; link != null; link = link.nextDep) {
+      if (link.dep case final Disposable disposable) {
+        deps.add(disposable);
+      }
+    }
+
     for (var link = subs; link != null; link = link.nextSub) {
       if (link.sub case final Disposable disposable) {
         disposable.maybeDispose();
@@ -142,6 +151,21 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
     super.dispose();
     if (trackInDevTools) {
       notifySignalDisposal();
+    }
+
+    // Dispose dependencies after super.dispose()
+    for (final dep in deps) {
+      dep.maybeDispose();
+    }
+  }
+
+  @override
+  @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
+  @pragma('dart2js:prefer-inline')
+  void maybeDispose() {
+    if (autoDispose && listenerCount == 0) {
+      dispose();
     }
   }
 

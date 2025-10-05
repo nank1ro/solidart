@@ -7,7 +7,7 @@ class MyEffectClass {
     Effect(() {
       signal.value;
       effectRun++;
-    });
+    }, detach: true);
   }
 
   int effectRun = 0;
