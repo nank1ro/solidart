@@ -137,14 +137,14 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
   @pragma('dart2js:prefer-inline')
   set value(T newValue) {
     if (isDisposed) return;
-
-    // Store previous value for observer notification
     final oldValue = super.latestValue;
     hasPreviousValue = true;
     super(newValue, true);
 
-    // Notify observers if the value actually changed
-    if (oldValue != newValue) {
+    // Check if value actually changed and notify observers
+    // Temporarily disabled to test if this causes flutter test failures
+    if ((equals && oldValue != newValue) ||
+        (!equals && !comparator(oldValue, newValue))) {
       for (final observer in SolidartConfig.observers) {
         observer.didUpdateSignal(this);
       }
@@ -168,6 +168,11 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
       super.previousValue = latestValue;
       if (trackInDevTools) {
         notifySignalUpdate();
+      }
+
+      // Notify observers of signal update
+      for (final observer in SolidartConfig.observers) {
+        observer.didUpdateSignal(this);
       }
 
       return true;
