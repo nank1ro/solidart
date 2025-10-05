@@ -136,7 +136,11 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   set value(T newValue) {
-    if (isDisposed) return;
+    if (isDisposed) {
+      super.latestValue = newValue;
+      return;
+    }
+
     final oldValue = super.latestValue;
     hasPreviousValue = true;
     super(newValue, true);
