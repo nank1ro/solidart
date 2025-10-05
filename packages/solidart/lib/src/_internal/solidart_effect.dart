@@ -2,7 +2,9 @@
 
 part of '../effect.dart';
 
-class SolidartEffect extends alien.PresetEffect implements Effect, Disposable {
+class SolidartEffect extends alien.PresetEffect
+    with Disposable
+    implements Effect {
   SolidartEffect(
     void Function() callback, {
     this.onError,
@@ -77,7 +79,7 @@ class SolidartEffect extends alien.PresetEffect implements Effect, Disposable {
   }
 
   @override
-  void dispose() {
+  void internalDispose() {
     if (isDisposed) return;
 
     timer?.cancel();
@@ -90,12 +92,8 @@ class SolidartEffect extends alien.PresetEffect implements Effect, Disposable {
       }
     }
 
-    for (final callback in callbacks) {
-      callback();
-    }
-
-    callbacks.clear();
     super.dispose();
+    super.internalDispose();
 
     for (final dep in deps) {
       dep.maybeDispose();
@@ -103,10 +101,5 @@ class SolidartEffect extends alien.PresetEffect implements Effect, Disposable {
   }
 
   @override
-  @pragma('vm:prefer-inline')
-  @pragma('wasm:prefer-inline')
-  @pragma('dart2js:prefer-inline')
-  void maybeDispose() {
-    if (autoDispose) dispose();
-  }
+  void dispose() => super.internalDispose();
 }

@@ -1,6 +1,6 @@
 part of 'resource.dart';
 
-class _ResourceImpl<T> implements Resource<T> {
+class _ResourceImpl<T> with Disposable implements Resource<T> {
   _ResourceImpl(
       {required this.lazy,
       required this.useRefreshing,
@@ -62,6 +62,7 @@ class _ResourceImpl<T> implements Resource<T> {
 
     signal.dispose();
     (effect as Effect).dispose();
+    internalDispose();
   }
 
   @override

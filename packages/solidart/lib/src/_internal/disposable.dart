@@ -20,7 +20,7 @@ mixin Disposable {
     _callbacks.add(callback);
   }
 
-  void dispose() {
+  void internalDispose() {
     if (isDisposed) return;
 
     _isDisposed = true;
@@ -35,6 +35,6 @@ mixin Disposable {
   @pragma('wasm:prefer-inline')
   @pragma('dart2js:prefer-inline')
   void maybeDispose() {
-    if (autoDispose) dispose();
+    if (autoDispose) internalDispose();
   }
 }

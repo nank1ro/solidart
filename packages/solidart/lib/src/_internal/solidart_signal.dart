@@ -194,7 +194,7 @@ class SolidartSignal<T> extends alien.PresetWritableSignal<T?>
       }
     }
 
-    super.dispose();
+    super.internalDispose();
     if (trackInDevTools) {
       notifySignalDisposal();
     }

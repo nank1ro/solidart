@@ -131,7 +131,7 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
   }
 
   @override
-  void dispose() {
+  void internalDispose() {
     if (isDisposed) return;
 
     // Collect dependencies before super.dispose() clears them
@@ -148,7 +148,7 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
       }
     }
 
-    super.dispose();
+    super.internalDispose();
     if (trackInDevTools) {
       notifySignalDisposal();
     }
@@ -177,4 +177,9 @@ class SolidartComputed<T> extends alien.PresetComputed<T>
 
   @override
   String toString() => 'Computed<$T>(value: $value)';
+
+  @override
+  void dispose() {
+    return internalDispose();
+  }
 }
