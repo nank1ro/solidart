@@ -1,6 +1,18 @@
-part of 'core.dart';
-
 // coverage:ignore-start
+
+// ignore_for_file: public_member_api_docs
+
+import 'dart:convert';
+import 'dart:developer' as dev;
+
+import 'package:solidart/src/collections/list.dart';
+import 'package:solidart/src/collections/map.dart';
+import 'package:solidart/src/collections/set.dart';
+import 'package:solidart/src/computed.dart';
+import 'package:solidart/src/config.dart';
+import 'package:solidart/src/resource/resource.dart';
+import 'package:solidart/src/resource/state.dart';
+import 'package:solidart/src/signal.dart';
 
 /// The type of the event emitted to the devtools
 enum DevToolsEventType {
@@ -34,8 +46,8 @@ dynamic _toJson(Object? obj) {
 }
 
 /// Extension for the devtools
-extension DevToolsExt<T> on SignalBase<T> {
-  void _notifySignalCreation() {
+extension DevToolsExt<T> on ReadonlySignal<T> {
+  void notifySignalCreation() {
     for (final obs in SolidartConfig.observers) {
       obs.didCreateSignal(this);
     }
@@ -43,7 +55,7 @@ extension DevToolsExt<T> on SignalBase<T> {
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.created);
   }
 
-  void _notifySignalUpdate() {
+  void notifySignalUpdate() {
     for (final obs in SolidartConfig.observers) {
       obs.didUpdateSignal(this);
     }
@@ -51,7 +63,7 @@ extension DevToolsExt<T> on SignalBase<T> {
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
   }
 
-  void _notifySignalDisposal() {
+  void notifySignalDisposal() {
     for (final obs in SolidartConfig.observers) {
       obs.didDisposeSignal(this);
     }
@@ -61,7 +73,7 @@ extension DevToolsExt<T> on SignalBase<T> {
 }
 
 void _notifyDevToolsAboutSignal(
-  SignalBase<dynamic> signal, {
+  ReadonlySignal<dynamic> signal, {
   required DevToolsEventType eventType,
 }) {
   if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
@@ -69,8 +81,8 @@ void _notifyDevToolsAboutSignal(
   var value = signal.value;
   var previousValue = signal.previousValue;
   if (signal is Resource) {
-    value = signal._value.asReady?.value;
-    previousValue = signal._previousValue?.asReady?.value;
+    value = signal.state.asReady?.value;
+    previousValue = signal.previousState?.asReady?.value;
   }
   final jsonValue = _toJson(value);
   final jsonPreviousValue = _toJson(previousValue);
@@ -87,8 +99,8 @@ void _notifyDevToolsAboutSignal(
       SetSignal() => 'SetSignal',
       Signal() => 'Signal',
       Computed() => 'Computed',
-      ReadableSignal() => 'ReadSignal',
-      _ => 'Unknown',
+      ReadonlySignal() => 'ReadSignal',
+      // _ => 'Unknown',
     },
     'valueType': value.runtimeType.toString(),
     if (signal.hasPreviousValue)

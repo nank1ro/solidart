@@ -99,7 +99,7 @@ Computed<T> useComputed<T>(
 void useSolidartEffect(
   dynamic Function() cb, {
 
-  void Function(Object error)? onError,
+  void Function(Object? error)? onError,
 
   /// The name of the effect, useful for logging
   String? name,
@@ -154,7 +154,7 @@ class _SignalHook<T, S extends ReadSignal<T>> extends Hook<S> {
 class _SignalHookState<T, S extends ReadSignal<T>>
     extends HookState<S, _SignalHook<T, S>> {
   late final _instance = hook.initialData;
-  late DisposeEffect _cleanup;
+  late Effect _cleanup;
 
   @override
   void initHook() {

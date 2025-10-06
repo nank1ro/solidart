@@ -3,6 +3,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 import 'package:solidart/solidart.dart';
+import 'package:solidart/system.dart' as system;
 
 /// {@template signalbuilder}
 /// Reacts to the signals automatically found in the [builder] function.
@@ -64,7 +65,8 @@ class _SignalBuilderElement extends StatelessElement {
   _SignalBuilderElement(SignalBuilder super.widget);
 
   late final effect =
-      Effect(scheduler, detach: true, autoDispose: false, autorun: false);
+      Effect(scheduler, detach: true, autoDispose: false, autorun: false)
+          as system.ReactiveNode;
 
   void scheduler() {
     if (dirty) return;
@@ -73,33 +75,29 @@ class _SignalBuilderElement extends StatelessElement {
 
   @override
   void unmount() {
-    effect.dispose();
+    (effect as Effect).dispose();
     super.unmount();
   }
 
   @override
   Widget build() {
-    final prevSub = reactiveSystem.activeSub;
-    // ignore: invalid_use_of_protected_member
-    final node = reactiveSystem.activeSub = effect.subscriber;
+    final prevSub = system.setActiveSub(effect);
 
     try {
       final built = super.build();
       if (SolidartConfig.assertSignalBuilderWithoutDependencies) {
         assert(
-          node.deps != null,
+          effect.deps != null,
           '''
           SignalBuilder must detect at least one Signal/Computed/Resource during build.
           You can disable this check by setting `SolidartConfig.assertSignalBuilderWithoutDependencies = false` before `runApp()`'
           ''',
         );
       }
-      // ignore: invalid_use_of_internal_member
-      effect.setDependencies(node);
 
       return built;
     } finally {
-      reactiveSystem.activeSub = prevSub;
+      system.setActiveSub(prevSub);
     }
   }
 }
