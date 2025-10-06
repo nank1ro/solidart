@@ -21,6 +21,7 @@ class SolidartReactiveList<E> extends SolidartSignal<List<E>>
   @override
   int get length => value.length;
 
+  @override
   set length(int newLength) {
     if (latestValue!.length == newLength) return;
     latestValue!.length = newLength;

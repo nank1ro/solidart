@@ -30,9 +30,11 @@ class SolidartEffect extends alien.PresetEffect
       : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
         debugLabel = createDebugLabel(debugLabel),
         super(callback: callback) {
+    // Create an effect and get the prevSub immediately to avoid linking
+    // to the wrong prevSub due to delays.
+    final prevSub = alien.getActiveSub();
     void init() {
       timer = null;
-      final prevSub = alien.getActiveSub();
       if (prevSub != null &&
           (detach ?? SolidartConfig.detachEffects) == false) {
         alien.system.link(this, prevSub, 0);
