@@ -42,12 +42,11 @@ class SolidartEffect extends alien.PresetEffect
       if (autorun == true) run();
     }
 
-    if (delay == null) {
+    if (delay != null) {
+      timer = Timer(delay, init);
+    } else {
       init();
-      return;
     }
-
-    timer = Timer(delay, init);
   }
 
   @override
