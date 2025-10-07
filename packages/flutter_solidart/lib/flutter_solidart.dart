@@ -1,3 +1,4 @@
+// coverage:ignore-file
 /// Flutter solidart library.
 library;
 

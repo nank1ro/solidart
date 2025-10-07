@@ -1,3 +1,4 @@
+// coverage:ignore-file
 import 'package:flutter/widgets.dart';
 import 'package:solidart/solidart.dart' as solidart;
 

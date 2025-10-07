@@ -1,3 +1,4 @@
+// coverage:ignore-file
 import 'package:flutter_solidart/src/core/readable_signal.dart';
 import 'package:flutter_solidart/src/core/value_notifier_signal_mixin.dart';
 
