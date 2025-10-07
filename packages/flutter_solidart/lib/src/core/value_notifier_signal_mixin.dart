@@ -30,7 +30,9 @@ mixin ValueNotifierSignalMixin<T> on solidart.ReadableSignal<T>
 
   @override
   void notifyListeners() {
-    triggerUpdate(force: true);
+    for (final listener in _listeners.keys) {
+      listener();
+    }
   }
 
   @override

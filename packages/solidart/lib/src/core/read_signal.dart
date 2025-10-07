@@ -391,19 +391,8 @@ class ReadableSignal<T> implements ReadSignal<T> {
     }
   }
 
-  /// Manually triggers an update check for this signal.
-  ///
-  /// When [force] is true, bypasses normal dirty checking and forces
-  /// a re-evaluation of all dependent computations and effects.
-  ///
-  /// Returns `true` if the signal's value changed and subscribers were
-  /// notified, `false` otherwise.
-  ///
-  /// Use this sparingly—prefer normal value updates via `value =` or
-  /// `updateValue()`. This is primarily useful when integrating with
-  /// external systems that need explicit control over the reactive cycle.
-  bool triggerUpdate({bool force = false}) {
-    if (force) _internalSignal.forceDirty = true;
+  /// Indicates if the signal should update its value.
+  bool shouldUpdate() {
     return _internalSignal.update();
   }
 
