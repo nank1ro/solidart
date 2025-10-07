@@ -1,3 +1,7 @@
+## 2.7.1
+
+- **REFACTOR**: Rename `update` to `shouldUpdate` in `ReadableSignal`.
+
 ## 2.7.0
 
 - **FEAT**: Add `then` extension method to `FutureOr`. This allows you to use the `then` method on both `Future` and `FutureOr` values seamlessly. Mainly needed to simplify the usage of `ReadableSignal.until` and `Resource.untilReady` methods.
