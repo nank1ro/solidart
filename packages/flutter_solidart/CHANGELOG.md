@@ -1,3 +1,7 @@
+## 2.6.0
+
+- **FEAT**: Export `Signal` and `Resource` by implementing `ValueNotifier` and `ReadableSignal`, `Computed` by implementing `ValueListenable`.
+
 ## 2.5.0
 
 - **REFACTOR**: Improve and simplify the `SignalBuilder` implementation (thanks to @medz).

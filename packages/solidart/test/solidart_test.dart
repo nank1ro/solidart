@@ -423,6 +423,15 @@ void main() {
         count.value = 1;
         expect(count.value, 1);
       });
+
+      test('shouldUpdate should return true if there is a new value', () {
+        final signal = Signal(0);
+        expect(signal.shouldUpdate(), false);
+        signal.value = 1;
+        expect(signal.shouldUpdate(), true);
+        // After checking, should be false again until a new value is set
+        expect(signal.shouldUpdate(), false);
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );

@@ -39,7 +39,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
         );
 
   @override
-  Map<K, V> _setValue(Map<K, V> newValue) {
+  Map<K, V> setValue(Map<K, V> newValue) {
     if (_compare(_value, newValue)) {
       return newValue;
     }

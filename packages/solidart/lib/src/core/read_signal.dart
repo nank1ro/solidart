@@ -196,7 +196,8 @@ class ReadableSignal<T> implements ReadSignal<T> {
   /// This operation may be skipped if the value is equal to the previous one,
   /// check [equals] and [comparator].
   /// {@endtemplate}
-  T _setValue(T newValue) {
+  @protected
+  T setValue(T newValue) {
     final firstValue = !_hasValue;
 
     if (firstValue) {
@@ -388,6 +389,11 @@ class ReadableSignal<T> implements ReadSignal<T> {
       }
       // coverage:ignore-end
     }
+  }
+
+  /// Indicates if the signal should update its value.
+  bool shouldUpdate() {
+    return _internalSignal.update();
   }
 
   @override
