@@ -1,3 +1,7 @@
+## 2.6.1
+
+- **CHORE**: Bump `solidart` dependency to `^2.7.1`.
+
 ## 2.6.0
 
 - **FEAT**: Export `Signal` and `Resource` by implementing `ValueNotifier` and `ReadableSignal`, `Computed` by implementing `ValueListenable`.
