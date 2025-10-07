@@ -24,6 +24,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
+          cache: true
       - run: flutter pub get
       - run: flutter analyze packages
       - run: flutter test packages --coverage -r github
