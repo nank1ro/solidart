@@ -390,6 +390,14 @@ class ReadableSignal<T> implements ReadSignal<T> {
     }
   }
 
+  /// Manually triggers an update of the signal.
+  bool shouldUpdate({bool force = false}) {
+    if (force) {
+      _internalSignal.forceDirty = true;
+    }
+    return _internalSignal.update();
+  }
+
   @override
   String toString() =>
       '''ReadSignal<$T>(value: $_value, previousValue: $_previousValue)''';
