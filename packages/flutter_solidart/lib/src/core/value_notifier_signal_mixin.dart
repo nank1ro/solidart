@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:solidart/solidart.dart' as solidart;
 
 /// [ValueNotifier] implementation for [solidart.Signal]
-mixin ValueNotifierSignalMixin<T> on solidart.Signal<T>
+mixin ValueNotifierSignalMixin<T> on solidart.ReadableSignal<T>
     implements ValueNotifier<T> {
   final _listeners = <VoidCallback, solidart.DisposeObservation>{};
 
@@ -29,12 +29,15 @@ mixin ValueNotifierSignalMixin<T> on solidart.Signal<T>
 
   @override
   void notifyListeners() {
-    shouldUpdate(force: true);
+    triggerUpdate(force: true);
   }
 
   @override
   void dispose() {
     super.dispose();
+    for (final cleanup in _listeners.values) {
+      cleanup();
+    }
     _listeners.clear();
   }
 }

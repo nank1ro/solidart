@@ -237,9 +237,6 @@ Resource<T> useResource<T>(
   /// {@macro SignalBase.comparator}
   bool Function(T? a, T? b) comparator = identical,
 
-  /// {@macro SignalBase.trackPreviousValue}
-  bool? trackPreviousValue,
-
   /// Reactive signal values passed to the fetcher, optional.
   final SignalBase<dynamic>? source,
 
@@ -265,7 +262,7 @@ Resource<T> useResource<T>(
       useRefreshing: useRefreshing,
       debounceDelay: debounceDelay,
       source: source,
-      trackPreviousState: trackPreviousValue,
+      trackPreviousState: trackPreviousState,
       lazy: lazy,
     ),
     [],
@@ -295,9 +292,6 @@ Resource<T> useResourceStream<T>(
   /// {@macro SignalBase.comparator}
   bool Function(T? a, T? b) comparator = identical,
 
-  /// {@macro SignalBase.trackPreviousValue}
-  bool? trackPreviousValue,
-
   /// Reactive signal values passed to the fetcher, optional.
   final SignalBase<dynamic>? source,
 
@@ -323,7 +317,7 @@ Resource<T> useResourceStream<T>(
       useRefreshing: useRefreshing,
       debounceDelay: debounceDelay,
       source: source,
-      trackPreviousState: trackPreviousValue,
+      trackPreviousState: trackPreviousState,
       lazy: lazy,
     ),
     [],

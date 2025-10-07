@@ -14,4 +14,14 @@ class ReadableSignal<T> extends solidart.ReadableSignal<T>
     super.trackInDevTools,
     super.trackPreviousValue,
   });
+
+  /// {@macro readsignal}
+  ReadableSignal.lazy({
+    super.equals,
+    super.name,
+    super.autoDispose,
+    super.comparator,
+    super.trackInDevTools,
+    super.trackPreviousValue,
+  }) : super.lazy();
 }

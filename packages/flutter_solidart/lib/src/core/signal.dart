@@ -1,9 +1,14 @@
 import 'package:flutter_solidart/src/core/readable_signal.dart';
 import 'package:flutter_solidart/src/core/value_notifier_signal_mixin.dart';
-import 'package:solidart/solidart.dart' as solidart;
+
+/// Adds the [toggle] method to boolean signals
+extension ToggleBoolSignal on Signal<bool> {
+  /// Toggles the signal boolean value.
+  void toggle() => value = !value;
+}
 
 /// {@macro signal}
-class Signal<T> extends solidart.Signal<T> with ValueNotifierSignalMixin<T> {
+class Signal<T> extends ReadableSignal<T> with ValueNotifierSignalMixin<T> {
   /// {@macro signal}
   Signal(
     super.value, {
@@ -25,16 +30,18 @@ class Signal<T> extends solidart.Signal<T> with ValueNotifierSignalMixin<T> {
     super.trackPreviousValue,
   }) : super.lazy();
 
+  /// {@macro set-signal-value}
   @override
-  ReadableSignal<T> toReadSignal() {
-    return ReadableSignal(
-      value,
-      equals: equals,
-      name: name,
-      autoDispose: autoDispose,
-      comparator: comparator,
-      trackInDevTools: trackInDevTools,
-      trackPreviousValue: trackPreviousValue,
-    );
+  set value(T newValue) {
+    setValue(newValue);
   }
+
+  /// Calls a function with the current value and assigns the result as the
+  /// new value.
+  T updateValue(T Function(T value) callback) =>
+      value = callback(untrackedValue);
+
+  /// Converts this [Signal] into a [ReadableSignal]
+  /// Use this method to remove the visility to the value setter.
+  ReadableSignal<T> toReadSignal() => this;
 }

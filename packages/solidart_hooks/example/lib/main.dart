@@ -23,7 +23,7 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Solidart Hooks Examples',
-      home: HookListScreen(),
+      home: const HookListScreen(),
       theme: ThemeData.from(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
@@ -31,22 +31,23 @@ class MainApp extends StatelessWidget {
   }
 }
 
+@immutable
 class HookInfo {
-  final String title;
-  final String description;
-  final Widget Function() example;
-
-  HookInfo({
+  const HookInfo({
     required this.title,
     required this.description,
     required this.example,
   });
+
+  final String title;
+  final String description;
+  final Widget Function() example;
 }
 
 class HookListScreen extends HookWidget {
   const HookListScreen({super.key});
 
-  List<HookInfo> get hooks => [
+  static final List<HookInfo> hooks = [
     HookInfo(
       title: 'useSignal',
       description: 'Create a reactive signal with a value',

@@ -27,6 +27,9 @@ mixin ValueListenableSignalMixin<T> on solidart.ReadSignal<T>
   @override
   void dispose() {
     super.dispose();
+    for (final cleanup in _listeners.values) {
+      cleanup();
+    }
     _listeners.clear();
   }
 }

@@ -9,7 +9,8 @@ export 'package:solidart/solidart.dart'
         ReadableSignal,
         Resource,
         SetSignal,
-        Signal;
+        Signal,
+        ToggleBoolSignal;
 
 export 'src/core/computed.dart';
 export 'src/core/list_signal.dart';

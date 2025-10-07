@@ -40,7 +40,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
         );
 
   @override
-  Set<E> _setValue(Set<E> newValue) {
+  Set<E> setValue(Set<E> newValue) {
     if (_compare(_value, newValue)) {
       return newValue;
     }

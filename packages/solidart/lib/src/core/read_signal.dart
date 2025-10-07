@@ -196,7 +196,8 @@ class ReadableSignal<T> implements ReadSignal<T> {
   /// This operation may be skipped if the value is equal to the previous one,
   /// check [equals] and [comparator].
   /// {@endtemplate}
-  T _setValue(T newValue) {
+  @protected
+  T setValue(T newValue) {
     final firstValue = !_hasValue;
 
     if (firstValue) {
@@ -390,11 +391,19 @@ class ReadableSignal<T> implements ReadSignal<T> {
     }
   }
 
-  /// Manually triggers an update of the signal.
-  bool shouldUpdate({bool force = false}) {
-    if (force) {
-      _internalSignal.forceDirty = true;
-    }
+  /// Manually triggers an update check for this signal.
+  ///
+  /// When [force] is true, bypasses normal dirty checking and forces
+  /// a re-evaluation of all dependent computations and effects.
+  ///
+  /// Returns `true` if the signal's value changed and subscribers were
+  /// notified, `false` otherwise.
+  ///
+  /// Use this sparingly—prefer normal value updates via `value =` or
+  /// `updateValue()`. This is primarily useful when integrating with
+  /// external systems that need explicit control over the reactive cycle.
+  bool triggerUpdate({bool force = false}) {
+    if (force) _internalSignal.forceDirty = true;
     return _internalSignal.update();
   }
 
