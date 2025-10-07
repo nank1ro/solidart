@@ -234,9 +234,6 @@ Resource<T> useResource<T>(
   /// {@macro SignalBase.trackInDevTools}
   bool? trackInDevTools,
 
-  /// {@macro SignalBase.comparator}
-  bool Function(T? a, T? b) comparator = identical,
-
   /// Reactive signal values passed to the fetcher, optional.
   final SignalBase<dynamic>? source,
 
@@ -288,9 +285,6 @@ Resource<T> useResourceStream<T>(
 
   /// {@macro SignalBase.trackInDevTools}
   bool? trackInDevTools,
-
-  /// {@macro SignalBase.comparator}
-  bool Function(T? a, T? b) comparator = identical,
 
   /// Reactive signal values passed to the fetcher, optional.
   final SignalBase<dynamic>? source,
