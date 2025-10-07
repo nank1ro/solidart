@@ -3,9 +3,8 @@ name: Publish solidart to pub.dev
 on:
   push:
     tags:
-      - 'solidart-v[0-9]+.[0-9]+.[0-9]+'          # Matches solidart-v1.2.3
-      - 'solidart-v[0-9]+.[0-9]+.[0-9]+\+[0-9]+'  # Matches solidart-v1.2.3+1
-
+      - "solidart-v[0-9]+.[0-9]+.[0-9]+" # Matches solidart-v1.2.3
+      - 'solidart-v[0-9]+.[0-9]+.[0-9]+\+[0-9]+' # Matches solidart-v1.2.3+1
 
 jobs:
   publish:
@@ -20,6 +19,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
+          cache: true
       - run: flutter pub get
       - run: |
           cd packages/solidart_devtools_extension
