@@ -40,7 +40,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
         );
 
   @override
-  List<E> _setValue(List<E> newValue) {
+  List<E> setValue(List<E> newValue) {
     if (_compare(_untrackedValue, newValue)) {
       return newValue;
     }
@@ -52,7 +52,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
 
   @override
   List<E> updateValue(List<E> Function(List<E> value) callback) {
-    return _setValue(callback(List<E>.of(_untrackedValue)));
+    return setValue(callback(List<E>.of(_untrackedValue)));
   }
 
   @override

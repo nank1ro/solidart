@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:disco/disco.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -903,5 +904,75 @@ void main() {
         contains('SignalBuilder must detect at least one Signal/Computed'),
       ),
     );
+  });
+
+  test('Signal is a ValueNotifier', () {
+    final signal = Signal(0);
+    expect(signal, isA<ValueNotifier<int>>());
+    expect(signal.value, 0);
+    var notifiedValue = -1;
+    void listener() {
+      notifiedValue = signal.value;
+    }
+
+    signal.addListener(listener);
+    signal.value = 1;
+    expect(notifiedValue, 1);
+    signal.removeListener(listener);
+    signal.value = 2;
+    expect(notifiedValue, 1); // Not updated since listener was removed
+  });
+
+  test('Resource is a ValueNotifier', () {
+    final r = Resource(() => Future.value(0));
+    expect(r, isA<ValueNotifier<ResourceState<int>>>());
+    expect(r.state, isA<ResourceLoading<int>>());
+    var notifiedState = r.state;
+    void listener() {
+      notifiedState = r.state;
+    }
+
+    r.addListener(listener);
+    // Wait for the resource to load
+    return Future.delayed(const Duration(milliseconds: 10), () {
+      expect(notifiedState, isA<ResourceReady<int>>());
+      r.removeListener(listener);
+      r.refresh();
+      expect(notifiedState,
+          isA<ResourceReady<int>>()); // Not updated since listener was removed
+    });
+  });
+
+  test('ReadableSignal is a ValueListenable', () {
+    final signal = Signal(0).toReadSignal();
+    expect(signal, isA<ValueListenable<int>>());
+    expect(signal.value, 0);
+    var notifiedValue = -1;
+    void listener() {
+      notifiedValue = signal.value;
+    }
+
+    signal.addListener(listener);
+    signal.dispose(); // Dispose before changing value to test cleanup
+    expect(notifiedValue, -1); // Not updated since value didn't change
+    signal.removeListener(listener);
+  });
+
+  test('Computed is a ValueListenable', () {
+    final baseSignal = Signal(1);
+    final computed = Computed(() => baseSignal.value * 2);
+    expect(computed, isA<ValueListenable<int>>());
+    expect(computed.value, 2);
+    var notifiedValue = -1;
+    void listener() {
+      notifiedValue = computed.value;
+    }
+
+    computed.addListener(listener);
+    baseSignal.value = 2;
+    expect(notifiedValue, 4);
+    computed.removeListener(listener);
+    baseSignal.value = 3;
+    expect(notifiedValue, 4); // Not updated since listener was removed
   });
 }

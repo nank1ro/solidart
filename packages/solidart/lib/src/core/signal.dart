@@ -154,7 +154,7 @@ class Signal<T> extends ReadableSignal<T> {
         );
 
   /// {@macro set-signal-value}
-  set value(T newValue) => _setValue(newValue);
+  set value(T newValue) => setValue(newValue);
 
   /// Calls a function with the current value and assigns the result as the
   /// new value.
