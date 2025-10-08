@@ -11,7 +11,13 @@ class UseSetSignalExample extends HookWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('useSetSignal')),
-      body: Center(child: Text('Items: ${uniqueItems.value.join(', ')}')),
+      body: Center(
+        child: SignalBuilder(
+          builder: (context, child) {
+            return Text('Items: ${uniqueItems.value.join(', ')}');
+          },
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => uniqueItems.add('Item${uniqueItems.value.length + 1}'),
         child: const Icon(Icons.add),

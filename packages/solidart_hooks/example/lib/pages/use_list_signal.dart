@@ -11,7 +11,13 @@ class UseListSignalExample extends HookWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('useListSignal')),
-      body: Center(child: Text('Items: ${items.value.join(', ')}')),
+      body: Center(
+        child: SignalBuilder(
+          builder: (context, child) {
+            return Text('Items: ${items.value.join(', ')}');
+          },
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => items.add('Item${items.value.length + 1}'),
         child: const Icon(Icons.add),
