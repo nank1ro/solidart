@@ -14,10 +14,14 @@ class UseResourceStreamExample extends HookWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('useResourceStream')),
       body: Center(
-        child: streamResource.state.on(
-          ready: (data) => Text('Stream value: $data'),
-          error: (error, stackTrace) => Text('Error: $error'),
-          loading: () => const CircularProgressIndicator(),
+        child: SignalBuilder(
+          builder: (context, child) {
+            return streamResource.state.on(
+              ready: (data) => Text('Stream value: $data'),
+              error: (error, stackTrace) => Text('Error: $error'),
+              loading: () => const CircularProgressIndicator(),
+            );
+          },
         ),
       ),
       floatingActionButton: FloatingActionButton(

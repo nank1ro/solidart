@@ -16,9 +16,10 @@ class UseSolidartEffectExample extends HookWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('useSolidartEffect')),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [Text('Count: ${count.value}')],
+        child: SignalBuilder(
+          builder: (context, child) {
+            return Text('Count: ${count.value}');
+          },
         ),
       ),
       floatingActionButton: FloatingActionButton(

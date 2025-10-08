@@ -23,14 +23,44 @@ class Example extends HookWidget {
     });
     return Scaffold(
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Count: ${count.value}'),
-            Text('Double: ${doubleCount.value}'),
-          ],
+        child: SignalBuilder(
+          builder: (context, child) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Count: ${count.value}'),
+                Text('Double: ${doubleCount.value}'),
+              ],
+            );
+          }
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => count.value++,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+```
+
+As you can see, a `SignalBuilder` is used to rebuild the widget when the signal changes.
+This is a good practice to avoid rebuilding the entire widget tree when a signal changes, and only rebuild the parts that depend on the signal.
+Alternatively, you can use `useListenable` from `flutter_hooks` to listen to the signal changes, but this will rebuild the entire widget tree; for example:
+
+```dart
+class UseSignalExample extends HookWidget {
+  const UseSignalExample({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final count = useSignal(0);
+    // this will rebuild the entire widget when the signal changes
+    useListenable(count);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('useSignal')),
+      body: Center(child: Text('Count: ${count.value}')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => count.value++,
         child: const Icon(Icons.add),
@@ -50,7 +80,13 @@ class Example extends HookWidget {
   Widget build(BuildContext context) {
     final count = useSignal(0);
     return Scaffold(
-      body: Center(child: Text('Count: ${count.value}')),
+      body: Center(
+        child: SignalBuilder(
+          builder: (context, child) {
+            return Text('Count: ${count.value}');
+          },
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => count.value++,
         child: const Icon(Icons.add),
@@ -75,12 +111,16 @@ class Example extends HookWidget {
     final doubled = useComputed(() => count.value * 2);
     return Scaffold(
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Count: ${count.value}'),
-            Text('Doubled: ${doubled.value}'),
-          ],
+        child: SignalBuilder(
+          builder: (context, child) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Count: ${count.value}'),
+                Text('Doubled: ${doubled.value}'),
+              ],
+            );
+          },
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -108,7 +148,13 @@ class Example extends HookWidget {
       debugPrint('Effect triggered! Count: ${count.value}');
     });
     return Scaffold(
-      body: Center(child: Text('Count: ${count.value}')),
+      body: Center(
+        child: SignalBuilder(
+          builder: (context, child) {
+            return Text('Count: ${count.value}');
+          },
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => count.value++,
         child: const Icon(Icons.add),
@@ -128,7 +174,13 @@ class Example extends HookWidget {
   Widget build(BuildContext context) {
     final items = useListSignal<String>(['Item1', 'Item2']);
     return Scaffold(
-      body: Center(child: Text('Items: ${items.value.join(', ')}')),
+      body: Center(
+        child: SignalBuilder(
+          builder: (context, child) {
+            return Text('Items: ${items.value.join(', ')}');
+          },
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => items.add('Item${items.value.length + 1}'),
         child: const Icon(Icons.add),
@@ -151,7 +203,13 @@ class Example extends HookWidget {
   Widget build(BuildContext context) {
     final uniqueItems = useSetSignal<String>({'Item1', 'Item2'});
     return Scaffold(
-      body: Center(child: Text('Items: ${uniqueItems.value.join(', ')}')),
+      body: Center(
+        child: SignalBuilder(
+          builder: (context, child) {
+            return Text('Items: ${uniqueItems.value.join(', ')}');
+          },
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => uniqueItems.add('Item${uniqueItems.value.length + 1}'),
         child: const Icon(Icons.add),
@@ -175,8 +233,19 @@ class Example extends HookWidget {
     final userRoles = useMapSignal<String, String>({'admin': 'John'});
     return Scaffold(
       body: Center(
-        child: Text('Roles: ${userRoles.value.entries.map((e) => '${e.key}:${e.value}').join(', ')}'),
-      ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SignalBuilder(
+              builder: (context, child) {
+                return Text(
+                  'Roles: ${userRoles.value.entries.map((e) => '${e.key}:${e.value}').join(', ')}',
+                );
+              },
+            ),
+          ],
+        ),
+      )
       floatingActionButton: FloatingActionButton(
         onPressed: () => userRoles['user${userRoles.value.length}'] = 'User${userRoles.value.length}',
         child: const Icon(Icons.add),
@@ -204,10 +273,14 @@ class Example extends HookWidget {
 
     return Scaffold(
       body: Center(
-        child: userResource.state.on(
-          ready: (data) => Text('Result: $data'),
-          error: (error, stackTrace) => Text('Error: $error'),
-          loading: () => const CircularProgressIndicator(),
+        child: SignalBuilder(
+          builder: (context, child) {
+            return userResource.state.on(
+              ready: (data) => Text('Result: $data'),
+              error: (error, stackTrace) => Text('Error: $error'),
+              loading: () => const CircularProgressIndicator(),
+            );
+          },
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -219,7 +292,6 @@ class Example extends HookWidget {
 }
 ```
 
-The widget will automatically rebuild when the resource state changes.
 The resource will get disposed when the widget gets unmounted.
 
 ## useResourceStream
@@ -236,10 +308,14 @@ class Example extends HookWidget {
 
     return Scaffold(
       body: Center(
-        child: streamResource.state.on(
-          ready: (data) => Text('Stream value: $data'),
-          error: (error, stackTrace) => Text('Error: $error'),
-          loading: () => const CircularProgressIndicator(),
+        child: SignalBuilder(
+          builder: (context, child) {
+            return streamResource.state.on(
+              ready: (data) => Text('Stream value: $data'),
+              error: (error, stackTrace) => Text('Error: $error'),
+              loading: () => const CircularProgressIndicator(),
+            );
+          },
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -251,7 +327,6 @@ class Example extends HookWidget {
 }
 ```
 
-The widget will automatically rebuild when the resource state changes.
 The resource will get disposed when the widget gets unmounted.
 
 ## useExistingSignal
@@ -275,7 +350,13 @@ class _UseExistingSignalExampleState extends State<UseExistingSignalExample> {
     final boundSignal = useExistingSignal(existingSignal);
 
     return Scaffold(
-      body: Center(child: Text('Value: ${boundSignal.value}')),
+      body: Center(
+        child: SignalBuilder(
+          builder: (context, child) {
+            return Text('Value: ${boundSignal.value}');
+          },
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => existingSignal.value++,
         child: const Icon(Icons.add),
@@ -291,5 +372,4 @@ class _UseExistingSignalExampleState extends State<UseExistingSignalExample> {
 }
 ```
 
-The widget will automatically rebuild when the value changes.
 The signal will NOT get disposed when the widget gets unmounted (unless autoDispose is true).
