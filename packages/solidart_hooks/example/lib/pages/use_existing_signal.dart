@@ -19,7 +19,13 @@ class _UseExistingSignalExampleState extends State<UseExistingSignalExample> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('useExistingSignal')),
-      body: Center(child: Text('Value: ${boundSignal.value}')),
+      body: Center(
+        child: SignalBuilder(
+          builder: (context, child) {
+            return Text('Value: ${boundSignal.value}');
+          },
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => existingSignal.value++,
         child: const Icon(Icons.add),

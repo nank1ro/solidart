@@ -13,12 +13,16 @@ class UseComputedExample extends HookWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('useComputed')),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Count: ${count.value}'),
-            Text('Doubled: ${doubled.value}'),
-          ],
+        child: SignalBuilder(
+          builder: (context, child) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Count: ${count.value}'),
+                Text('Doubled: ${doubled.value}'),
+              ],
+            );
+          },
         ),
       ),
       floatingActionButton: FloatingActionButton(

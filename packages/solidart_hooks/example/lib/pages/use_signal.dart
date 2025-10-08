@@ -11,7 +11,13 @@ class UseSignalExample extends HookWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('useSignal')),
-      body: Center(child: Text('Count: ${count.value}')),
+      body: Center(
+        child: SignalBuilder(
+          builder: (context, child) {
+            return Text('Count: ${count.value}');
+          },
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => count.value++,
         child: const Icon(Icons.add),

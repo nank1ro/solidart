@@ -15,10 +15,14 @@ class UseResourceExample extends HookWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('useResource')),
       body: Center(
-        child: userResource.state.on(
-          ready: (data) => Text('Result: $data'),
-          error: (error, stackTrace) => Text('Error: $error'),
-          loading: () => const CircularProgressIndicator(),
+        child: SignalBuilder(
+          builder: (context, child) {
+            return userResource.state.on(
+              ready: (data) => Text('Result: $data'),
+              error: (error, stackTrace) => Text('Error: $error'),
+              loading: () => const CircularProgressIndicator(),
+            );
+          },
         ),
       ),
       floatingActionButton: FloatingActionButton(

@@ -378,34 +378,13 @@ class _SignalHook<T, S extends ReadSignal<T>> extends Hook<S> {
 
 class _SignalHookState<T, S extends ReadSignal<T>>
     extends HookState<S, _SignalHook<T, S>> {
-  late DisposeEffect _cleanup;
-
   @override
   void initHook() {
-    _listener();
     super.initHook();
   }
 
   @override
-  void didUpdateHook(_SignalHook<T, S> oldHook) {
-    super.didUpdateHook(oldHook);
-    if (hook.target != oldHook.target) {
-      _cleanup();
-      _listener();
-    }
-  }
-
-  void _listener() {
-    // ignore: implicit_call_tearoffs
-    _cleanup = Effect(() {
-      hook.target.value;
-      if (context.mounted) setState(() {});
-    });
-  }
-
-  @override
   void dispose() {
-    _cleanup.call();
     if (hook.disposeOnUnmount) {
       hook.target.dispose();
     }
