@@ -245,7 +245,8 @@ class Example extends HookWidget {
             ),
           ],
         ),
-      )
+      ),
+      floatingActionButton: FloatingActionButton(
       floatingActionButton: FloatingActionButton(
         onPressed: () => userRoles['user${userRoles.value.length}'] = 'User${userRoles.value.length}',
         child: const Icon(Icons.add),
