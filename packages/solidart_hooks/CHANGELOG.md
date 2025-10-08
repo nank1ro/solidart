@@ -24,7 +24,6 @@
   ```
   This is inline with the behaviour of `useValueNotifier` from `flutter_hooks`.
 
-
 ## 2.0.0
 
 - **FEAT**: Added `useResource`, `useResourceStream`, `useListSignal`, `useSetSignal` and `useMapSignal` hooks.
