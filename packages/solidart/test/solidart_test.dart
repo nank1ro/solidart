@@ -976,7 +976,7 @@ void main() {
         expect(resource.state, isA<ResourceReady<int>>());
       });
 
-      test('check ResourceState.on', () async {
+      test('check ResourceState.when', () async {
         var shouldThrow = false;
         Future<int> fetcher() {
           return Future.delayed(const Duration(milliseconds: 150), () {
@@ -994,7 +994,7 @@ void main() {
 
         Effect(
           () {
-            resource.state.on(
+            resource.state.when(
               ready: (data) {
                 if (resource.state.isRefreshing) {
                   refreshingOnDataTimes++;

@@ -38,10 +38,10 @@ In this case you just need to pass the `stream` field to the `Resource` class.
 
 The resource has a value named `ResourceState`, that provides many useful convenience methods to correctly handle the state of the resource.
 
-The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
+The `when` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
 The are also other convenience methods to handle only specific states:
-- `on` forces you to handle all the states of a Resource
-- `maybeOn` lets you decide which states to handle and provide an `orElse` action for unhandled states
+- `when` forces you to handle all the states of a Resource
+- `maybeWhen` lets you decide which states to handle and provide an `orElse` action for unhandled states
 - `map` equal to `on` but gives access to the `ResourceState` data class
 - `maybeMap` equal to `maybeOn` but gives access to the `ResourceState` data class
 - `isReady` indicates if the `Resource` is in the ready state

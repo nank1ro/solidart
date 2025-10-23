@@ -51,7 +51,7 @@ class _ResourcePageState extends State<ResourcePage> {
             SignalBuilder(
               builder: (context, child) {
                 final userState = user.state;
-                return userState.on(
+                return userState.when(
                   ready: (data) {
                     return Column(
                       mainAxisSize: MainAxisSize.min,

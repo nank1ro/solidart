@@ -99,7 +99,7 @@ class _SearchBody extends StatelessWidget {
               GithubSearchBloc.provider.of(context).searchResult.state;
           return Stack(
             children: [
-              searchResultState.on(
+              searchResultState.when(
                 ready: (searchResult) {
                   if (searchResult.items.isEmpty) {
                     return const Text('No Results');

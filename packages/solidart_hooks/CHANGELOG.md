@@ -1,3 +1,9 @@
+## 3.1.0
+
+### Changes from solidart
+
+- **REFACTOR**: Deprecate `maybeOn` and `on` methods of `ResourceState`. Use `maybeWhen` and `when` instead.
+
 ## 3.0.0
 
 - **BREAKING CHANGE**: `SignalHook` no longer calls `setState` to trigger a rebuild when the signal changes. Instead, you should use `SignalBuilder` to listen to signal changes and rebuild the UI accordingly. This change improves performance and reduces unnecessary rebuilds. You can also use `useListenable` if you want to trigger a rebuild on signal changes.

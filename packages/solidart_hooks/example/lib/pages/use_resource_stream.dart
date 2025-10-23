@@ -16,7 +16,7 @@ class UseResourceStreamExample extends HookWidget {
       body: Center(
         child: SignalBuilder(
           builder: (context, child) {
-            return streamResource.state.on(
+            return streamResource.state.when(
               ready: (data) => Text('Stream value: $data'),
               error: (error, stackTrace) => Text('Error: $error'),
               loading: () => const CircularProgressIndicator(),

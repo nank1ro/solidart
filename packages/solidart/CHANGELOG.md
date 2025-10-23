@@ -1,3 +1,7 @@
+## 2.8.0
+
+- **REFACTOR**: Deprecate `maybeOn` and `on` methods of `ResourceState`. Use `maybeWhen` and `when` instead.
+
 ## 2.7.1
 
 - **REFACTOR**: Rename `update` to `shouldUpdate` in `ReadableSignal`.
