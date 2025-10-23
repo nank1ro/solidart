@@ -62,11 +62,11 @@ extension FutureOrThenExtension<T> on FutureOr<T> {
 /// The resource has a [state] named [ResourceState], that provides many useful
 /// convenience methods to correctly handle the state of the resource.
 ///
-/// The `on` method forces you to handle all the states of a Resource
+/// The `when` method forces you to handle all the states of a Resource
 /// (_ready_, _error_ and _loading_).
 /// The are also other convenience methods to handle only specific states:
-/// - `on` forces you to handle all the states of a Resource
-/// - `maybeOn` lets you decide which states to handle and provide an `orElse`
+/// - `when` forces you to handle all the states of a Resource
+/// - `maybeWhen` lets you decide which states to handle and provide an `orElse`
 /// action for unhandled states
 /// - `map` equal to `on` but gives access to the `ResourceState` data class
 /// - `maybeMap` equal to `maybeMap` but gives access to the `ResourceState`
@@ -742,10 +742,26 @@ extension ResourceExtensions<T> on ResourceState<T> {
     );
   }
 
+  // coverage:ignore-start
   /// Performs an action based on the state of the [ResourceState].
   ///
   /// All cases are required.
+  @Deprecated('Use when instead')
   R on<R>({
+    // ignore: avoid_positional_boolean_parameters
+    required R Function(T data) ready,
+    // ignore: avoid_positional_boolean_parameters
+    required R Function(Object error, StackTrace? stackTrace) error,
+    required R Function() loading,
+  }) {
+    return when<R>(ready: ready, error: error, loading: loading);
+  }
+  // coverage:ignore-end
+
+  /// Performs an action based on the state of the [ResourceState].
+  ///
+  /// All cases are required.
+  R when<R>({
     // ignore: avoid_positional_boolean_parameters
     required R Function(T data) ready,
     // ignore: avoid_positional_boolean_parameters
@@ -759,9 +775,30 @@ extension ResourceExtensions<T> on ResourceState<T> {
     );
   }
 
+  // coverage:ignore-start
   /// Performs an action based on the state of the [ResourceState], or call
   /// [orElse] if the current state is not considered.
+  @Deprecated('Use maybeWhen instead')
   R maybeOn<R>({
+    required R Function() orElse,
+    // ignore: avoid_positional_boolean_parameters
+    R Function(T data)? ready,
+    // ignore: avoid_positional_boolean_parameters
+    R Function(Object error, StackTrace? stackTrace)? error,
+    R Function()? loading,
+  }) {
+    return maybeWhen(
+      orElse: orElse,
+      ready: ready,
+      error: error,
+      loading: loading,
+    );
+  }
+  // coverage:ignore-end
+
+  /// Performs an action based on the state of the [ResourceState], or call
+  /// [orElse] if the current state is not considered.
+  R maybeWhen<R>({
     required R Function() orElse,
     // ignore: avoid_positional_boolean_parameters
     R Function(T data)? ready,

@@ -29,7 +29,7 @@ final user = Resource(fetchUser);
 // and use it in a widget:
 SignalBuilder(
   builder: (context, child) {
-    return user.state.on(
+    return user.state.when(
       ready: (data) => Text(data),
       error: (error, stackTrace) => Text('Error: $error'),
       loading: () => const Text('Loading...'),
@@ -153,7 +153,7 @@ This allows you to keep showing the current data or error while the new data is 
 ```dart
 SignalBuilder(builder: (context, child) {
   final userState = user.state;
-  return userState.on(
+  return userState.when(
     ready: (data) {
       return Column(
         mainAxisSize: MainAxisSize.min,

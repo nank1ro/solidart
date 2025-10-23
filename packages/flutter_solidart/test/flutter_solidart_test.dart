@@ -101,7 +101,7 @@ void main() {
           body: SignalBuilder(
             builder: (context, child) {
               final resourceState = r.state;
-              return resourceState.on(
+              return resourceState.when(
                 ready: (data) {
                   return Text(
                     'Data: $data (refreshing: ${resourceState.isRefreshing})',
@@ -158,7 +158,7 @@ void main() {
           body: SignalBuilder(
             builder: (context, child) {
               final resourceState = r.state;
-              return resourceState.on(
+              return resourceState.when(
                 ready: (data) {
                   return Text(
                     'Data: $data (refreshing: ${resourceState.isRefreshing})',
@@ -212,7 +212,7 @@ void main() {
           body: SignalBuilder(
             builder: (context, child) {
               final resourceState = r.state;
-              return resourceState.on(
+              return resourceState.when(
                 ready: (data) {
                   return Text(
                     'Data: $data (refreshing: ${resourceState.isRefreshing})',

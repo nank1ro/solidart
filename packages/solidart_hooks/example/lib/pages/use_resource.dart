@@ -17,7 +17,7 @@ class UseResourceExample extends HookWidget {
       body: Center(
         child: SignalBuilder(
           builder: (context, child) {
-            return userResource.state.on(
+            return userResource.state.when(
               ready: (data) => Text('Result: $data'),
               error: (error, stackTrace) => Text('Error: $error'),
               loading: () => const CircularProgressIndicator(),

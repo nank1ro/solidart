@@ -123,7 +123,7 @@ If you're using `SignalBuilder` you can react to the state of the resource:
 ```dart
 SignalBuilder(
   builder: (_, __) {
-    return user.state.on(
+    return user.state.when(
       ready: (data) {
         return Column(
           mainAxisSize: MainAxisSize.min,
