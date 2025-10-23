@@ -742,7 +742,6 @@ extension ResourceExtensions<T> on ResourceState<T> {
     );
   }
 
-  // coverage:ignore-start
   /// Performs an action based on the state of the [ResourceState].
   ///
   /// All cases are required.
@@ -756,7 +755,6 @@ extension ResourceExtensions<T> on ResourceState<T> {
   }) {
     return when<R>(ready: ready, error: error, loading: loading);
   }
-  // coverage:ignore-end
 
   /// Performs an action based on the state of the [ResourceState].
   ///
@@ -775,7 +773,6 @@ extension ResourceExtensions<T> on ResourceState<T> {
     );
   }
 
-  // coverage:ignore-start
   /// Performs an action based on the state of the [ResourceState], or call
   /// [orElse] if the current state is not considered.
   @Deprecated('Use maybeWhen instead')
@@ -794,7 +791,6 @@ extension ResourceExtensions<T> on ResourceState<T> {
       loading: loading,
     );
   }
-  // coverage:ignore-end
 
   /// Performs an action based on the state of the [ResourceState], or call
   /// [orElse] if the current state is not considered.
