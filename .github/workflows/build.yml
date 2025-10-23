@@ -27,7 +27,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter analyze packages
-      - run: flutter test packages --coverage -r github
+      - run: flutter test packages --coverage -r github --fail-fast
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
