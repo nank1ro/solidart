@@ -40,7 +40,7 @@ The resource has a value named `ResourceState`, that provides many useful conven
 
 The `when` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
 The are also other convenience methods to handle only specific states:
-- `whem` forces you to handle all the states of a Resource
+- `when` forces you to handle all the states of a Resource
 - `maybeWhen` lets you decide which states to handle and provide an `orElse` action for unhandled states
 - `map` equal to `on` but gives access to the `ResourceState` data class
 - `maybeMap` equal to `maybeOn` but gives access to the `ResourceState` data class
