@@ -77,7 +77,7 @@ Performs an action based on the state of the __ResourceState__.
 All cases are required.
 
 ```dart
-resourceState.on(
+resourceState.when(
   ready: (data) => Text('ready: $data'),
   error: (error, stackTrace) => Text('error: $error $stackTrace'),
   loading: () => Text('loading'),

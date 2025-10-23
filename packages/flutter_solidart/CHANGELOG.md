@@ -1,3 +1,9 @@
+## 2.7.0
+
+### Changes from solidart
+
+- **REFACTOR**: Deprecate `maybeOn` and `on` methods of `ResourceState`. Use `maybeWhen` and `when` instead.
+
 ## 2.6.1
 
 - **CHORE**: Bump `solidart` dependency to `^2.7.1`.
