@@ -1,3 +1,7 @@
+## 2.0.3
+
+- Update analyzer dependency range to support latest Dart versions (thanks to @romaingyh).
+
 ## 2.0.2
 
 - Fix lints not working with latest Dart versions.
