@@ -76,11 +76,11 @@ class Show<T extends bool> extends StatefulWidget {
   ///  [fallback] (if provided, or an empty view).
   final T Function() when;
 
-  /// The builder widget is rendered when the [when] signal value evalutes to
+  /// The builder widget is rendered when the [when] signal value evaluates to
   /// `true`
   final WidgetBuilder builder;
 
-  /// The fallback widget is rendered when the [when] signal value evalutes to
+  /// The fallback widget is rendered when the [when] signal value evaluates to
   /// `false`
   final WidgetBuilder? fallback;
 

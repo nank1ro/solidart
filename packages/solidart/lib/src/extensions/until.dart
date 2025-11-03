@@ -4,7 +4,7 @@ import 'package:solidart/solidart.dart';
 
 /// Extension that adds the `until` method to [SignalBase] classes.
 extension Until<T> on SignalBase<T> {
-  /// Returns the future that completes when the [condition] evalutes to true.
+  /// Returns the future that completes when the [condition] evaluates to true.
   /// If the [condition] is already true, it completes immediately.
   ///
   /// The [timeout] parameter specifies the maximum time to wait for the
