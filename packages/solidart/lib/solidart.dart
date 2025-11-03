@@ -5,6 +5,7 @@ library;
 
 export 'src/core/core.dart'
     hide ReactionErrorHandler, ReactionInterface, ReactiveName, ValueComparator;
+export 'src/extensions/until.dart';
 export 'src/utils.dart'
     show
         DebounceOperation,

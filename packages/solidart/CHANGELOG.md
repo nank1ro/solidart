@@ -1,3 +1,7 @@
+## 2.8.1
+
+- **FIX**: Expose `until` method for `Computed`.
+
 ## 2.8.0
 
 - **REFACTOR**: Deprecate `maybeOn` and `on` methods of `ResourceState`. Use `maybeWhen` and `when` instead.
