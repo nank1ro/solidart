@@ -1,3 +1,9 @@
+## 3.1.1
+
+### Changes from solidart
+
+- **FIX**: Expose `until` method for `Computed`.
+
 ## 3.1.0
 
 ### Changes from solidart

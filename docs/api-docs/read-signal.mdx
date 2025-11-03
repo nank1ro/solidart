@@ -95,7 +95,7 @@ count.observe((previousValue, value) {
 
 ## `FutureOr<T> until(bool Function(T value) condition, {Duration? timeout})`
 
-Returns the future that completes when the __condition__ evalutes to true.
+Returns the future that completes when the __condition__ evaluates to true.
 If the __condition__ is already true, it completes immediately.
 
 The optional __timeout__ parameter specifies the maximum time to wait for the condition to be met. If provided and the timeout is reached before the condition is met, the future will complete with a __TimeoutException__.

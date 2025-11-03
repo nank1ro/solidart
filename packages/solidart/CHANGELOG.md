@@ -1,3 +1,7 @@
+## 2.8.1
+
+- **FIX**: Expose `until` method for `Computed`.
+
 ## 2.8.0
 
 - **REFACTOR**: Deprecate `maybeOn` and `on` methods of `ResourceState`. Use `maybeWhen` and `when` instead.
@@ -249,7 +253,7 @@ The core of the library has been rewritten in order to support automatic depende
     print('The counter changed from $previousValue to $value');
   }, fireImmediately: true);
   ```
-- **FEAT**: Add `firstWhere` method on `Signal`. It returns a future that completes when the condition evalutes to true and it returns the current signal value.
+- **FEAT**: Add `firstWhere` method on `Signal`. It returns a future that completes when the condition evaluates to true and it returns the current signal value.
   ```dart
   final count = createSignal(0);
   // wait until the count is greater than 5
@@ -372,7 +376,7 @@ The core of the library has been rewritten in order to support automatic depende
     print('The counter changed from $previousValue to $value');
   }, fireImmediately: true);
   ```
-- **FEAT**: Add `until` method on `Signal`. It returns a future that completes when the condition evalutes to true and it
+- **FEAT**: Add `until` method on `Signal`. It returns a future that completes when the condition evaluates to true and it
   returns the current signal value.
   ```dart
   final count = createSignal(0);
