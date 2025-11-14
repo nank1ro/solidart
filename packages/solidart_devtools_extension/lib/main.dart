@@ -280,8 +280,16 @@ class _SignalsState extends State<Signals> {
                         const SizedBox(height: 8),
                         Expanded(
                           child: SignalBuilder(builder: (context, _) {
-                            return ListView.separated(
+                            return GridView.builder(
+                              gridDelegate:
+                                  SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 500,
+                                childAspectRatio: 5,
+                                mainAxisSpacing: 8,
+                                crossAxisSpacing: 8,
+                              ),
                               itemCount: filteredSignals.value.length,
+                              padding: EdgeInsets.symmetric(horizontal: 4),
                               itemBuilder: (BuildContext context, int index) {
                                 final sortedSignals = filteredSignals.value
                                   ..sort((a, b) => b.value.lastUpdate
@@ -297,100 +305,125 @@ class _SignalsState extends State<Signals> {
                                   builder: (context, _) {
                                     final selected =
                                         selectedSignalId.value == entry.key;
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 4),
-                                      child: Stack(
-                                        children: [
-                                          ShadGestureDetector(
-                                            cursor: SystemMouseCursors.click,
-                                            onTap: () {
-                                              selectedSignalId.value =
-                                                  entry.key;
-                                            },
-                                            child: ShadCard(
-                                              width: double.infinity,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      vertical: 16,
-                                                      horizontal: 24),
-                                              title: Text(name),
-                                              backgroundColor: selected
-                                                  ? shadTheme.colorScheme.accent
-                                                  : null,
-                                              trailing: selected
-                                                  ? const Icon(
-                                                      LucideIcons.chevronRight)
-                                                  : null,
-                                              description: Wrap(
-                                                spacing: 4,
-                                                runSpacing: 4,
-                                                children: [
-                                                  ShadBadge(
-                                                    child: Text(
-                                                      signal.type.name
-                                                          .capitalizeFirst(),
-                                                    ),
-                                                    onPressed: () {
-                                                      selectedSignalId.value =
-                                                          entry.key;
-                                                    },
-                                                  ),
-                                                  ShadBadge(
-                                                    child:
-                                                        Text(signal.valueType),
-                                                    onPressed: () {
-                                                      selectedSignalId.value =
-                                                          entry.key;
-                                                    },
-                                                  ),
-                                                  ShadBadge(
-                                                    child: Text(
-                                                      DateFormat(
-                                                              'yyyy-MM-dd hh:mm:ss',
-                                                              Localizations
-                                                                      .localeOf(
-                                                                          context)
-                                                                  .toLanguageTag())
-                                                          .format(signal
-                                                              .lastUpdate),
-                                                    ),
-                                                    onPressed: () {
-                                                      selectedSignalId.value =
-                                                          entry.key;
-                                                    },
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                          Positioned(
-                                            top: 0,
-                                            bottom: 0,
-                                            right: 0,
-                                            child: Container(
-                                              width: 10,
-                                              decoration: BoxDecoration(
-                                                color: signal.disposed
-                                                    ? Colors.red
-                                                    : Colors.green,
-                                                borderRadius:
-                                                    const BorderRadius.only(
-                                                  topRight: Radius.circular(8),
-                                                  bottomRight:
-                                                      Radius.circular(8),
+                                    return Stack(
+                                      children: [
+                                        ShadGestureDetector(
+                                          cursor: SystemMouseCursors.click,
+                                          onTap: () {
+                                            selectedSignalId.value = entry.key;
+                                          },
+                                          child: ShadCard(
+                                            width: double.infinity,
+                                            height: double.infinity,
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 8, horizontal: 8),
+                                            rowCrossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            title: Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 4),
+                                              child: Text(
+                                                name,
+                                                style: shadTheme.textTheme.small
+                                                    .copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: shadTheme
+                                                      .colorScheme.foreground,
                                                 ),
                                               ),
                                             ),
-                                          )
-                                        ],
-                                      ),
+                                            backgroundColor: selected
+                                                ? shadTheme.colorScheme.accent
+                                                : null,
+                                            description: Wrap(
+                                              spacing: 4,
+                                              runSpacing: 4,
+                                              children: [
+                                                ShadBadge(
+                                                  child: Text(
+                                                    signal.type.name
+                                                        .capitalizeFirst(),
+                                                    style: shadTheme
+                                                        .textTheme.small
+                                                        .copyWith(
+                                                            fontSize: 10,
+                                                            color: shadTheme
+                                                                .primaryBadgeTheme
+                                                                .foregroundColor),
+                                                  ),
+                                                  onPressed: () {
+                                                    selectedSignalId.value =
+                                                        entry.key;
+                                                  },
+                                                ),
+                                                ShadBadge(
+                                                  child: Text(
+                                                    signal.valueType,
+                                                    style: shadTheme
+                                                        .textTheme.small
+                                                        .copyWith(
+                                                            fontSize: 10,
+                                                            color: shadTheme
+                                                                .primaryBadgeTheme
+                                                                .foregroundColor),
+                                                  ),
+                                                  onPressed: () {
+                                                    selectedSignalId.value =
+                                                        entry.key;
+                                                  },
+                                                ),
+                                                ShadBadge(
+                                                  child: Text(
+                                                    DateFormat(
+                                                            'hh:mm:ss',
+                                                            Localizations
+                                                                    .localeOf(
+                                                                        context)
+                                                                .toLanguageTag())
+                                                        .format(
+                                                            signal.lastUpdate),
+                                                    style: shadTheme
+                                                        .textTheme.small
+                                                        .copyWith(
+                                                            fontSize: 10,
+                                                            color: shadTheme
+                                                                .primaryBadgeTheme
+                                                                .foregroundColor),
+                                                  ),
+                                                  onPressed: () {
+                                                    selectedSignalId.value =
+                                                        entry.key;
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 0,
+                                          bottom: 0,
+                                          right: 0,
+                                          child: Container(
+                                            width: 10,
+                                            decoration: BoxDecoration(
+                                              color: signal.disposed
+                                                  ? Colors.red
+                                                  : Colors.green,
+                                              borderRadius:
+                                                  const BorderRadius.only(
+                                                topRight: Radius.circular(8),
+                                                bottomRight: Radius.circular(8),
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      ],
                                     );
                                   },
                                 );
                               },
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 8),
+                              // separatorBuilder: (_, __) =>
+                              //     const SizedBox(height: 8),
                             );
                           }),
                         ),
