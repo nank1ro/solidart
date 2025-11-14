@@ -18,7 +18,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   MapSignal(
     super.initialValue, {
     /// {@macro SignalBase.name}
-    String? name,
+    super.name,
 
     /// {@macro SignalBase.equals}
     super.equals,
@@ -34,9 +34,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
 
     /// {@macro SignalBase.trackPreviousValue}
     super.trackPreviousValue,
-  }) : super(
-          name: name ?? ReactiveName.nameFor('MapSignal'),
-        );
+  });
 
   @override
   Map<K, V> setValue(Map<K, V> newValue) {
@@ -427,4 +425,8 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
     _reportChanged();
     _notifySignalUpdate();
   }
+
+  @override
+  // ignore: overridden_fields
+  final _id = ReactiveName.nameFor('MapSignal');
 }

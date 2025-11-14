@@ -98,7 +98,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     this.source,
 
     /// {@macro SignalBase.name}
-    String? name,
+    super.name,
 
     /// {@macro SignalBase.equals}
     super.equals,
@@ -125,7 +125,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
         stream = null,
         super(
           ResourceState<T>.loading(),
-          name: name ?? ReactiveName.nameFor('Resource'),
           trackPreviousValue:
               trackPreviousState ?? SolidartConfig.trackPreviousValue,
           comparator: identical,
@@ -140,7 +139,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     this.source,
 
     /// {@macro SignalBase.name}
-    String? name,
+    super.name,
 
     /// {@macro SignalBase.equals}
     super.equals,
@@ -165,7 +164,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
         fetcher = null,
         super(
           ResourceState<T>.loading(),
-          name: name ?? ReactiveName.nameFor('Resource'),
           trackPreviousValue:
               trackPreviousState ?? SolidartConfig.trackPreviousValue,
           comparator: identical,
@@ -205,6 +203,10 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// refreshing.
   /// {@endtemplate}
   final bool useRefreshing;
+
+  @override
+  // ignore: overridden_fields
+  final _id = ReactiveName.nameFor('Resource');
 
   /// The current resource state
   ResourceState<T> get state {
@@ -314,7 +316,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
       _sourceDisposeObservation = source!.observe((p, v) {
         if (debounceDelay != null) {
           Debouncer.debounce(
-            source!.name,
+            source!._id,
             debounceDelay!,
             refresh,
           );

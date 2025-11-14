@@ -28,7 +28,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   ReadableSignal(
     T initialValue, {
     /// {@macro SignalBase.name}
-    String? name,
+    this.name,
 
     /// {@macro SignalBase.equals}
     bool? equals,
@@ -48,7 +48,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
         trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
         autoDispose = autoDispose ?? SolidartConfig.autoDispose,
         equals = equals ?? SolidartConfig.equals,
-        name = name ?? ReactiveName.nameFor('ReadSignal'),
         trackPreviousValue =
             trackPreviousValue ?? SolidartConfig.trackPreviousValue {
     _internalSignal = _AlienSignal(this, Some(initialValue));
@@ -59,7 +58,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   /// {@macro readsignal}
   ReadableSignal.lazy({
     /// {@macro SignalBase.name}
-    String? name,
+    this.name,
 
     /// {@macro SignalBase.equals}
     bool? equals,
@@ -80,7 +79,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
         autoDispose = autoDispose ?? SolidartConfig.autoDispose,
         equals = equals ?? SolidartConfig.equals,
         // coverage:ignore-start
-        name = name ?? ReactiveName.nameFor('ReadSignal'),
         // coverage:ignore-end
         trackPreviousValue =
             trackPreviousValue ?? SolidartConfig.trackPreviousValue {
@@ -89,7 +87,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   /// {@macro SignalBase.name}
   @override
-  final String name;
+  final String? name;
 
   /// {@macro SignalBase.equals}
   @override
@@ -113,6 +111,9 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   /// Tracks the internal value
   late final _AlienSignal<T> _internalSignal;
+
+  @override
+  final _id = ReactiveName.nameFor('ReadSignal');
 
   @override
   bool get hasValue {
