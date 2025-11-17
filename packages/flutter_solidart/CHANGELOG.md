@@ -1,3 +1,9 @@
+## 2.7.2
+
+### Changes from solidart
+
+- **REFACTOR**: Improve the Solidart DevTools extension by giving any signal an id and omit overriding the same signal by name.
+
 ## 2.7.1
 
 ### Changes from solidart

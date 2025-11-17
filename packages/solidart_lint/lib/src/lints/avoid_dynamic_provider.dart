@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer/error/error.dart' as analyzer_error;
 import 'package:analyzer/error/listener.dart';
 import 'package:collection/collection.dart';
@@ -10,14 +11,14 @@ class AvoidDynamicProvider extends DartLintRule {
 
   static const _code = LintCode(
     name: 'avoid_dynamic_provider',
-    errorSeverity: analyzer_error.ErrorSeverity.ERROR,
+    errorSeverity: analyzer_error.DiagnosticSeverity.ERROR,
     problemMessage: 'The Provider cannot be dynamic',
   );
 
   @override
   void run(
     CustomLintResolver resolver,
-    ErrorReporter reporter,
+    DiagnosticReporter reporter,
     CustomLintContext context,
   ) {
     context.registry.addInstanceCreationExpression((node) {
@@ -43,8 +44,8 @@ class _ProviderTypeFix extends DartFix {
     CustomLintResolver resolver,
     ChangeReporter reporter,
     CustomLintContext context,
-    analyzer_error.AnalysisError analysisError,
-    List<analyzer_error.AnalysisError> others,
+    Diagnostic analysisError,
+    List<Diagnostic> others,
   ) {
     context.registry.addInstanceCreationExpression(
       (node) {

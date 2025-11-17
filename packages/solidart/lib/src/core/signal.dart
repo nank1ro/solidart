@@ -106,7 +106,7 @@ class Signal<T> extends ReadableSignal<T> {
   Signal(
     super.initialValue, {
     /// {@macro SignalBase.name}
-    String? name,
+    super.name,
 
     /// {@macro SignalBase.equals}
     super.equals,
@@ -122,9 +122,7 @@ class Signal<T> extends ReadableSignal<T> {
 
     /// {@macro SignalBase.trackPreviousValue}
     super.trackPreviousValue,
-  }) : super(
-          name: name ?? ReactiveName.nameFor('Signal'),
-        );
+  });
 
   /// {@macro signal}
   ///
@@ -133,7 +131,7 @@ class Signal<T> extends ReadableSignal<T> {
   /// one.
   Signal.lazy({
     /// {@macro SignalBase.name}
-    String? name,
+    super.name,
 
     /// {@macro SignalBase.equals}
     super.equals,
@@ -149,9 +147,7 @@ class Signal<T> extends ReadableSignal<T> {
 
     /// {@macro SignalBase.trackPreviousValue}
     super.trackPreviousValue,
-  }) : super.lazy(
-          name: name ?? ReactiveName.nameFor('Signal'),
-        );
+  }) : super.lazy();
 
   /// {@macro set-signal-value}
   set value(T newValue) => setValue(newValue);
@@ -164,6 +160,10 @@ class Signal<T> extends ReadableSignal<T> {
   /// Converts this [Signal] into a [ReadableSignal]
   /// Use this method to remove the visility to the value setter.
   ReadableSignal<T> toReadSignal() => this;
+
+  @override
+  // ignore: overridden_fields
+  final _id = ReactiveName.nameFor('Signal');
 
   @override
   String toString() =>

@@ -18,7 +18,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   SetSignal(
     Iterable<E> initialValue, {
     /// {@macro SignalBase.name}
-    String? name,
+    super.name,
 
     /// {@macro SignalBase.equals}
     super.equals,
@@ -34,10 +34,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
 
     /// {@macro SignalBase.trackPreviousValue}
     super.trackPreviousValue,
-  }) : super(
-          initialValue.toSet(),
-          name: name ?? ReactiveName.nameFor('SetSignal'),
-        );
+  }) : super(initialValue.toSet());
 
   @override
   Set<E> setValue(Set<E> newValue) {
@@ -470,4 +467,8 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
     _reportChanged();
     _notifySignalUpdate();
   }
+
+  @override
+  // ignore: overridden_fields
+  final _id = ReactiveName.nameFor('SetSignal');
 }

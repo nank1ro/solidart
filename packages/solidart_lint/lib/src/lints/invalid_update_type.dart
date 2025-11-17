@@ -9,14 +9,14 @@ class InvalidUpdateType extends DartLintRule {
 
   static const _code = LintCode(
     name: 'invalid_update_type',
-    errorSeverity: analyzer_error.ErrorSeverity.ERROR,
+    errorSeverity: analyzer_error.DiagnosticSeverity.ERROR,
     problemMessage: 'The update type is invalid, must not implement SignalBase',
   );
 
   @override
   void run(
     CustomLintResolver resolver,
-    ErrorReporter reporter,
+    DiagnosticReporter reporter,
     CustomLintContext context,
   ) {
     context.registry.addMethodInvocation(
@@ -29,12 +29,14 @@ class InvalidUpdateType extends DartLintRule {
           if (!isContext) return;
           final typeArgument = node.typeArguments?.arguments.firstOrNull?.type;
           if (typeArgument == null) {
-            return reporter.atNode(node, _code);
+            reporter.atNode(node, _code);
+            return;
           }
           final isSignalBase =
               signalBaseType.isAssignableFromType(typeArgument);
           if (isSignalBase) {
-            return reporter.atNode(node, _code);
+            reporter.atNode(node, _code);
+            return;
           }
         }
       },

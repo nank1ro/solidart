@@ -12,7 +12,7 @@ typedef ValueComparator<T> = bool Function(T a, T b);
 abstract class SignalBase<T> {
   /// The base of a signal.
   SignalBase({
-    required this.name,
+    this.name,
     this.comparator = identical,
     bool? equals,
     bool? autoDispose,
@@ -24,10 +24,12 @@ abstract class SignalBase<T> {
         trackPreviousValue =
             trackPreviousValue ?? SolidartConfig.trackPreviousValue;
 
+  String get _id;
+
   /// {@template SignalBase.name}
   /// The name of the signal, useful for logging purposes.
   /// {@endtemplate}
-  final String name;
+  final String? name;
 
   /// {@template SignalBase.equals}
   /// Whether to check the equality of the value with the == equality.

@@ -9,14 +9,14 @@ class MissingSolidGetType extends DartLintRule {
 
   static const _code = LintCode(
     name: 'missing_solid_get_type',
-    errorSeverity: analyzer_error.ErrorSeverity.ERROR,
+    errorSeverity: analyzer_error.DiagnosticSeverity.ERROR,
     problemMessage: 'Specify the provider or signal type you want to get',
   );
 
   @override
   void run(
     CustomLintResolver resolver,
-    ErrorReporter reporter,
+    DiagnosticReporter reporter,
     CustomLintContext context,
   ) {
     context.registry.addMethodInvocation(
