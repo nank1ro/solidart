@@ -76,6 +76,7 @@ void _notifyDevToolsAboutSignal(
   final jsonPreviousValue = _toJson(previousValue);
 
   dev.postEvent(eventName, {
+    '_id': signal._id,
     'name': signal.name,
     'value': jsonValue,
     'previousValue': jsonPreviousValue,

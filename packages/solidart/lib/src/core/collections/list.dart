@@ -18,7 +18,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   ListSignal(
     Iterable<E> initialValue, {
     /// {@macro SignalBase.name}
-    String? name,
+    super.name,
 
     /// {@macro SignalBase.equals}
     super.equals,
@@ -34,10 +34,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
 
     /// {@macro SignalBase.trackPreviousValue}
     super.trackPreviousValue,
-  }) : super(
-          initialValue.toList(),
-          name: name ?? ReactiveName.nameFor('ListSignal'),
-        );
+  }) : super(initialValue.toList());
 
   @override
   List<E> setValue(List<E> newValue) {
@@ -907,4 +904,8 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
     _reportChanged();
     _notifySignalUpdate();
   }
+
+  @override
+  // ignore: overridden_fields
+  final _id = ReactiveName.nameFor('ListSignal');
 }

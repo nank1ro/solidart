@@ -55,7 +55,7 @@ class Computed<T> extends ReadSignal<T> {
   Computed(
     this.selector, {
     /// {@macro SignalBase.name}
-    String? name,
+    super.name,
 
     /// {@macro SignalBase.equals}
     super.equals,
@@ -71,7 +71,7 @@ class Computed<T> extends ReadSignal<T> {
 
     /// {@macro SignalBase.trackPreviousValue}
     super.trackPreviousValue,
-  }) : super(name: name ?? ReactiveName.nameFor('Computed')) {
+  }) {
     var runnedOnce = false;
     _internalComputed = _AlienComputed(
       this,
@@ -244,6 +244,9 @@ class Computed<T> extends ReadSignal<T> {
     if (_disposed) return;
     _internalComputed.update();
   }
+
+  @override
+  final _id = ReactiveName.nameFor('Computed');
 
   @override
   String toString() {

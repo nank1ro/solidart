@@ -8,7 +8,7 @@ class InvalidObserveType extends DartLintRule {
 
   static const _code = LintCode(
     name: 'invalid_observe_type',
-    errorSeverity: analyzer_error.ErrorSeverity.ERROR,
+    errorSeverity: analyzer_error.DiagnosticSeverity.ERROR,
     problemMessage:
         'The observe type is invalid, must not implement SignalBase',
   );
@@ -16,7 +16,7 @@ class InvalidObserveType extends DartLintRule {
   @override
   void run(
     CustomLintResolver resolver,
-    ErrorReporter reporter,
+    DiagnosticReporter reporter,
     CustomLintContext context,
   ) {
     context.registry.addMethodInvocation(
@@ -30,7 +30,8 @@ class InvalidObserveType extends DartLintRule {
           if (node.staticType == null) return;
           final typeArgument = node.typeArguments?.arguments.firstOrNull?.type;
           if (typeArgument == null) {
-            return reporter.atNode(node, _code);
+            reporter.atNode(node, _code);
+            return;
           }
           final isSignalBase =
               signalBaseType.isAssignableFromType(node.staticType!);
