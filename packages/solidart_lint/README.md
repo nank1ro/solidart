@@ -4,26 +4,13 @@ This package is a developer tool for users of flutter_solidart, designed to help
 
 ## Getting started
 
-Run this command in the root of your Flutter project:
-
-```sh
-flutter pub add -d solidart_lint custom_lint
-```
+Be sure to have the Dart SDK version `>= 3.10.0` and the Flutter SDK `>= 3.38.0`.
 
 Then edit your `analysis_options.yaml` file and add these lines of code:
 
 ```yaml
-analyzer:
-  plugins:
-    - custom_lint
-```
-
-Then run:
-
-```sh
-flutter clean
-flutter pub get
-dart run custom_lint
+plugins:
+  solidart_lint: ^3.0.0
 ```
 
 ## ASSISTS
