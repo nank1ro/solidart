@@ -10,11 +10,12 @@ import 'package:meta/meta.dart';
 @immutable
 class GithubSearchBloc {
   GithubSearchBloc({GithubRepository? repository})
-      : _repository = repository ??
-            GithubRepository(
-              client: GithubClient(),
-              cache: InMemoryCache(const Duration(minutes: 5)),
-            );
+    : _repository =
+          repository ??
+          GithubRepository(
+            client: GithubClient(),
+            cache: InMemoryCache(const Duration(minutes: 5)),
+          );
 
   static final provider = Provider(
     (_) => GithubSearchBloc(),
@@ -27,10 +28,7 @@ class GithubSearchBloc {
   final _searchTerm = Signal('');
 
   /// Handles the fetching of current search results
-  late final searchResult = Resource(
-    _search,
-    source: _searchTerm,
-  );
+  late final searchResult = Resource(_search, source: _searchTerm);
 
   // Sets the current search term
   void search(String term) => _searchTerm.value = term;

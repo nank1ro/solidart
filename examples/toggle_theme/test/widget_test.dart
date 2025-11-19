@@ -12,34 +12,35 @@ import 'package:toggle_theme/main.dart';
 
 void main() {
   testWidgets(
-      'Check that when the app is in light mode the icon button shows a moon, while in dark mode it shows a sun',
-      (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    'Check that when the app is in light mode the icon button shows a moon, while in dark mode it shows a sun',
+    (WidgetTester tester) async {
+      // Build our app and trigger a frame.
+      await tester.pumpWidget(const MyApp());
 
-    // Icon finders
-    Finder lightModeIcon() => find.byIcon(Icons.light_mode);
-    Finder darkModeIcon() => find.byIcon(Icons.dark_mode);
+      // Icon finders
+      Finder lightModeIcon() => find.byIcon(Icons.light_mode);
+      Finder darkModeIcon() => find.byIcon(Icons.dark_mode);
 
-    // Given that our theme starts at light mode
-    // Verify that the toggle theme icon button shows the dark mode icon
-    expect(darkModeIcon(), findsOneWidget);
-    expect(lightModeIcon(), findsNothing);
+      // Given that our theme starts at light mode
+      // Verify that the toggle theme icon button shows the dark mode icon
+      expect(darkModeIcon(), findsOneWidget);
+      expect(lightModeIcon(), findsNothing);
 
-    // Tap the icon button to toggle the theme mode and trigger a frame.
-    await tester.tap(darkModeIcon());
-    await tester.pump();
+      // Tap the icon button to toggle the theme mode and trigger a frame.
+      await tester.tap(darkModeIcon());
+      await tester.pump();
 
-    // Verify that our theme has changed to 'dark' mode and the `light_mode` icon should be shown
-    expect(lightModeIcon(), findsOneWidget);
-    expect(darkModeIcon(), findsNothing);
+      // Verify that our theme has changed to 'dark' mode and the `light_mode` icon should be shown
+      expect(lightModeIcon(), findsOneWidget);
+      expect(darkModeIcon(), findsNothing);
 
-    // Tap the icon button to toggle the theme mode and trigger a frame.
-    await tester.tap(lightModeIcon());
-    await tester.pump();
+      // Tap the icon button to toggle the theme mode and trigger a frame.
+      await tester.tap(lightModeIcon());
+      await tester.pump();
 
-    // Verify that our theme has changed to 'light' mode and the `dark_mode` icon should be shown
-    expect(darkModeIcon(), findsOneWidget);
-    expect(lightModeIcon(), findsNothing);
-  });
+      // Verify that our theme has changed to 'light' mode and the `dark_mode` icon should be shown
+      expect(darkModeIcon(), findsOneWidget);
+      expect(lightModeIcon(), findsNothing);
+    },
+  );
 }

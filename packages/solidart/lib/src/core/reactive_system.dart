@@ -26,10 +26,11 @@ extension MayDisposeDependencies on alien.ReactiveNode {
   }
 }
 
-typedef ReactionErrorHandler = void Function(
-  Object error,
-  ReactionInterface reaction,
-);
+typedef ReactionErrorHandler =
+    void Function(
+      Object error,
+      ReactionInterface reaction,
+    );
 
 class ReactiveName {
   ReactiveName._internal();
@@ -57,14 +58,14 @@ class ReactiveSystem extends alien.ReactiveSystem {
   @override
   void notify(alien.ReactiveNode node) {
     final flags = node.flags;
-    if ((flags & 64 /* Queued */) == 0) {
+    if ((flags & 64 /* Queued */ ) == 0) {
       node.flags = flags | 64 /* Queued */;
       final subs = node.subs;
       if (subs != null) {
         notify(subs.sub);
       } else if (queuedEffectsTail != null) {
-        queuedEffectsTail =
-            queuedEffectsTail!.nextEffect = node as _AlienEffect;
+        queuedEffectsTail = queuedEffectsTail!.nextEffect =
+            node as _AlienEffect;
       } else {
         queuedEffectsTail = queuedEffects = node as _AlienEffect;
       }
@@ -108,15 +109,15 @@ class ReactiveSystem extends alien.ReactiveSystem {
 
   T getComputedValue<T>(_AlienComputed<T> computed) {
     final flags = computed.flags;
-    if ((flags & 16 /* Dirty */) != 0 ||
-        ((flags & 32 /* Pending */) != 0 &&
+    if ((flags & 16 /* Dirty */ ) != 0 ||
+        ((flags & 32 /* Pending */ ) != 0 &&
             computed.deps != null &&
             checkDirty(computed.deps!, computed))) {
       if (computed.update()) {
         final subs = computed.subs;
         if (subs != null) shallowPropagate(subs);
       }
-    } else if ((flags & 32 /* Pending */) != 0) {
+    } else if ((flags & 32 /* Pending */ ) != 0) {
       computed.flags = flags & -33 /* ~Pending */;
     }
     if (activeSub != null) {
@@ -128,7 +129,7 @@ class ReactiveSystem extends alien.ReactiveSystem {
 
   Option<T> getSignalValue<T>(_AlienSignal<T> signal) {
     final value = signal.value;
-    if ((signal.flags & 16 /* Dirty */) != 0) {
+    if ((signal.flags & 16 /* Dirty */ ) != 0) {
       if (signal.update()) {
         final subs = signal.subs;
         if (subs != null) shallowPropagate(subs);
@@ -163,8 +164,9 @@ class ReactiveSystem extends alien.ReactiveSystem {
   }
 
   void run(alien.ReactiveNode effect, int flags) {
-    if ((flags & 16 /* Dirty */) != 0 ||
-        ((flags & 32 /* Pending */) != 0 && checkDirty(effect.deps!, effect))) {
+    if ((flags & 16 /* Dirty */ ) != 0 ||
+        ((flags & 32 /* Pending */ ) != 0 &&
+            checkDirty(effect.deps!, effect))) {
       final prevSub = setCurrentSub(effect);
       startTracking(effect);
       try {
@@ -174,14 +176,14 @@ class ReactiveSystem extends alien.ReactiveSystem {
         endTracking(effect);
       }
       return;
-    } else if ((flags & 32 /* Pending */) != 0) {
+    } else if ((flags & 32 /* Pending */ ) != 0) {
       effect.flags = flags & -33 /* ~Pending */;
     }
     var link = effect.deps;
     while (link != null) {
       final dep = link.dep;
       final depFlags = dep.flags;
-      if ((depFlags & 64 /* Queued */) != 0) {
+      if ((depFlags & 64 /* Queued */ ) != 0) {
         run(dep, dep.flags = depFlags & -65 /* ~Queued */);
       }
       link = link.nextDep;

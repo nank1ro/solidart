@@ -17,6 +17,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// {@macro map-signal}
   MapSignal(
     super.initialValue, {
+
     /// {@macro SignalBase.name}
     super.name,
 

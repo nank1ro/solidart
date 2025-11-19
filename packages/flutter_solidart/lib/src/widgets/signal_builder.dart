@@ -63,8 +63,12 @@ class SignalBuilder extends StatelessWidget {
 class _SignalBuilderElement extends StatelessElement {
   _SignalBuilderElement(SignalBuilder super.widget);
 
-  late final effect =
-      Effect(scheduler, detach: true, autoDispose: false, autorun: false);
+  late final effect = Effect(
+    scheduler,
+    detach: true,
+    autoDispose: false,
+    autorun: false,
+  );
 
   void scheduler() {
     if (dirty) return;

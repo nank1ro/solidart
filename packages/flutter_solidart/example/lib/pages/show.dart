@@ -26,7 +26,7 @@ class _ShowPageState extends State<ShowPage> {
               builder: (_) => const Text('LOGIN'),
               fallback: (_) => const Text('LOGOUT'),
             ),
-          )
+          ),
         ],
       ),
       body: Center(

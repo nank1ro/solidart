@@ -26,9 +26,7 @@ class SearchPageBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Github Search'),
-      ),
+      appBar: AppBar(title: const Text('Github Search')),
       body: const Padding(
         padding: EdgeInsets.all(8.0),
         child: Column(
@@ -94,41 +92,41 @@ class _SearchBody extends StatelessWidget {
       child:
           // Handle the search result state
           SignalBuilder(
-        builder: (context, searchResultState) {
-          final searchResultState =
-              GithubSearchBloc.provider.of(context).searchResult.state;
-          return Stack(
-            children: [
-              searchResultState.when(
-                ready: (searchResult) {
-                  if (searchResult.items.isEmpty) {
-                    return const Text('No Results');
-                  }
-                  return _SearchResults(items: searchResult.items);
-                },
-                error: (error, _) => Text(error.toString()),
-                loading: () => const CircularProgressIndicator(),
-              ),
-              if (searchResultState.isRefreshing)
-                Positioned.fill(
-                  child: Container(
-                    alignment: Alignment.center,
-                    color: Colors.black.withValues(alpha: 0.3),
-                    child: const CircularProgressIndicator(),
+            builder: (context, searchResultState) {
+              final searchResultState = GithubSearchBloc.provider
+                  .of(context)
+                  .searchResult
+                  .state;
+              return Stack(
+                children: [
+                  searchResultState.when(
+                    ready: (searchResult) {
+                      if (searchResult.items.isEmpty) {
+                        return const Text('No Results');
+                      }
+                      return _SearchResults(items: searchResult.items);
+                    },
+                    error: (error, _) => Text(error.toString()),
+                    loading: () => const CircularProgressIndicator(),
                   ),
-                ),
-            ],
-          );
-        },
-      ),
+                  if (searchResultState.isRefreshing)
+                    Positioned.fill(
+                      child: Container(
+                        alignment: Alignment.center,
+                        color: Colors.black.withValues(alpha: 0.3),
+                        child: const CircularProgressIndicator(),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
     );
   }
 }
 
 class _SearchResults extends StatelessWidget {
-  const _SearchResults({
-    required this.items,
-  });
+  const _SearchResults({required this.items});
 
   final List<SearchResultItem> items;
 
@@ -151,9 +149,7 @@ class _SearchResultItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: CircleAvatar(
-        child: Image.network(item.owner.avatarUrl),
-      ),
+      leading: CircleAvatar(child: Image.network(item.owner.avatarUrl)),
       title: Text(item.fullName),
       onTap: () async {
         if (await canLaunchUrlString(item.htmlUrl)) {

@@ -3,10 +3,7 @@ import 'package:github_search/service/client.dart';
 import 'package:github_search/service/in_memory_cache.dart';
 
 class GithubRepository {
-  GithubRepository({
-    required this.client,
-    required this.cache,
-  });
+  GithubRepository({required this.client, required this.cache});
 
   final InMemoryCache cache;
   final GithubClient client;

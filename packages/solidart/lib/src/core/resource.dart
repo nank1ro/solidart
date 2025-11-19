@@ -7,8 +7,10 @@ part of 'core.dart';
 /// {@endtemplate}
 extension FutureOrThenExtension<T> on FutureOr<T> {
   /// Extension method to add a `then` method to `FutureOr`.
-  FutureOr<R> then<R>(FutureOr<R> Function(T value) onValue,
-      {Function? onError}) {
+  FutureOr<R> then<R>(
+    FutureOr<R> Function(T value) onValue, {
+    Function? onError,
+  }) {
     final v = this;
     if (v is Future<T>) {
       return v.then(onValue, onError: onError);
@@ -121,14 +123,14 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
     /// The debounce delay when the source changes, optional.
     this.debounceDelay,
-  })  : useRefreshing = useRefreshing ?? SolidartConfig.useRefreshing,
-        stream = null,
-        super(
-          ResourceState<T>.loading(),
-          trackPreviousValue:
-              trackPreviousState ?? SolidartConfig.trackPreviousValue,
-          comparator: identical,
-        ) {
+  }) : useRefreshing = useRefreshing ?? SolidartConfig.useRefreshing,
+       stream = null,
+       super(
+         ResourceState<T>.loading(),
+         trackPreviousValue:
+             trackPreviousState ?? SolidartConfig.trackPreviousValue,
+         comparator: identical,
+       ) {
     // resolve the resource immediately if not lazy
     if (!lazy) _resolve();
   }
@@ -160,14 +162,14 @@ class Resource<T> extends Signal<ResourceState<T>> {
     /// Whether to track the previous state of the resource, defaults to true.
     bool? trackPreviousState,
     this.debounceDelay,
-  })  : useRefreshing = useRefreshing ?? SolidartConfig.useRefreshing,
-        fetcher = null,
-        super(
-          ResourceState<T>.loading(),
-          trackPreviousValue:
-              trackPreviousState ?? SolidartConfig.trackPreviousValue,
-          comparator: identical,
-        ) {
+  }) : useRefreshing = useRefreshing ?? SolidartConfig.useRefreshing,
+       fetcher = null,
+       super(
+         ResourceState<T>.loading(),
+         trackPreviousValue:
+             trackPreviousState ?? SolidartConfig.trackPreviousValue,
+         comparator: identical,
+       ) {
     // resolve the resource immediately if not lazy
     if (!lazy) _resolve();
   }
@@ -246,8 +248,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   @override
   ResourceState<T> updateValue(
     ResourceState<T> Function(ResourceState<T> state) callback,
-  ) =>
-      update(callback);
+  ) => update(callback);
   // coverage:ignore-end
 
   /// The previous resource state
@@ -433,8 +434,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// new state
   ResourceState<T> update(
     ResourceState<T> Function(ResourceState<T> state) callback,
-  ) =>
-      state = callback(_value);
+  ) => state = callback(_value);
 
   @override
   void dispose() {
@@ -552,6 +552,7 @@ class ResourceReady<T> implements ResourceState<T> {
       isRefreshing: isRefreshing ?? this.isRefreshing,
     );
   }
+
   // coverage:ignore-end
 }
 
@@ -653,6 +654,7 @@ class ResourceError<T> implements ResourceState<T> {
       isRefreshing: isRefreshing ?? this.isRefreshing,
     );
   }
+
   // coverage:ignore-end
 }
 
@@ -671,10 +673,10 @@ extension ResourceExtensions<T> on ResourceState<T> {
   /// Indicates if the resource is refreshing. Loading is not considered as
   /// refreshing.
   bool get isRefreshing => switch (this) {
-        ResourceReady<T>(:final isRefreshing) => isRefreshing,
-        ResourceError<T>(:final isRefreshing) => isRefreshing,
-        ResourceLoading<T>() => false,
-      };
+    ResourceReady<T>(:final isRefreshing) => isRefreshing,
+    ResourceError<T>(:final isRefreshing) => isRefreshing,
+    ResourceLoading<T>() => false,
+  };
 
   /// Upcast [ResourceState] into a [ResourceReady], or return null if the
   /// [ResourceState] is in loading/error state.
@@ -812,4 +814,5 @@ extension ResourceExtensions<T> on ResourceState<T> {
     );
   }
 }
+
 // coverage:ignore-end

@@ -54,6 +54,7 @@ class Computed<T> extends ReadSignal<T> {
   /// {@macro computed}
   Computed(
     this.selector, {
+
     /// {@macro SignalBase.name}
     super.name,
 
