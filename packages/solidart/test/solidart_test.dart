@@ -1,4 +1,4 @@
-// ignore_for_file: cascade_invocations
+// ignore_for_file: cascade_invocations, unreachable_from_main
 
 import 'dart:async';
 import 'dart:math';
@@ -76,39 +76,40 @@ void main() {
   group(
     'Signal tests - ',
     () {
-      test('with equals true it notifies only when the value changes',
-          () async {
-        final counter = Signal(0);
-
-        final cb = MockCallbackFunction();
-        final unobserve = counter.observe((_, __) => cb());
-
-        expect(counter(), 0);
-
-        counter.value = 1;
-        await pumpEventQueue();
-        expect(counter.value, 1);
-
-        counter.value = 2;
-        counter.value = 2;
-        counter.value = 2;
-
-        await pumpEventQueue();
-        counter.value = 3;
-
-        expect(counter.value, 3);
-        await pumpEventQueue();
-        verify(cb()).called(3);
-        // clear
-        unobserve();
-      });
-
       test(
-          'with the identical comparator it notifies only when the comparator '
+        'with equals true it notifies only when the value changes',
+        () async {
+          final counter = Signal(0);
+
+          final cb = MockCallbackFunction();
+          final unobserve = counter.observe((_, _) => cb());
+
+          expect(counter(), 0);
+
+          counter.value = 1;
+          await pumpEventQueue();
+          expect(counter.value, 1);
+
+          counter.value = 2;
+          counter.value = 2;
+          counter.value = 2;
+
+          await pumpEventQueue();
+          counter.value = 3;
+
+          expect(counter.value, 3);
+          await pumpEventQueue();
+          verify(cb()).called(3);
+          // clear
+          unobserve();
+        },
+      );
+
+      test('with the identical comparator it notifies only when the comparator '
           'returns false', () async {
         final signal = Signal<_A?>(null);
         final cb = MockCallbackFunction();
-        final unobserve = signal.observe((_, __) => cb());
+        final unobserve = signal.observe((_, _) => cb());
 
         expect(signal.value, null);
         final a = _A();
@@ -184,54 +185,59 @@ void main() {
         count.value = 11;
       });
 
-      test('test until() with timeout - condition met before timeout',
-          () async {
-        final count = Signal(0);
+      test(
+        'test until() with timeout - condition met before timeout',
+        () async {
+          final count = Signal(0);
 
-        unawaited(
-          expectLater(
-            count.until(
-              (value) => value > 5,
-              timeout: const Duration(milliseconds: 500),
+          unawaited(
+            expectLater(
+              count.until(
+                (value) => value > 5,
+                timeout: const Duration(milliseconds: 500),
+              ),
+              completion(11),
             ),
-            completion(11),
-          ),
-        );
-        // Wait a bit then update the value before timeout
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-        count.value = 11;
-      });
-
-      test('test until() with timeout - timeout occurs before condition',
-          () async {
-        final count = Signal(0);
-
-        unawaited(
-          expectLater(
-            count.until(
-              (value) => value > 5,
-              timeout: const Duration(milliseconds: 100),
-            ),
-            throwsA(isA<TimeoutException>()),
-          ),
-        );
-
-        // Don't update the value, let it timeout
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-      });
+          );
+          // Wait a bit then update the value before timeout
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          count.value = 11;
+        },
+      );
 
       test(
-          '''test until() with timeout - condition already met returns immediately''',
-          () async {
-        final count = Signal(10); // Value already meets condition
+        'test until() with timeout - timeout occurs before condition',
+        () async {
+          final count = Signal(0);
 
-        final result = await count.until(
-          (value) => value > 5,
-          timeout: const Duration(milliseconds: 100),
-        );
+          unawaited(
+            expectLater(
+              count.until(
+                (value) => value > 5,
+                timeout: const Duration(milliseconds: 100),
+              ),
+              throwsA(isA<TimeoutException>()),
+            ),
+          );
 
-        expect(result, 10);
-      });
+          // Don't update the value, let it timeout
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+        },
+      );
+
+      test(
+        '''test until() with timeout - condition already met returns immediately''',
+        () async {
+          final count = Signal(10); // Value already meets condition
+
+          final result = await count.until(
+            (value) => value > 5,
+            timeout: const Duration(milliseconds: 100),
+          );
+
+          expect(result, 10);
+        },
+      );
 
       test('test until() with timeout - proper cleanup on timeout', () async {
         final count = Signal(0);
@@ -332,11 +338,12 @@ void main() {
       });
 
       test(
-          '''lazy Signal trows StateError when accessing value before setting one''',
-          () {
-        final signal = Signal<bool>.lazy();
-        expect(() => signal.value, throwsStateError);
-      });
+        '''lazy Signal trows StateError when accessing value before setting one''',
+        () {
+          final signal = Signal<bool>.lazy();
+          expect(() => signal.value, throwsStateError);
+        },
+      );
 
       test('untrackedValue', () {
         final counter = Signal(0);
@@ -493,44 +500,46 @@ void main() {
   group(
     'Computed tests - ',
     () {
-      test('check that a Computed updates only for the selected value',
-          () async {
-        final klass = _B(_C(0));
-        final s = Signal(klass);
-        final selected = Computed(() => s.value.c.count);
-        final cb = MockCallbackFunctionWithValue<int>();
+      test(
+        'check that a Computed updates only for the selected value',
+        () async {
+          final klass = _B(_C(0));
+          final s = Signal(klass);
+          final selected = Computed(() => s.value.c.count);
+          final cb = MockCallbackFunctionWithValue<int>();
 
-        // A computed always has a value
-        expect(selected.hasValue, true);
+          // A computed always has a value
+          expect(selected.hasValue, true);
 
-        void listener() {
-          cb(selected.value);
-        }
+          void listener() {
+            cb(selected.value);
+          }
 
-        final unobserve = selected.observe((_, __) => listener());
+          final unobserve = selected.observe((_, _) => listener());
 
-        s.value = _B(_C(1));
-        await pumpEventQueue();
+          s.value = _B(_C(1));
+          await pumpEventQueue();
 
-        s.value = _B(_C(5));
-        await pumpEventQueue();
+          s.value = _B(_C(5));
+          await pumpEventQueue();
 
-        s.value = _B(_C(1));
-        await pumpEventQueue();
+          s.value = _B(_C(1));
+          await pumpEventQueue();
 
-        verify(cb(1)).called(2);
-        s.value = _B(_C(2));
-        await pumpEventQueue();
-        s.value = _B(_C(2));
-        await pumpEventQueue();
-        s.value = _B(_C(3));
-        await pumpEventQueue();
-        verify(cb(2)).called(1);
-        verify(cb(3)).called(1);
+          verify(cb(1)).called(2);
+          s.value = _B(_C(2));
+          await pumpEventQueue();
+          s.value = _B(_C(2));
+          await pumpEventQueue();
+          s.value = _B(_C(3));
+          await pumpEventQueue();
+          verify(cb(2)).called(1);
+          verify(cb(3)).called(1);
 
-        // clear
-        unobserve();
-      });
+          // clear
+          unobserve();
+        },
+      );
 
       test('Computed contains previous value', () async {
         final signal = Signal(0);
@@ -622,7 +631,7 @@ void main() {
           onDisposeCalled = true;
         });
         final cb = MockCallbackFunctionWithValue<int>();
-        doubleCount.observe((_, __) {
+        doubleCount.observe((_, _) {
           cb(doubleCount.value);
         });
 
@@ -642,22 +651,24 @@ void main() {
         verifyNever(cb(2));
       });
 
-      test('Check Computed runs manually by counting the number of runs',
-          () async {
-        final cb = MockCallbackFunction();
-        final count = Signal(0);
-        final doubleCount = Computed(() {
-          cb();
-          return count.value * 2;
-        });
-        // trigger reactive value
-        doubleCount.value;
-        // run manually twice
-        doubleCount.run();
-        doubleCount.run();
-        // 3 times in total, 1 automatically and 2 manually
-        verify(cb()).called(3);
-      });
+      test(
+        'Check Computed runs manually by counting the number of runs',
+        () async {
+          final cb = MockCallbackFunction();
+          final count = Signal(0);
+          final doubleCount = Computed(() {
+            cb();
+            return count.value * 2;
+          });
+          // trigger reactive value
+          doubleCount.value;
+          // run manually twice
+          doubleCount.run();
+          doubleCount.run();
+          // 3 times in total, 1 automatically and 2 manually
+          verify(cb()).called(3);
+        },
+      );
 
       test('Check Computed autoDisposes if no longer used', () {
         final count = Signal(0);
@@ -833,8 +844,11 @@ void main() {
         source.value = 1;
         expect(
           resource.state,
-          isA<ResourceReady<int>>()
-              .having((p0) => p0.isRefreshing, 'Should be refreshing', true),
+          isA<ResourceReady<int>>().having(
+            (p0) => p0.isRefreshing,
+            'Should be refreshing',
+            true,
+          ),
         );
 
         // add to stream A, the value should not be propagated
@@ -937,22 +951,28 @@ void main() {
         await pumpEventQueue();
         expect(
           resource.state,
-          isA<ResourceReady<int>>()
-              .having((p0) => p0.value, 'value equal to 1', 1),
+          isA<ResourceReady<int>>().having(
+            (p0) => p0.value,
+            'value equal to 1',
+            1,
+          ),
         );
 
         resource.update((state) => const ResourceReady(2));
         expect(
           resource.state,
-          isA<ResourceReady<int>>()
-              .having((p0) => p0.value, 'value equal to 2', 2),
+          isA<ResourceReady<int>>().having(
+            (p0) => p0.value,
+            'value equal to 2',
+            2,
+          ),
         );
       });
       test('refresh Resource with fetcher while loading', () async {
         Future<int> fetcher() => Future.delayed(
-              const Duration(milliseconds: 200),
-              () => 1,
-            );
+          const Duration(milliseconds: 200),
+          () => 1,
+        );
         final resource = Resource(fetcher);
         expect(resource.state, isA<ResourceLoading<int>>());
         await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -1055,32 +1075,36 @@ void main() {
         'test untilReady()',
         () async {
           Future<int> fetcher() => Future.delayed(
-                const Duration(milliseconds: 300),
-                () => 1,
-              );
+            const Duration(milliseconds: 300),
+            () => 1,
+          );
           final count = Resource(fetcher);
 
           await expectLater(count.untilReady(), completion(1));
         },
       );
 
-      test('until syncronously fires the then callback if condition is met',
-          () async {
-        final count = Resource<int>(() => Future.value(1), lazy: false);
-        var fired = false;
-        count.until((v) => true).then((value) => fired = true);
-        expect(fired, true);
-      });
+      test(
+        'until syncronously fires the then callback if condition is met',
+        () async {
+          final count = Resource<int>(() => Future.value(1), lazy: false);
+          var fired = false;
+          count.until((v) => true).then((value) => fired = true);
+          expect(fired, true);
+        },
+      );
 
-      test('until asynchronously fires the then callback if condition is met',
-          () async {
-        final count = Signal(0);
-        var fired = false;
-        count.until((v) => v == 1).then((value) => fired = true);
-        count.value = 1;
-        await pumpEventQueue();
-        expect(fired, true);
-      });
+      test(
+        'until asynchronously fires the then callback if condition is met',
+        () async {
+          final count = Signal(0);
+          var fired = false;
+          count.until((v) => v == 1).then((value) => fired = true);
+          count.value = 1;
+          await pumpEventQueue();
+          expect(fired, true);
+        },
+      );
 
       test('check toString()', () async {
         final r = Resource(
@@ -1096,42 +1120,44 @@ void main() {
         );
       });
 
-      test('check Resource debounceDelay for source that triggers very often',
-          () async {
-        final source = Signal(0);
+      test(
+        'check Resource debounceDelay for source that triggers very often',
+        () async {
+          final source = Signal(0);
 
-        Future<int> fetcher() => Future.value(42);
+          Future<int> fetcher() => Future.value(42);
 
-        final resource = Resource(
-          fetcher,
-          source: source,
-          debounceDelay: const Duration(milliseconds: 100),
-          lazy: false, // Start immediately so we get an initial load
-        );
+          final resource = Resource(
+            fetcher,
+            source: source,
+            debounceDelay: const Duration(milliseconds: 100),
+            lazy: false, // Start immediately so we get an initial load
+          );
 
-        addTearDown(() {
-          resource.dispose();
-          source.dispose();
-        });
+          addTearDown(() {
+            resource.dispose();
+            source.dispose();
+          });
 
-        // Wait for initial load to complete
-        await pumpEventQueue();
-        expect(resource.state, isA<ResourceReady<int>>());
+          // Wait for initial load to complete
+          await pumpEventQueue();
+          expect(resource.state, isA<ResourceReady<int>>());
 
-        // Rapidly change the source value multiple times
-        for (var i = 1; i < 10; i++) {
-          source.value = i;
-          await Future<void>.delayed(const Duration(milliseconds: 30));
-        }
+          // Rapidly change the source value multiple times
+          for (var i = 1; i < 10; i++) {
+            source.value = i;
+            await Future<void>.delayed(const Duration(milliseconds: 30));
+          }
 
-        // Wait enough time to ensure the debounce delay has passed
-        // and the Future completes
-        await Future<void>.delayed(const Duration(milliseconds: 200));
+          // Wait enough time to ensure the debounce delay has passed
+          // and the Future completes
+          await Future<void>.delayed(const Duration(milliseconds: 200));
 
-        // At this point, the resource should still be ready after debounced
-        // refresh
-        expect(resource.state, isA<ResourceReady<int>>());
-      });
+          // At this point, the resource should still be ready after debounced
+          // refresh
+          expect(resource.state, isA<ResourceReady<int>>());
+        },
+      );
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
