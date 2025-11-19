@@ -1,8 +1,3 @@
-/// Support for doing something awesome.
-///
-/// More dartdocs go here.
-library;
-
 import 'dart:async';
 
 import 'package:solidart_lint/src/assists/wrap_with_show.dart';
