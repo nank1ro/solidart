@@ -28,18 +28,14 @@ class _ResourcePageState extends State<ResourcePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Resource'),
-      ),
+      appBar: AppBar(title: const Text('Resource')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             TextFormField(
               initialValue: "1",
-              decoration: const InputDecoration(
-                hintText: 'Enter numeric id',
-              ),
+              decoration: const InputDecoration(hintText: 'Enter numeric id'),
               onChanged: (s) {
                 final intValue = int.tryParse(s);
                 if (intValue == null) return;
@@ -58,8 +54,9 @@ class _ResourcePageState extends State<ResourcePage> {
                       children: [
                         ListTile(
                           title: Text(data),
-                          subtitle:
-                              Text('refreshing: ${userState.isRefreshing}'),
+                          subtitle: Text(
+                            'refreshing: ${userState.isRefreshing}',
+                          ),
                         ),
                         userState.isRefreshing
                             ? const CircularProgressIndicator()

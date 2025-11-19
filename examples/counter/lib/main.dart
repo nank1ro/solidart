@@ -10,10 +10,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'Counter',
-      home: CounterPage(),
-    );
+    return const MaterialApp(title: 'Counter', home: CounterPage());
   }
 }
 
@@ -30,12 +27,10 @@ class _CounterPageState extends State<CounterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Counter'),
-      ),
+      appBar: AppBar(title: const Text('Counter')),
       body: Center(
         child: SignalBuilder(
-          builder: (_, __) {
+          builder: (_, _) {
             return Text(counter.value.toString());
           },
         ),

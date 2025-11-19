@@ -8,7 +8,7 @@ topics:
   - signals
 
 environment:
-  sdk: ^3.6.0
+  sdk: ^3.10.0
   flutter: ">=1.17.0"
 
 resolution: workspace
@@ -24,5 +24,5 @@ dev_dependencies:
   disco: ^1.0.0
   flutter_test:
     sdk: flutter
-  mockito: ^5.4.4
-  very_good_analysis: ^9.0.0
+  mockito: ^5.5.1
+  very_good_analysis: ^10.0.0

@@ -7,12 +7,10 @@ part of 'search_result.dart';
 // **************************************************************************
 
 SearchResult _$SearchResultFromJson(Map<String, dynamic> json) => SearchResult(
-      items: (json['items'] as List<dynamic>)
-          .map((e) => SearchResultItem.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
+  items: (json['items'] as List<dynamic>)
+      .map((e) => SearchResultItem.fromJson(e as Map<String, dynamic>))
+      .toList(),
+);
 
 Map<String, dynamic> _$SearchResultToJson(SearchResult instance) =>
-    <String, dynamic>{
-      'items': instance.items,
-    };
+    <String, dynamic>{'items': instance.items};

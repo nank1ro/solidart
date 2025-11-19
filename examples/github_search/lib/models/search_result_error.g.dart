@@ -7,11 +7,7 @@ part of 'search_result_error.dart';
 // **************************************************************************
 
 SearchResultError _$SearchResultErrorFromJson(Map<String, dynamic> json) =>
-    SearchResultError(
-      message: json['message'] as String,
-    );
+    SearchResultError(message: json['message'] as String);
 
 Map<String, dynamic> _$SearchResultErrorToJson(SearchResultError instance) =>
-    <String, dynamic>{
-      'message': instance.message,
-    };
+    <String, dynamic>{'message': instance.message};

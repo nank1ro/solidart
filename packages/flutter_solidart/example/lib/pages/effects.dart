@@ -15,12 +15,10 @@ class _EffectsPageState extends State<EffectsPage> {
   @override
   void initState() {
     super.initState();
-    disposeEffect = Effect(
-      () {
-        // ignore: avoid_print
-        print("The count is now ${count.value}");
-      },
-    );
+    disposeEffect = Effect(() {
+      // ignore: avoid_print
+      print("The count is now ${count.value}");
+    });
   }
 
   @override
@@ -39,9 +37,11 @@ class _EffectsPageState extends State<EffectsPage> {
           children: [
             const Text('Check the console to see the effect printing'),
             const SizedBox(height: 16),
-            SignalBuilder(builder: (context, child) {
-              return Text('Count: ${count.value}');
-            }),
+            SignalBuilder(
+              builder: (context, child) {
+                return Text('Count: ${count.value}');
+              },
+            ),
           ],
         ),
       ),

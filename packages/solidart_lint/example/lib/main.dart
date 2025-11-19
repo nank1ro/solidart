@@ -29,10 +29,7 @@ class MyApp extends StatelessWidget {
         counterProvider,
         doubleCounterProvider(counter),
       ],
-      child: const MaterialApp(
-        title: 'Flutter Demo',
-        home: MyHomePage(),
-      ),
+      child: const MaterialApp(title: 'Flutter Demo', home: MyHomePage()),
     );
   }
 }

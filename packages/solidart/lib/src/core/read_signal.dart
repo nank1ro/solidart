@@ -27,6 +27,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   /// {@macro readsignal}
   ReadableSignal(
     T initialValue, {
+
     /// {@macro SignalBase.name}
     this.name,
 
@@ -44,12 +45,12 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
     /// {@macro SignalBase.trackPreviousValue}
     bool? trackPreviousValue,
-  })  : _hasValue = true,
-        trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
-        autoDispose = autoDispose ?? SolidartConfig.autoDispose,
-        equals = equals ?? SolidartConfig.equals,
-        trackPreviousValue =
-            trackPreviousValue ?? SolidartConfig.trackPreviousValue {
+  }) : _hasValue = true,
+       trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
+       autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+       equals = equals ?? SolidartConfig.equals,
+       trackPreviousValue =
+           trackPreviousValue ?? SolidartConfig.trackPreviousValue {
     _internalSignal = _AlienSignal(this, Some(initialValue));
     _untrackedValue = initialValue;
     _notifySignalCreation();
@@ -74,14 +75,14 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
     /// {@macro SignalBase.trackPreviousValue}
     bool? trackPreviousValue,
-  })  : _hasValue = false,
-        trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
-        autoDispose = autoDispose ?? SolidartConfig.autoDispose,
-        equals = equals ?? SolidartConfig.equals,
-        // coverage:ignore-start
-        // coverage:ignore-end
-        trackPreviousValue =
-            trackPreviousValue ?? SolidartConfig.trackPreviousValue {
+  }) : _hasValue = false,
+       trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
+       autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+       equals = equals ?? SolidartConfig.equals,
+       // coverage:ignore-start
+       // coverage:ignore-end
+       trackPreviousValue =
+           trackPreviousValue ?? SolidartConfig.trackPreviousValue {
     _internalSignal = _AlienSignal(this, None<T>());
   }
 

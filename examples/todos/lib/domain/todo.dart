@@ -38,8 +38,4 @@ class Todo {
   String toString() => 'Todo(id: $id, task: $task, completed: $completed)';
 }
 
-enum TodosFilter {
-  all,
-  incomplete,
-  completed;
-}
+enum TodosFilter { all, incomplete, completed }

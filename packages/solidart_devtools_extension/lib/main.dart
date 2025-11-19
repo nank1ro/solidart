@@ -17,9 +17,7 @@ class FooDevToolsExtension extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const DevToolsExtension(
-      child: Signals(),
-    );
+    return const DevToolsExtension(child: Signals());
   }
 }
 
@@ -114,12 +112,13 @@ class _SignalsState extends State<Signals> {
     final type = filterType.value;
     final viewDisposed = showDisposed.value;
     return signals.value.entries
-        .where((entry) =>
-            entry.value.name
-                .toString()
-                .toLowerCase()
-                .contains(lowercasedSearch) ||
-            entry.value.matchesSearch(lowercasedSearch))
+        .where(
+          (entry) =>
+              entry.value.name.toString().toLowerCase().contains(
+                lowercasedSearch,
+              ) ||
+              entry.value.matchesSearch(lowercasedSearch),
+        )
         .where((entry) => type == null || entry.value.type == type)
         .where((entry) => viewDisposed || !entry.value.disposed)
         .toList();
@@ -133,32 +132,35 @@ class _SignalsState extends State<Signals> {
 
   Future<void> initialize() async {
     final vmService = await serviceManager.onServiceAvailable;
-    sub = vmService.onExtensionEvent.where((e) {
-      return e.extensionKind?.startsWith('ext.solidart.signal') ?? false;
-    }).listen((event) {
-      final data = event.extensionData?.data;
-      if (data == null) return;
-      switch (event.extensionKind) {
-        case 'ext.solidart.signal.created':
-        case 'ext.solidart.signal.updated':
-        case 'ext.solidart.signal.disposed':
-          signals[data['_id']] = SignalData(
-            name: data['name'] ?? data['_id'],
-            value: jsonDecode(data['value'] ?? 'null'),
-            hasPreviousValue: data['hasPreviousValue'],
-            previousValue: jsonDecode(data['previousValue'] ?? 'null'),
-            type: SignalType.byName(data['type']),
-            disposed: data['disposed'],
-            autoDispose: data['autoDispose'],
-            listenerCount: data['listenerCount'],
-            valueType: data['valueType'],
-            previousValueType: data['previousValueType'],
-            lastUpdate: DateTime.parse(data['lastUpdate']!),
-          );
-      }
-    });
-    searchController
-        .addListener(() => searchText.value = searchController.text);
+    sub = vmService.onExtensionEvent
+        .where((e) {
+          return e.extensionKind?.startsWith('ext.solidart.signal') ?? false;
+        })
+        .listen((event) {
+          final data = event.extensionData?.data;
+          if (data == null) return;
+          switch (event.extensionKind) {
+            case 'ext.solidart.signal.created':
+            case 'ext.solidart.signal.updated':
+            case 'ext.solidart.signal.disposed':
+              signals[data['_id']] = SignalData(
+                name: data['name'] ?? data['_id'],
+                value: jsonDecode(data['value'] ?? 'null'),
+                hasPreviousValue: data['hasPreviousValue'],
+                previousValue: jsonDecode(data['previousValue'] ?? 'null'),
+                type: SignalType.byName(data['type']),
+                disposed: data['disposed'],
+                autoDispose: data['autoDispose'],
+                listenerCount: data['listenerCount'],
+                valueType: data['valueType'],
+                previousValueType: data['previousValueType'],
+                lastUpdate: DateTime.parse(data['lastUpdate']!),
+              );
+          }
+        });
+    searchController.addListener(
+      () => searchText.value = searchController.text,
+    );
   }
 
   @override
@@ -228,24 +230,29 @@ class _SignalsState extends State<Signals> {
                         Row(
                           children: [
                             Flexible(
-                              child: SignalBuilder(builder: (context, _) {
-                                return ShadSelect<SignalType>(
-                                  selectedOptionBuilder: (context, v) {
-                                    return Text(v.name.capitalizeFirst());
-                                  },
-                                  allowDeselection: true,
-                                  placeholder: const Text('Type'),
-                                  initialValue: filterType.value,
-                                  options: SignalType.values
-                                      .map((e) => ShadOption(
+                              child: SignalBuilder(
+                                builder: (context, _) {
+                                  return ShadSelect<SignalType>(
+                                    selectedOptionBuilder: (context, v) {
+                                      return Text(v.name.capitalizeFirst());
+                                    },
+                                    allowDeselection: true,
+                                    placeholder: const Text('Type'),
+                                    initialValue: filterType.value,
+                                    options: SignalType.values
+                                        .map(
+                                          (e) => ShadOption(
                                             value: e,
-                                            child:
-                                                Text(e.name.capitalizeFirst()),
-                                          ))
-                                      .toList(),
-                                  onChanged: (v) => filterType.value = v,
-                                );
-                              }),
+                                            child: Text(
+                                              e.name.capitalizeFirst(),
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onChanged: (v) => filterType.value = v,
+                                  );
+                                },
+                              ),
                             ),
                             SizedBox(
                               height: 20,
@@ -279,178 +286,203 @@ class _SignalsState extends State<Signals> {
                         ),
                         const SizedBox(height: 8),
                         Expanded(
-                          child: SignalBuilder(builder: (context, _) {
-                            return GridView.builder(
-                              gridDelegate:
-                                  SliverGridDelegateWithMaxCrossAxisExtent(
-                                maxCrossAxisExtent: 500,
-                                childAspectRatio: 5,
-                                mainAxisSpacing: 8,
-                                crossAxisSpacing: 8,
-                              ),
-                              itemCount: filteredSignals.value.length,
-                              padding: EdgeInsets.symmetric(horizontal: 4),
-                              itemBuilder: (BuildContext context, int index) {
-                                final sortedSignals = filteredSignals.value
-                                  ..sort((a, b) => b.value.lastUpdate
-                                      .compareTo(a.value.lastUpdate))
-                                  ..sort(
-                                    (a, b) => a.value.disposed ? 1 : -1,
-                                  );
+                          child: SignalBuilder(
+                            builder: (context, _) {
+                              return GridView.builder(
+                                gridDelegate:
+                                    SliverGridDelegateWithMaxCrossAxisExtent(
+                                      maxCrossAxisExtent: 500,
+                                      childAspectRatio: 5,
+                                      mainAxisSpacing: 8,
+                                      crossAxisSpacing: 8,
+                                    ),
+                                itemCount: filteredSignals.value.length,
+                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                itemBuilder: (BuildContext context, int index) {
+                                  final sortedSignals = filteredSignals.value
+                                    ..sort(
+                                      (a, b) => b.value.lastUpdate.compareTo(
+                                        a.value.lastUpdate,
+                                      ),
+                                    )
+                                    ..sort((a, b) => a.value.disposed ? 1 : -1);
 
-                                final entry = sortedSignals.elementAt(index);
-                                final name = entry.value.name;
-                                final signal = entry.value;
-                                return SignalBuilder(
-                                  builder: (context, _) {
-                                    final selected =
-                                        selectedSignalId.value == entry.key;
-                                    return Stack(
-                                      children: [
-                                        ShadGestureDetector(
-                                          cursor: SystemMouseCursors.click,
-                                          onTap: () {
-                                            selectedSignalId.value = entry.key;
-                                          },
-                                          child: ShadCard(
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 8, horizontal: 8),
-                                            rowCrossAxisAlignment:
-                                                CrossAxisAlignment.center,
-                                            title: Padding(
-                                              padding: const EdgeInsets.only(
-                                                  bottom: 4),
-                                              child: Text(
-                                                name,
-                                                style: shadTheme.textTheme.small
-                                                    .copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                  color: shadTheme
-                                                      .colorScheme.foreground,
+                                  final entry = sortedSignals.elementAt(index);
+                                  final name = entry.value.name;
+                                  final signal = entry.value;
+                                  return SignalBuilder(
+                                    builder: (context, _) {
+                                      final selected =
+                                          selectedSignalId.value == entry.key;
+                                      return Stack(
+                                        children: [
+                                          ShadGestureDetector(
+                                            cursor: SystemMouseCursors.click,
+                                            onTap: () {
+                                              selectedSignalId.value =
+                                                  entry.key;
+                                            },
+                                            child: ShadCard(
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 8,
+                                                    horizontal: 8,
+                                                  ),
+                                              rowCrossAxisAlignment:
+                                                  CrossAxisAlignment.center,
+                                              title: Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 4,
+                                                ),
+                                                child: Text(
+                                                  name,
+                                                  style: shadTheme
+                                                      .textTheme
+                                                      .small
+                                                      .copyWith(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: shadTheme
+                                                            .colorScheme
+                                                            .foreground,
+                                                      ),
                                                 ),
                                               ),
-                                            ),
-                                            backgroundColor: selected
-                                                ? shadTheme.colorScheme.accent
-                                                : null,
-                                            description: Wrap(
-                                              spacing: 4,
-                                              runSpacing: 4,
-                                              children: [
-                                                ShadBadge(
-                                                  child: Text(
-                                                    signal.type.name
-                                                        .capitalizeFirst(),
-                                                    style: shadTheme
-                                                        .textTheme.small
-                                                        .copyWith(
+                                              backgroundColor: selected
+                                                  ? shadTheme.colorScheme.accent
+                                                  : null,
+                                              description: Wrap(
+                                                spacing: 4,
+                                                runSpacing: 4,
+                                                children: [
+                                                  ShadBadge(
+                                                    child: Text(
+                                                      signal.type.name
+                                                          .capitalizeFirst(),
+                                                      style: shadTheme
+                                                          .textTheme
+                                                          .small
+                                                          .copyWith(
                                                             fontSize: 10,
                                                             color: shadTheme
                                                                 .primaryBadgeTheme
-                                                                .foregroundColor),
+                                                                .foregroundColor,
+                                                          ),
+                                                    ),
+                                                    onPressed: () {
+                                                      selectedSignalId.value =
+                                                          entry.key;
+                                                    },
                                                   ),
-                                                  onPressed: () {
-                                                    selectedSignalId.value =
-                                                        entry.key;
-                                                  },
-                                                ),
-                                                ShadBadge(
-                                                  child: Text(
-                                                    signal.valueType,
-                                                    style: shadTheme
-                                                        .textTheme.small
-                                                        .copyWith(
+                                                  ShadBadge(
+                                                    child: Text(
+                                                      signal.valueType,
+                                                      style: shadTheme
+                                                          .textTheme
+                                                          .small
+                                                          .copyWith(
                                                             fontSize: 10,
                                                             color: shadTheme
                                                                 .primaryBadgeTheme
-                                                                .foregroundColor),
+                                                                .foregroundColor,
+                                                          ),
+                                                    ),
+                                                    onPressed: () {
+                                                      selectedSignalId.value =
+                                                          entry.key;
+                                                    },
                                                   ),
-                                                  onPressed: () {
-                                                    selectedSignalId.value =
-                                                        entry.key;
-                                                  },
-                                                ),
-                                                ShadBadge(
-                                                  child: Text(
-                                                    DateFormat(
-                                                            'hh:mm:ss',
-                                                            Localizations
-                                                                    .localeOf(
-                                                                        context)
-                                                                .toLanguageTag())
-                                                        .format(
-                                                            signal.lastUpdate),
-                                                    style: shadTheme
-                                                        .textTheme.small
-                                                        .copyWith(
+                                                  ShadBadge(
+                                                    child: Text(
+                                                      DateFormat(
+                                                        'hh:mm:ss',
+                                                        Localizations.localeOf(
+                                                          context,
+                                                        ).toLanguageTag(),
+                                                      ).format(
+                                                        signal.lastUpdate,
+                                                      ),
+                                                      style: shadTheme
+                                                          .textTheme
+                                                          .small
+                                                          .copyWith(
                                                             fontSize: 10,
                                                             color: shadTheme
                                                                 .primaryBadgeTheme
-                                                                .foregroundColor),
+                                                                .foregroundColor,
+                                                          ),
+                                                    ),
+                                                    onPressed: () {
+                                                      selectedSignalId.value =
+                                                          entry.key;
+                                                    },
                                                   ),
-                                                  onPressed: () {
-                                                    selectedSignalId.value =
-                                                        entry.key;
-                                                  },
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        Positioned(
-                                          top: 0,
-                                          bottom: 0,
-                                          right: 0,
-                                          child: Container(
-                                            width: 10,
-                                            decoration: BoxDecoration(
-                                              color: signal.disposed
-                                                  ? Colors.red
-                                                  : Colors.green,
-                                              borderRadius:
-                                                  const BorderRadius.only(
-                                                topRight: Radius.circular(8),
-                                                bottomRight: Radius.circular(8),
+                                                ],
                                               ),
                                             ),
                                           ),
-                                        )
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                              // separatorBuilder: (_, __) =>
-                              //     const SizedBox(height: 8),
-                            );
-                          }),
+                                          Positioned(
+                                            top: 0,
+                                            bottom: 0,
+                                            right: 0,
+                                            child: Container(
+                                              width: 10,
+                                              decoration: BoxDecoration(
+                                                color: signal.disposed
+                                                    ? Colors.red
+                                                    : Colors.green,
+                                                borderRadius:
+                                                    const BorderRadius.only(
+                                                      topRight: Radius.circular(
+                                                        8,
+                                                      ),
+                                                      bottomRight:
+                                                          Radius.circular(8),
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                                // separatorBuilder: (_, __) =>
+                                //     const SizedBox(height: 8),
+                              );
+                            },
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
                 ShadResizablePanel(
-                    id: 'detail',
-                    defaultSize: .5,
-                    minSize: 0.3,
-                    child: SignalBuilder(
-                      builder: (context, _) {
-                        if (selectedSignalId.value == null) {
-                          return const SizedBox();
-                        }
-                        final signal = filteredSignals.value
-                            .firstWhereOrNull((element) =>
-                                element.key == selectedSignalId.value)
-                            ?.value;
-                        if (signal == null) return const SizedBox();
-                        return KeyedSubtree(
-                          key: ValueKey(selectedSignalId.value),
-                          child: LayoutBuilder(builder: (context, constraints) {
+                  id: 'detail',
+                  defaultSize: .5,
+                  minSize: 0.3,
+                  child: SignalBuilder(
+                    builder: (context, _) {
+                      if (selectedSignalId.value == null) {
+                        return const SizedBox();
+                      }
+                      final signal = filteredSignals.value
+                          .firstWhereOrNull(
+                            (element) => element.key == selectedSignalId.value,
+                          )
+                          ?.value;
+                      if (signal == null) return const SizedBox();
+                      return KeyedSubtree(
+                        key: ValueKey(selectedSignalId.value),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
                             return SingleChildScrollView(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 24),
+                                horizontal: 8,
+                                vertical: 24,
+                              ),
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                   minHeight: constraints.maxHeight - 48,
@@ -458,13 +490,17 @@ class _SignalsState extends State<Signals> {
                                 child: Column(
                                   children: [
                                     ParameterView(
-                                        name: 'name', value: signal.name),
+                                      name: 'name',
+                                      value: signal.name,
+                                    ),
                                     ParameterView(
-                                        name: 'type',
-                                        value:
-                                            signal.type.name.capitalizeFirst()),
+                                      name: 'type',
+                                      value: signal.type.name.capitalizeFirst(),
+                                    ),
                                     ParameterView(
-                                        name: 'value', value: signal.value),
+                                      name: 'value',
+                                      value: signal.value,
+                                    ),
                                     ParameterView(
                                       name: 'previousValue',
                                       value: signal.previousValue,
@@ -493,10 +529,12 @@ class _SignalsState extends State<Signals> {
                                 ),
                               ),
                             );
-                          }),
-                        );
-                      },
-                    )),
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
             );
           },
@@ -507,11 +545,7 @@ class _SignalsState extends State<Signals> {
 }
 
 class ParameterView extends StatefulWidget {
-  const ParameterView({
-    super.key,
-    required this.name,
-    this.value,
-  });
+  const ParameterView({super.key, required this.name, this.value});
 
   final String name;
   final Object? value;
@@ -533,45 +567,50 @@ class _ParameterViewState extends State<ParameterView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return ShadTheme(
-      data: ShadTheme.of(context).copyWith(
-        textTheme: ShadTextTheme(family: kDefaultFontFamilyMono),
-      ),
-      child: Builder(builder: (context) {
-        return Column(
-          children: [
-            DefaultTextStyle(
-              style: theme.textTheme.bodyMedium!
-                  .copyWith(fontWeight: FontWeight.bold),
-              child: InkWell(
-                onTap: isExpandible
-                    ? () => setState(() => expanded = !expanded)
-                    : null,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Row(
-                      children: [
-                        Visibility.maintain(
-                          visible: isExpandible,
-                          child: RotatedBox(
-                            quarterTurns: expanded ? 1 : 0,
-                            child: const Icon(LucideIcons.chevronRight),
+      data: ShadTheme.of(
+        context,
+      ).copyWith(textTheme: ShadTextTheme(family: kDefaultFontFamilyMono)),
+      child: Builder(
+        builder: (context) {
+          return Column(
+            children: [
+              DefaultTextStyle(
+                style: theme.textTheme.bodyMedium!.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                child: InkWell(
+                  onTap: isExpandible
+                      ? () => setState(() => expanded = !expanded)
+                      : null,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          Visibility.maintain(
+                            visible: isExpandible,
+                            child: RotatedBox(
+                              quarterTurns: expanded ? 1 : 0,
+                              child: const Icon(LucideIcons.chevronRight),
+                            ),
                           ),
-                        ),
-                        Text('${widget.name}: ',
-                            style: ShadTheme.of(context).textTheme.p),
-                      ],
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(child: getView()),
-                  ],
+                          Text(
+                            '${widget.name}: ',
+                            style: ShadTheme.of(context).textTheme.p,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(child: getView()),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            getExpandedView(),
-          ],
-        );
-      }),
+              getExpandedView(),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -678,6 +717,7 @@ class _ParameterViewState extends State<ParameterView> {
       );
     }
     throw Exception(
-        'Unsupported expanded view for type: ${widget.value.runtimeType}');
+      'Unsupported expanded view for type: ${widget.value.runtimeType}',
+    );
   }
 }

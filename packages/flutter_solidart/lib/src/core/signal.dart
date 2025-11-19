@@ -12,7 +12,7 @@ extension ToggleBoolSignal on Signal<bool> {
 class Signal<T> extends ReadableSignal<T> with ValueNotifierSignalMixin<T> {
   /// {@macro signal}
   Signal(
-    super.value, {
+    super.initialValue, {
     super.equals,
     super.name,
     super.autoDispose,

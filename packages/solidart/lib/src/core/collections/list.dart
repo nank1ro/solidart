@@ -17,6 +17,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// {@macro list-signal}
   ListSignal(
     Iterable<E> initialValue, {
+
     /// {@macro SignalBase.name}
     super.name,
 

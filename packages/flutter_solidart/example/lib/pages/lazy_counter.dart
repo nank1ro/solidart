@@ -17,7 +17,7 @@ class _LazyCounterPageState extends State<LazyCounterPage> {
       appBar: AppBar(title: const Text('Lazy Counter')),
       body: Center(
         child: SignalBuilder(
-          builder: (_, __) {
+          builder: (_, _) {
             return switch (counter.hasValue) {
               true => Text('Counter: ${counter.value}'),
               false => const Text('Counter: not initialized'),

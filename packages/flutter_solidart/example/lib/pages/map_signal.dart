@@ -31,8 +31,12 @@ class _MapSignalPageState extends State<MapSignalPage> {
     super.dispose();
   }
 
-  String getRandomString(int length) => String.fromCharCodes(Iterable.generate(
-      length, (_) => _chars.codeUnitAt(Random().nextInt(_chars.length))));
+  String getRandomString(int length) => String.fromCharCodes(
+    Iterable.generate(
+      length,
+      (_) => _chars.codeUnitAt(Random().nextInt(_chars.length)),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -65,18 +69,12 @@ class _MapSignalPageState extends State<MapSignalPage> {
       bottomNavigationBar: BottomNavigationBar(
         useLegacyColorScheme: false,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add),
-            label: 'Add',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.remove),
-            label: 'Remove',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Add'),
+          BottomNavigationBarItem(icon: Icon(Icons.remove), label: 'Remove'),
           BottomNavigationBarItem(
             icon: Icon(Icons.clear_all),
             label: 'Clear all',
-          )
+          ),
         ],
         onTap: (i) {
           switch (i) {

@@ -28,7 +28,7 @@ dart run custom_lint
 
 ## ASSISTS
 
-### Wrap with Solid (Renamed into ``rap with ProviderScope`)
+### Wrap with Solid (Renamed into `Wrap with ProviderScope`)
 
 ![Wrap with Solid sample](https://raw.githubusercontent.com/nank1ro/solidart/main/packages/solidart_lint/assets/wrap_with_solid.gif)
 

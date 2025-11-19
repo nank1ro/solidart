@@ -16,31 +16,33 @@ class _SignalBuilderPageState extends State<SignalBuilderPage> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('SignalBuilder'),
-      ),
+      appBar: AppBar(title: const Text('SignalBuilder')),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SignalBuilder(builder: (_, __) {
-              return ListTile(
-                title: Text(
-                  'First counter: ${counter1.value}',
-                  textAlign: TextAlign.center,
-                  style: textTheme.titleMedium!.copyWith(color: Colors.black),
-                ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    'Second counter: ${counter2.value}',
+            SignalBuilder(
+              builder: (_, _) {
+                return ListTile(
+                  title: Text(
+                    'First counter: ${counter1.value}',
                     textAlign: TextAlign.center,
                     style: textTheme.titleMedium!.copyWith(color: Colors.black),
                   ),
-                ),
-              );
-            }),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Second counter: ${counter2.value}',
+                      textAlign: TextAlign.center,
+                      style: textTheme.titleMedium!.copyWith(
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 16),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -57,7 +59,7 @@ class _SignalBuilderPageState extends State<SignalBuilderPage> {
                     counter2.value++;
                   },
                   child: const Text('Counter2++'),
-                )
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -68,7 +70,7 @@ class _SignalBuilderPageState extends State<SignalBuilderPage> {
                 'Even when only one signal updates, the whole builder is called again. ',
                 style: textTheme.titleMedium!.copyWith(color: Colors.blueGrey),
               ),
-            )
+            ),
           ],
         ),
       ),

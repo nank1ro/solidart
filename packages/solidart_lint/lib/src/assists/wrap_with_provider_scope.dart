@@ -1,39 +1,18 @@
-import 'package:analyzer/source/source_range.dart';
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:analyzer_plugin/utilities/assist/assist.dart';
+import 'package:solidart_lint/src/assists/base/wrap_single_widget.dart';
 
-class WrapWithProviderScope extends DartAssist {
-  WrapWithProviderScope();
-
-  @override
-  void run(
-    CustomLintResolver resolver,
-    ChangeReporter reporter,
-    CustomLintContext context,
-    SourceRange target,
-  ) {
-    context.registry.addInstanceCreationExpression((node) {
-      if (!target.intersects(node.constructorName.sourceRange)) {
-        return;
-      }
-
-      final createdType = node.constructorName.type.type;
-      if (createdType == null) {
-        return;
-      }
-
-      final changeBuilder = reporter.createChangeBuilder(
-        message: 'Wrap with ProviderScope',
-        priority: 0,
+class WrapWithProviderScope extends WrapSingleWidget {
+  WrapWithProviderScope({required super.context})
+    : super(
+        widgetName: 'ProviderScope',
+        extraNamedParams: const ['providers: [],'],
+        packageImport: 'package:disco/disco.dart',
       );
 
-      changeBuilder.addDartFileEdit((builder) {
-        builder.addSimpleInsertion(
-            node.offset,
-            'ProviderScope(\n'
-            '  providers: [],\n'
-            '  child: ');
-        builder.addSimpleInsertion(node.end, ',\n)');
-      });
-    });
-  }
+  @override
+  AssistKind get assistKind => const AssistKind(
+    'solidart.wrap_with_provider_scope',
+    30,
+    'Wrap with ProviderScope',
+  );
 }

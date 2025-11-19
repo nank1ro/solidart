@@ -42,9 +42,9 @@ class SolidartReactionException extends SolidartException {
 class SolidartCaughtException extends SolidartException {
   /// {@macro solidartcaughtexception}
   SolidartCaughtException(Object exception, {required StackTrace stackTrace})
-      : _exception = exception,
-        _stackTrace = stackTrace,
-        super('SolidartException: $exception');
+    : _exception = exception,
+      _stackTrace = stackTrace,
+      super('SolidartException: $exception');
 
   final Object _exception;
   final StackTrace _stackTrace;

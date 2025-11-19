@@ -4,8 +4,6 @@ analyzer:
   errors:
     always_put_required_named_parameters_first: ignore
     specify_nonobvious_property_types: ignore
-  plugins:
-    - custom_lint
 
 linter:
   rules:

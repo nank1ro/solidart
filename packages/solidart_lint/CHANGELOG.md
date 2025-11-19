@@ -1,3 +1,7 @@
+## 3.0.0
+
+- Refactor the codebase to use `analysis_server_plugin` instead of `custom_lint`.
+
 ## 2.0.3
 
 - Update analyzer dependency range to support latest Dart versions (thanks to @romaingyh).
