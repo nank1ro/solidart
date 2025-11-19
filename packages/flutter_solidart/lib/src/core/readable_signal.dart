@@ -7,7 +7,7 @@ class ReadableSignal<T> extends solidart.ReadableSignal<T>
     with ValueListenableSignalMixin<T> {
   /// {@macro readsignal}
   ReadableSignal(
-    super.value, {
+    super.initialValue, {
     super.equals,
     super.name,
     super.autoDispose,

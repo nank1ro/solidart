@@ -30,7 +30,8 @@ class Logger implements SolidartObserver {
   @override
   void didUpdateSignal(SignalBase<Object?> signal) {
     dev.log(
-        'didUpdateSignal(name: ${signal.name}, previousValue: ${signal.previousValue}, value: ${signal.value})');
+      'didUpdateSignal(name: ${signal.name}, previousValue: ${signal.previousValue}, value: ${signal.value})',
+    );
   }
 }
 
@@ -47,10 +48,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
-      theme: ThemeData(
-        useMaterial3: false,
-        primarySwatch: Colors.blue,
-      ),
+      theme: ThemeData(useMaterial3: false, primarySwatch: Colors.blue),
       home: const HomePage(),
       routes: routes,
     );

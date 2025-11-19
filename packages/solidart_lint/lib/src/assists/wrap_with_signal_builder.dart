@@ -1,39 +1,19 @@
-import 'package:analyzer/source/source_range.dart';
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:analyzer_plugin/utilities/assist/assist.dart';
+import 'package:solidart_lint/src/assists/base/wrap_builder.dart';
 
-class WrapWithSignalBuilder extends DartAssist {
-  WrapWithSignalBuilder();
-
-  @override
-  void run(
-    CustomLintResolver resolver,
-    ChangeReporter reporter,
-    CustomLintContext context,
-    SourceRange target,
-  ) {
-    context.registry.addInstanceCreationExpression((node) {
-      if (!target.intersects(node.constructorName.sourceRange)) {
-        return;
-      }
-
-      final createdType = node.constructorName.type.type;
-      if (createdType == null) {
-        return;
-      }
-
-      final changeBuilder = reporter.createChangeBuilder(
-        message: 'Wrap with SignalBuilder',
-        priority: 0,
+class WrapWithSignalBuilder extends WrapBuilder {
+  WrapWithSignalBuilder({required super.context})
+    : super(
+        builderName: 'SignalBuilder',
+        extraNamedParams: const [],
+        extraBuilderParams: const ['child'],
+        packageImport: 'package:flutter_solidart/flutter_solidart.dart',
       );
 
-      changeBuilder.addDartFileEdit((builder) {
-        builder.addSimpleInsertion(
-            node.offset,
-            'SignalBuilder(\n'
-            '  builder: (context, child) {\n'
-            '    return ');
-        builder.addSimpleInsertion(node.end, ';\n  },\n)');
-      });
-    });
-  }
+  @override
+  AssistKind get assistKind => const AssistKind(
+    'solidart.wrap_with_signal_builder',
+    30,
+    'Wrap with SignalBuilder',
+  );
 }

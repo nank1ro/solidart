@@ -1,7 +1,9 @@
 analyzer:
   errors:
     avoid_catches_without_on_clauses: ignore
+    discarded_futures: ignore
     document_ignores: ignore
+    prefer_foreach: ignore
 include: package:very_good_analysis/analysis_options.yaml
 
 linter:

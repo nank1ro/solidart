@@ -105,6 +105,7 @@ class Signal<T> extends ReadableSignal<T> {
   /// {@macro signal}
   Signal(
     super.initialValue, {
+
     /// {@macro SignalBase.name}
     super.name,
 

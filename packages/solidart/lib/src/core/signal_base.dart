@@ -18,11 +18,11 @@ abstract class SignalBase<T> {
     bool? autoDispose,
     bool? trackInDevTools,
     bool? trackPreviousValue,
-  })  : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
-        trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
-        equals = equals ?? SolidartConfig.equals,
-        trackPreviousValue =
-            trackPreviousValue ?? SolidartConfig.trackPreviousValue;
+  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+       trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
+       equals = equals ?? SolidartConfig.equals,
+       trackPreviousValue =
+           trackPreviousValue ?? SolidartConfig.trackPreviousValue;
 
   String get _id;
 
@@ -105,6 +105,5 @@ abstract class SignalBase<T> {
   void dispose();
 
   /// Indicates if the [oldValue] and the [newValue] are equal
-  // ignore: unused_element
   bool _compare(T? oldValue, T? newValue);
 }

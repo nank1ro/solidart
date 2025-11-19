@@ -10,10 +10,7 @@ class InMemoryCache<T> {
   final Map<Object, _CacheEntry<T>?> _cache = {};
 
   void _cacheValue(T value, Object key) {
-    _cache[key] = _CacheEntry(
-      timestamp: DateTime.now(),
-      data: value,
-    );
+    _cache[key] = _CacheEntry(timestamp: DateTime.now(), data: value);
   }
 
   /// Returns a cached value from a previous call to [fetch], or runs [callback]
@@ -21,10 +18,7 @@ class InMemoryCache<T> {
   ///
   /// If [fetch] has been called recently enough, returns its previous return
   /// value. Otherwise, runs [callback] and returns its new return value.
-  Future<T> fetch(
-    Future<T> Function() callback, {
-    String? key,
-  }) async {
+  Future<T> fetch(Future<T> Function() callback, {String? key}) async {
     final effectiveKey = key ?? callback;
     final entry = _cache[effectiveKey];
 
@@ -49,10 +43,7 @@ class InMemoryCache<T> {
 }
 
 class _CacheEntry<T> {
-  _CacheEntry({
-    required this.timestamp,
-    required this.data,
-  });
+  _CacheEntry({required this.timestamp, required this.data});
 
   final DateTime timestamp;
   final T data;

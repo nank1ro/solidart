@@ -7,9 +7,9 @@ part of 'github_user.dart';
 // **************************************************************************
 
 GithubUser _$GithubUserFromJson(Map<String, dynamic> json) => GithubUser(
-      login: json['login'] as String,
-      avatarUrl: json['avatar_url'] as String,
-    );
+  login: json['login'] as String,
+  avatarUrl: json['avatar_url'] as String,
+);
 
 Map<String, dynamic> _$GithubUserToJson(GithubUser instance) =>
     <String, dynamic>{

@@ -58,18 +58,12 @@ class _SetSignalPageState extends State<SetSignalPage> {
       bottomNavigationBar: BottomNavigationBar(
         useLegacyColorScheme: false,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add),
-            label: 'Add',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.remove),
-            label: 'Remove',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Add'),
+          BottomNavigationBarItem(icon: Icon(Icons.remove), label: 'Remove'),
           BottomNavigationBarItem(
             icon: Icon(Icons.clear_all),
             label: 'Clear all',
-          )
+          ),
         ],
         onTap: (i) {
           switch (i) {

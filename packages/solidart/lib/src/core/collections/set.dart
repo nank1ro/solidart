@@ -17,6 +17,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// {@macro set-signal}
   SetSignal(
     Iterable<E> initialValue, {
+
     /// {@macro SignalBase.name}
     super.name,
 

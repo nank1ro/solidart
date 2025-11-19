@@ -13,7 +13,7 @@ mixin ValueNotifierSignalMixin<T> on solidart.ReadableSignal<T>
   @override
   void addListener(VoidCallback listener) {
     _listeners.putIfAbsent(listener, () {
-      return observe((_, __) {
+      return observe((_, _) {
         listener();
       }, fireImmediately: fireImmediately);
     });
