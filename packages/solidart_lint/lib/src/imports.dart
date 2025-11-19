@@ -30,5 +30,18 @@ extension ImportFix on DartFileEditBuilder {
   }
 
   @useResult
+  String _importFlutterSolidart(String name) {
+    return _importWithPrefix(name, [
+      Uri(scheme: 'package', path: 'flutter_solidart/flutter_solidart.dart'),
+    ]);
+  }
+
+  @useResult
   String importProviderScope() => _importDisco('ProviderScope');
+
+  @useResult
+  String importShow() => _importFlutterSolidart('Show');
+
+  @useResult
+  String importSignalBuilder() => _importFlutterSolidart('SignalBuilder');
 }

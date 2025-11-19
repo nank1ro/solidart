@@ -1,41 +1,40 @@
-import 'package:analyzer/source/source_range.dart';
-// import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer_plugin/utilities/assist/assist.dart';
+import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
+import 'package:solidart_lint/src/imports.dart';
+import 'package:solidart_lint/src/types.dart';
 
-// class WrapWithShow extends DartAssist {
-//   WrapWithShow();
+class WrapWithShow extends ResolvedCorrectionProducer {
+  WrapWithShow({required super.context});
 
-//   @override
-//   void run(
-//     CustomLintResolver resolver,
-//     ChangeReporter reporter,
-//     CustomLintContext context,
-//     SourceRange target,
-//   ) {
-//     context.registry.addInstanceCreationExpression((node) {
-//       if (!target.intersects(node.constructorName.sourceRange)) {
-//         return;
-//       }
+  @override
+  CorrectionApplicability get applicability =>
+      CorrectionApplicability.singleLocation;
 
-//       final createdType = node.constructorName.type.type;
-//       if (createdType == null) {
-//         return;
-//       }
+  @override
+  AssistKind get assistKind =>
+      const AssistKind('solidart.wrap_with_show', 27, 'Wrap with Show');
 
-//       final changeBuilder = reporter.createChangeBuilder(
-//         message: 'Wrap with Show',
-//         priority: 0,
-//       );
-
-//       changeBuilder.addDartFileEdit((builder) {
-//         builder.addSimpleInsertion(
-//             node.offset,
-//             'Show(\n'
-//             '  when: null,\n'
-//             '  fallback: null,\n'
-//             '  builder: (context) {\n'
-//             '    return ');
-//         builder.addSimpleInsertion(node.end, ';\n  },\n)');
-//       });
-//     });
-//   }
-// }
+  @override
+  Future<void> compute(ChangeBuilder builder) async {
+    final node = this.node;
+    if (node is! InstanceCreationExpression) return;
+    final createdType = node.constructorName.type.type;
+    if (createdType == null || !widgetType.isAssignableFromType(createdType)) {
+      return;
+    }
+    await builder.addDartFileEdit(file, (builder) {
+      final show = builder.importShow();
+      builder.addSimpleInsertion(
+        node.offset,
+        '$show(\n'
+        '  when: null,\n'
+        '  fallback: null,\n'
+        '  builder: (context) {\n'
+        '    return ',
+      );
+      builder.addSimpleInsertion(node.end, ';\n  },\n)');
+    });
+  }
+}

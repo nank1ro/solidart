@@ -76,10 +76,10 @@ abstract class TypeChecker {
   ///
   /// Throws on unresolved annotations unless [throwOnUnresolved] is `false`.
   DartObject? firstAnnotationOf(
-    Annotatable annotatable, {
+    Element annotatable, {
     bool throwOnUnresolved = true,
   }) {
-    final annotations = annotatable.metadata2.annotations;
+    final annotations = annotatable.metadata.annotations;
     if (annotations.isEmpty) {
       return null;
     }
@@ -93,7 +93,7 @@ abstract class TypeChecker {
   /// Returns if a constant annotating [element] is assignable to this type.
   ///
   /// Throws on unresolved annotations unless [throwOnUnresolved] is `false`.
-  bool hasAnnotationOf(Annotatable element, {bool throwOnUnresolved = true}) =>
+  bool hasAnnotationOf(Element element, {bool throwOnUnresolved = true}) =>
       firstAnnotationOf(element, throwOnUnresolved: throwOnUnresolved) != null;
 
   /// Returns the first constant annotating [annotatable] that is exactly this type.
@@ -101,10 +101,10 @@ abstract class TypeChecker {
   /// Throws [UnresolvedAnnotationException] on unresolved annotations unless
   /// [throwOnUnresolved] is explicitly set to `false` (default is `true`).
   DartObject? firstAnnotationOfExact(
-    Annotatable annotatable, {
+    Element annotatable, {
     bool throwOnUnresolved = true,
   }) {
-    final annotations = annotatable.metadata2.annotations;
+    final annotations = annotatable.metadata.annotations;
     if (annotations.isEmpty) {
       return null;
     }
@@ -120,7 +120,7 @@ abstract class TypeChecker {
   /// Throws [UnresolvedAnnotationException] on unresolved annotations unless
   /// [throwOnUnresolved] is explicitly set to `false` (default is `true`).
   bool hasAnnotationOfExact(
-    Annotatable annotatable, {
+    Element annotatable, {
     bool throwOnUnresolved = true,
   }) =>
       firstAnnotationOfExact(
@@ -136,7 +136,7 @@ abstract class TypeChecker {
     bool throwOnUnresolved = true,
   }) {
     final result = annotation.computeConstantValue();
-    if (result == null && throwOnUnresolved && element is Element2) {
+    if (result == null && throwOnUnresolved && element is Element) {
       throw UnresolvedAnnotationException._from(element, annotationIndex);
     }
     return result;
@@ -147,21 +147,20 @@ abstract class TypeChecker {
   /// Throws [UnresolvedAnnotationException] on unresolved annotations unless
   /// [throwOnUnresolved] is explicitly set to `false` (default is `true`).
   Iterable<DartObject> annotationsOf(
-    Annotatable annotatable, {
+    Element annotatable, {
     bool throwOnUnresolved = true,
-  }) =>
-      _annotationsWhere(
-        annotatable,
-        isAssignableFromType,
-        throwOnUnresolved: throwOnUnresolved,
-      );
+  }) => _annotationsWhere(
+    annotatable,
+    isAssignableFromType,
+    throwOnUnresolved: throwOnUnresolved,
+  );
 
   Iterable<DartObject> _annotationsWhere(
-    Annotatable annotatable,
+    Element annotatable,
     bool Function(DartType) predicate, {
     bool throwOnUnresolved = true,
   }) sync* {
-    final annotations = annotatable.metadata2.annotations;
+    final annotations = annotatable.metadata.annotations;
     for (var i = 0; i < annotations.length; i++) {
       final value = _computeConstantValue(
         annotatable,
@@ -180,36 +179,34 @@ abstract class TypeChecker {
   /// Throws [UnresolvedAnnotationException] on unresolved annotations unless
   /// [throwOnUnresolved] is explicitly set to `false` (default is `true`).
   Iterable<DartObject> annotationsOfExact(
-    Annotatable annotatable, {
+    Element annotatable, {
     bool throwOnUnresolved = true,
-  }) =>
-      _annotationsWhere(
-        annotatable,
-        isExactlyType,
-        throwOnUnresolved: throwOnUnresolved,
-      );
+  }) => _annotationsWhere(
+    annotatable,
+    isExactlyType,
+    throwOnUnresolved: throwOnUnresolved,
+  );
 
   /// Returns `true` if the type of [element] can be assigned to this type.
-  bool isAssignableFrom(Element2 element) =>
+  bool isAssignableFrom(Element element) =>
       isExactly(element) ||
-      (element is InterfaceElement2 &&
-          element.allSupertypes.any(isExactlyType));
+      (element is InterfaceElement && element.allSupertypes.any(isExactlyType));
 
   /// Returns `true` if [staticType] can be assigned to this type.
   bool isAssignableFromType(DartType staticType) {
-    final element = staticType.element3;
+    final element = staticType.element;
     return element != null && isAssignableFrom(element);
   }
 
   /// Returns `true` if representing the exact same class as [element].
-  bool isExactly(Element2 element);
+  bool isExactly(Element element);
 
   /// Returns `true` if representing the exact same type as [staticType].
   ///
   /// This will always return false for types without a backing class such as
   /// `void` or function types.
   bool isExactlyType(DartType staticType) {
-    final element = staticType.element3;
+    final element = staticType.element;
     return element != null && isExactly(element);
   }
 
@@ -217,8 +214,8 @@ abstract class TypeChecker {
   ///
   /// This check only takes into account the *extends* hierarchy. If you wish
   /// to check mixins and interfaces, use [isAssignableFrom].
-  bool isSuperOf(Element2 element) {
-    if (element is InterfaceElement2) {
+  bool isSuperOf(Element element) {
+    if (element is InterfaceElement) {
       var theSuper = element.supertype;
 
       do {
@@ -238,7 +235,7 @@ abstract class TypeChecker {
   /// This only takes into account the *extends* hierarchy. If you wish
   /// to check mixins and interfaces, use [isAssignableFromType].
   bool isSuperTypeOf(DartType staticType) {
-    final element = staticType.element3;
+    final element = staticType.element;
     return element != null && isSuperOf(element);
   }
 }
@@ -249,11 +246,11 @@ class _LibraryTypeChecker extends TypeChecker {
   final DartType _type;
 
   @override
-  bool isExactly(Element2 element) =>
-      element is InterfaceElement2 && element == _type.element3;
+  bool isExactly(Element element) =>
+      element is InterfaceElement && element == _type.element;
 
   @override
-  String toString() => _urlOfElement(_type.element3!);
+  String toString() => _urlOfElement(_type.element!);
 }
 
 @immutable
@@ -263,8 +260,8 @@ class _PackageChecker extends TypeChecker {
   final String _packageName;
 
   @override
-  bool isExactly(Element2 element) {
-    final targetUri = element.library2?.uri;
+  bool isExactly(Element element) {
+    final targetUri = element.library?.uri;
     if (targetUri == null) return false;
     if (_packageName == targetUri.toString()) return true;
 
@@ -292,8 +289,8 @@ class _NamedChecker extends TypeChecker {
   final String? packageName;
 
   @override
-  bool isExactly(Element2 element) {
-    if (element.name3 != _name) return false;
+  bool isExactly(Element element) {
+    if (element.name != _name) return false;
 
     // No packageName specified, ignoring it.
     if (packageName == null) return true;
@@ -319,9 +316,7 @@ class _NamedChecker extends TypeChecker {
 // Checks a runtime type against an Uri and Symbol.
 @immutable
 class _UriTypeChecker extends TypeChecker {
-  const _UriTypeChecker(dynamic url)
-      : _url = '$url',
-        super._();
+  const _UriTypeChecker(dynamic url) : _url = '$url', super._();
 
   // Precomputed cache of String --> Uri.
   static final _cache = Expando<Uri>();
@@ -337,7 +332,7 @@ class _UriTypeChecker extends TypeChecker {
       (url is String ? url : _normalizeUrl(url as Uri).toString());
 
   @override
-  bool isExactly(Element2 element) => hasSameUrl(_urlOfElement(element));
+  bool isExactly(Element element) => hasSameUrl(_urlOfElement(element));
 
   @override
   bool operator ==(Object o) => o is _UriTypeChecker && o._url == _url;
@@ -354,8 +349,7 @@ class _AnyChecker extends TypeChecker {
   final Iterable<TypeChecker> _checkers;
 
   @override
-  bool isExactly(Element2 element) =>
-      _checkers.any((c) => c.isExactly(element));
+  bool isExactly(Element element) => _checkers.any((c) => c.isExactly(element));
 }
 
 class _EveryChecker extends TypeChecker {
@@ -364,7 +358,7 @@ class _EveryChecker extends TypeChecker {
   final Iterable<TypeChecker> _checkers;
 
   @override
-  bool isExactly(Element2 element) {
+  bool isExactly(Element element) {
     return _checkers.every((c) => c.isExactly(element));
   }
 }
@@ -380,7 +374,7 @@ class UnresolvedAnnotationException implements Exception {
   /// Creates an exception from an annotation ([annotationIndex]) that was not
   /// resolvable while traversing `metadata2` on [annotatedElement].
   factory UnresolvedAnnotationException._from(
-    Element2 annotatedElement,
+    Element annotatedElement,
     int annotationIndex,
   ) {
     final sourceSpan = _findSpan(annotatedElement, annotationIndex);
@@ -393,17 +387,19 @@ class UnresolvedAnnotationException implements Exception {
   );
 
   /// Element that was annotated with something we could not resolve.
-  final Element2 annotatedElement;
+  final Element annotatedElement;
 
   /// Source span of the annotation that was not resolved.
   ///
   /// May be `null` if the import library was not found.
   final SourceSpan? annotationSource;
 
-  static SourceSpan? _findSpan(Element2 annotatedElement, int annotationIndex) {
-    final parsedLibrary = annotatedElement.session!.getParsedLibraryByElement2(
-      annotatedElement.library2!,
-    ) as ParsedLibraryResult;
+  static SourceSpan? _findSpan(Element annotatedElement, int annotationIndex) {
+    final parsedLibrary =
+        annotatedElement.session!.getParsedLibraryByElement(
+              annotatedElement.library!,
+            )
+            as ParsedLibraryResult;
     final declaration = parsedLibrary.getFragmentDeclaration(
       annotatedElement.firstFragment,
     );
@@ -443,14 +439,14 @@ class UnresolvedAnnotationException implements Exception {
 }
 
 /// Returns a URL representing [element].
-String _urlOfElement(Element2 element) => element.kind == ElementKind.DYNAMIC
+String _urlOfElement(Element element) => element.kind == ElementKind.DYNAMIC
     ? 'dart:core#dynamic'
     : element.kind == ElementKind.NEVER
-        ? 'dart:core#Never'
-        // using librarySource.uri – in case the element is in a part
-        : _normalizeUrl(
-            element.library2!.uri,
-          ).replace(fragment: element.name3).toString();
+    ? 'dart:core#Never'
+    // using librarySource.uri – in case the element is in a part
+    : _normalizeUrl(
+        element.library!.uri,
+      ).replace(fragment: element.name).toString();
 
 Uri _normalizeUrl(Uri url) {
   switch (url.scheme) {

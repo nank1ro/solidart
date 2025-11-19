@@ -18,7 +18,7 @@ class _ComputedPageState extends State<ComputedPage> {
       appBar: AppBar(title: const Text('Computed')),
       body: Center(
         child: SignalBuilder(
-          builder: (_, __) => Column(
+          builder: (_, _) => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('Count: ${count.value}'),

@@ -297,7 +297,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// This method must be called once during the life cycle of the resource.
   Future<void> _resolve() async {
     assert(
-      _resolved == false,
+      !_resolved,
       """The resource has been already resolved, you can't resolve it more than once. Use `refresh()` instead if you want to refresh the value.""",
     );
     _resolved = true;
@@ -749,9 +749,7 @@ extension ResourceExtensions<T> on ResourceState<T> {
   /// All cases are required.
   @Deprecated('Use when instead')
   R on<R>({
-    // ignore: avoid_positional_boolean_parameters
     required R Function(T data) ready,
-    // ignore: avoid_positional_boolean_parameters
     required R Function(Object error, StackTrace? stackTrace) error,
     required R Function() loading,
   }) {
@@ -762,9 +760,7 @@ extension ResourceExtensions<T> on ResourceState<T> {
   ///
   /// All cases are required.
   R when<R>({
-    // ignore: avoid_positional_boolean_parameters
     required R Function(T data) ready,
-    // ignore: avoid_positional_boolean_parameters
     required R Function(Object error, StackTrace? stackTrace) error,
     required R Function() loading,
   }) {
@@ -780,9 +776,7 @@ extension ResourceExtensions<T> on ResourceState<T> {
   @Deprecated('Use maybeWhen instead')
   R maybeOn<R>({
     required R Function() orElse,
-    // ignore: avoid_positional_boolean_parameters
     R Function(T data)? ready,
-    // ignore: avoid_positional_boolean_parameters
     R Function(Object error, StackTrace? stackTrace)? error,
     R Function()? loading,
   }) {
@@ -798,9 +792,7 @@ extension ResourceExtensions<T> on ResourceState<T> {
   /// [orElse] if the current state is not considered.
   R maybeWhen<R>({
     required R Function() orElse,
-    // ignore: avoid_positional_boolean_parameters
     R Function(T data)? ready,
-    // ignore: avoid_positional_boolean_parameters
     R Function(Object error, StackTrace? stackTrace)? error,
     R Function()? loading,
   }) {

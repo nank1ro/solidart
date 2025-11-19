@@ -14,15 +14,14 @@ class WrapWithProviderScope extends ResolvedCorrectionProducer {
 
   @override
   AssistKind get assistKind => const AssistKind(
-        'solidart.wrap_with_provider_scope',
-        27,
-        'Wrap with ProviderScope',
-      );
+    'solidart.wrap_with_provider_scope',
+    27,
+    'Wrap with ProviderScope',
+  );
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
     final node = this.node;
-    print('calling compute for WrapWithProviderScope');
     if (node is! InstanceCreationExpression) return;
     final createdType = node.constructorName.type.type;
     if (createdType == null || !widgetType.isAssignableFromType(createdType)) {
@@ -31,10 +30,11 @@ class WrapWithProviderScope extends ResolvedCorrectionProducer {
     await builder.addDartFileEdit(file, (builder) {
       final providerScope = builder.importProviderScope();
       builder.addSimpleInsertion(
-          node.offset,
-          '$providerScope(\n'
-          '  providers: [],\n'
-          '  child: ');
+        node.offset,
+        '$providerScope(\n'
+        '  providers: [],\n'
+        '  child: ',
+      );
       builder.addSimpleInsertion(node.end, ',\n)');
     });
   }

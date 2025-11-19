@@ -1,4 +1,4 @@
-// ignore_for_file: lines_longer_than_80_chars, document_ignores
+// ignore_for_file: document_ignores, unreachable_from_main, discarded_futures
 
 import 'dart:async';
 
@@ -87,8 +87,9 @@ void main() {
     expect(fallbackFinder, findsOneWidget);
   });
 
-  testWidgets('SignalBuilder widget works properly in ResourceReady state',
-      (tester) async {
+  testWidgets('SignalBuilder widget works properly in ResourceReady state', (
+    tester,
+  ) async {
     final s = Signal(0);
     Future<int> fetcher() {
       return Future.delayed(const Duration(milliseconds: 50), () => s.value);
@@ -144,8 +145,9 @@ void main() {
     expect(loadingFinder, findsNothing);
   });
 
-  testWidgets('SignalBuilder widget works properly in ResourceLoading state',
-      (tester) async {
+  testWidgets('SignalBuilder widget works properly in ResourceLoading state', (
+    tester,
+  ) async {
     final s = Signal(0);
     Future<int> fetcher() {
       return Future.delayed(const Duration(milliseconds: 150), () => s.value);
@@ -195,8 +197,9 @@ void main() {
     expect(loadingFinder, findsNothing);
   });
 
-  testWidgets('SignalBuilder widget works properly in ResourceError state',
-      (tester) async {
+  testWidgets('SignalBuilder widget works properly in ResourceError state', (
+    tester,
+  ) async {
     final s = Signal(0);
     Future<int> fetcher() {
       return Future.delayed(
@@ -343,48 +346,54 @@ void main() {
 
   group('Provider and SignalBuilder', () {
     testWidgets(
-        '(Provider) SignalBuilder works properly (1 Signal and 1 Computed)',
-        (tester) async {
-      final s = Signal(0);
+      '(Provider) SignalBuilder works properly (1 Signal and 1 Computed)',
+      (tester) async {
+        final s = Signal(0);
 
-      final counterProvider = Provider((_) => s);
-      final doubleCounterProvider =
-          Provider((_) => Computed(() => s.value * 2));
+        final counterProvider = Provider((_) => s);
+        final doubleCounterProvider = Provider(
+          (_) => Computed(() => s.value * 2),
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ProviderScope(
-              providers: [
-                counterProvider,
-                doubleCounterProvider,
-              ],
-              child: SignalBuilder(
-                builder: (context, child) {
-                  final counter = counterProvider.of(context).value;
-                  final doubleCounter = doubleCounterProvider.of(context).value;
-                  return Text('$counter $doubleCounter');
-                },
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: ProviderScope(
+                providers: [
+                  counterProvider,
+                  doubleCounterProvider,
+                ],
+                child: SignalBuilder(
+                  builder: (context, child) {
+                    final counter = counterProvider.of(context).value;
+                    final doubleCounter = doubleCounterProvider
+                        .of(context)
+                        .value;
+                    return Text('$counter $doubleCounter');
+                  },
+                ),
               ),
             ),
           ),
-        ),
-      );
-      Finder counterFinder(int value1, int value2) =>
-          find.text('$value1 $value2');
-      expect(counterFinder(0, 0), findsOneWidget);
+        );
+        Finder counterFinder(int value1, int value2) =>
+            find.text('$value1 $value2');
+        expect(counterFinder(0, 0), findsOneWidget);
 
-      s.value = 1;
-      await tester.pumpAndSettle();
-      expect(counterFinder(1, 2), findsOneWidget);
-    });
+        s.value = 1;
+        await tester.pumpAndSettle();
+        expect(counterFinder(1, 2), findsOneWidget);
+      },
+    );
 
-    testWidgets('(Provider) SignalBuilder works properly (1 Computed)',
-        (tester) async {
+    testWidgets('(Provider) SignalBuilder works properly (1 Computed)', (
+      tester,
+    ) async {
       final s = Signal(0);
 
-      final doubleCounterProvider =
-          Provider((_) => Computed(() => s.value * 2));
+      final doubleCounterProvider = Provider(
+        (_) => Computed(() => s.value * 2),
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -411,8 +420,9 @@ void main() {
       expect(counterFinder(2), findsOneWidget);
     });
 
-    testWidgets('(Provider) SignalBuilder works properly (1 ReadSignal)',
-        (tester) async {
+    testWidgets('(Provider) SignalBuilder works properly (1 ReadSignal)', (
+      tester,
+    ) async {
       final s = Signal(0);
 
       final counterProvider = Provider((_) => s.toReadSignal());
@@ -443,41 +453,43 @@ void main() {
     });
   });
 
-  testWidgets('(Provider) SignalBuilder works properly (1 Signal, 1 Computed)',
-      (tester) async {
-    final s = Signal(0);
-    final s2 = Computed(() => s.value * 2);
+  testWidgets(
+    '(Provider) SignalBuilder works properly (1 Signal, 1 Computed)',
+    (tester) async {
+      final s = Signal(0);
+      final s2 = Computed(() => s.value * 2);
 
-    final counterProvider = Provider((_) => s);
-    final doubleCounterProvider = Provider((_) => s2);
+      final counterProvider = Provider((_) => s);
+      final doubleCounterProvider = Provider((_) => s2);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ProviderScope(
-            providers: [
-              counterProvider,
-              doubleCounterProvider,
-            ],
-            child: SignalBuilder(
-              builder: (context, _) {
-                final counter = counterProvider.of(context);
-                final doubleCounter = doubleCounterProvider.of(context);
-                return Text('${counter.value} ${doubleCounter.value}');
-              },
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ProviderScope(
+              providers: [
+                counterProvider,
+                doubleCounterProvider,
+              ],
+              child: SignalBuilder(
+                builder: (context, _) {
+                  final counter = counterProvider.of(context);
+                  final doubleCounter = doubleCounterProvider.of(context);
+                  return Text('${counter.value} ${doubleCounter.value}');
+                },
+              ),
             ),
           ),
         ),
-      ),
-    );
-    Finder counterFinder(int value1, int value2) =>
-        find.text('$value1 $value2');
-    expect(counterFinder(0, 0), findsOneWidget);
+      );
+      Finder counterFinder(int value1, int value2) =>
+          find.text('$value1 $value2');
+      expect(counterFinder(0, 0), findsOneWidget);
 
-    s.value = 1;
-    await tester.pumpAndSettle();
-    expect(counterFinder(1, 2), findsOneWidget);
-  });
+      s.value = 1;
+      await tester.pumpAndSettle();
+      expect(counterFinder(1, 2), findsOneWidget);
+    },
+  );
 
   testWidgets('Signal reactivity within Provider create fn', (tester) async {
     final s = Signal(0);
@@ -517,8 +529,9 @@ void main() {
   });
 
   group('ProviderScopePortal with Signals', () {
-    testWidgets('ProviderScopePortal with 1 Signal w/out autoDispose',
-        (tester) async {
+    testWidgets('ProviderScopePortal with 1 Signal w/out autoDispose', (
+      tester,
+    ) async {
       final s = Signal(0, autoDispose: false);
       final counterProvider = Provider((_) => s);
 
@@ -570,12 +583,14 @@ void main() {
       expect(counterFinder(1), findsOneWidget);
     });
 
-    testWidgets('ProviderScopePortal with 1 Signal and 1 Computed',
-        (tester) async {
+    testWidgets('ProviderScopePortal with 1 Signal and 1 Computed', (
+      tester,
+    ) async {
       final s = Signal(0);
       final counterProvider = Provider((_) => s);
-      final doubleCounterProvider =
-          Provider((_) => Computed(() => s.value * 2));
+      final doubleCounterProvider = Provider(
+        (_) => Computed(() => s.value * 2),
+      );
 
       Future<void> showCounterDialog({required BuildContext context}) {
         return showDialog(
@@ -584,7 +599,7 @@ void main() {
             return ProviderScopePortal(
               mainContext: context,
               child: SignalBuilder(
-                builder: (innerContext, __) {
+                builder: (innerContext, _) {
                   final counter = counterProvider.of(innerContext);
                   final doubleCounter = doubleCounterProvider.of(innerContext);
                   return Text(
@@ -741,7 +756,7 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                builder: (_, __) {
+                builder: (_, _) {
                   return Text(counter.value.toString());
                 },
               ),
@@ -763,7 +778,7 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                builder: (_, __) {
+                builder: (_, _) {
                   return Text(counter.value.toString());
                 },
               ),
@@ -786,7 +801,7 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                builder: (_, __) {
+                builder: (_, _) {
                   return Text(doubleCounter.value.toString());
                 },
               ),
@@ -811,7 +826,7 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                builder: (_, __) {
+                builder: (_, _) {
                   return Text(counter.value.toString());
                 },
               ),
@@ -835,7 +850,7 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                builder: (_, __) {
+                builder: (_, _) {
                   return Text(r.state.toString());
                 },
               ),
@@ -863,7 +878,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: SignalBuilder(
-              builder: (_, __) {
+              builder: (_, _) {
                 return Text(counter.value.toString());
               },
             ),
@@ -882,13 +897,14 @@ void main() {
     timeout: const Timeout(Duration(seconds: 1)),
   );
 
-  testWidgets('SignalBuilder without dependencies throws an error',
-      (tester) async {
+  testWidgets('SignalBuilder without dependencies throws an error', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: SignalBuilder(
-            builder: (_, __) {
+            builder: (_, _) {
               return const Text('No dependencies here');
             },
           ),
@@ -938,8 +954,10 @@ void main() {
       expect(notifiedState, isA<ResourceReady<int>>());
       r.removeListener(listener);
       r.refresh();
-      expect(notifiedState,
-          isA<ResourceReady<int>>()); // Not updated since listener was removed
+      expect(
+        notifiedState,
+        isA<ResourceReady<int>>(),
+      ); // Not updated since listener was removed
     });
   });
 

@@ -27,7 +27,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: SignalBuilder(
-              builder: (_, __) {
+              builder: (_, _) {
                 cls ??= MyEffectClass(counter);
                 return Text(cls!.signal.value.toString());
               },

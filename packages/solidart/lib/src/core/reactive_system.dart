@@ -1,5 +1,4 @@
-// ignore: lines_longer_than_80_chars
-// ignore_for_file: public_member_api_docs, parameter_assignments, library_private_types_in_public_api
+// ignore_for_file: public_member_api_docs, library_private_types_in_public_api
 //
 // Reactive flags map: https://github.com/medz/alien-signals-dart/blob/main/flags.md
 part of 'core.dart';
