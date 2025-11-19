@@ -5,13 +5,14 @@ class WrapWithProviderScope extends WrapSingleWidget {
   WrapWithProviderScope({required super.context})
     : super(
         widgetName: 'ProviderScope',
-        extraNamedParams: const ['providers: []'],
+        extraNamedParams: const ['providers: [],'],
+        packageImport: 'package:disco/disco.dart',
       );
 
   @override
   AssistKind get assistKind => const AssistKind(
     'solidart.wrap_with_provider_scope',
-    29,
+    30,
     'Wrap with ProviderScope',
   );
 }

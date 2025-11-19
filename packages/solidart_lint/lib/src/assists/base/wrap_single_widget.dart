@@ -9,15 +9,17 @@ abstract class WrapSingleWidget extends ResolvedCorrectionProducer {
   WrapSingleWidget({
     required super.context,
     required this.widgetName,
+    required this.packageImport,
     this.extraNamedParams = const [],
   });
+
+  final String packageImport;
+  final String widgetName;
+  final List<String> extraNamedParams;
 
   @override
   CorrectionApplicability get applicability =>
       CorrectionApplicability.singleLocation;
-
-  final String widgetName;
-  final List<String> extraNamedParams;
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
@@ -26,7 +28,7 @@ abstract class WrapSingleWidget extends ResolvedCorrectionProducer {
     var widgetSrc = utils.getNodeText(widgetExpr);
 
     final widgetElement = await sessionHelper.getClass(
-      'package:flutter_solidart/flutter_solidart.dart',
+      packageImport,
       widgetName,
     );
 
@@ -45,7 +47,7 @@ abstract class WrapSingleWidget extends ResolvedCorrectionProducer {
           var indentOld = utils.getLinePrefix(widgetExpr.offset);
           var indentNew = '$indentOld${utils.oneIndent}';
 
-          for (var namedParam in extraNamedParams) {
+          for (final namedParam in extraNamedParams) {
             builder.writeln();
             builder.write(indentNew);
             builder.write(namedParam);

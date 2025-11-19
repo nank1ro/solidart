@@ -12,6 +12,9 @@
 # The core lints are also what is used by pub.dev for scoring packages.
 
 include: package:lints/recommended.yaml
+analyzer:
+  errors:
+    implementation_imports: ignore
 
 # Uncomment the following section to specify additional rules.
 

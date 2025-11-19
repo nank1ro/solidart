@@ -7,6 +7,7 @@ class WrapWithSignalBuilder extends WrapBuilder {
         builderName: 'SignalBuilder',
         extraNamedParams: const [],
         extraBuilderParams: const ['child'],
+        packageImport: 'package:flutter_solidart/flutter_solidart.dart',
       );
 
   @override

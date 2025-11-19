@@ -4,7 +4,6 @@
 library;
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:solidart_lint/src/assists/wrap_with_show.dart';
 import 'package:solidart_lint/src/assists/wrap_with_signal_builder.dart';
@@ -12,12 +11,6 @@ import 'package:solidart_lint/src/assists/wrap_with_provider_scope.dart';
 
 import 'package:analysis_server_plugin/plugin.dart';
 import 'package:analysis_server_plugin/registry.dart';
-
-void log(Object obj) {
-  File('/Users/ale/github/solidart/log.txt')
-    ..createSync(recursive: true)
-    ..writeAsStringSync('$obj\n', mode: FileMode.append);
-}
 
 final plugin = _SolidartPlugin();
 

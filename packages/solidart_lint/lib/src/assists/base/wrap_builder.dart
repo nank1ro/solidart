@@ -4,16 +4,17 @@ import 'package:analyzer/src/dart/element/type.dart';
 import 'package:analyzer/src/utilities/extensions/flutter.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
-import 'package:solidart_lint/main.dart';
 
 abstract class WrapBuilder extends ResolvedCorrectionProducer {
   final List<String> extraBuilderParams;
   final List<String> extraNamedParams;
   final String builderName;
+  final String packageImport;
 
   WrapBuilder({
     required super.context,
     required this.builderName,
+    required this.packageImport,
     this.extraNamedParams = const [],
     this.extraBuilderParams = const [],
   });
@@ -28,27 +29,17 @@ abstract class WrapBuilder extends ResolvedCorrectionProducer {
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
-    log('FlutterBaseWrapBuilder.compute');
     final widgetExpr = node.findWidgetExpression;
-    if (widgetExpr == null) {
-      log('widgetExpr is null');
-      return;
-    }
-    if (!canWrapOn(widgetExpr.typeOrThrow)) {
-      log('cannot wrap on type: ${widgetExpr.typeOrThrow}');
-      return;
-    }
+    if (widgetExpr == null) return;
+    if (!canWrapOn(widgetExpr.typeOrThrow)) return;
     var widgetSrc = utils.getNodeText(widgetExpr);
 
     final builderElement = await sessionHelper.getClass(
-      'package:flutter_solidart/flutter_solidart.dart',
+      packageImport,
       builderName,
     );
 
-    if (builderElement == null) {
-      log('builderElement is null');
-      return;
-    }
+    if (builderElement == null) return;
 
     final params = ['context', ...extraBuilderParams];
 
@@ -65,7 +56,7 @@ abstract class WrapBuilder extends ResolvedCorrectionProducer {
         for (final namedParam in extraNamedParams) {
           builder.write(indentNew1);
           builder.write('$namedParam: ');
-          builder.addSimpleLinkedEdit('variable', namedParam);
+          // builder.addSimpleLinkedEdit('variable', namedParam);
           builder.writeln(',');
         }
 
