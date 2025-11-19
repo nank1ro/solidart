@@ -56,7 +56,7 @@ abstract class WrapBuilder extends ResolvedCorrectionProducer {
         for (final namedParam in extraNamedParams) {
           builder.write(indentNew1);
           builder.write('$namedParam: ');
-          // builder.addSimpleLinkedEdit('variable', namedParam);
+          builder.addSimpleLinkedEdit('variable', namedParam);
           builder.writeln(',');
         }
 
