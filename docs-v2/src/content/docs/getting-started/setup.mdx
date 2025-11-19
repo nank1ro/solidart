@@ -63,30 +63,18 @@ import 'package:solidart_hooks/solidart_hooks.dart';
 
 ## solidart_lint
 
-This package is a developer tool for users of flutter_solidart, designed to help stop common issues and simplify repetitive tasks.
+This package is a Dart Analysis plugin for users of flutter_solidart, designed to help stop common issues and simplify repetitive tasks.
 <Aside type="tip">I highly recommend using this package to avoid errors and understand how to properly use flutter_solidart</Aside>
 
-### Install
+### Usage
 
-Run this command in the root of your Flutter project:
-```sh
-flutter pub add -d solidart_lint custom_lint
-```
+Be sure to have the Dart SDK version `>= 3.10.0` and the Flutter SDK `>= 3.38.0`.
 
 Then edit your `analysis_options.yaml` file and add these lines of code:
 
 ```yaml
-analyzer:
-  plugins:
-    - custom_lint
-```
-
-Then run:
-```sh
-rm pubspec.lock
-flutter clean
-flutter pub get
-dart run custom_lint
+plugins:
+  solidart_lint: ^3.0.0
 ```
 
 ## Update lints (suggested)
