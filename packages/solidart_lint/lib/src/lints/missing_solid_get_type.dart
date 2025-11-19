@@ -1,37 +1,37 @@
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/error/error.dart' as analyzer_error;
 import 'package:analyzer/error/listener.dart';
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+// import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:solidart_lint/src/types.dart';
 
-class MissingSolidGetType extends DartLintRule {
-  const MissingSolidGetType() : super(code: _code);
+// class MissingSolidGetType extends DartLintRule {
+//   const MissingSolidGetType() : super(code: _code);
 
-  static const _code = LintCode(
-    name: 'missing_solid_get_type',
-    errorSeverity: analyzer_error.DiagnosticSeverity.ERROR,
-    problemMessage: 'Specify the provider or signal type you want to get',
-  );
+//   static const _code = LintCode(
+//     name: 'missing_solid_get_type',
+//     errorSeverity: analyzer_error.DiagnosticSeverity.ERROR,
+//     problemMessage: 'Specify the provider or signal type you want to get',
+//   );
 
-  @override
-  void run(
-    CustomLintResolver resolver,
-    DiagnosticReporter reporter,
-    CustomLintContext context,
-  ) {
-    context.registry.addMethodInvocation(
-      (node) async {
-        if (node.methodName.name == 'get') {
-          if (node.target?.staticType == null) return;
-          if (node.argumentList.arguments.isNotEmpty) return;
-          final isContext =
-              buildContextType.isExactlyType(node.target!.staticType!);
-          if (!isContext) return;
-          if (node.staticType is DynamicType) {
-            reporter.atNode(node, _code);
-          }
-        }
-      },
-    );
-  }
-}
+//   @override
+//   void run(
+//     CustomLintResolver resolver,
+//     DiagnosticReporter reporter,
+//     CustomLintContext context,
+//   ) {
+//     context.registry.addMethodInvocation(
+//       (node) async {
+//         if (node.methodName.name == 'get') {
+//           if (node.target?.staticType == null) return;
+//           if (node.argumentList.arguments.isNotEmpty) return;
+//           final isContext =
+//               buildContextType.isExactlyType(node.target!.staticType!);
+//           if (!isContext) return;
+//           if (node.staticType is DynamicType) {
+//             reporter.atNode(node, _code);
+//           }
+//         }
+//       },
+//     );
+//   }
+// }

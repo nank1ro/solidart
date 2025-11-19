@@ -1,4 +1,4 @@
-import 'package:custom_lint_builder/custom_lint_builder.dart';
+import 'package:solidart_lint/src/type_checker.dart';
 
 final buildContextType = TypeChecker.fromName('BuildContext');
 final signalBaseType =
@@ -7,3 +7,5 @@ final solidType =
     TypeChecker.fromName('Solid', packageName: 'flutter_solidart');
 final providerType =
     TypeChecker.fromName('Provider', packageName: 'flutter_solidart');
+
+const widgetType = TypeChecker.fromName('Widget', packageName: 'flutter');

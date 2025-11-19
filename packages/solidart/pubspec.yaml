@@ -8,17 +8,17 @@ topics:
   - signals
 
 environment:
-  sdk: ^3.6.0
+  sdk: ^3.10.0
 
 resolution: workspace
 
 dependencies:
   # we depend on the alien signals reactivity implementation because it's the fastest available right now (30/12/2024)
-  alien_signals: ^0.5.3
+  alien_signals: ^0.5.4
   collection: ^1.18.0
   meta: ^1.11.0
 
 dev_dependencies:
-  mockito: ^5.4.4
+  mockito: ^5.5.1
   test: ^1.25.3
-  very_good_analysis: ^9.0.0
+  very_good_analysis: ^10.0.0

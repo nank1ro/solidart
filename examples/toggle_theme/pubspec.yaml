@@ -20,7 +20,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.6.0
+  sdk: ^3.10.0
 
 resolution: workspace
 
@@ -37,7 +37,6 @@ dependencies:
   flutter_solidart: ^2.0.0
 
 dev_dependencies:
-  custom_lint: ^0.8.0
   flutter_test:
     sdk: flutter
 
@@ -47,7 +46,6 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
-  solidart_lint: ^2.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
