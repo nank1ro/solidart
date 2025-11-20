@@ -90,13 +90,11 @@ class _SignalBuilderElement extends StatelessElement {
     try {
       final built = super.build();
       if (SolidartConfig.assertSignalBuilderWithoutDependencies) {
-        assert(
-          node.deps != null,
-          '''
-          SignalBuilder must detect at least one Signal/Computed/Resource during build.
-          You can disable this check by setting `SolidartConfig.assertSignalBuilderWithoutDependencies = false` before `runApp()`'
-          ''',
-        );
+        assert(node.deps != null, '''
+SignalBuilder must detect at least one Signal, Computed, or Resource during the build.
+This may mean your reactive values were disposed. 
+You can disable this check by setting `SolidartConfig.assertSignalBuilderWithoutDependencies = false` before `runApp()`'
+          ''');
       }
       // ignore: invalid_use_of_internal_member
       effect.setDependencies(node);
