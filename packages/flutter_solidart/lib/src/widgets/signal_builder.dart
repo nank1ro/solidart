@@ -97,6 +97,7 @@ class _SignalBuilderElement extends StatelessElement {
           You can disable this check by setting `SolidartConfig.assertSignalBuilderWithoutDependencies = false` before `runApp()`'
           ''',
         );
+        debugPrint(StackTrace.current.toString());
       }
       // ignore: invalid_use_of_internal_member
       effect.setDependencies(node);
