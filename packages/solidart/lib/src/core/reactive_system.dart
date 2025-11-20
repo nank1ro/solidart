@@ -27,10 +27,7 @@ extension MayDisposeDependencies on alien.ReactiveNode {
 }
 
 typedef ReactionErrorHandler =
-    void Function(
-      Object error,
-      ReactionInterface reaction,
-    );
+    void Function(Object error, ReactionInterface reaction);
 
 class ReactiveName {
   ReactiveName._internal();
@@ -166,6 +163,7 @@ class ReactiveSystem extends alien.ReactiveSystem {
   void run(alien.ReactiveNode effect, int flags) {
     if ((flags & 16 /* Dirty */ ) != 0 ||
         ((flags & 32 /* Pending */ ) != 0 &&
+            effect.deps != null &&
             checkDirty(effect.deps!, effect))) {
       final prevSub = setCurrentSub(effect);
       startTracking(effect);

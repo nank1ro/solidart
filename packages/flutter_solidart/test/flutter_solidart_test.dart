@@ -916,8 +916,12 @@ void main() {
       tester.takeException(),
       isAssertionError.having(
         (error) => error.message,
-        'SignalBuilder must detect at least one Signal/Computed during build.',
-        contains('SignalBuilder must detect at least one Signal/Computed'),
+        '''
+SignalBuilder must detect at least one Signal, Computed, or Resource during the build.
+''',
+        contains(
+          '''SignalBuilder must detect at least one Signal, Computed, or Resource during the build.''',
+        ),
       ),
     );
   });
