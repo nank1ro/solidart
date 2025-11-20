@@ -1,3 +1,7 @@
+## 2.8.3
+
+- **FIX**: Handle race conditions in Resource that caused multiple calls to `resolve`.
+
 ## 2.8.2
 
 - **REFACTOR**: Improve the Solidart DevTools extension by giving any signal an id and omit overriding the same signal by name.
