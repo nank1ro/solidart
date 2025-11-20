@@ -132,7 +132,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
          comparator: identical,
        ) {
     // resolve the resource immediately if not lazy
-    if (!lazy) _resolve();
+    if (!lazy) _resolveIfNeeded();
   }
 
   /// {@macro resource}
@@ -171,7 +171,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
          comparator: identical,
        ) {
     // resolve the resource immediately if not lazy
-    if (!lazy) _resolve();
+    if (!lazy) _resolveIfNeeded();
   }
 
   /// Indicates whether the resource should be computed lazily, defaults to true
@@ -288,15 +288,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
   final _broadcastStreams = <Stream<T>, Stream<T>>{};
   final _streamSubscriptions = <StreamSubscription<T>>[];
 
-  void _resolve() {
-    assert(
-      !_resolved,
-      """The resource has been already resolved, you can't resolve it more than once. Use `refresh()` instead if you want to refresh the value.""",
-    );
-    _resolved = true;
-    __resolve();
-  }
-
   /// Resolves the [Resource].
   ///
   /// If you provided a [fetcher], it run the async call.
@@ -305,7 +296,12 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// Then will subscribe to the [source], if provided.
   ///
   /// This method must be called once during the life cycle of the resource.
-  Future<void> __resolve() async {
+  Future<void> _resolve() async {
+    assert(
+      !_resolved,
+      """The resource has been already resolved, you can't resolve it more than once. Use `refresh()` instead if you want to refresh the value.""",
+    );
+    _resolved = true;
     if (fetcher != null) {
       // start fetching
       await _fetch();
