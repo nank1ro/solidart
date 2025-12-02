@@ -1,7 +1,7 @@
 import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:infinite_scroll/controllers/post_controller.dart';
+import 'package:infinite_scroll/notifiers/posts_notifier.dart';
 import 'package:infinite_scroll/domain/post.dart';
 
 class PostsPage extends StatelessWidget {
@@ -10,7 +10,7 @@ class PostsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ProviderScope(
-      providers: [PostController.provider],
+      providers: [PostsNotifier.provider],
       child: Scaffold(
         appBar: AppBar(title: const Text('Posts')),
         body: const PostsList(),
@@ -28,7 +28,7 @@ class PostsList extends StatefulWidget {
 
 class _PostsListState extends State<PostsList> {
   final scrollController = ScrollController();
-  late final postController = PostController.provider.of(context);
+  late final postsNotifier = PostsNotifier.provider.of(context);
   bool hasTriggeredLoadMore = false; // prevent multiple load more calls
 
   @override
@@ -38,13 +38,18 @@ class _PostsListState extends State<PostsList> {
   }
 
   @override
+  void dispose() {
+    scrollController.removeListener(onScroll);
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SignalBuilder(
       builder: (_, _) {
-        final postsState = postController.postsResource.state;
-        final hasReachedMax = postController.hasReachedMax.value;
-
-        return postsState.when(
+        final hasReachedMax = postsNotifier.hasReachedMax.value;
+        return postsNotifier.posts.state.when(
           ready: (posts) {
             if (posts.isEmpty) {
               return const Center(child: Text('no posts'));
@@ -61,24 +66,17 @@ class _PostsListState extends State<PostsList> {
             );
           },
           error: (e, st) => Text('Error : $e'),
-          loading: () => const Center(child: CircularProgressIndicator.adaptive()),
+          loading: () =>
+              const Center(child: CircularProgressIndicator.adaptive()),
         );
       },
     );
   }
 
-  @override
-  void dispose() {
-    scrollController.removeListener(onScroll);
-    scrollController.dispose();
-
-    super.dispose();
-  }
-
   void onScroll() {
     if (isBottom && !hasTriggeredLoadMore) {
       hasTriggeredLoadMore = true;
-      postController.loadMore();
+      postsNotifier.loadMore();
     }
 
     if (!isBottom) {
