@@ -1,12 +1,10 @@
 import 'dart:convert';
 
 import 'package:disco/disco.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:http/http.dart' as http;
 import 'package:infinite_scroll/domain/post.dart';
 
-@immutable
 class PostController {
   static const _postLimit = 20;
   static const _throttleDuration = Duration(milliseconds: 300);
