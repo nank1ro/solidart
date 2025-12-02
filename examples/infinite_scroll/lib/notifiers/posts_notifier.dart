@@ -5,21 +5,22 @@ import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:http/http.dart' as http;
 import 'package:infinite_scroll/domain/post.dart';
 
-class PostController {
+class PostsNotifier {
   static const _postLimit = 20;
   static const _throttleDuration = Duration(milliseconds: 300);
 
   // Provider
-  static final provider = Provider((_) => PostController());
+  static final provider = Provider((_) => PostsNotifier());
 
-  PostController({http.Client? httpClient}) : _httpClient = httpClient ?? http.Client();
+  PostsNotifier({http.Client? httpClient})
+    : _httpClient = httpClient ?? http.Client();
 
   final http.Client _httpClient;
   final _posts = <Post>[];
 
   final hasReachedMax = Signal(false);
   final _startIndex = Signal<int>(0);
-  late final postsResource = Resource(
+  late final posts = Resource(
     _getPosts,
     debounceDelay: _throttleDuration,
     source: _startIndex,
@@ -38,7 +39,7 @@ class PostController {
   }
 
   void loadMore() {
-    if (!hasReachedMax.value && !postsResource.state.isLoading) {
+    if (!hasReachedMax.value && !posts.state.isLoading) {
       _startIndex.value = _posts.length;
     }
   }
@@ -46,10 +47,11 @@ class PostController {
   /// https://jsonplaceholder.typicode.com/posts?_start=0&_limit=20
   Future<List<Post>> _fetchPosts({required int startIndex}) async {
     final response = await _httpClient.get(
-      Uri.https('jsonplaceholder.typicode.com', '/posts', <String, String>{
+      Uri.https('jsonplaceholder.typicode.com', '/posts', {
         '_start': '$startIndex',
         '_limit': '$_postLimit',
       }),
+      headers: {'Content-Type': 'application/json'},
     );
 
     if (response.statusCode == 200) {
@@ -57,6 +59,8 @@ class PostController {
       return List<Post>.from(body.map((x) => Post.fromJson(x)));
     }
 
-    throw Exception('error fetching posts');
+    throw Exception(
+      'error fetching posts statusCode: ${response.statusCode} body: ${response.body}',
+    );
   }
 }

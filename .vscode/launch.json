@@ -57,6 +57,13 @@
       "cwd": "examples/github_search/"
     },
     {
+      "name": "Infinite scroll",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "examples/infinite_scroll/"
+    },
+    {
       "name": "DevTools extension",
       "type": "dart",
       "request": "launch",
