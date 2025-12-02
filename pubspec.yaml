@@ -16,6 +16,7 @@ workspace:
   - examples/github_search
   - examples/todos
   - examples/toggle_theme
+  - examples/infinite_scroll
 
 dev_dependencies:
   reactivity_benchmark: ^0.0.1
