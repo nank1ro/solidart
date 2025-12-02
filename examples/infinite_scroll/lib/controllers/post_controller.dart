@@ -23,7 +23,6 @@ class PostController {
   final _startIndex = Signal<int>(0);
   late final postsResource = Resource(
     _getPosts,
-    autoDispose: false,
     debounceDelay: _throttleDuration,
     source: _startIndex,
   );
