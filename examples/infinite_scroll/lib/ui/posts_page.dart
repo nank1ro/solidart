@@ -43,10 +43,9 @@ class _PostsListState extends State<PostsList> {
       builder: (_, _) {
         final postsState = postController.postsResource.state;
         final hasReachedMax = postController.hasReachedMax.value;
-        final posts = postController.posts;
 
         return postsState.when(
-          ready: (_) {
+          ready: (posts) {
             if (posts.isEmpty) {
               return const Center(child: Text('no posts'));
             }

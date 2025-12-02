@@ -17,8 +17,7 @@ class PostController {
   PostController({http.Client? httpClient}) : _httpClient = httpClient ?? http.Client();
 
   final http.Client _httpClient;
-
-  final posts = <Post>[];
+  final _posts = <Post>[];
 
   final hasReachedMax = Signal(false);
   final _startIndex = Signal<int>(0);
@@ -29,20 +28,21 @@ class PostController {
     source: _startIndex,
   );
 
-  Future<void> _getPosts() async {
+  Future<List<Post>> _getPosts() async {
     final index = _startIndex.value;
     final response = await _fetchPosts(startIndex: index);
     if (response.isEmpty) {
       hasReachedMax.value = true;
-      return;
+      return _posts;
     }
 
-    posts.addAll(response);
+    _posts.addAll(response);
+    return _posts;
   }
 
   void loadMore() {
     if (!hasReachedMax.value && !postsResource.state.isLoading) {
-      _startIndex.value = posts.length;
+      _startIndex.value = _posts.length;
     }
   }
 
