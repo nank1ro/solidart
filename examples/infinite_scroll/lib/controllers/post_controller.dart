@@ -12,17 +12,15 @@ class PostController {
   static const _throttleDuration = Duration(milliseconds: 300);
 
   // Provider
-  static final provider = Provider.withArgument(
-    (_, http.Client client) => PostController(httpClient: client),
-  );
+  static final provider = Provider((_) => PostController());
 
   PostController({http.Client? httpClient}) : _httpClient = httpClient ?? http.Client();
 
   final http.Client _httpClient;
 
-  final posts = ListSignal<Post>([]);
-  final hasReachedMax = Signal(false);
+  final posts = <Post>[];
 
+  final hasReachedMax = Signal(false);
   final _startIndex = Signal<int>(0);
   late final postsResource = Resource(
     _getPosts,
@@ -39,8 +37,7 @@ class PostController {
       return;
     }
 
-    // update state
-    posts.updateValue((curr) => [...curr, ...response]);
+    posts.addAll(response);
   }
 
   void loadMore() {

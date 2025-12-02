@@ -1,7 +1,6 @@
 import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:http/http.dart' as http;
 import 'package:infinite_scroll/controllers/post_controller.dart';
 import 'package:infinite_scroll/domain/post.dart';
 
@@ -11,7 +10,7 @@ class PostsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ProviderScope(
-      providers: [PostController.provider(http.Client())],
+      providers: [PostController.provider],
       child: Scaffold(
         appBar: AppBar(title: const Text('Posts')),
         body: const PostsList(),
@@ -28,22 +27,23 @@ class PostsList extends StatefulWidget {
 }
 
 class _PostsListState extends State<PostsList> {
-  final _scrollController = ScrollController();
-  late final _postController = PostController.provider.of(context);
+  final scrollController = ScrollController();
+  late final postController = PostController.provider.of(context);
+  bool hasTriggeredLoadMore = false; // prevent multiple load more calls
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
+    scrollController.addListener(onScroll);
   }
 
   @override
   Widget build(BuildContext context) {
     return SignalBuilder(
       builder: (_, _) {
-        final postsState = _postController.postsResource.state;
-        final hasReachedMax = _postController.hasReachedMax.value;
-        final posts = _postController.posts;
+        final postsState = postController.postsResource.state;
+        final hasReachedMax = postController.hasReachedMax.value;
+        final posts = postController.posts;
 
         return postsState.when(
           ready: (_) {
@@ -58,7 +58,7 @@ class _PostsListState extends State<PostsList> {
                     : PostListItem(post: posts[index]);
               },
               itemCount: hasReachedMax ? posts.length : posts.length + 1,
-              controller: _scrollController,
+              controller: scrollController,
             );
           },
           error: (e, st) => Text('Error : $e'),
@@ -70,21 +70,28 @@ class _PostsListState extends State<PostsList> {
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
+    scrollController.removeListener(onScroll);
+    scrollController.dispose();
 
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_isBottom) _postController.loadMore();
+  void onScroll() {
+    if (isBottom && !hasTriggeredLoadMore) {
+      hasTriggeredLoadMore = true;
+      postController.loadMore();
+    }
+
+    if (!isBottom) {
+      hasTriggeredLoadMore = false;
+    }
   }
 
-  bool get _isBottom {
-    if (!_scrollController.hasClients) return false;
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.offset;
-    return currentScroll >= (maxScroll * 0.9);
+  bool get isBottom {
+    if (!scrollController.hasClients) return false;
+    final maxScroll = scrollController.position.maxScrollExtent;
+    final currentScroll = scrollController.offset;
+    return currentScroll >= (maxScroll * 0.95);
   }
 }
 
