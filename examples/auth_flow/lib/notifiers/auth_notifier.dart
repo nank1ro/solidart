@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:disco/disco.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,9 +8,14 @@ final sharedPreferenceProvider = Provider.withArgument((_, SharedPreferences pre
 
 class AuthNotifier {
   AuthNotifier(this.prefs) {
-    final user = prefs.getString('user');
-    if (user != null) {
-      currentUser.value = (id: '1', name: 'John Doe', email: 'john.doe@example.com');
+    final userJson = prefs.getString('user');
+    if (userJson != null) {
+      final data = jsonDecode(userJson) as Map<String, dynamic>;
+      currentUser.value = (
+        id: data['id'] as String,
+        name: data['name'] as String,
+        email: data['email'] as String,
+      );
     }
   }
 
@@ -20,12 +27,13 @@ class AuthNotifier {
   late final currentUser = Signal<User?>(null);
   late final isLoggedIn = Computed(() => currentUser.value != null);
 
-  void login(User user) async {
-    await prefs.setString('user', user.id);
+  Future<void> login(User user) async {
+    final userJson = jsonEncode({'id': user.id, 'name': user.name, 'email': user.email});
+    await prefs.setString('user', userJson);
     currentUser.value = user;
   }
 
-  void logout() async {
+  Future<void> logout() async {
     await prefs.remove('user');
     currentUser.value = null;
   }

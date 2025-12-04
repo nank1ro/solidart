@@ -1,6 +1,6 @@
 import 'package:auth_flow/notifiers/auth_notifier.dart';
 import 'package:auth_flow/ui/login_page.dart';
-import 'package:auth_flow/ui/my_home_page.dart';
+import 'package:auth_flow/ui/home_page.dart';
 import 'package:auth_flow/ui/profile_page.dart';
 import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
@@ -55,7 +55,7 @@ class AppRouter {
     routes: [
       GoRoute(
         path: '/',
-        builder: (_, _) => const MyHomePage(title: 'Home'),
+        builder: (_, _) => const HomePage(title: 'Home'),
         routes: [GoRoute(path: 'profile', builder: (_, _) => const ProfilePage())],
       ),
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),

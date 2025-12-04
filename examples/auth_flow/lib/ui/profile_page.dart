@@ -6,7 +6,11 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = AuthNotifier.provider.of(context).currentUser.value!;
+    final user = AuthNotifier.provider.of(context).currentUser.value;
+
+    if (user == null) {
+      return const Scaffold(body: Center(child: Text('No user found')));
+    }
 
     return Scaffold(
       appBar: AppBar(

@@ -1,6 +1,6 @@
 import 'package:auth_flow/notifiers/auth_notifier.dart';
 import 'package:auth_flow/ui/login_page.dart';
-import 'package:auth_flow/ui/my_home_page.dart';
+import 'package:auth_flow/ui/home_page.dart';
 import 'package:disco/disco.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
@@ -45,7 +45,7 @@ class MyApp extends StatelessWidget {
             title: 'Auth Demo',
             debugShowCheckedModeBanner: false,
             theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
-            home: controller.isLoggedIn.value ? const MyHomePage(title: 'Home') : const LoginPage(),
+            home: controller.isLoggedIn.value ? const HomePage(title: 'Home') : const LoginPage(),
           );
         },
       ),
