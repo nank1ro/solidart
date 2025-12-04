@@ -28,15 +28,14 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late final Effect disposeEffect;
-  late final controller = AuthNotifier.provider.of(context);
+  late final Effect authEffect;
 
   @override
   void initState() {
     super.initState();
     // Listen to auth state changes and navigate accordingly
-    disposeEffect = Effect(() {
-      final isLoggedIn = controller.isLoggedIn.value;
+    authEffect = Effect(() {
+      final isLoggedIn = AuthNotifier.provider.of(context).isLoggedIn.value;
       if (!isLoggedIn) {
         MyApp.navigatorKey.currentState?.popUntil((route) => route.isFirst);
       }
@@ -45,7 +44,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
-    disposeEffect();
+    authEffect();
     super.dispose();
   }
 
@@ -58,7 +57,9 @@ class _MyAppState extends State<MyApp> {
           title: 'Auth Demo',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
-          home: controller.isLoggedIn.value ? const HomePage(title: 'Home') : const LoginPage(),
+          home: AuthNotifier.provider.of(context).isLoggedIn.value
+              ? const HomePage(title: 'Home')
+              : const LoginPage(),
         );
       },
     );
