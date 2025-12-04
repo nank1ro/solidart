@@ -10,45 +10,57 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
 
-  runApp(ProviderScope(providers: [sharedPreferenceProvider(prefs)], child: const MyApp()));
+  runApp(
+    ProviderScope(
+      providers: [sharedPreferenceProvider(prefs)],
+      child: ProviderScope(providers: [AuthNotifier.provider], child: const MyApp()),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   static final navigatorKey = GlobalKey<NavigatorState>();
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final Effect disposeEffect;
+  late final controller = AuthNotifier.provider.of(context);
+
+  @override
+  void initState() {
+    // Listen to auth state changes and navigate accordingly
+    disposeEffect = Effect(() {
+      final isLoggedIn = controller.isLoggedIn.value;
+      if (!isLoggedIn) {
+        MyApp.navigatorKey.currentState?.popUntil((route) => route.isFirst);
+      }
+    });
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    disposeEffect();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ProviderScope(
-      providers: [AuthNotifier.provider],
-      child: SignalBuilder(
-        builder: (context, child) {
-          final controller = AuthNotifier.provider.of(context);
-
-          // Listen to auth state changes and navigate accordingly
-          Effect(() {
-            final isLoggedIn = controller.isLoggedIn.value;
-
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              final navigator = navigatorKey.currentState;
-              if (navigator == null) return;
-
-              if (!isLoggedIn) {
-                navigator.popUntil((route) => route.isFirst);
-              }
-            });
-          });
-
-          return MaterialApp(
-            navigatorKey: navigatorKey,
-            title: 'Auth Demo',
-            debugShowCheckedModeBanner: false,
-            theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
-            home: controller.isLoggedIn.value ? const HomePage(title: 'Home') : const LoginPage(),
-          );
-        },
-      ),
+    return SignalBuilder(
+      builder: (context, child) {
+        return MaterialApp(
+          navigatorKey: MyApp.navigatorKey,
+          title: 'Auth Demo',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
+          home: controller.isLoggedIn.value ? const HomePage(title: 'Home') : const LoginPage(),
+        );
+      },
     );
   }
 }
