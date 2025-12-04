@@ -33,6 +33,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void initState() {
+    super.initState();
     // Listen to auth state changes and navigate accordingly
     disposeEffect = Effect(() {
       final isLoggedIn = controller.isLoggedIn.value;
@@ -40,7 +41,6 @@ class _MyAppState extends State<MyApp> {
         MyApp.navigatorKey.currentState?.popUntil((route) => route.isFirst);
       }
     });
-    super.initState();
   }
 
   @override
