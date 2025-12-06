@@ -3,17 +3,17 @@
 // Reactive flags map: https://github.com/medz/alien-signals-dart/blob/main/flags.md
 part of 'core.dart';
 
-extension MayDisposeDependencies on alien.ReactiveNode {
-  Iterable<alien.ReactiveNode> getDependencies() {
+extension MayDisposeDependencies on system.ReactiveNode {
+  Iterable<system.ReactiveNode> getDependencies() {
     var link = deps;
-    final foundDeps = <alien.ReactiveNode>{};
+    final foundDeps = <system.ReactiveNode>{};
     for (; link != null; link = link.nextDep) {
       foundDeps.add(link.dep);
     }
     return foundDeps;
   }
 
-  void mayDisposeDependencies([Iterable<alien.ReactiveNode>? include]) {
+  void mayDisposeDependencies([Iterable<system.ReactiveNode>? include]) {
     final dependencies = {...getDependencies(), ...?include};
     for (final dep in dependencies) {
       switch (dep) {
