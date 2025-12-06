@@ -152,7 +152,13 @@ class Computed<T> extends ReadSignal<T> {
       return _untrackedValue;
     }
 
-    final value = reactiveSystem.getComputedValue(_internalComputed);
+    if ((_internalComputed.flags & alien.ReactiveFlags.pending) !=
+            alien.ReactiveFlags.none &&
+        _internalComputed.deps == null) {
+      _internalComputed.flags &= ~alien.ReactiveFlags.pending;
+    }
+
+    final value = _internalComputed.get();
     if (autoDispose) {
       _mayDispose();
     }
