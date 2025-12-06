@@ -259,7 +259,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   @override
   int get listenerCount => _subs.length;
 
-  final _subs = <alien.ReactiveNode>{};
+  final _subs = <system.ReactiveNode>{};
 
   @override
   void dispose() {
@@ -334,8 +334,8 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   /// Indicates if the signal should update its value.
   bool shouldUpdate() {
-    if ((_internalSignal.flags & alien.ReactiveFlags.dirty) ==
-        alien.ReactiveFlags.none) {
+    if ((_internalSignal.flags & system.ReactiveFlags.dirty) ==
+        system.ReactiveFlags.none) {
       return false;
     }
     return _internalSignal.update();

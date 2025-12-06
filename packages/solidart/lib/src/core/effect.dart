@@ -166,7 +166,7 @@ class Effect implements ReactionInterface {
       this,
       fn: safeCallback(),
       detach: detach,
-      flags: alien.ReactiveFlags.watching | alien.ReactiveFlags.dirty,
+      flags: system.ReactiveFlags.watching | system.ReactiveFlags.dirty,
     );
   }
 
@@ -183,27 +183,27 @@ class Effect implements ReactionInterface {
 
   late final _AlienEffect _internalEffect;
 
-  final _deps = <alien.ReactiveNode>{};
+  final _deps = <system.ReactiveNode>{};
 
   /// The subscriber of the effect, do not use it directly.
   @protected
-  alien.ReactiveNode get subscriber => _internalEffect;
+  system.ReactiveNode get subscriber => _internalEffect;
 
   @override
   bool get disposed => _disposed;
 
   /// Runs the effect, tracking any signal read during the execution.
   void run() {
-    final currentSub = alien_preset.getActiveSub();
+    final currentSub = preset.getActiveSub();
     if (!SolidartConfig.detachEffects &&
         currentSub != null &&
         (currentSub is! _AlienEffect ||
             (!_internalEffect.detach && !currentSub.detach))) {
-      alien_preset.link(_internalEffect, currentSub, alien_preset.cycle);
+      preset.link(_internalEffect, currentSub, preset.cycle);
     }
 
     try {
-      alien_preset.run(_internalEffect);
+      preset.run(_internalEffect);
     } catch (_) {
       // The callback handles the error reporting, just rethrow to preserve
       // the behavior when no handler is provided.
@@ -217,7 +217,7 @@ class Effect implements ReactionInterface {
 
   /// Sets the dependencies of the effect, do not use it directly.
   @internal
-  void setDependencies(alien.ReactiveNode node) {
+  void setDependencies(system.ReactiveNode node) {
     _deps
       ..clear()
       ..addAll(node.getDependencies());

@@ -21,10 +21,10 @@ part of 'core.dart';
 /// So when `x` changes, the effect is paused and you never see it printing:
 /// "x = 11, y = 20".
 T batch<T>(T Function() fn) {
-  alien_preset.startBatch();
+  preset.startBatch();
   try {
     return fn();
   } finally {
-    alien_preset.endBatch();
+    preset.endBatch();
   }
 }

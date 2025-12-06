@@ -1,7 +1,7 @@
 // ignore_for_file: document_ignores
 
-import 'package:alien_signals/preset.dart' as alien_preset;
-import 'package:alien_signals/system.dart' as alien;
+import 'package:solidart/deps/preset.dart' as preset;
+import 'package:solidart/deps/system.dart' as system;
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 import 'package:solidart/solidart.dart';
@@ -85,9 +85,9 @@ class _SignalBuilderElement extends StatelessElement {
 
   @override
   Widget build() {
-    final prevSub = alien_preset.getActiveSub();
+    final prevSub = preset.getActiveSub();
     final node = effect.subscriber;
-    alien_preset.setActiveSub(node);
+    preset.setActiveSub(node);
 
     try {
       final built = super.build();
@@ -100,11 +100,11 @@ You can disable this check by setting `SolidartConfig.assertSignalBuilderWithout
       }
       // ignore: invalid_use_of_internal_member
       effect.setDependencies(node);
-      node.flags = alien.ReactiveFlags.watching;
+      node.flags = system.ReactiveFlags.watching;
 
       return built;
     } finally {
-      alien_preset.setActiveSub(prevSub);
+      preset.setActiveSub(prevSub);
     }
   }
 }

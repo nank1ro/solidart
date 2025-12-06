@@ -124,7 +124,7 @@ class Computed<T> extends ReadSignal<T> {
   @override
   bool get hasValue => true;
 
-  final _deps = <alien.ReactiveNode>{};
+  final _deps = <system.ReactiveNode>{};
 
   @override
   void dispose() {
@@ -152,10 +152,10 @@ class Computed<T> extends ReadSignal<T> {
       return _untrackedValue;
     }
 
-    if ((_internalComputed.flags & alien.ReactiveFlags.pending) !=
-            alien.ReactiveFlags.none &&
+    if ((_internalComputed.flags & system.ReactiveFlags.pending) !=
+            system.ReactiveFlags.none &&
         _internalComputed.deps == null) {
-      _internalComputed.flags &= ~alien.ReactiveFlags.pending;
+      _internalComputed.flags &= ~system.ReactiveFlags.pending;
     }
 
     final value = _internalComputed.get();
