@@ -1,9 +1,9 @@
 // ignore_for_file: document_ignores
 
-import 'package:solidart/deps/preset.dart' as preset;
-import 'package:solidart/deps/system.dart' as system;
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
+import 'package:solidart/deps/preset.dart' as preset;
+import 'package:solidart/deps/system.dart' as system;
 import 'package:solidart/solidart.dart';
 
 /// {@template signalbuilder}
@@ -86,7 +86,7 @@ class _SignalBuilderElement extends StatelessElement {
   @override
   Widget build() {
     final prevSub = preset.getActiveSub();
-    final node = effect.subscriber;
+    final node = effect;
     preset.setActiveSub(node);
 
     try {

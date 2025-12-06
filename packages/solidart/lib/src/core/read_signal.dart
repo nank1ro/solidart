@@ -274,15 +274,21 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
     if (SolidartConfig.autoDispose) {
       for (final sub in _subs) {
-        if (sub is _AlienEffect) {
+        if (sub is Effect) {
+          sub.dispose();
+          continue;
+        }
+        if (sub is preset.EffectNode) {
           if (sub.deps?.dep == _internalSignal) {
             sub.deps = null;
           }
           if (sub.depsTail?.dep == _internalSignal) {
             sub.depsTail = null;
           }
-
-          sub.parent._mayDispose();
+          // coverage:ignore-start
+          sub.mayDisposeDependencies();
+          preset.stop(sub);
+          // coverage:ignore-end
         }
         if (sub is _AlienComputed) {
           // coverage:ignore-start

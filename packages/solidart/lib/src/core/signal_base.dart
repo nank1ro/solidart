@@ -105,5 +105,6 @@ abstract class SignalBase<T> {
   void dispose();
 
   /// Indicates if the [oldValue] and the [newValue] are equal
+  // ignore: unused_element
   bool _compare(T? oldValue, T? newValue);
 }

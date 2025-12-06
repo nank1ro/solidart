@@ -64,7 +64,7 @@ abstract class ReactionInterface {
 ///
 /// > An effect is useless after it is disposed, you must not use it anymore.
 /// {@endtemplate}
-class Effect implements ReactionInterface {
+class Effect extends preset.EffectNode implements ReactionInterface {
   /// {@macro effect}
   factory Effect(
     void Function() callback, {
@@ -93,48 +93,29 @@ class Effect implements ReactionInterface {
     try {
       final effectiveName = name ?? ReactiveName.nameFor('Effect');
       final effectiveAutoDispose = autoDispose ?? SolidartConfig.autoDispose;
-      if (delay == null) {
-        effect = Effect._internal(
-          callback: () => callback(),
-          onError: onError,
-          name: effectiveName,
-          autoDispose: effectiveAutoDispose,
-          detach: detach,
-        );
-      } else {
-        final scheduler = createDelayedScheduler(delay);
-        var isScheduled = false;
-        Timer? timer;
-
-        effect = Effect._internal(
-          callback: () {
-            if (!isScheduled) {
-              isScheduled = true;
-
-              // coverage:ignore-start
-              timer?.cancel();
-              // coverage:ignore-end
-              timer = null;
-
-              timer = scheduler(() {
-                isScheduled = false;
-                if (!effect.disposed) {
-                  callback();
-                } else {
-                  // coverage:ignore-start
-                  timer?.cancel();
-                  // coverage:ignore-end
-                }
-              });
-            }
-          },
-          onError: onError,
-          name: effectiveName,
-          autoDispose: effectiveAutoDispose,
-          detach: detach,
-        );
+      Timer? timer;
+      void delayedCallback() {
+        // coverage:ignore-start
+        timer?.cancel();
+        // coverage:ignore-end
+        timer = createDelayedScheduler(delay!)(() {
+          if (!effect.disposed) {
+            callback();
+          } else {
+            // coverage:ignore-start
+            timer?.cancel();
+            // coverage:ignore-end
+          }
+        });
       }
-      return effect;
+
+      return effect = Effect._internal(
+        callback: delay == null ? callback : delayedCallback,
+        onError: onError,
+        name: effectiveName,
+        autoDispose: effectiveAutoDispose,
+        detach: detach,
+      );
     } finally {
       if (autorun ?? true) effect.run();
     }
@@ -147,28 +128,21 @@ class Effect implements ReactionInterface {
     required this.autoDispose,
     ErrorCallback? onError,
     bool? detach,
-  }) : _onError = onError {
-    VoidCallback safeCallback() {
-      return () {
-        try {
-          callback();
-        } catch (e, s) {
-          if (_onError != null) {
-            _onError!.call(SolidartCaughtException(e, stackTrace: s));
-            return;
-          }
-          rethrow;
-        }
-      };
-    }
-
-    _internalEffect = _AlienEffect(
-      this,
-      fn: safeCallback(),
-      detach: detach,
-      flags: system.ReactiveFlags.watching | system.ReactiveFlags.dirty,
-    );
-  }
+  }) : detach = detach ?? SolidartConfig.detachEffects,
+       super(
+         fn: () {
+           try {
+             callback();
+           } catch (e, s) {
+             if (onError != null) {
+               onError(SolidartCaughtException(e, stackTrace: s));
+               return;
+             }
+             rethrow;
+           }
+         },
+         flags: system.ReactiveFlags.watching | system.ReactiveFlags.dirty,
+       );
 
   /// The name of the effect, useful for logging purposes.
   final String name;
@@ -176,18 +150,19 @@ class Effect implements ReactionInterface {
   /// Whether to automatically dispose the effect (defaults to true).
   final bool autoDispose;
 
-  /// Optionally handle the error case
-  final ErrorCallback? _onError;
+  /// Whether this effect is detached from parent subscribers.
+  bool get isDetached => detach;
 
   bool _disposed = false;
 
-  late final _AlienEffect _internalEffect;
+  /// Whether the effect should detach from parent subscribers.
+  final bool detach;
 
   final _deps = <system.ReactiveNode>{};
 
   /// The subscriber of the effect, do not use it directly.
   @protected
-  system.ReactiveNode get subscriber => _internalEffect;
+  system.ReactiveNode get subscriber => this;
 
   @override
   bool get disposed => _disposed;
@@ -197,17 +172,13 @@ class Effect implements ReactionInterface {
     final currentSub = preset.getActiveSub();
     if (!SolidartConfig.detachEffects &&
         currentSub != null &&
-        (currentSub is! _AlienEffect ||
-            (!_internalEffect.detach && !currentSub.detach))) {
-      preset.link(_internalEffect, currentSub, preset.cycle);
+        (currentSub is! preset.EffectNode ||
+            !(detach || (currentSub is Effect && currentSub.detach)))) {
+      preset.link(this, currentSub, preset.cycle);
     }
 
     try {
-      preset.run(_internalEffect);
-    } catch (_) {
-      // The callback handles the error reporting, just rethrow to preserve
-      // the behavior when no handler is provided.
-      rethrow;
+      preset.run(this);
     } finally {
       if (SolidartConfig.autoDispose) {
         _mayDispose();
@@ -237,7 +208,7 @@ class Effect implements ReactionInterface {
     _disposed = true;
 
     final dependencies = {...subscriber.getDependencies(), ..._deps};
-    _internalEffect.dispose();
+    preset.stop(this);
     subscriber.mayDisposeDependencies(dependencies);
   }
 
