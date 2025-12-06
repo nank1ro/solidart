@@ -148,7 +148,26 @@ class Effect implements ReactionInterface {
     ErrorCallback? onError,
     bool? detach,
   }) : _onError = onError {
-    _internalEffect = _AlienEffect(this, callback, detach: detach);
+    VoidCallback safeCallback() {
+      return () {
+        try {
+          callback();
+        } catch (e, s) {
+          if (_onError != null) {
+            _onError!.call(SolidartCaughtException(e, stackTrace: s));
+            return;
+          }
+          rethrow;
+        }
+      };
+    }
+
+    _internalEffect = _AlienEffect(
+      this,
+      fn: safeCallback(),
+      detach: detach,
+      flags: alien.ReactiveFlags.watching | alien.ReactiveFlags.dirty,
+    );
   }
 
   /// The name of the effect, useful for logging purposes.
@@ -175,25 +194,21 @@ class Effect implements ReactionInterface {
 
   /// Runs the effect, tracking any signal read during the execution.
   void run() {
-    final currentSub = reactiveSystem.activeSub;
-    if (!SolidartConfig.detachEffects && currentSub != null) {
-      if (currentSub is! _AlienEffect ||
-          (!_internalEffect.detach && !currentSub.detach)) {
-        reactiveSystem.link(_internalEffect, currentSub);
-      }
+    final currentSub = alien_preset.getActiveSub();
+    if (!SolidartConfig.detachEffects &&
+        currentSub != null &&
+        (currentSub is! _AlienEffect ||
+            (!_internalEffect.detach && !currentSub.detach))) {
+      alien_preset.link(_internalEffect, currentSub, alien_preset.cycle);
     }
-    final prevSub = reactiveSystem.setCurrentSub(_internalEffect);
 
     try {
-      _internalEffect.run();
-    } catch (e, s) {
-      if (_onError != null) {
-        _onError.call(SolidartCaughtException(e, stackTrace: s));
-      } else {
-        rethrow;
-      }
+      alien_preset.run(_internalEffect);
+    } catch (_) {
+      // The callback handles the error reporting, just rethrow to preserve
+      // the behavior when no handler is provided.
+      rethrow;
     } finally {
-      reactiveSystem.setCurrentSub(prevSub);
       if (SolidartConfig.autoDispose) {
         _mayDispose();
       }
