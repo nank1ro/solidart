@@ -1,4 +1,5 @@
 part of 'core.dart';
+// ignore_for_file: unused_element
 
 /// {@template computed}
 /// A special Signal that notifies only whenever the selected
@@ -229,20 +230,6 @@ class Computed<T> extends ReadSignal<T> {
     _onDisposeCallbacks.add(cb);
   }
 
-  // coverage:ignore-start
-  /// Indicates if the [oldValue] and the [newValue] are equal
-  @override
-  bool _compare(T? oldValue, T? newValue) {
-    // skip if the value are equals
-    if (equals) {
-      return oldValue == newValue;
-    }
-
-    // return the [comparator] result
-    return comparator(oldValue, newValue);
-  }
-  // coverage:ignore-end
-
   /// Manually runs the computed to update its value.
   /// This is usually not necessary, as the computed will automatically
   /// update when its dependencies change.
@@ -259,5 +246,13 @@ class Computed<T> extends ReadSignal<T> {
   String toString() {
     value;
     return '''Computed<$T>(value: $untrackedValue, previousValue: $untrackedPreviousValue)''';
+  }
+
+  @override
+  bool _compare(T? oldValue, T? newValue) {
+    if (equals) {
+      return oldValue == newValue;
+    }
+    return comparator(oldValue, newValue);
   }
 }
