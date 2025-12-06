@@ -5,10 +5,10 @@ part of 'core.dart';
 /// This can be useful inside Effects or Observations to prevent a signal from
 /// being tracked.
 T untracked<T>(T Function() callback) {
-  final prevSub = reactiveSystem.setCurrentSub(null);
+  final prevSub = preset.setActiveSub();
   try {
     return callback();
   } finally {
-    reactiveSystem.setCurrentSub(prevSub);
+    preset.setActiveSub(prevSub);
   }
 }

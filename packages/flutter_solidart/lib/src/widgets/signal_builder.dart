@@ -2,6 +2,8 @@
 
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
+import 'package:solidart/deps/preset.dart' as preset;
+import 'package:solidart/deps/system.dart' as system;
 import 'package:solidart/solidart.dart';
 
 /// {@template signalbuilder}
@@ -83,9 +85,9 @@ class _SignalBuilderElement extends StatelessElement {
 
   @override
   Widget build() {
-    final prevSub = reactiveSystem.activeSub;
-    // ignore: invalid_use_of_protected_member
-    final node = reactiveSystem.activeSub = effect.subscriber;
+    final prevSub = preset.getActiveSub();
+    final node = effect;
+    preset.setActiveSub(node);
 
     try {
       final built = super.build();
@@ -98,10 +100,11 @@ You can disable this check by setting `SolidartConfig.assertSignalBuilderWithout
       }
       // ignore: invalid_use_of_internal_member
       effect.setDependencies(node);
+      node.flags = system.ReactiveFlags.watching;
 
       return built;
     } finally {
-      reactiveSystem.activeSub = prevSub;
+      preset.setActiveSub(prevSub);
     }
   }
 }

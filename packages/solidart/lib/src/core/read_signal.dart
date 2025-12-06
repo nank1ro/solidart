@@ -118,7 +118,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   @override
   bool get hasValue {
-    _reportObserved();
+    _internalSignal.get();
     return _hasValue;
   }
 
@@ -133,11 +133,10 @@ class ReadableSignal<T> implements ReadSignal<T> {
   T get _value {
     if (_disposed) {
       return untracked(
-        () => reactiveSystem.getSignalValue(_internalSignal).unwrap(),
+        () => _internalSignal.get().unwrap(),
       );
     }
-    _reportObserved();
-    final value = reactiveSystem.getSignalValue(_internalSignal).unwrap();
+    final value = _internalSignal.get().unwrap();
 
     if (autoDispose) {
       _subs.clear();
@@ -174,7 +173,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   set _value(T newValue) {
     _untrackedPreviousValue = _untrackedValue;
     _untrackedValue = newValue;
-    reactiveSystem.setSignalValue(_internalSignal, Some(newValue));
+    _internalSignal.set(Some(newValue));
   }
 
   @override
@@ -260,7 +259,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   @override
   int get listenerCount => _subs.length;
 
-  final _subs = <alien.ReactiveNode>{};
+  final _subs = <system.ReactiveNode>{};
 
   @override
   void dispose() {
@@ -270,20 +269,26 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
     // This will dispose the signal
     untracked(() {
-      reactiveSystem.getSignalValue(_internalSignal);
+      _internalSignal.get();
     });
 
     if (SolidartConfig.autoDispose) {
       for (final sub in _subs) {
-        if (sub is _AlienEffect) {
+        if (sub is Effect) {
+          sub.dispose();
+          continue;
+        }
+        if (sub is preset.EffectNode) {
           if (sub.deps?.dep == _internalSignal) {
             sub.deps = null;
           }
           if (sub.depsTail?.dep == _internalSignal) {
             sub.depsTail = null;
           }
-
-          sub.parent._mayDispose();
+          // coverage:ignore-start
+          sub.mayDisposeDependencies();
+          preset.stop(sub);
+          // coverage:ignore-end
         }
         if (sub is _AlienComputed) {
           // coverage:ignore-start
@@ -321,12 +326,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
     _onDisposeCallbacks.add(cb);
   }
 
-  void _reportObserved() {
-    if (reactiveSystem.activeSub != null) {
-      reactiveSystem.link(_internalSignal, reactiveSystem.activeSub!);
-    }
-  }
-
   /// Forces a change notification even when the value
   /// hasn't substantially changed.
   ///
@@ -336,21 +335,15 @@ class ReadableSignal<T> implements ReadSignal<T> {
   // ignore: comment_references
   /// use [reactiveSystem.setSignalValue] instead.
   void _reportChanged() {
-    _internalSignal.forceDirty = true;
-    _internalSignal.flags = 17 /* Mutable | Dirty */;
-    final subs = _internalSignal.subs;
-    if (subs != null) {
-      // coverage:ignore-start
-      reactiveSystem.propagate(subs);
-      if (reactiveSystem.batchDepth == 0) {
-        reactiveSystem.flush();
-      }
-      // coverage:ignore-end
-    }
+    _internalSignal.set(Some(_untrackedValue));
   }
 
   /// Indicates if the signal should update its value.
   bool shouldUpdate() {
+    if ((_internalSignal.flags & system.ReactiveFlags.dirty) ==
+        system.ReactiveFlags.none) {
+      return false;
+    }
     return _internalSignal.update();
   }
 
