@@ -1,5 +1,7 @@
 // ignore_for_file: document_ignores
 
+import 'package:alien_signals/preset.dart' as alien_preset;
+import 'package:alien_signals/system.dart' as alien;
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 import 'package:solidart/solidart.dart';
@@ -83,9 +85,9 @@ class _SignalBuilderElement extends StatelessElement {
 
   @override
   Widget build() {
-    final prevSub = reactiveSystem.activeSub;
-    // ignore: invalid_use_of_protected_member
-    final node = reactiveSystem.activeSub = effect.subscriber;
+    final prevSub = alien_preset.getActiveSub();
+    final node = effect.subscriber;
+    alien_preset.setActiveSub(node);
 
     try {
       final built = super.build();
@@ -98,10 +100,11 @@ You can disable this check by setting `SolidartConfig.assertSignalBuilderWithout
       }
       // ignore: invalid_use_of_internal_member
       effect.setDependencies(node);
+      node.flags = alien.ReactiveFlags.watching;
 
       return built;
     } finally {
-      reactiveSystem.activeSub = prevSub;
+      alien_preset.setActiveSub(prevSub);
     }
   }
 }
