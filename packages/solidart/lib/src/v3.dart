@@ -159,6 +159,13 @@ class Effect extends preset.EffectNode
 
   @override
   final Identifier identifier;
+
+  @override
+  void dispose() {
+    if (isDisposed) return;
+    preset.stop(this);
+    super.dispose();
+  }
 }
 
 mixin DisponsableMixin implements Disposable {
