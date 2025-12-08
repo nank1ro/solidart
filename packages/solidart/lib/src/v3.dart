@@ -31,6 +31,12 @@ final class None<T> extends Option<T> {
   const None();
 }
 
+final class SolidartConifg {
+  const SolidartConifg._();
+
+  static bool autoDispose = false;
+}
+
 abstract class Configuration {
   String? get name;
   bool get autoDispose;
@@ -46,30 +52,34 @@ abstract class Disposable {
 /// Maybe rename to `ReadSignal` ?
 /// CC @nank1ro
 abstract interface class ReadonlySignal<T>
-    implements system.ReactiveNode, Disposable {
+    implements system.ReactiveNode, Disposable, Configuration {
   T get value;
 }
 
 class Signal<T> extends preset.SignalNode<Option<T>>
     with DisponsableMixin
     implements ReadonlySignal<T> {
-  Signal(T initialValue)
-    : super(
-        flags: system.ReactiveFlags.mutable,
-        currentValue: Some(initialValue),
-        pendingValue: const None(),
-      ) {
-    pendingValue = currentValue;
-  }
+  Signal(T initialValue, {String? name, bool? autoDispose})
+    : this._internal(Some(initialValue), name: name, autoDispose: autoDispose);
 
-  Signal._internal(Option<T> initialValue)
-    : super(
-        flags: system.ReactiveFlags.mutable,
-        currentValue: initialValue,
-        pendingValue: initialValue,
-      );
+  Signal._internal(
+    Option<T> initialValue, {
+    this.name,
+    bool? autoDispose,
+  }) : autoDispose = autoDispose ?? SolidartConifg.autoDispose,
+       super(
+         flags: system.ReactiveFlags.mutable,
+         currentValue: initialValue,
+         pendingValue: initialValue,
+       );
 
-  factory Signal.lazy() = LazySignal;
+  factory Signal.lazy({String? name, bool? autoDispose}) = LazySignal;
+
+  @override
+  final bool autoDispose;
+
+  @override
+  final String? name;
 
   @override
   T get value => super.get().unwrap();
@@ -78,7 +88,8 @@ class Signal<T> extends preset.SignalNode<Option<T>>
 }
 
 class LazySignal<T> extends Signal<T> {
-  LazySignal() : super._internal(const None());
+  LazySignal({String? name, bool? autoDispose})
+    : super._internal(const None(), name: name, autoDispose: autoDispose);
 
   @override
   T get value {
@@ -95,8 +106,15 @@ class LazySignal<T> extends Signal<T> {
 class Computed<T> extends preset.ComputedNode<T>
     with DisponsableMixin
     implements ReadonlySignal<T> {
-  Computed(ValueGetter<T> getter)
-    : super(flags: system.ReactiveFlags.none, getter: (_) => getter());
+  Computed(ValueGetter<T> getter, {this.name, bool? autoDispose})
+    : autoDispose = autoDispose ?? SolidartConifg.autoDispose,
+      super(flags: system.ReactiveFlags.none, getter: (_) => getter());
+
+  @override
+  final bool autoDispose;
+
+  @override
+  final String? name;
 
   @override
   T get value => super.get();
