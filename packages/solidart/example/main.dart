@@ -1,6 +1,6 @@
 // ignore_for_file: avoid_print
 
-import 'package:solidart/solidart.dart';
+import 'package:solidart/v3.dart';
 
 void main() {
   final count = Signal(0);
