@@ -108,10 +108,7 @@ class LazySignal<T> extends Signal<T> {
 
   @override
   T get value {
-    if (isInitialized) {
-      return super.value;
-    }
-
+    if (isInitialized) return super.value;
     throw StateError(
       'LazySignal is not initialized, Please call `.value = <newValue>` first.',
     );
