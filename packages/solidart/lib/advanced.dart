@@ -1,8 +1,8 @@
 export 'src/v3.dart'
     show
         Configuration,
-        DisponsableMixin,
         Disposable,
+        DisposableMixin,
         Identifier,
         None,
         Option,

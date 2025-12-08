@@ -32,8 +32,8 @@ final class None<T> extends Option<T> {
   const None();
 }
 
-final class SolidartConifg {
-  const SolidartConifg._();
+final class SolidartConfig {
+  const SolidartConfig._();
 
   static bool autoDispose = true;
 }
@@ -97,7 +97,7 @@ abstract interface class ReadonlySignal<T>
 }
 
 class Signal<T> extends preset.SignalNode<Option<T>>
-    with DisponsableMixin
+    with DisposableMixin
     implements ReadonlySignal<T> {
   Signal(T initialValue, {bool? autoDispose, String? name})
     : this._internal(Some(initialValue), autoDispose: autoDispose, name: name);
@@ -106,7 +106,7 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     Option<T> initialValue, {
     String? name,
     bool? autoDispose,
-  }) : autoDispose = autoDispose ?? SolidartConifg.autoDispose,
+  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
        identifier = Identifier._(name),
        super(
          flags: system.ReactiveFlags.mutable,
@@ -156,10 +156,10 @@ class LazySignal<T> extends Signal<T> {
 }
 
 class Computed<T> extends preset.ComputedNode<T>
-    with DisponsableMixin
+    with DisposableMixin
     implements ReadonlySignal<T> {
   Computed(ValueGetter<T> getter, {bool? autoDispose, String? name})
-    : autoDispose = autoDispose ?? SolidartConifg.autoDispose,
+    : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
       identifier = Identifier._(name),
       super(flags: system.ReactiveFlags.none, getter: (_) => getter());
 
@@ -183,10 +183,10 @@ class Computed<T> extends preset.ComputedNode<T>
 }
 
 class Effect extends preset.EffectNode
-    with DisponsableMixin
+    with DisposableMixin
     implements Disposable, Configuration {
   Effect(VoidCallback callback, {bool? autoDispose, String? name})
-    : autoDispose = autoDispose ?? SolidartConifg.autoDispose,
+    : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
       identifier = Identifier._(name),
       super(
         fn: callback,
@@ -218,7 +218,7 @@ class Effect extends preset.EffectNode
   }
 }
 
-mixin DisponsableMixin implements Disposable {
+mixin DisposableMixin implements Disposable {
   @internal
   late final cleanups = <VoidCallback>[];
 
