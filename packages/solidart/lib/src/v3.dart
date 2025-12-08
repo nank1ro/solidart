@@ -122,9 +122,10 @@ class Computed<T> extends preset.ComputedNode<T>
 
 class Effect extends preset.EffectNode
     with DisponsableMixin
-    implements Disposable {
-  Effect(VoidCallback callback)
-    : super(
+    implements Disposable, Configuration {
+  Effect(VoidCallback callback, {this.name, bool? autoDispose})
+    : autoDispose = autoDispose ?? SolidartConifg.autoDispose,
+      super(
         fn: callback,
         flags:
             system.ReactiveFlags.watching | system.ReactiveFlags.recursedCheck,
@@ -138,6 +139,12 @@ class Effect extends preset.EffectNode
       flags &= ~system.ReactiveFlags.recursedCheck;
     }
   }
+
+  @override
+  final bool autoDispose;
+
+  @override
+  final String? name;
 }
 
 mixin DisponsableMixin implements Disposable {
