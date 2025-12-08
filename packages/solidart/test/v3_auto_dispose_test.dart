@@ -6,12 +6,12 @@ void main() {
   late bool previousAutoDispose;
 
   setUp(() {
-    previousAutoDispose = SolidartConifg.autoDispose;
-    SolidartConifg.autoDispose = true;
+    previousAutoDispose = SolidartConfig.autoDispose;
+    SolidartConfig.autoDispose = true;
   });
 
   tearDown(() {
-    SolidartConifg.autoDispose = previousAutoDispose;
+    SolidartConfig.autoDispose = previousAutoDispose;
   });
 
   test('disposing a signal cascades to its dependents', () {
@@ -99,7 +99,7 @@ void main() {
   });
 
   test('global autoDispose off but explicit opt-in still disposes', () {
-    SolidartConifg.autoDispose = false;
+    SolidartConfig.autoDispose = false;
     final a = Signal(0, autoDispose: true);
     final b = Computed(() => a.value + 1, autoDispose: true);
     final c = Effect(() {
