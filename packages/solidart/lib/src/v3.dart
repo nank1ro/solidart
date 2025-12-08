@@ -355,7 +355,7 @@ class Effect extends preset.EffectNode
       () {
         timer?.cancel();
         timer = .new(duration, () {
-          unawaited(Future.microtask(callback))
+          unawaited(Future.microtask(callback));
         });
       },
     );
