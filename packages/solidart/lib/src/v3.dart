@@ -37,8 +37,16 @@ final class SolidartConifg {
   static bool autoDispose = false;
 }
 
+class Identifier {
+  Identifier._(this.name) : value = _counter++;
+  static int _counter = 0;
+
+  final String? name;
+  final int value;
+}
+
 abstract class Configuration {
-  String? get name;
+  Identifier get identifier;
   bool get autoDispose;
 }
 
@@ -59,14 +67,15 @@ abstract interface class ReadonlySignal<T>
 class Signal<T> extends preset.SignalNode<Option<T>>
     with DisponsableMixin
     implements ReadonlySignal<T> {
-  Signal(T initialValue, {String? name, bool? autoDispose})
-    : this._internal(Some(initialValue), name: name, autoDispose: autoDispose);
+  Signal(T initialValue, {bool? autoDispose, String? name})
+    : this._internal(Some(initialValue), autoDispose: autoDispose, name: name);
 
   Signal._internal(
     Option<T> initialValue, {
-    this.name,
+    String? name,
     bool? autoDispose,
   }) : autoDispose = autoDispose ?? SolidartConifg.autoDispose,
+       identifier = Identifier._(name),
        super(
          flags: system.ReactiveFlags.mutable,
          currentValue: initialValue,
@@ -79,7 +88,7 @@ class Signal<T> extends preset.SignalNode<Option<T>>
   final bool autoDispose;
 
   @override
-  final String? name;
+  final Identifier identifier;
 
   @override
   T get value => super.get().unwrap();
@@ -106,15 +115,16 @@ class LazySignal<T> extends Signal<T> {
 class Computed<T> extends preset.ComputedNode<T>
     with DisponsableMixin
     implements ReadonlySignal<T> {
-  Computed(ValueGetter<T> getter, {this.name, bool? autoDispose})
+  Computed(ValueGetter<T> getter, {bool? autoDispose, String? name})
     : autoDispose = autoDispose ?? SolidartConifg.autoDispose,
+      identifier = Identifier._(name),
       super(flags: system.ReactiveFlags.none, getter: (_) => getter());
 
   @override
   final bool autoDispose;
 
   @override
-  final String? name;
+  final Identifier identifier;
 
   @override
   T get value => super.get();
@@ -123,8 +133,9 @@ class Computed<T> extends preset.ComputedNode<T>
 class Effect extends preset.EffectNode
     with DisponsableMixin
     implements Disposable, Configuration {
-  Effect(VoidCallback callback, {this.name, bool? autoDispose})
+  Effect(VoidCallback callback, {bool? autoDispose, String? name})
     : autoDispose = autoDispose ?? SolidartConifg.autoDispose,
+      identifier = Identifier._(name),
       super(
         fn: callback,
         flags:
@@ -144,7 +155,7 @@ class Effect extends preset.EffectNode
   final bool autoDispose;
 
   @override
-  final String? name;
+  final Identifier identifier;
 }
 
 mixin DisponsableMixin implements Disposable {
