@@ -100,15 +100,17 @@ class LazySignal<T> extends Signal<T> {
   LazySignal({String? name, bool? autoDispose})
     : super._internal(const None(), name: name, autoDispose: autoDispose);
 
+  bool get isInitialized => currentValue is Some<T>;
+
   @override
   T get value {
-    if (currentValue is None) {
-      throw StateError(
-        'LazySignal is not initialized, Please call `.value` first.',
-      );
+    if (isInitialized) {
+      return super.value;
     }
 
-    return super.value;
+    throw StateError(
+      'LazySignal is not initialized, Please call `.value = <newValue>` first.',
+    );
   }
 }
 
