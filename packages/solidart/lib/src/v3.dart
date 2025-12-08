@@ -57,8 +57,7 @@ abstract class Disposable {
   void dispose();
 }
 
-/// Maybe rename to `ReadSignal` ?
-/// CC @nank1ro
+// TODO(nank1ro): Maybe rename to `ReadSignal`? medz: I still recommend `ReadonlySignal` because it is semantically clearer., https://github.com/nank1ro/solidart/pull/166#issuecomment-3623175977
 abstract interface class ReadonlySignal<T>
     implements system.ReactiveNode, Disposable, Configuration {
   T get value;
@@ -95,6 +94,8 @@ class Signal<T> extends preset.SignalNode<Option<T>>
 
   set value(T newValue) => set(Some(newValue));
 
+  // TODO(nank1ro): See ReadonlySignal TODO, If `ReadonlySignal` rename
+  // to `ReadSignal`, the `.toReadonly` method should be rename?
   ReadonlySignal<T> toReadonly() => this;
 }
 
