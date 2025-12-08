@@ -130,7 +130,7 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     String? name,
     bool? autoDispose,
   }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
-       identifier = Identifier._(name),
+       identifier = ._(name),
        super(
          flags: system.ReactiveFlags.mutable,
          currentValue: initialValue,
@@ -233,7 +233,7 @@ class Computed<T> extends preset.ComputedNode<T>
     bool? autoDispose,
     String? name,
   }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
-       identifier = Identifier._(name),
+       identifier = ._(name),
        super(flags: system.ReactiveFlags.none, getter: (_) => getter());
 
   @override
@@ -305,7 +305,7 @@ class Effect extends preset.EffectNode
     bool? autoDispose,
     String? name,
     bool? detach,
-  }) => Effect.manual(
+  }) => .manual(
     callback,
     autoDispose: autoDispose,
     name: name,
@@ -318,7 +318,7 @@ class Effect extends preset.EffectNode
     String? name,
     bool? detach,
   }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
-       identifier = Identifier._(name),
+       identifier = ._(name),
        detach = detach ?? SolidartConfig.detachEffects,
        super(
          fn: callback,
@@ -348,14 +348,14 @@ class Effect extends preset.EffectNode
 
     final callback = factory(on);
     Timer? timer;
-    effect = Effect.manual(
+    effect = .manual(
       autoDispose: autoDispose,
       name: name,
       detach: detach,
       () {
         timer?.cancel();
         timer = .new(duration, () {
-          unawaited(Future.microtask(callback));
+          unawaited(.microtask(callback));
         });
       },
     );
