@@ -94,6 +94,7 @@ abstract class Disposable {
 abstract interface class ReadonlySignal<T>
     implements system.ReactiveNode, Disposable, Configuration {
   T get value;
+  T get untrackedValue;
 }
 
 class Signal<T> extends preset.SignalNode<Option<T>>
@@ -126,6 +127,9 @@ class Signal<T> extends preset.SignalNode<Option<T>>
   T get value => super.get().unwrap();
 
   set value(T newValue) => set(Some(newValue));
+
+  @override
+  T get untrackedValue => super.currentValue.unwrap();
 
   // TODO(nank1ro): See ReadonlySignal TODO, If `ReadonlySignal` rename
   // to `ReadSignal`, the `.toReadonly` method should be rename?
@@ -171,6 +175,20 @@ class Computed<T> extends preset.ComputedNode<T>
 
   @override
   T get value => super.get();
+
+  @override
+  T get untrackedValue {
+    if (currentValue != null || null is T) {
+      return currentValue as T;
+    }
+
+    final prevSub = preset.setActiveSub();
+    try {
+      return value;
+    } finally {
+      preset.activeSub = prevSub;
+    }
+  }
 
   @override
   void dispose() {
