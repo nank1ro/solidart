@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:meta/meta.dart';
 import 'package:solidart/deps/preset.dart' as preset;
 import 'package:solidart/deps/system.dart' as system;
 
@@ -30,13 +31,27 @@ final class None<T> extends Option<T> {
   const None();
 }
 
+abstract class Configuration {
+  String? get name;
+  bool get autoDispose;
+}
+
+abstract class Disposable {
+  bool get isDisposed;
+
+  void onDispose(VoidCallback callback);
+  void dispose();
+}
+
 /// Maybe rename to `ReadSignal` ?
 /// CC @nank1ro
-abstract interface class ReadonlySignal<T> implements system.ReactiveNode {
+abstract interface class ReadonlySignal<T>
+    implements system.ReactiveNode, Disposable {
   T get value;
 }
 
 class Signal<T> extends preset.SignalNode<Option<T>>
+    with DisponsableMixin
     implements ReadonlySignal<T> {
   Signal(T initialValue)
     : super(
@@ -77,7 +92,9 @@ class LazySignal<T> extends Signal<T> {
   }
 }
 
-class Computed<T> extends preset.ComputedNode<T> implements ReadonlySignal<T> {
+class Computed<T> extends preset.ComputedNode<T>
+    with DisponsableMixin
+    implements ReadonlySignal<T> {
   Computed(ValueGetter<T> getter)
     : super(flags: system.ReactiveFlags.none, getter: (_) => getter());
 
@@ -85,7 +102,9 @@ class Computed<T> extends preset.ComputedNode<T> implements ReadonlySignal<T> {
   T get value => super.get();
 }
 
-class Effect extends preset.EffectNode {
+class Effect extends preset.EffectNode
+    with DisponsableMixin
+    implements Disposable {
   Effect(VoidCallback callback)
     : super(
         fn: callback,
@@ -99,6 +118,34 @@ class Effect extends preset.EffectNode {
     } finally {
       preset.activeSub = prevSub;
       flags &= ~system.ReactiveFlags.recursedCheck;
+    }
+  }
+}
+
+mixin DisponsableMixin implements Disposable {
+  @internal
+  late final cleanups = <VoidCallback>[];
+
+  @override
+  bool isDisposed = false;
+
+  @mustCallSuper
+  @override
+  void onDispose(VoidCallback callback) {
+    cleanups.add(callback);
+  }
+
+  @mustCallSuper
+  @override
+  void dispose() {
+    if (isDisposed) return;
+    isDisposed = true;
+    try {
+      for (final callback in cleanups) {
+        callback();
+      }
+    } finally {
+      cleanups.clear();
     }
   }
 }
