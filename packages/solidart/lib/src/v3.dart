@@ -124,9 +124,15 @@ class Signal<T> extends preset.SignalNode<Option<T>>
   final Identifier identifier;
 
   @override
-  T get value => super.get().unwrap();
+  T get value {
+    assert(!isDisposed, 'Signal is disposed');
+    return super.get().unwrap();
+  }
 
-  set value(T newValue) => set(Some(newValue));
+  set value(T newValue) {
+    assert(!isDisposed, 'Signal is disposed');
+    set(Some(newValue));
+  }
 
   @override
   T get untrackedValue => super.currentValue.unwrap();
@@ -174,7 +180,10 @@ class Computed<T> extends preset.ComputedNode<T>
   final Identifier identifier;
 
   @override
-  T get value => super.get();
+  T get value {
+    assert(!isDisposed, 'Computed is disposed');
+    return get();
+  }
 
   @override
   T get untrackedValue {
