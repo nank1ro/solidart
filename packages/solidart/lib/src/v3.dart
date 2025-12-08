@@ -94,6 +94,8 @@ class Signal<T> extends preset.SignalNode<Option<T>>
   T get value => super.get().unwrap();
 
   set value(T newValue) => set(Some(newValue));
+
+  ReadonlySignal<T> toReadonly() => this;
 }
 
 class LazySignal<T> extends Signal<T> {
