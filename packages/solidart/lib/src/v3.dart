@@ -5,6 +5,7 @@ import 'package:meta/meta.dart';
 import 'package:solidart/deps/preset.dart' as preset;
 import 'package:solidart/deps/system.dart' as system;
 
+typedef ValueComparator<T> = bool Function(T? a, T? b);
 typedef ValueGetter<T> = T Function();
 typedef VoidCallback = ValueGetter<void>;
 
@@ -46,7 +47,7 @@ class Identifier {
   final int value;
 }
 
-abstract class Configuration {
+abstract interface class Configuration {
   Identifier get identifier;
   bool get autoDispose;
 }
@@ -90,9 +91,13 @@ abstract class Disposable {
   }
 }
 
+abstract interface class SignalConfiguration<T> implements Configuration {
+  ValueComparator<T> get equals;
+}
+
 // TODO(nank1ro): Maybe rename to `ReadSignal`? medz: I still recommend `ReadonlySignal` because it is semantically clearer., https://github.com/nank1ro/solidart/pull/166#issuecomment-3623175977
 abstract interface class ReadonlySignal<T>
-    implements system.ReactiveNode, Disposable, Configuration {
+    implements system.ReactiveNode, Disposable, SignalConfiguration<T> {
   T get value;
   T get untrackedValue;
 }
@@ -100,11 +105,21 @@ abstract interface class ReadonlySignal<T>
 class Signal<T> extends preset.SignalNode<Option<T>>
     with DisposableMixin
     implements ReadonlySignal<T> {
-  Signal(T initialValue, {bool? autoDispose, String? name})
-    : this._internal(Some(initialValue), autoDispose: autoDispose, name: name);
+  Signal(
+    T initialValue, {
+    bool? autoDispose,
+    String? name,
+    ValueComparator<T> equals = identical,
+  }) : this._internal(
+         Some(initialValue),
+         autoDispose: autoDispose,
+         name: name,
+         equals: equals,
+       );
 
   Signal._internal(
     Option<T> initialValue, {
+    this.equals = identical,
     String? name,
     bool? autoDispose,
   }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
@@ -115,13 +130,20 @@ class Signal<T> extends preset.SignalNode<Option<T>>
          pendingValue: initialValue,
        );
 
-  factory Signal.lazy({String? name, bool? autoDispose}) = LazySignal;
+  factory Signal.lazy({
+    String? name,
+    bool? autoDispose,
+    ValueComparator<T> equals,
+  }) = LazySignal;
 
   @override
   final bool autoDispose;
 
   @override
   final Identifier identifier;
+
+  @override
+  final ValueComparator<T> equals;
 
   @override
   T get value {
@@ -148,11 +170,30 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     preset.stop(this);
     super.dispose();
   }
+
+  @override
+  bool didUpdate() {
+    flags = system.ReactiveFlags.mutable;
+    if (equals(pendingValue.unwrap(), currentValue.unwrap())) {
+      return false;
+    }
+
+    currentValue = pendingValue;
+    return true;
+  }
 }
 
 class LazySignal<T> extends Signal<T> {
-  LazySignal({String? name, bool? autoDispose})
-    : super._internal(const None(), name: name, autoDispose: autoDispose);
+  LazySignal({
+    String? name,
+    bool? autoDispose,
+    ValueComparator<T> equals = identical,
+  }) : super._internal(
+         const None(),
+         name: name,
+         autoDispose: autoDispose,
+         equals: equals,
+       );
 
   bool get isInitialized => currentValue is Some<T>;
 
@@ -163,21 +204,39 @@ class LazySignal<T> extends Signal<T> {
       'LazySignal is not initialized, Please call `.value = <newValue>` first.',
     );
   }
+
+  @override
+  bool didUpdate() {
+    if (!isInitialized) {
+      flags = system.ReactiveFlags.mutable;
+      currentValue = pendingValue;
+      return true;
+    }
+
+    return super.didUpdate();
+  }
 }
 
 class Computed<T> extends preset.ComputedNode<T>
     with DisposableMixin
     implements ReadonlySignal<T> {
-  Computed(ValueGetter<T> getter, {bool? autoDispose, String? name})
-    : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
-      identifier = Identifier._(name),
-      super(flags: system.ReactiveFlags.none, getter: (_) => getter());
+  Computed(
+    ValueGetter<T> getter, {
+    this.equals = identical,
+    bool? autoDispose,
+    String? name,
+  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+       identifier = Identifier._(name),
+       super(flags: system.ReactiveFlags.none, getter: (_) => getter());
 
   @override
   final bool autoDispose;
 
   @override
   final Identifier identifier;
+
+  @override
+  final ValueComparator<T> equals;
 
   @override
   T get value {
@@ -206,6 +265,28 @@ class Computed<T> extends preset.ComputedNode<T>
     Disposable.unlinkDeps(this);
     preset.stop(this);
     super.dispose();
+  }
+
+  @override
+  bool didUpdate() {
+    preset.cycle++;
+    depsTail = null;
+    flags = system.ReactiveFlags.mutable | system.ReactiveFlags.recursedCheck;
+
+    final prevSub = preset.setActiveSub(this);
+    try {
+      final pendingValue = getter(currentValue);
+      if (equals(currentValue, pendingValue)) {
+        return false;
+      }
+
+      currentValue = pendingValue;
+      return true;
+    } finally {
+      preset.activeSub = prevSub;
+      flags &= ~system.ReactiveFlags.recursedCheck;
+      preset.purgeDeps(this);
+    }
   }
 }
 
