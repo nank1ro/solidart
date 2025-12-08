@@ -236,7 +236,7 @@ class Computed<T> extends ReadSignal<T> {
   /// However, in some cases, you may want to force an update.
   void run() {
     if (_disposed) return;
-    _internalComputed.update();
+    _internalComputed.didUpdate();
   }
 
   @override

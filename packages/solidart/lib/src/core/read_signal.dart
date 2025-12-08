@@ -344,7 +344,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
         system.ReactiveFlags.none) {
       return false;
     }
-    return _internalSignal.update();
+    return _internalSignal.didUpdate();
   }
 
   @override
