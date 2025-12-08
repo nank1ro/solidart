@@ -36,7 +36,8 @@ final class None<T> extends Option<T> {
 final class SolidartConfig {
   const SolidartConfig._();
 
-  static bool autoDispose = true;
+  static bool autoDispose = false;
+  static bool detachEffects = false;
 }
 
 class Identifier {
@@ -293,16 +294,24 @@ class Computed<T> extends preset.ComputedNode<T>
 class Effect extends preset.EffectNode
     with DisposableMixin
     implements Disposable, Configuration {
-  Effect(VoidCallback callback, {bool? autoDispose, String? name})
-    : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
-      identifier = Identifier._(name),
-      super(
-        fn: callback,
-        flags:
-            system.ReactiveFlags.watching | system.ReactiveFlags.recursedCheck,
-      ) {
+  Effect(
+    VoidCallback callback, {
+    bool? autoDispose,
+    String? name,
+    bool? detach,
+  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+       identifier = Identifier._(name),
+       detach = detach ?? SolidartConfig.detachEffects,
+       super(
+         fn: callback,
+         flags:
+             system.ReactiveFlags.watching | system.ReactiveFlags.recursedCheck,
+       ) {
     final prevSub = preset.setActiveSub(this);
-    if (prevSub != null) preset.link(this, prevSub, 0);
+    if (prevSub != null && !this.detach) {
+      preset.link(this, prevSub, 0);
+    }
+
     try {
       callback();
     } finally {
@@ -316,6 +325,8 @@ class Effect extends preset.EffectNode
 
   @override
   final Identifier identifier;
+
+  final bool detach;
 
   @override
   void dispose() {
