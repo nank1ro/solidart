@@ -35,7 +35,7 @@ final class None<T> extends Option<T> {
 final class SolidartConifg {
   const SolidartConifg._();
 
-  static bool autoDispose = false;
+  static bool autoDispose = true;
 }
 
 class Identifier {
@@ -56,6 +56,38 @@ abstract class Disposable {
 
   void onDispose(VoidCallback callback);
   void dispose();
+
+  static bool canAutoDispose(system.ReactiveNode node) => switch (node) {
+    Disposable(:final isDisposed) && Configuration(:final autoDispose) =>
+      !isDisposed && autoDispose,
+    _ => false,
+  };
+
+  static void unlinkDeps(system.ReactiveNode node) {
+    var link = node.deps;
+    while (link != null) {
+      final next = link.nextDep;
+      final dep = link.dep;
+      preset.unlink(link, node);
+      if (canAutoDispose(dep) && dep.subs == null) {
+        (dep as Disposable).dispose();
+      }
+      link = next;
+    }
+  }
+
+  static void unlinkSubs(system.ReactiveNode node) {
+    var link = node.subs;
+    while (link != null) {
+      final next = link.nextSub;
+      final sub = link.sub;
+      preset.unlink(link, sub);
+      if (canAutoDispose(sub) && sub.deps == null) {
+        (sub as Disposable).dispose();
+      }
+      link = next;
+    }
+  }
 }
 
 // TODO(nank1ro): Maybe rename to `ReadSignal`? medz: I still recommend `ReadonlySignal` because it is semantically clearer., https://github.com/nank1ro/solidart/pull/166#issuecomment-3623175977
@@ -98,6 +130,14 @@ class Signal<T> extends preset.SignalNode<Option<T>>
   // TODO(nank1ro): See ReadonlySignal TODO, If `ReadonlySignal` rename
   // to `ReadSignal`, the `.toReadonly` method should be rename?
   ReadonlySignal<T> toReadonly() => this;
+
+  @override
+  void dispose() {
+    if (isDisposed) return;
+    Disposable.unlinkSubs(this);
+    preset.stop(this);
+    super.dispose();
+  }
 }
 
 class LazySignal<T> extends Signal<T> {
@@ -131,6 +171,15 @@ class Computed<T> extends preset.ComputedNode<T>
 
   @override
   T get value => super.get();
+
+  @override
+  void dispose() {
+    if (isDisposed) return;
+    Disposable.unlinkSubs(this);
+    Disposable.unlinkDeps(this);
+    preset.stop(this);
+    super.dispose();
+  }
 }
 
 class Effect extends preset.EffectNode
@@ -163,6 +212,7 @@ class Effect extends preset.EffectNode
   @override
   void dispose() {
     if (isDisposed) return;
+    Disposable.unlinkDeps(this);
     preset.stop(this);
     super.dispose();
   }
