@@ -57,10 +57,6 @@ class SolidartCaughtException extends SolidartException {
   StackTrace? get stackTrace => _stackTrace;
 }
 
-/// Creates a delayer scheduler with the given [duration].
-Timer Function(void Function()) createDelayedScheduler(Duration duration) =>
-    (fn) => Timer(duration, fn);
-
 /// The `Option` class represents an optional value.
 
 /// It is either `Some` or `None`.

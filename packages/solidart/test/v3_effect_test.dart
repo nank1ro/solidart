@@ -1,4 +1,3 @@
-import 'package:fake_async/fake_async.dart';
 import 'package:solidart/deps/system.dart' as system;
 import 'package:solidart/v3.dart';
 import 'package:test/test.dart';
@@ -144,100 +143,6 @@ void main() {
     child.dispose();
   });
 
-  group('Effect.delay', () {
-    test('debounces execution and tracks dependencies via on()', () {
-      fakeAsync((async) {
-        final source = Signal(0);
-        var runs = 0;
-
-        final effect = Effect.delay(
-          (on) => () {
-            on(() => source.value);
-            runs++;
-          },
-          duration: const Duration(milliseconds: 100),
-        );
-
-        expect(runs, 0);
-
-        async
-          ..elapse(const Duration(milliseconds: 99))
-          ..flushMicrotasks();
-        expect(runs, 0);
-
-        async
-          ..elapse(const Duration(milliseconds: 1))
-          ..flushMicrotasks();
-        expect(runs, 1);
-
-        source
-          ..value = 1
-          ..value = 2; // additional changes before the delay expires
-        async.flushMicrotasks();
-        expect(runs, 1);
-
-        async
-          ..elapse(const Duration(milliseconds: 80))
-          ..flushMicrotasks();
-        expect(runs, 1);
-
-        async
-          ..elapse(const Duration(milliseconds: 30))
-          ..flushMicrotasks();
-        expect(
-          runs,
-          2,
-          reason: 'Only one delayed run despite two quick changes',
-        );
-
-        source.value = 3;
-        async
-          ..elapse(const Duration(milliseconds: 100))
-          ..flushMicrotasks();
-        expect(runs, 3);
-
-        effect.dispose();
-      });
-    });
-
-    test('respects eager: false and only starts after manual run', () {
-      fakeAsync((async) {
-        final source = Signal(0);
-        var runs = 0;
-
-        final effect = Effect.delay(
-          (on) => () {
-            on(() => source.value);
-            runs++;
-          },
-          eager: false,
-          duration: const Duration(milliseconds: 10),
-        );
-
-        async
-          ..elapse(const Duration(milliseconds: 20))
-          ..flushMicrotasks();
-        expect(runs, 0);
-
-        effect.run(); // start tracking
-        async
-          ..elapse(const Duration(milliseconds: 10))
-          ..flushMicrotasks();
-        expect(runs, 1);
-
-        source.value = 1;
-        async
-          ..elapse(const Duration(milliseconds: 9))
-          ..flushMicrotasks();
-        expect(runs, 1);
-
-        async
-          ..elapse(const Duration(milliseconds: 1))
-          ..flushMicrotasks();
-        expect(runs, 2);
-      });
-    });
-  });
 }
 
 List<system.ReactiveNode> _depsOf(system.ReactiveNode node) {

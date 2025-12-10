@@ -467,22 +467,6 @@ void main() {
         verify(cb(4)).called(2);
       });
 
-      test('check effect reaction with delay', () async {
-        final cb = MockCallbackFunction();
-        final disposeEffect = Effect(
-          cb,
-          delay: const Duration(milliseconds: 500),
-          autoDispose: false,
-          onError: (error) {
-            // ignore
-          },
-        );
-        addTearDown(disposeEffect.dispose);
-        verifyNever(cb());
-        await Future<void>.delayed(const Duration(milliseconds: 501));
-        verify(cb()).called(1);
-      });
-
       test('check effect onError', () async {
         Object? detectedError;
         Effect(
