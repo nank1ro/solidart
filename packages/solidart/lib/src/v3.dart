@@ -1,8 +1,6 @@
 // ignore_for_file: public_member_api_docs
 // TODO(medz): Add code comments
 
-import 'dart:async';
-
 import 'package:meta/meta.dart';
 import 'package:solidart/deps/preset.dart' as preset;
 import 'package:solidart/deps/system.dart' as system;
@@ -10,10 +8,6 @@ import 'package:solidart/deps/system.dart' as system;
 typedef ValueComparator<T> = bool Function(T? a, T? b);
 typedef ValueGetter<T> = T Function();
 typedef VoidCallback = ValueGetter<void>;
-typedef DelayEffectCallback =
-    ValueGetter<FutureOr<void>> Function(
-      T Function<T>(T Function() callback) on,
-    );
 
 sealed class Option<T> {
   const Option();
@@ -325,44 +319,6 @@ class Effect extends preset.EffectNode
          flags:
              system.ReactiveFlags.watching | system.ReactiveFlags.recursedCheck,
        );
-
-  // TODO(nank1ro): How about this plan?
-  factory Effect.delay(
-    DelayEffectCallback factory, {
-    required Duration duration,
-    bool? autoDispose,
-    String? name,
-    bool? detach,
-    bool eager = true,
-  }) {
-    late final Effect effect;
-    T on<T>(T Function() callback) {
-      final prevSub = preset.setActiveSub(effect);
-      try {
-        return callback();
-      } finally {
-        preset.activeSub = prevSub;
-        effect.flags &= ~system.ReactiveFlags.recursedCheck;
-      }
-    }
-
-    final callback = factory(on);
-    Timer? timer;
-    effect = .manual(
-      autoDispose: autoDispose,
-      name: name,
-      detach: detach,
-      () {
-        timer?.cancel();
-        timer = .new(duration, () {
-          unawaited(.microtask(callback));
-        });
-      },
-    );
-
-    if (eager) effect.run();
-    return effect;
-  }
 
   @override
   final bool autoDispose;

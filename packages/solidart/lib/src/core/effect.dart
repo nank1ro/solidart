@@ -73,9 +73,6 @@ class Effect extends preset.EffectNode implements ReactionInterface {
     /// The name of the effect, useful for logging
     String? name,
 
-    /// Delay each effect reaction
-    Duration? delay,
-
     /// Whether to automatically dispose the effect (defaults to true).
     ///
     /// This happens automatically when all the tracked dependencies are
@@ -93,24 +90,9 @@ class Effect extends preset.EffectNode implements ReactionInterface {
     try {
       final effectiveName = name ?? ReactiveName.nameFor('Effect');
       final effectiveAutoDispose = autoDispose ?? SolidartConfig.autoDispose;
-      Timer? timer;
-      void delayedCallback() {
-        // coverage:ignore-start
-        timer?.cancel();
-        // coverage:ignore-end
-        timer = createDelayedScheduler(delay!)(() {
-          if (!effect.disposed) {
-            callback();
-          } else {
-            // coverage:ignore-start
-            timer?.cancel();
-            // coverage:ignore-end
-          }
-        });
-      }
 
       return effect = Effect._internal(
-        callback: delay == null ? callback : delayedCallback,
+        callback: callback,
         onError: onError,
         name: effectiveName,
         autoDispose: effectiveAutoDispose,
