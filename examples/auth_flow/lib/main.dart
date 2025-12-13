@@ -31,6 +31,12 @@ class _MyAppState extends State<MyApp> {
   }
 
   @override
+  void dispose() {
+    router.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Auth Demo - GoRouter',

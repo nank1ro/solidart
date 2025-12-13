@@ -12,11 +12,11 @@ class AuthNotifier {
   late final currentUser = UserSignal();
   late final isLoggedIn = Computed(() => currentUser.value != null);
 
-  Future<void> login(User user) async {
+  void login(User user) {
     currentUser.value = user;
   }
 
-  Future<void> logout() async {
+  void logout() {
     currentUser.value = null;
   }
 }
