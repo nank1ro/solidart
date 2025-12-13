@@ -13,8 +13,8 @@ dependencies:
     sdk: flutter
   disco: ^1.0.3+1
   flutter_solidart: ^2.7.2
-  shared_preferences: ^2.5.3
   go_router: ^17.0.0
+  localstorage: ^6.0.0
 
 dev_dependencies:
   flutter_test:

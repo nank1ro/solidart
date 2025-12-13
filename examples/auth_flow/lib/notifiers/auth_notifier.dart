@@ -1,46 +1,38 @@
 import 'dart:convert';
 
+import 'package:auth_flow/domain/user.dart';
 import 'package:disco/disco.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-final sharedPreferenceProvider = Provider.withArgument((_, SharedPreferences prefs) => prefs);
+import 'package:localstorage/localstorage.dart';
 
 class AuthNotifier {
-  AuthNotifier(this.prefs) {
-    final userJson = prefs.getString('user');
-    if (userJson != null) {
-      final data = jsonDecode(userJson) as Map<String, dynamic>;
-      currentUser.value = (
-        id: data['id'] as String,
-        name: data['name'] as String,
-        email: data['email'] as String,
-      );
-    }
-  }
-
-  final SharedPreferences prefs;
-
   // Provider
-  static final provider = Provider((context) => AuthNotifier(sharedPreferenceProvider.of(context)));
+  static final provider = Provider((context) => AuthNotifier());
 
-  late final currentUser = Signal<User?>(null);
+  late final currentUser = UserSignal();
   late final isLoggedIn = Computed(() => currentUser.value != null);
 
   Future<void> login(User user) async {
-    final userJson = jsonEncode({'id': user.id, 'name': user.name, 'email': user.email});
-    await prefs.setString('user', userJson);
     currentUser.value = user;
   }
 
   Future<void> logout() async {
-    await prefs.remove('user');
     currentUser.value = null;
   }
 }
 
-typedef User = ({String id, String name, String email});
+class UserSignal extends Signal<User?> {
+  UserSignal()
+    : super(
+        localStorage.getItem('user') != null
+            ? User.fromJson(jsonDecode(localStorage.getItem('user')!))
+            : null,
+      );
 
-/// We can also use Resource, but required to trigger the refresh or manual update
-/// late final user = Resource(_getUser)
-/// user.state = ResourceReady(value)
+  @override
+  set value(User? newValue) {
+    super.value = newValue;
+    if (newValue == null) return localStorage.removeItem('user');
+    localStorage.setItem('user', jsonEncode(newValue));
+  }
+}
