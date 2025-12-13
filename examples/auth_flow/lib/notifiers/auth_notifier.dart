@@ -23,16 +23,24 @@ class AuthNotifier {
 
 class UserSignal extends Signal<User?> {
   UserSignal()
-    : super(
-        localStorage.getItem('user') != null
-            ? User.fromJson(jsonDecode(localStorage.getItem('user')!))
-            : null,
-      );
+    : super(() {
+        final userJsonString = localStorage.getItem('user');
+        if (userJsonString == null) return null;
+        try {
+          final map = jsonDecode(userJsonString) as Map<String, dynamic>;
+          return User.fromJson(map);
+        } catch (_) {
+          return null;
+        }
+      }());
 
   @override
   set value(User? newValue) {
     super.value = newValue;
-    if (newValue == null) return localStorage.removeItem('user');
+    if (newValue == null) {
+      localStorage.removeItem('user');
+      return;
+    }
     localStorage.setItem('user', jsonEncode(newValue));
   }
 }

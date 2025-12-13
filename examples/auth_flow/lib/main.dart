@@ -11,26 +11,32 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initLocalStorage();
 
-  runApp(const MyApp());
+  runApp(ProviderScope(providers: [AuthNotifier.provider], child: const MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final GoRouter router;
+
+  @override
+  void initState() {
+    super.initState();
+    router = AppRouter(context).router;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ProviderScope(
-      providers: [AuthNotifier.provider],
-      child: Builder(
-        builder: (context) {
-          return MaterialApp.router(
-            title: 'Auth Demo - GoRouter',
-            debugShowCheckedModeBanner: false,
-            theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
-            routerConfig: AppRouter(context).router,
-          );
-        },
-      ),
+    return MaterialApp.router(
+      title: 'Auth Demo - GoRouter',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
+      routerConfig: router,
     );
   }
 }
