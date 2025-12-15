@@ -28,7 +28,7 @@ class UserSignal extends Signal<User?> {
         if (userJsonString == null) return null;
         try {
           final map = jsonDecode(userJsonString) as Map<String, dynamic>;
-          return User.fromJson(map);
+          return User.fromMap(map);
         } catch (_) {
           return null;
         }
