@@ -25,7 +25,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    router = AppRouter(context).router;
+    router = AppRouter(AuthNotifier.provider.of(context)).router;
   }
 
   @override

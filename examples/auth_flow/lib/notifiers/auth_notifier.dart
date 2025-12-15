@@ -41,6 +41,6 @@ class UserSignal extends Signal<User?> {
       localStorage.removeItem('user');
       return;
     }
-    localStorage.setItem('user', jsonEncode(newValue));
+    localStorage.setItem('user', jsonEncode(newValue.toMap()));
   }
 }
