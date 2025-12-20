@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/src/widgets/signal_builder.dart';
-import 'package:solidart/solidart.dart';
 
 /// {@template show}
 /// Conditionally render its [builder] or an optional [fallback] component
@@ -20,7 +19,7 @@ import 'package:solidart/solidart.dart';
 /// Widget build(BuildContext context) {
 ///   return SignalBuilder(
 ///     builder: (context, child) {
-///       if (loggedIn()) return const Text('Logged in');
+///       if (loggedIn.value) return const Text('Logged in');
 ///       return const Text('Logged out');
 ///     },
 ///   );
@@ -34,7 +33,7 @@ import 'package:solidart/solidart.dart';
 /// @override
 /// Widget build(BuildContext context) {
 ///   return Show(
-///     when: loggedIn,
+///     when: () => loggedIn.value,
 ///     builder: (context) => const Text('Logged In'),
 ///     fallback: (context) => const Text('Logged out'),
 ///   );
@@ -54,14 +53,14 @@ import 'package:solidart/solidart.dart';
 /// @override
 /// Widget build(BuildContext context) {
 ///   return Show(
-///     when: () => count() > 5,
+///     when: () => count.value > 5,
 ///     builder: (context) => const Text('Count is greater than 5'),
 ///     fallback: (context) => const Text('Count is lower than 6'),
 ///   );
 /// }
 /// ```
 /// {@endtemplate}
-class Show<T extends bool> extends StatefulWidget {
+class Show<T extends bool> extends StatelessWidget {
   /// {@macro show}
   const Show({
     super.key,
@@ -85,37 +84,14 @@ class Show<T extends bool> extends StatefulWidget {
   final WidgetBuilder? fallback;
 
   @override
-  State<Show<T>> createState() => _ShowState<T>();
-}
-
-class _ShowState<T extends bool> extends State<Show<T>> {
-  final show = ValueNotifier(false);
-  late final DisposeEffect disposeEffect;
-
-  @override
-  void initState() {
-    super.initState();
-    disposeEffect = Effect(() {
-      show.value = widget.when();
-    }).call;
-  }
-
-  @override
-  void dispose() {
-    show.dispose();
-    disposeEffect();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: show,
-      builder: (context, condition, _) {
+    return SignalBuilder(
+      builder: (context, _) {
+        final condition = when();
         if (!condition) {
-          return widget.fallback?.call(context) ?? const SizedBox.shrink();
+          return fallback?.call(context) ?? const SizedBox.shrink();
         }
-        return widget.builder(context);
+        return builder(context);
       },
     );
   }

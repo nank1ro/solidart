@@ -3,7 +3,6 @@
 import 'dart:async';
 
 import 'package:disco/disco.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -420,12 +419,12 @@ void main() {
       expect(counterFinder(2), findsOneWidget);
     });
 
-    testWidgets('(Provider) SignalBuilder works properly (1 ReadSignal)', (
+    testWidgets('(Provider) SignalBuilder works properly (1 ReadonlySignal)', (
       tester,
     ) async {
       final s = Signal(0);
 
-      final counterProvider = Provider((_) => s.toReadSignal());
+      final counterProvider = Provider((_) => s.toReadonly());
 
       await tester.pumpWidget(
         MaterialApp(
@@ -648,7 +647,7 @@ void main() {
     });
   });
 
-  testWidgets('(Provider) Signal.updateValue method', (tester) async {
+  testWidgets('(Provider) Signal update via value assignment', (tester) async {
     final counterProvider = Provider((_) => Signal(0));
     await tester.pumpWidget(
       MaterialApp(
@@ -665,7 +664,7 @@ void main() {
                     Text('${counter.value}'),
                     ElevatedButton(
                       onPressed: () {
-                        counter.updateValue((value) => value + 1);
+                        counter.value = counter.value + 1;
                       },
                       child: const Text('add'),
                     ),
@@ -685,7 +684,9 @@ void main() {
     expect(find.text('1'), findsOneWidget);
   });
 
-  testWidgets('(ArgProvider) Signal.updateValue method', (tester) async {
+  testWidgets('(ArgProvider) Signal update via value assignment', (
+    tester,
+  ) async {
     final counterProvider = Provider.withArgument((_, int n) => Signal(n));
     await tester.pumpWidget(
       MaterialApp(
@@ -702,7 +703,7 @@ void main() {
                     Text('${counter.value}'),
                     ElevatedButton(
                       onPressed: () {
-                        counter.updateValue((value) => value + 1);
+                        counter.value = counter.value + 1;
                       },
                       child: const Text('add'),
                     ),
@@ -748,6 +749,14 @@ void main() {
   );
 
   group('Automatic disposal', () {
+    setUp(() {
+      SolidartConfig.autoDispose = true;
+    });
+
+    tearDown(() {
+      SolidartConfig.autoDispose = false;
+    });
+
     testWidgets(
       'Signal autoDispose',
       (tester) async {
@@ -763,17 +772,17 @@ void main() {
             ),
           ),
         );
-        expect(counter.disposed, isFalse);
+        expect(counter.isDisposed, isFalse);
         await tester.pumpWidget(const SizedBox());
-        expect(counter.disposed, isTrue);
+        expect(counter.isDisposed, isTrue);
       },
       timeout: const Timeout(Duration(seconds: 1)),
     );
 
     testWidgets(
-      'ReadSignal autoDispose',
+      'ReadonlySignal autoDispose',
       (tester) async {
-        final counter = Signal(0).toReadSignal();
+        final counter = Signal(0).toReadonly();
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -785,9 +794,9 @@ void main() {
             ),
           ),
         );
-        expect(counter.disposed, isFalse);
+        expect(counter.isDisposed, isFalse);
         await tester.pumpWidget(const SizedBox());
-        expect(counter.disposed, isTrue);
+        expect(counter.isDisposed, isTrue);
       },
       timeout: const Timeout(Duration(seconds: 1)),
     );
@@ -808,11 +817,11 @@ void main() {
             ),
           ),
         );
-        expect(counter.disposed, isFalse);
-        expect(doubleCounter.disposed, isFalse);
+        expect(counter.isDisposed, isFalse);
+        expect(doubleCounter.isDisposed, isFalse);
         await tester.pumpWidget(const SizedBox());
-        expect(counter.disposed, isTrue);
-        expect(doubleCounter.disposed, isTrue);
+        expect(counter.isDisposed, isTrue);
+        expect(doubleCounter.isDisposed, isTrue);
       },
       timeout: const Timeout(Duration(seconds: 1)),
     );
@@ -833,11 +842,11 @@ void main() {
             ),
           ),
         );
-        expect(counter.disposed, isFalse);
-        expect(effect.disposed, isFalse);
+        expect(counter.isDisposed, isFalse);
+        expect(effect.isDisposed, isFalse);
         await tester.pumpWidget(const SizedBox());
         counter.dispose();
-        expect(effect.disposed, isTrue);
+        expect(effect.isDisposed, isTrue);
       },
       timeout: const Timeout(Duration(seconds: 1)),
     );
@@ -857,9 +866,9 @@ void main() {
             ),
           ),
         );
-        expect(r.disposed, isFalse);
+        expect(r.isDisposed, isFalse);
         await tester.pumpWidget(const SizedBox());
-        expect(r.disposed, isTrue);
+        expect(r.isDisposed, isTrue);
       },
       timeout: const Timeout(Duration(seconds: 1)),
     );
@@ -868,6 +877,8 @@ void main() {
   testWidgets(
     'Effect with multiple dependencies autoDispose',
     (tester) async {
+      SolidartConfig.autoDispose = true;
+      addTearDown(() => SolidartConfig.autoDispose = false);
       final counter = Signal(0);
       final doubleCounter = Computed(() => counter.value * 2);
       final effect = Effect(() {
@@ -885,116 +896,70 @@ void main() {
           ),
         ),
       );
-      expect(counter.disposed, isFalse);
-      expect(doubleCounter.disposed, isFalse);
-      expect(effect.disposed, isFalse);
+      expect(counter.isDisposed, isFalse);
+      expect(doubleCounter.isDisposed, isFalse);
+      expect(effect.isDisposed, isFalse);
       await tester.pumpWidget(const SizedBox());
-      effect();
-      expect(effect.disposed, isTrue);
-      expect(counter.disposed, isTrue);
-      expect(doubleCounter.disposed, isTrue);
+      effect.dispose();
+      expect(effect.isDisposed, isTrue);
+      expect(counter.isDisposed, isTrue);
+      expect(doubleCounter.isDisposed, isTrue);
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
 
-  testWidgets('SignalBuilder without dependencies throws an error', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SignalBuilder(
-            builder: (_, _) {
-              return const Text('No dependencies here');
-            },
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      tester.takeException(),
-      isAssertionError.having(
-        (error) => error.message,
-        '''
-SignalBuilder must detect at least one Signal, Computed, or Resource during the build.
-''',
-        contains(
-          '''SignalBuilder must detect at least one Signal, Computed, or Resource during the build.''',
-        ),
-      ),
-    );
-  });
-
-  test('Signal is a ValueNotifier', () {
+  test('Signal to ValueNotifier notifies listeners', () {
     final signal = Signal(0);
-    expect(signal, isA<ValueNotifier<int>>());
-    expect(signal.value, 0);
+    final notifier = signal.toValueNotifier();
     var notifiedValue = -1;
     void listener() {
-      notifiedValue = signal.value;
+      notifiedValue = notifier.value;
     }
 
-    signal.addListener(listener);
+    notifier.addListener(listener);
     signal.value = 1;
     expect(notifiedValue, 1);
-    signal.removeListener(listener);
+    notifier.removeListener(listener);
     signal.value = 2;
     expect(notifiedValue, 1); // Not updated since listener was removed
+    notifier.dispose();
   });
 
-  test('Resource is a ValueNotifier', () {
-    final r = Resource(() => Future.value(0));
-    expect(r, isA<ValueNotifier<ResourceState<int>>>());
-    expect(r.state, isA<ResourceLoading<int>>());
-    var notifiedState = r.state;
+  test('Resource to ValueNotifier updates when ready', () {
+    final resource = Resource(() => Future.value(0));
+    final notifier = resource.toValueNotifier();
+    expect(notifier.value, isA<ResourceLoading<int>>());
+    var notifiedState = notifier.value;
+
     void listener() {
-      notifiedState = r.state;
+      notifiedState = notifier.value;
     }
 
-    r.addListener(listener);
+    notifier.addListener(listener);
     // Wait for the resource to load
     return Future.delayed(const Duration(milliseconds: 10), () {
       expect(notifiedState, isA<ResourceReady<int>>());
-      r.removeListener(listener);
-      r.refresh();
-      expect(
-        notifiedState,
-        isA<ResourceReady<int>>(),
-      ); // Not updated since listener was removed
+      notifier.removeListener(listener);
+      notifier.dispose();
     });
   });
 
-  test('ReadableSignal is a ValueListenable', () {
-    final signal = Signal(0).toReadSignal();
-    expect(signal, isA<ValueListenable<int>>());
-    expect(signal.value, 0);
-    var notifiedValue = -1;
-    void listener() {
-      notifiedValue = signal.value;
-    }
-
-    signal.addListener(listener);
-    signal.dispose(); // Dispose before changing value to test cleanup
-    expect(notifiedValue, -1); // Not updated since value didn't change
-    signal.removeListener(listener);
-  });
-
-  test('Computed is a ValueListenable', () {
+  test('ReadonlySignal to ValueNotifier works for Computed', () {
     final baseSignal = Signal(1);
     final computed = Computed(() => baseSignal.value * 2);
-    expect(computed, isA<ValueListenable<int>>());
-    expect(computed.value, 2);
+    final notifier = computed.toValueNotifier();
+    expect(notifier.value, 2);
     var notifiedValue = -1;
     void listener() {
-      notifiedValue = computed.value;
+      notifiedValue = notifier.value;
     }
 
-    computed.addListener(listener);
+    notifier.addListener(listener);
     baseSignal.value = 2;
     expect(notifiedValue, 4);
-    computed.removeListener(listener);
+    notifier.removeListener(listener);
     baseSignal.value = 3;
     expect(notifiedValue, 4); // Not updated since listener was removed
+    notifier.dispose();
   });
 }

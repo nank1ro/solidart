@@ -1,10 +1,8 @@
-// ignore_for_file: document_ignores
-
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 import 'package:solidart/deps/preset.dart' as preset;
 import 'package:solidart/deps/system.dart' as system;
-import 'package:solidart/solidart.dart';
+import 'package:solidart/v3.dart';
 
 /// {@template signalbuilder}
 /// Reacts to the signals automatically found in the [builder] function.
@@ -65,46 +63,45 @@ class SignalBuilder extends StatelessWidget {
 class _SignalBuilderElement extends StatelessElement {
   _SignalBuilderElement(SignalBuilder super.widget);
 
-  late final effect = Effect(
-    scheduler,
-    detach: true,
+  late final Effect _effect = Effect.manual(
+    _runEffect,
     autoDispose: false,
-    autorun: false,
+    detach: true,
   );
 
-  void scheduler() {
-    if (dirty) return;
+  bool _isBuilding = false;
+  system.Link? _depsTail;
+
+  void _runEffect() {
+    _effect.depsTail = _depsTail;
+    if (_isBuilding || dirty) {
+      return;
+    }
     markNeedsBuild();
   }
 
   @override
   void unmount() {
-    effect.dispose();
+    _effect.dispose();
     super.unmount();
   }
 
   @override
   Widget build() {
-    final prevSub = preset.getActiveSub();
-    final node = effect;
-    preset.setActiveSub(node);
-
+    _isBuilding = true;
+    final prevSub = preset.setActiveSub(_effect);
+    _effect.depsTail = null;
+    preset.cycle++;
     try {
       final built = super.build();
-      if (SolidartConfig.assertSignalBuilderWithoutDependencies) {
-        assert(node.deps != null, '''
-SignalBuilder must detect at least one Signal, Computed, or Resource during the build.
-This may mean your reactive values were disposed. 
-You can disable this check by setting `SolidartConfig.assertSignalBuilderWithoutDependencies = false` before `runApp()`'
-          ''');
-      }
-      // ignore: invalid_use_of_internal_member
-      effect.setDependencies(node);
-      node.flags = system.ReactiveFlags.watching;
-
+      preset.purgeDeps(_effect);
+      _depsTail = _effect.depsTail;
+      _effect.flags = system.ReactiveFlags.watching;
       return built;
     } finally {
       preset.setActiveSub(prevSub);
+      _effect.flags &= ~system.ReactiveFlags.recursedCheck;
+      _isBuilding = false;
     }
   }
 }

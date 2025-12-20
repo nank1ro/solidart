@@ -20,7 +20,7 @@ class _ShowPageState extends State<ShowPage> {
         actions: [
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.white),
-            onPressed: loggedIn.toggle,
+            onPressed: () => loggedIn.value = !loggedIn.value,
             child: Show(
               when: () => loggedIn.value,
               builder: (_) => const Text('LOGIN'),

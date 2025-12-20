@@ -1,5 +1,3 @@
-// ignore_for_file: avoid_print
-
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -13,15 +11,7 @@ class SetSignalPage extends StatefulWidget {
 }
 
 class _SetSignalPageState extends State<SetSignalPage> {
-  final items = SetSignal({1, 2}, name: 'items');
-
-  @override
-  void initState() {
-    super.initState();
-    items.observe((previousValue, value) {
-      print("Items changed: $previousValue -> $value");
-    });
-  }
+  final items = ReactiveSet({1, 2}, name: 'items');
 
   @override
   void dispose() {
@@ -32,7 +22,7 @@ class _SetSignalPageState extends State<SetSignalPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('SetSignal')),
+      appBar: AppBar(title: const Text('ReactiveSet')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

@@ -53,7 +53,7 @@ To change the value, you can use:
 // Set the value to 2
 counter.value = 2;
 // Update the value based on the current value
-counter.updateValue((value) => value * 2);
+counter.value = counter.value * 2;
 ```
 
 ### Effect
@@ -65,9 +65,11 @@ The effect automatically subscribes to any signal and reruns when any of them ch
 So let's create an Effect that reruns whenever `counter` changes:
 
 ```dart
-final disposeFn = Effect(() {
+final effect = Effect(() {
     print("The count is now ${counter.value}");
 });
+// Later...
+effect.dispose();
 ```
 
 ### Computed
@@ -81,11 +83,11 @@ A `Computed` automatically subscribes to any signal provided and reruns when any
 final name = Signal('John');
 final lastName = Signal('Doe');
 final fullName = Computed(() => '${name.value} ${lastName.value}');
-print(fullName()); // prints "John Doe"
+print(fullName.value); // prints "John Doe"
 
 // Update the name
-name.set('Jane');
-print(fullName()); // prints "Jane Doe"
+name.value = 'Jane';
+print(fullName.value); // prints "Jane Doe"
 ```
 
 ### Resource
@@ -123,7 +125,8 @@ If you're using `SignalBuilder` you can react to the state of the resource:
 ```dart
 SignalBuilder(
   builder: (_, __) {
-    return user.state.when(
+    final userState = user.state;
+    return userState.when(
       ready: (data) {
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -166,7 +169,7 @@ SignalBuilder(
 )
 ```
 
-The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
+The `when` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
 The are also other convenience methods to handle only specific states.
 
 ### Dependency Injection

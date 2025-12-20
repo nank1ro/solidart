@@ -18,5 +18,6 @@ export 'src/v3.dart'
         Signal,
         SolidartConfig,
         SolidartObserver,
+        ValueComparator,
         batch,
         untracked;

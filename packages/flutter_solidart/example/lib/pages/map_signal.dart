@@ -1,5 +1,3 @@
-// ignore_for_file: avoid_print
-
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -15,15 +13,7 @@ class MapSignalPage extends StatefulWidget {
 }
 
 class _MapSignalPageState extends State<MapSignalPage> {
-  final items = MapSignal({'a': 1, 'b': 2}, name: 'items');
-
-  @override
-  void initState() {
-    super.initState();
-    items.observe((previousValue, value) {
-      print("Items changed: $previousValue -> $value");
-    });
-  }
+  final items = ReactiveMap({'a': 1, 'b': 2}, name: 'items');
 
   @override
   void dispose() {
@@ -41,7 +31,7 @@ class _MapSignalPageState extends State<MapSignalPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('SetSignal')),
+      appBar: AppBar(title: const Text('ReactiveMap')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
