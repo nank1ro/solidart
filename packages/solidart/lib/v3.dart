@@ -17,5 +17,6 @@ export 'src/v3.dart'
         ResourceStateExtensions,
         Signal,
         SolidartConfig,
+        SolidartObserver,
         batch,
         untracked;
