@@ -373,9 +373,17 @@ abstract class Disposable {
     while (link != null) {
       final next = link.nextDep;
       final dep = link.dep;
-      preset.unlink(link, node);
-      if (canAutoDispose(dep) && dep.subs == null) {
+      final isLastSub =
+          identical(dep.subs, link) &&
+          link.prevSub == null &&
+          link.nextSub == null;
+      if (canAutoDispose(dep) && isLastSub) {
         (dep as Disposable).dispose();
+      } else {
+        preset.unlink(link, node);
+        if (canAutoDispose(dep) && dep.subs == null) {
+          (dep as Disposable).dispose();
+        }
       }
       link = next;
     }
@@ -1277,8 +1285,8 @@ class Computed<T> extends preset.ComputedNode<T>
   @override
   void dispose() {
     if (isDisposed) return;
-    Disposable.unlinkSubs(this);
     Disposable.unlinkDeps(this);
+    Disposable.unlinkSubs(this);
     preset.stop(this);
     super.dispose();
     _notifySignalDisposal(this);

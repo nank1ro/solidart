@@ -1,3 +1,9 @@
+## 3.0.2
+
+- **CHORE**: Upgrade `solidart` and `flutter_solidart` dev dependencies to v3.
+- **DOCS**: Update README version snippet.
+- **EXAMPLE**: Migrate example code to v3 APIs.
+
 ## 3.0.1
 
 - Update README.md

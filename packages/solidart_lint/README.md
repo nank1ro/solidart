@@ -10,7 +10,7 @@ Then edit your `analysis_options.yaml` file and add these lines of code:
 
 ```yaml
 plugins:
-  solidart_lint: ^3.0.0
+  solidart_lint: ^3.0.2
 ```
 
 ## ASSISTS

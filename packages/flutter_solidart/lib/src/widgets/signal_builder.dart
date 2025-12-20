@@ -70,9 +70,11 @@ class _SignalBuilderElement extends StatelessElement {
   );
 
   bool _isBuilding = false;
+  system.Link? _depsHead;
   system.Link? _depsTail;
 
   void _runEffect() {
+    _effect.deps = _depsHead;
     _effect.depsTail = _depsTail;
     if (_isBuilding || dirty) {
       return;
@@ -82,6 +84,8 @@ class _SignalBuilderElement extends StatelessElement {
 
   @override
   void unmount() {
+    _effect.deps = _depsHead;
+    _effect.depsTail = _depsTail;
     _effect.dispose();
     super.unmount();
   }
@@ -89,16 +93,21 @@ class _SignalBuilderElement extends StatelessElement {
   @override
   Widget build() {
     _isBuilding = true;
+    final prevDetach = SolidartConfig.detachEffects;
     final prevSub = preset.setActiveSub(_effect);
     _effect.depsTail = null;
+    _effect.flags =
+        system.ReactiveFlags.watching | system.ReactiveFlags.recursedCheck;
     preset.cycle++;
     try {
+      SolidartConfig.detachEffects = true;
       final built = super.build();
       preset.purgeDeps(_effect);
+      _depsHead = _effect.deps;
       _depsTail = _effect.depsTail;
-      _effect.flags = system.ReactiveFlags.watching;
       return built;
     } finally {
+      SolidartConfig.detachEffects = prevDetach;
       preset.setActiveSub(prevSub);
       _effect.flags &= ~system.ReactiveFlags.recursedCheck;
       _isBuilding = false;
