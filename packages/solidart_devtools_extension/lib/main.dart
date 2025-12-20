@@ -40,39 +40,29 @@ class Signals extends StatefulWidget {
 }
 
 enum SignalType {
-  readSignal,
   readonlySignal,
   signal,
   lazySignal,
   computed,
   resource,
-  listSignal,
   reactiveList,
-  mapSignal,
   reactiveMap,
-  setSignal,
   reactiveSet;
 
   static SignalType byName(String name) {
     return switch (name) {
-      'ReadSignal' => SignalType.readSignal,
       'ReadonlySignal' => SignalType.readonlySignal,
       'Signal' => SignalType.signal,
       'LazySignal' => SignalType.lazySignal,
       'Computed' => SignalType.computed,
       'Resource' => SignalType.resource,
-      'ListSignal' => SignalType.listSignal,
       'ReactiveList' => SignalType.reactiveList,
-      'MapSignal' => SignalType.mapSignal,
       'ReactiveMap' => SignalType.reactiveMap,
-      'SetSignal' => SignalType.setSignal,
       'ReactiveSet' => SignalType.reactiveSet,
       _ => SignalType.signal,
     };
   }
 }
-
-enum SignalVersion { v2, v3 }
 
 class SignalData {
   const SignalData({
@@ -80,7 +70,6 @@ class SignalData {
     required this.hasPreviousValue,
     required this.previousValue,
     required this.type,
-    required this.version,
     required this.disposed,
     required this.autoDispose,
     required this.listenerCount,
@@ -95,7 +84,6 @@ class SignalData {
   final bool hasPreviousValue;
   final Object? previousValue;
   final SignalType type;
-  final SignalVersion version;
   final bool disposed;
   final bool autoDispose;
   final int listenerCount;
@@ -107,7 +95,7 @@ class SignalData {
     return value.toString().toLowerCase().contains(search) ||
         previousValue.toString().toLowerCase().contains(search) ||
         valueType.toLowerCase().contains(search) ||
-        version.name.toLowerCase().contains(search) ||
+        type.name.toLowerCase().contains(search) ||
         (previousValueType != null &&
             previousValueType!.toLowerCase().contains(search));
   }
@@ -120,7 +108,7 @@ class _SignalsState extends State<Signals> {
   final searchText = Signal<String>('');
   final filterType = Signal<SignalType?>(null);
   final showDisposed = Signal<bool>(true);
-  final signals = MapSignal<String, SignalData>({});
+  final signals = ReactiveMap<String, SignalData>({});
 
   late final filteredSignals = Computed(() {
     final lowercasedSearch = searchText.value.toLowerCase();
@@ -151,31 +139,23 @@ class _SignalsState extends State<Signals> {
         .where((e) {
           final kind = e.extensionKind;
           return kind != null &&
-              (kind.startsWith('ext.solidart.signal') ||
-                  kind.startsWith('ext.solidart.v3.signal'));
+              kind.startsWith('ext.solidart.v3.signal');
         })
         .listen((event) {
           final data = event.extensionData?.data;
           if (data == null) return;
           final kind = event.extensionKind;
-          final version = (kind?.startsWith('ext.solidart.v3.signal') ?? false)
-              ? SignalVersion.v3
-              : SignalVersion.v2;
           switch (kind) {
-            case 'ext.solidart.signal.created':
-            case 'ext.solidart.signal.updated':
-            case 'ext.solidart.signal.disposed':
             case 'ext.solidart.v3.signal.created':
             case 'ext.solidart.v3.signal.updated':
             case 'ext.solidart.v3.signal.disposed':
-              final signalId = '${version.name}:${data['_id']}';
+              final signalId = data['_id'].toString();
               signals[signalId] = SignalData(
                 name: data['name'] ?? data['_id'],
                 value: jsonDecode(data['value'] ?? 'null'),
                 hasPreviousValue: data['hasPreviousValue'],
                 previousValue: jsonDecode(data['previousValue'] ?? 'null'),
                 type: SignalType.byName(data['type']),
-                version: version,
                 disposed: data['disposed'],
                 autoDispose: data['autoDispose'],
                 listenerCount: data['listenerCount'],
@@ -423,25 +403,6 @@ class _SignalsState extends State<Signals> {
                                                   ),
                                                   ShadBadge(
                                                     child: Text(
-                                                      signal.version.name
-                                                          .toUpperCase(),
-                                                      style: shadTheme
-                                                          .textTheme
-                                                          .small
-                                                          .copyWith(
-                                                            fontSize: 10,
-                                                            color: shadTheme
-                                                                .primaryBadgeTheme
-                                                                .foregroundColor,
-                                                          ),
-                                                    ),
-                                                    onPressed: () {
-                                                      selectedSignalId.value =
-                                                          entry.key;
-                                                    },
-                                                  ),
-                                                  ShadBadge(
-                                                    child: Text(
                                                       DateFormat(
                                                         'hh:mm:ss',
                                                         Localizations.localeOf(
@@ -542,10 +503,6 @@ class _SignalsState extends State<Signals> {
                                     ParameterView(
                                       name: 'type',
                                       value: signal.type.name.capitalizeFirst(),
-                                    ),
-                                    ParameterView(
-                                      name: 'version',
-                                      value: signal.version.name,
                                     ),
                                     ParameterView(
                                       name: 'value',
