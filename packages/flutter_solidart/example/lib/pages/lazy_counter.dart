@@ -9,7 +9,7 @@ class LazyCounterPage extends StatefulWidget {
 }
 
 class _LazyCounterPageState extends State<LazyCounterPage> {
-  final counter = Signal<int>.lazy(name: 'lazyCounter');
+  final counter = LazySignal<int>(name: 'lazyCounter');
 
   @override
   Widget build(BuildContext context) {

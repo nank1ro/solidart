@@ -1,45 +1,69 @@
 import 'package:solidart/solidart.dart';
 import 'package:test/test.dart';
 
+const _skip = Object();
+
+void expectPreviousValues<T>(
+  ReadonlySignal<T> signal, {
+  Object? previous = _skip,
+  Object? untracked = _skip,
+}) {
+  if (previous != _skip && untracked != _skip) {
+    final values = (
+      previous: signal.previousValue,
+      untracked: signal.untrackedPreviousValue,
+    );
+
+    expect(values.previous, previous);
+    expect(values.untracked, untracked);
+    return;
+  }
+
+  if (previous != _skip) {
+    expect(signal.previousValue, previous);
+  }
+
+  if (untracked != _skip) {
+    expect(signal.untrackedPreviousValue, untracked);
+  }
+}
+
 void main() {
   group('Signal previous value', () {
     test('tracks previousValue and untrackedPreviousValue', () {
       final signal = Signal(0);
 
-      expect(signal.previousValue, isNull);
-      expect(signal.untrackedPreviousValue, isNull);
+      expectPreviousValues(signal, previous: null, untracked: null);
 
       signal.value = 1;
 
-      expect(signal.previousValue, 0);
-      expect(signal.untrackedPreviousValue, 0);
+      expectPreviousValues(signal, previous: 0, untracked: 0);
 
       signal.value = 2;
 
-      expect(signal.previousValue, 1);
-      expect(signal.untrackedPreviousValue, 1);
+      expectPreviousValues(signal, previous: 1, untracked: 1);
     });
 
     test('updates previous only after read', () {
       final signal = Signal(0);
 
-      signal.value = 1;
+      expectPreviousValues(signal..value = 1, untracked: null);
 
-      expect(signal.untrackedPreviousValue, isNull);
+      final _ = signal.value;
 
-      signal.value;
-
-      expect(signal.untrackedPreviousValue, 0);
+      expectPreviousValues(signal, untracked: 0);
     });
 
     test('respects trackPreviousValue false', () {
       final signal = Signal(0, trackPreviousValue: false);
 
-      signal.value = 1;
-      signal.value;
-
-      expect(signal.previousValue, isNull);
-      expect(signal.untrackedPreviousValue, isNull);
+      expectPreviousValues(
+        signal
+          ..value = 1
+          ..value,
+        previous: null,
+        untracked: null,
+      );
     });
   });
 
@@ -48,13 +72,12 @@ void main() {
       final source = Signal(1);
       final computed = Computed(() => source.value * 2);
 
-      expect(computed.previousValue, isNull);
+      expectPreviousValues(computed, previous: null, untracked: null);
       expect(computed.value, 2);
 
       source.value = 2;
 
-      expect(computed.previousValue, 2);
-      expect(computed.untrackedPreviousValue, 2);
+      expectPreviousValues(computed, previous: 2, untracked: 2);
       expect(computed.value, 4);
     });
 
@@ -62,15 +85,19 @@ void main() {
       final source = Signal(1);
       final computed = Computed(() => source.value * 2);
 
-      computed.value;
+      {
+        final _ = computed.value;
+      }
 
       source.value = 2;
 
-      expect(computed.untrackedPreviousValue, isNull);
+      expectPreviousValues(computed, untracked: null);
 
-      computed.value;
+      {
+        final _ = computed.value;
+      }
 
-      expect(computed.untrackedPreviousValue, 2);
+      expectPreviousValues(computed, untracked: 2);
     });
 
     test('respects trackPreviousValue false', () {
@@ -80,12 +107,15 @@ void main() {
         trackPreviousValue: false,
       );
 
-      computed.value;
+      {
+        final _ = computed.value;
+      }
       source.value = 2;
-      computed.value;
+      {
+        final _ = computed.value;
+      }
 
-      expect(computed.previousValue, isNull);
-      expect(computed.untrackedPreviousValue, isNull);
+      expectPreviousValues(computed, previous: null, untracked: null);
     });
   });
 
@@ -98,18 +128,16 @@ void main() {
     test('tracks previous only after initialized and read', () {
       final lazy = LazySignal<int>();
 
-      lazy.value = 1;
-
-      expect(lazy.previousValue, isNull);
+      expectPreviousValues(lazy..value = 1, previous: null, untracked: null);
       expect(lazy.isInitialized, isTrue);
 
       lazy.value = 2;
 
-      expect(lazy.untrackedPreviousValue, isNull);
+      expectPreviousValues(lazy, untracked: null);
 
-      lazy.value;
+      final _ = lazy.value;
 
-      expect(lazy.untrackedPreviousValue, 1);
+      expectPreviousValues(lazy, untracked: 1);
     });
   });
 }
