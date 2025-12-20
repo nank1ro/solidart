@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 import 'package:solidart/deps/preset.dart' as preset;
 import 'package:solidart/deps/system.dart' as system;
-import 'package:solidart/v3.dart';
+import 'package:solidart/solidart.dart';
 
 /// {@template signalbuilder}
 /// Reacts to the signals automatically found in the [builder] function.

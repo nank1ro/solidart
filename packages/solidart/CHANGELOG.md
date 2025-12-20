@@ -1,3 +1,10 @@
+## 3.0.0-dev.1
+
+- **BREAKING**: Remove all v2 implementation code (`src/core`, `src/extensions`, v2 utils).
+- **BREAKING**: `package:solidart/solidart.dart` is the sole public entry and re-exports the v3 APIs.
+- **REFACTOR**: Rename `src/v3.dart` to `src/solidart.dart`.
+- **BREAKING**: Drop v2-only helpers like `until`, `Debouncer`, and v2 exceptions.
+
 ## 2.8.3
 
 - **FIX**: Handle race conditions in Resource that caused multiple calls to `resolve`.

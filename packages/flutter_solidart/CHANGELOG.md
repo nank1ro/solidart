@@ -1,3 +1,12 @@
+## 3.0.0-dev.1
+
+- **BREAKING**: Remove Flutter-specific core wrappers under `src/core/*`; `flutter_solidart` now re-exports `solidart/solidart.dart` directly.
+- **BREAKING**: Replace `ListSignal`/`MapSignal`/`SetSignal` with `ReactiveList`/`ReactiveMap`/`ReactiveSet`.
+- **BREAKING**: Replace `toReadSignal()` with `toReadonly()` and remove legacy `SignalBase`/`ReadableSignal` surfaces.
+- **FEAT**: Add v3 conversion extensions: `ReadonlySignal.toValueNotifier()` and `ValueListenable.toSignal()`.
+- **REFACTOR**: Rewrite `SignalBuilder` and `Show` to use v3 effects + dependency tracking.
+- **DOCS**: Update README, examples, and tests to v3 syntax (`.value`, `isInitialized`, `Effect.dispose()`).
+
 ## 2.7.2
 
 ### Changes from solidart
