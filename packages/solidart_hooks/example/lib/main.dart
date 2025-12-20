@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
 import 'pages/use_signal.dart';
-import 'pages/use_list_signal.dart';
-import 'pages/use_set_signal.dart';
-import 'pages/use_map_signal.dart';
+import 'pages/use_reactive_list.dart';
+import 'pages/use_reactive_set.dart';
+import 'pages/use_reactive_map.dart';
 import 'pages/use_computed.dart';
 import 'pages/use_resource.dart';
 import 'pages/use_resource_stream.dart';
@@ -54,19 +54,19 @@ class HookListScreen extends HookWidget {
       example: () => const UseSignalExample(),
     ),
     HookInfo(
-      title: 'useListSignal',
-      description: 'Create a reactive list signal',
-      example: () => const UseListSignalExample(),
+      title: 'useReactiveList',
+      description: 'Create a reactive list',
+      example: () => const UseReactiveListExample(),
     ),
     HookInfo(
-      title: 'useSetSignal',
-      description: 'Create a reactive set signal',
-      example: () => const UseSetSignalExample(),
+      title: 'useReactiveSet',
+      description: 'Create a reactive set',
+      example: () => const UseReactiveSetExample(),
     ),
     HookInfo(
-      title: 'useMapSignal',
-      description: 'Create a reactive map signal',
-      example: () => const UseMapSignalExample(),
+      title: 'useReactiveMap',
+      description: 'Create a reactive map',
+      example: () => const UseReactiveMapExample(),
     ),
     HookInfo(
       title: 'useComputed',
