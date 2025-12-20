@@ -1,6 +1,10 @@
 // ignore_for_file: public_member_api_docs
 // TODO(medz): Add code comments
 
+import 'dart:async';
+import 'dart:collection';
+import 'dart:math';
+
 import 'package:meta/meta.dart';
 import 'package:solidart/deps/preset.dart' as preset;
 import 'package:solidart/deps/system.dart' as system;
@@ -39,6 +43,7 @@ final class SolidartConfig {
   static bool autoDispose = false;
   static bool detachEffects = false;
   static bool trackPreviousValue = true;
+  static bool useRefreshing = true;
 }
 
 T untracked<T>(T Function() callback) {
@@ -274,6 +279,467 @@ class LazySignal<T> extends Signal<T> {
   }
 }
 
+class ReactiveList<E> extends Signal<List<E>> with ListMixin<E> {
+  ReactiveList(
+    Iterable<E> initialValue, {
+    bool? autoDispose,
+    String? name,
+    ValueComparator<List<E>> equals = identical,
+    bool? trackPreviousValue,
+  }) : super(
+         List<E>.of(initialValue),
+         autoDispose: autoDispose,
+         name: name,
+         equals: equals,
+         trackPreviousValue: trackPreviousValue,
+       );
+
+  List<E> _copy() => List<E>.of(untrackedValue);
+
+  bool _listEquals(List<E> a, List<E> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get length => value.length;
+
+  @override
+  set length(int newLength) {
+    final current = untrackedValue;
+    if (current.length == newLength) return;
+    final next = List<E>.of(current);
+    next.length = newLength;
+    value = next;
+  }
+
+  @override
+  E operator [](int index) => value[index];
+
+  @override
+  void operator []=(int index, E element) {
+    final current = untrackedValue;
+    if (current[index] == element) return;
+    final next = List<E>.of(current);
+    next[index] = element;
+    value = next;
+  }
+
+  @override
+  void add(E element) {
+    final next = _copy()..add(element);
+    value = next;
+  }
+
+  @override
+  void addAll(Iterable<E> iterable) {
+    if (iterable.isEmpty) return;
+    final next = _copy()..addAll(iterable);
+    value = next;
+  }
+
+  @override
+  void insert(int index, E element) {
+    final next = _copy()..insert(index, element);
+    value = next;
+  }
+
+  @override
+  void insertAll(int index, Iterable<E> iterable) {
+    if (iterable.isEmpty) return;
+    final next = _copy()..insertAll(index, iterable);
+    value = next;
+  }
+
+  @override
+  bool remove(Object? element) {
+    final current = untrackedValue;
+    final index = current.indexWhere((value) => value == element);
+    if (index == -1) return false;
+    final next = List<E>.of(current)..removeAt(index);
+    value = next;
+    return true;
+  }
+
+  @override
+  E removeAt(int index) {
+    final current = untrackedValue;
+    final removed = current[index];
+    final next = List<E>.of(current)..removeAt(index);
+    value = next;
+    return removed;
+  }
+
+  @override
+  E removeLast() {
+    final current = untrackedValue;
+    final removed = current.last;
+    final next = List<E>.of(current)..removeLast();
+    value = next;
+    return removed;
+  }
+
+  @override
+  void removeRange(int start, int end) {
+    if (end <= start) return;
+    final next = _copy()..removeRange(start, end);
+    value = next;
+  }
+
+  @override
+  void replaceRange(int start, int end, Iterable<E> replacements) {
+    final next = _copy()..replaceRange(start, end, replacements);
+    if (_listEquals(untrackedValue, next)) return;
+    value = next;
+  }
+
+  @override
+  void setAll(int index, Iterable<E> iterable) {
+    final next = _copy()..setAll(index, iterable);
+    if (_listEquals(untrackedValue, next)) return;
+    value = next;
+  }
+
+  @override
+  void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) {
+    final next = _copy()..setRange(start, end, iterable, skipCount);
+    if (_listEquals(untrackedValue, next)) return;
+    value = next;
+  }
+
+  @override
+  void fillRange(int start, int end, [E? fillValue]) {
+    if (end <= start) return;
+    final next = _copy()..fillRange(start, end, fillValue);
+    if (_listEquals(untrackedValue, next)) return;
+    value = next;
+  }
+
+  @override
+  void clear() {
+    if (untrackedValue.isEmpty) return;
+    value = <E>[];
+  }
+
+  @override
+  void sort([int Function(E a, E b)? compare]) {
+    if (untrackedValue.length < 2) return;
+    final next = _copy()..sort(compare);
+    if (_listEquals(untrackedValue, next)) return;
+    value = next;
+  }
+
+  @override
+  void shuffle([Random? random]) {
+    if (untrackedValue.length < 2) return;
+    final next = _copy()..shuffle(random);
+    if (_listEquals(untrackedValue, next)) return;
+    value = next;
+  }
+
+  @override
+  void removeWhere(bool Function(E element) test) {
+    final current = untrackedValue;
+    final next = List<E>.of(current)..removeWhere(test);
+    if (next.length == current.length) return;
+    value = next;
+  }
+
+  @override
+  void retainWhere(bool Function(E element) test) {
+    final current = untrackedValue;
+    final next = List<E>.of(current)..retainWhere(test);
+    if (next.length == current.length) return;
+    value = next;
+  }
+
+  @override
+  List<R> cast<R>() => ReactiveList<R>(untrackedValue.cast<R>());
+
+  @override
+  String toString() =>
+      'ReactiveList<$E>(value: ${untrackedValue}, previousValue: ${untrackedPreviousValue})';
+}
+
+class ReactiveSet<E> extends Signal<Set<E>> with SetMixin<E> {
+  ReactiveSet(
+    Iterable<E> initialValue, {
+    bool? autoDispose,
+    String? name,
+    ValueComparator<Set<E>> equals = identical,
+    bool? trackPreviousValue,
+  }) : super(
+         Set<E>.of(initialValue),
+         autoDispose: autoDispose,
+         name: name,
+         equals: equals,
+         trackPreviousValue: trackPreviousValue,
+       );
+
+  Set<E> _copy() => Set<E>.of(untrackedValue);
+
+  @override
+  int get length => value.length;
+
+  @override
+  Iterator<E> get iterator => value.iterator;
+
+  @override
+  bool contains(Object? element) {
+    value;
+    return untrackedValue.contains(element);
+  }
+
+  @override
+  E? lookup(Object? element) {
+    value;
+    return untrackedValue.lookup(element);
+  }
+
+  @override
+  bool add(E value) {
+    final current = untrackedValue;
+    if (current.contains(value)) return false;
+    final next = Set<E>.of(current)..add(value);
+    this.value = next;
+    return true;
+  }
+
+  @override
+  void addAll(Iterable<E> elements) {
+    if (elements.isEmpty) return;
+    final next = _copy()..addAll(elements);
+    if (next.length == untrackedValue.length) return;
+    value = next;
+  }
+
+  @override
+  bool remove(Object? value) {
+    final current = untrackedValue;
+    if (!current.contains(value)) return false;
+    final next = Set<E>.of(current)..remove(value);
+    this.value = next;
+    return true;
+  }
+
+  @override
+  void removeAll(Iterable<Object?> elements) {
+    if (elements.isEmpty) return;
+    final current = untrackedValue;
+    final next = Set<E>.of(current)..removeAll(elements);
+    if (next.length == current.length) return;
+    value = next;
+  }
+
+  @override
+  void retainAll(Iterable<Object?> elements) {
+    final current = untrackedValue;
+    final next = Set<E>.of(current)..retainAll(elements);
+    if (next.length == current.length) return;
+    value = next;
+  }
+
+  @override
+  void removeWhere(bool Function(E element) test) {
+    final current = untrackedValue;
+    final next = Set<E>.of(current)..removeWhere(test);
+    if (next.length == current.length) return;
+    value = next;
+  }
+
+  @override
+  void retainWhere(bool Function(E element) test) {
+    final current = untrackedValue;
+    final next = Set<E>.of(current)..retainWhere(test);
+    if (next.length == current.length) return;
+    value = next;
+  }
+
+  @override
+  void clear() {
+    if (untrackedValue.isEmpty) return;
+    value = <E>{};
+  }
+
+  @override
+  Set<E> toSet() => Set<E>.of(untrackedValue);
+
+  @override
+  Set<R> cast<R>() => ReactiveSet<R>(untrackedValue.cast<R>());
+
+  @override
+  String toString() =>
+      'ReactiveSet<$E>(value: ${untrackedValue}, previousValue: ${untrackedPreviousValue})';
+}
+
+class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
+  ReactiveMap(
+    Map<K, V> initialValue, {
+    bool? autoDispose,
+    String? name,
+    ValueComparator<Map<K, V>> equals = identical,
+    bool? trackPreviousValue,
+  }) : super(
+         Map<K, V>.of(initialValue),
+         autoDispose: autoDispose,
+         name: name,
+         equals: equals,
+         trackPreviousValue: trackPreviousValue,
+       );
+
+  Map<K, V> _copy() => Map<K, V>.of(untrackedValue);
+
+  @override
+  V? operator [](Object? key) {
+    value;
+    return untrackedValue[key];
+  }
+
+  @override
+  void operator []=(K key, V value) {
+    final current = untrackedValue;
+    final existing = current[key];
+    if (current.containsKey(key) && existing == value) return;
+    final next = Map<K, V>.of(current);
+    next[key] = value;
+    this.value = next;
+  }
+
+  @override
+  void clear() {
+    if (untrackedValue.isEmpty) return;
+    value = <K, V>{};
+  }
+
+  @override
+  Iterable<K> get keys {
+    value;
+    return untrackedValue.keys;
+  }
+
+  @override
+  V? remove(Object? key) {
+    final current = untrackedValue;
+    if (!current.containsKey(key)) return null;
+    final next = Map<K, V>.of(current);
+    final removed = next.remove(key);
+    value = next;
+    return removed;
+  }
+
+  @override
+  int get length {
+    value;
+    return untrackedValue.length;
+  }
+
+  @override
+  bool get isEmpty {
+    value;
+    return untrackedValue.isEmpty;
+  }
+
+  @override
+  bool get isNotEmpty {
+    value;
+    return untrackedValue.isNotEmpty;
+  }
+
+  @override
+  bool containsKey(Object? key) {
+    value;
+    return untrackedValue.containsKey(key);
+  }
+
+  @override
+  bool containsValue(Object? candidate) {
+    this.value;
+    return untrackedValue.containsValue(candidate);
+  }
+
+  @override
+  void addAll(Map<K, V> other) {
+    if (other.isEmpty) return;
+    final next = _copy()..addAll(other);
+    if (next.length == untrackedValue.length) return;
+    value = next;
+  }
+
+  @override
+  V putIfAbsent(K key, V Function() ifAbsent) {
+    final current = untrackedValue;
+    if (current.containsKey(key)) {
+      return current[key] as V;
+    }
+    final next = Map<K, V>.of(current);
+    final value = ifAbsent();
+    next[key] = value;
+    this.value = next;
+    return value;
+  }
+
+  @override
+  V update(
+    K key,
+    V Function(V value) update, {
+    V Function()? ifAbsent,
+  }) {
+    final current = untrackedValue;
+    if (!current.containsKey(key)) {
+      if (ifAbsent == null) {
+        throw ArgumentError.value(key, 'key', 'Key not in map.');
+      }
+      final next = Map<K, V>.of(current);
+      final value = ifAbsent();
+      next[key] = value;
+      this.value = next;
+      return value;
+    }
+
+    final next = Map<K, V>.of(current);
+    final value = update(next[key] as V);
+    next[key] = value;
+    this.value = next;
+    return value;
+  }
+
+  @override
+  void updateAll(V Function(K key, V value) update) {
+    final current = untrackedValue;
+    if (current.isEmpty) return;
+    final next = Map<K, V>.of(current);
+    next.updateAll(update);
+    if (next.length == current.length &&
+        next.keys.every((key) {
+          return current.containsKey(key) && current[key] == next[key];
+        })) {
+      return;
+    }
+    value = next;
+  }
+
+  @override
+  void removeWhere(bool Function(K key, V value) test) {
+    final current = untrackedValue;
+    if (current.isEmpty) return;
+    final next = Map<K, V>.of(current)..removeWhere(test);
+    if (next.length == current.length) return;
+    value = next;
+  }
+
+  @override
+  Map<RK, RV> cast<RK, RV>() =>
+      ReactiveMap<RK, RV>(untrackedValue.cast<RK, RV>());
+
+  @override
+  String toString() =>
+      'ReactiveMap<$K, $V>(value: ${untrackedValue}, previousValue: ${untrackedPreviousValue})';
+}
+
 class Computed<T> extends preset.ComputedNode<T>
     with DisposableMixin
     implements ReadonlySignal<T> {
@@ -430,6 +896,465 @@ class Effect extends preset.EffectNode
     Disposable.unlinkDeps(this);
     preset.stop(this);
     super.dispose();
+  }
+}
+
+class Resource<T> extends Signal<ResourceState<T>> {
+  Resource(
+    this.fetcher, {
+    this.source,
+    this.lazy = true,
+    bool? useRefreshing,
+    bool? trackPreviousState,
+    this.debounceDelay,
+    bool? autoDispose,
+    String? name,
+    ValueComparator<ResourceState<T>> equals = identical,
+  }) : stream = null,
+       useRefreshing = useRefreshing ?? SolidartConfig.useRefreshing,
+       super(
+         ResourceState<T>.loading(),
+         autoDispose: autoDispose,
+         name: name,
+         equals: equals,
+         trackPreviousValue:
+             trackPreviousState ?? SolidartConfig.trackPreviousValue,
+       ) {
+    if (!lazy) {
+      _resolveIfNeeded();
+    }
+  }
+
+  Resource.stream(
+    this.stream, {
+    this.source,
+    this.lazy = true,
+    bool? useRefreshing,
+    bool? trackPreviousState,
+    this.debounceDelay,
+    bool? autoDispose,
+    String? name,
+    ValueComparator<ResourceState<T>> equals = identical,
+  }) : fetcher = null,
+       useRefreshing = useRefreshing ?? SolidartConfig.useRefreshing,
+       super(
+         ResourceState<T>.loading(),
+         autoDispose: autoDispose,
+         name: name,
+         equals: equals,
+         trackPreviousValue:
+             trackPreviousState ?? SolidartConfig.trackPreviousValue,
+       ) {
+    if (!lazy) {
+      _resolveIfNeeded();
+    }
+  }
+
+  final ReadonlySignal<dynamic>? source;
+  final Future<T> Function()? fetcher;
+  final Stream<T> Function()? stream;
+  final bool lazy;
+  final bool useRefreshing;
+  final Duration? debounceDelay;
+
+  bool _resolved = false;
+  int _version = 0;
+  Future<void>? _resolveFuture;
+  Effect? _sourceEffect;
+  StreamSubscription<T>? _streamSubscription;
+  Timer? _debounceTimer;
+
+  ResourceState<T> get state {
+    _resolveIfNeeded();
+    return value;
+  }
+
+  set state(ResourceState<T> next) => value = next;
+
+  ResourceState<T>? get previousState {
+    _resolveIfNeeded();
+    if (!_resolved) return null;
+    return previousValue;
+  }
+
+  ResourceState<T> get untrackedState => untrackedValue;
+
+  ResourceState<T>? get untrackedPreviousState => untrackedPreviousValue;
+
+  Future<void> resolve() async {
+    if (isDisposed) return;
+    if (_resolveFuture != null) return _resolveFuture!;
+    if (_resolved) return;
+
+    _resolved = true;
+    _resolveFuture = _doResolve().whenComplete(() {
+      _resolveFuture = null;
+    });
+
+    return _resolveFuture!;
+  }
+
+  Future<void> refresh() async {
+    if (!_resolved) {
+      await resolve();
+      return;
+    }
+
+    if (fetcher != null) {
+      return _refetch();
+    }
+
+    if (stream != null) {
+      _resubscribe();
+      return;
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
+    _sourceEffect?.dispose();
+    _sourceEffect = null;
+    _streamSubscription?.cancel();
+    _streamSubscription = null;
+    super.dispose();
+  }
+
+  void _resolveIfNeeded() {
+    if (!_resolved) {
+      unawaited(resolve());
+    }
+  }
+
+  Future<void> _doResolve() async {
+    if (fetcher != null) {
+      await _fetch();
+    }
+
+    if (stream != null) {
+      _subscribe();
+    }
+
+    if (source != null) {
+      _setupSourceEffect();
+    }
+  }
+
+  void _setupSourceEffect() {
+    var skipped = false;
+    _sourceEffect = Effect(
+      () {
+        source!.value;
+        if (!skipped) {
+          skipped = true;
+          return;
+        }
+        if (debounceDelay != null) {
+          _debounceTimer?.cancel();
+          _debounceTimer = Timer(debounceDelay!, () {
+            if (isDisposed) return;
+            untracked(refresh);
+          });
+        } else {
+          untracked(refresh);
+        }
+      },
+      autoDispose: false,
+    );
+  }
+
+  Future<void> _fetch() async {
+    final requestId = ++_version;
+    try {
+      final result = await fetcher!();
+      if (_isStale(requestId)) return;
+      state = ResourceState<T>.ready(result);
+    } catch (e, s) {
+      if (_isStale(requestId)) return;
+      state = ResourceState<T>.error(e, stackTrace: s);
+    }
+  }
+
+  Future<void> _refetch() async {
+    _transition();
+    return _fetch();
+  }
+
+  void _subscribe() {
+    _listenStream();
+  }
+
+  void _resubscribe() {
+    _streamSubscription?.cancel();
+    _streamSubscription = null;
+    _transition();
+    _listenStream();
+  }
+
+  void _listenStream() {
+    final requestId = ++_version;
+    _streamSubscription = stream!().listen(
+      (data) {
+        if (_isStale(requestId)) return;
+        state = ResourceState<T>.ready(data);
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (_isStale(requestId)) return;
+        state = ResourceState<T>.error(error, stackTrace: stackTrace);
+      },
+    );
+  }
+
+  bool _isStale(int requestId) => requestId != _version || isDisposed;
+
+  void _transition() {
+    if (!useRefreshing) {
+      state = ResourceState<T>.loading();
+      return;
+    }
+    state.map(
+      ready: (ready) {
+        state = ready.copyWith(isRefreshing: true);
+      },
+      error: (error) {
+        state = error.copyWith(isRefreshing: true);
+      },
+      loading: (_) {
+        state = ResourceState<T>.loading();
+      },
+    );
+  }
+}
+
+@sealed
+@immutable
+sealed class ResourceState<T> {
+  const factory ResourceState.ready(T data, {bool isRefreshing}) =
+      ResourceReady<T>;
+  const factory ResourceState.loading() = ResourceLoading<T>;
+  const factory ResourceState.error(
+    Object error, {
+    StackTrace? stackTrace,
+    bool isRefreshing,
+  }) = ResourceError<T>;
+
+  const ResourceState();
+
+  R map<R>({
+    required R Function(ResourceReady<T> ready) ready,
+    required R Function(ResourceError<T> error) error,
+    required R Function(ResourceLoading<T> loading) loading,
+  });
+}
+
+@immutable
+class ResourceReady<T> implements ResourceState<T> {
+  const ResourceReady(this.value, {this.isRefreshing = false});
+
+  final T value;
+  final bool isRefreshing;
+
+  @override
+  R map<R>({
+    required R Function(ResourceReady<T> ready) ready,
+    required R Function(ResourceError<T> error) error,
+    required R Function(ResourceLoading<T> loading) loading,
+  }) {
+    return ready(this);
+  }
+
+  ResourceReady<T> copyWith({
+    T? value,
+    bool? isRefreshing,
+  }) {
+    return ResourceReady<T>(
+      value ?? this.value,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'ResourceReady<$T>(value: $value, refreshing: $isRefreshing)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return runtimeType == other.runtimeType &&
+        other is ResourceReady<T> &&
+        other.value == value &&
+        other.isRefreshing == isRefreshing;
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, value, isRefreshing);
+}
+
+@immutable
+class ResourceLoading<T> implements ResourceState<T> {
+  const ResourceLoading();
+
+  @override
+  R map<R>({
+    required R Function(ResourceReady<T> ready) ready,
+    required R Function(ResourceError<T> error) error,
+    required R Function(ResourceLoading<T> loading) loading,
+  }) {
+    return loading(this);
+  }
+
+  @override
+  String toString() => 'ResourceLoading<$T>()';
+
+  @override
+  bool operator ==(Object other) => runtimeType == other.runtimeType;
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+}
+
+@immutable
+class ResourceError<T> implements ResourceState<T> {
+  const ResourceError(
+    this.error, {
+    this.stackTrace,
+    this.isRefreshing = false,
+  });
+
+  final Object error;
+  final StackTrace? stackTrace;
+  final bool isRefreshing;
+
+  @override
+  R map<R>({
+    required R Function(ResourceReady<T> ready) ready,
+    required R Function(ResourceError<T> error) error,
+    required R Function(ResourceLoading<T> loading) loading,
+  }) {
+    return error(this);
+  }
+
+  ResourceError<T> copyWith({
+    Object? error,
+    StackTrace? stackTrace,
+    bool? isRefreshing,
+  }) {
+    return ResourceError<T>(
+      error ?? this.error,
+      stackTrace: stackTrace ?? this.stackTrace,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'ResourceError<$T>(error: $error, stackTrace: $stackTrace, '
+        'refreshing: $isRefreshing)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return runtimeType == other.runtimeType &&
+        other is ResourceError<T> &&
+        other.error == error &&
+        other.stackTrace == stackTrace &&
+        other.isRefreshing == isRefreshing;
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, error, stackTrace, isRefreshing);
+}
+
+extension ResourceStateExtensions<T> on ResourceState<T> {
+  bool get isLoading => this is ResourceLoading<T>;
+  bool get hasError => this is ResourceError<T>;
+  bool get isReady => this is ResourceReady<T>;
+  bool get isRefreshing => switch (this) {
+    ResourceReady<T>(:final isRefreshing) => isRefreshing,
+    ResourceError<T>(:final isRefreshing) => isRefreshing,
+    ResourceLoading<T>() => false,
+  };
+
+  ResourceReady<T>? get asReady => map(
+    ready: (r) => r,
+    error: (_) => null,
+    loading: (_) => null,
+  );
+
+  ResourceError<T>? get asError => map(
+    error: (e) => e,
+    ready: (_) => null,
+    loading: (_) => null,
+  );
+
+  T? get value => map(
+    ready: (r) => r.value,
+    // ignore: only_throw_errors
+    error: (r) => throw r.error,
+    loading: (_) => null,
+  );
+
+  Object? get error => map(
+    error: (r) => r.error,
+    ready: (_) => null,
+    loading: (_) => null,
+  );
+
+  R when<R>({
+    required R Function(T data) ready,
+    required R Function(Object error, StackTrace? stackTrace) error,
+    required R Function() loading,
+  }) {
+    return map(
+      ready: (r) => ready(r.value),
+      error: (e) => error(e.error, e.stackTrace),
+      loading: (_) => loading(),
+    );
+  }
+
+  R maybeWhen<R>({
+    required R Function() orElse,
+    R Function(T data)? ready,
+    R Function(Object error, StackTrace? stackTrace)? error,
+    R Function()? loading,
+  }) {
+    return map(
+      ready: (r) {
+        if (ready != null) return ready(r.value);
+        return orElse();
+      },
+      error: (e) {
+        if (error != null) return error(e.error, e.stackTrace);
+        return orElse();
+      },
+      loading: (l) {
+        if (loading != null) return loading();
+        return orElse();
+      },
+    );
+  }
+
+  R maybeMap<R>({
+    required R Function() orElse,
+    R Function(ResourceReady<T> ready)? ready,
+    R Function(ResourceError<T> error)? error,
+    R Function(ResourceLoading<T> loading)? loading,
+  }) {
+    return map(
+      ready: (r) {
+        if (ready != null) return ready(r);
+        return orElse();
+      },
+      error: (e) {
+        if (error != null) return error(e);
+        return orElse();
+      },
+      loading: (l) {
+        if (loading != null) return loading(l);
+        return orElse();
+      },
+    );
   }
 }
 
