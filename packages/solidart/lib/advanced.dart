@@ -1,4 +1,4 @@
-export 'src/v3.dart'
+export 'src/solidart.dart'
     show
         Configuration,
         Disposable,

@@ -1,4 +1,4 @@
-import 'package:solidart/v3.dart';
+import 'package:solidart/solidart.dart';
 import 'package:test/test.dart';
 
 void main() {

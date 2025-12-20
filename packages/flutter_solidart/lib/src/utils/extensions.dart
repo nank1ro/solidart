@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:solidart/v3.dart';
+import 'package:solidart/solidart.dart';
 
 /// {@template readonly-signal-to-value-notifier}
 /// Converts a [ReadonlySignal] into a [ValueNotifier].
