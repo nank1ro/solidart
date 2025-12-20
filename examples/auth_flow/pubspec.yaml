@@ -1,0 +1,26 @@
+name: auth_flow
+description: "A new Flutter project."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.0
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  disco: ^1.0.3+1
+  flutter_solidart: ^2.7.2
+  go_router: ^17.0.0
+  localstorage: ^6.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  

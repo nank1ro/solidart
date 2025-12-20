@@ -17,6 +17,7 @@ workspace:
   - examples/todos
   - examples/toggle_theme
   - examples/infinite_scroll
+  - examples/auth_flow
 
 dev_dependencies:
   reactivity_benchmark: ^0.0.1
