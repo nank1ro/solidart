@@ -38,6 +38,7 @@ final class SolidartConfig {
 
   static bool autoDispose = false;
   static bool detachEffects = false;
+  static bool trackPreviousValue = true;
 }
 
 class Identifier {
@@ -94,6 +95,7 @@ abstract class Disposable {
 
 abstract interface class SignalConfiguration<T> implements Configuration {
   ValueComparator<T> get equals;
+  bool get trackPreviousValue;
 }
 
 // TODO(nank1ro): Maybe rename to `ReadSignal`? medz: I still recommend `ReadonlySignal` because it is semantically clearer., https://github.com/nank1ro/solidart/pull/166#issuecomment-3623175977
@@ -101,6 +103,8 @@ abstract interface class ReadonlySignal<T>
     implements system.ReactiveNode, Disposable, SignalConfiguration<T> {
   T get value;
   T get untrackedValue;
+  T? get previousValue;
+  T? get untrackedPreviousValue;
 }
 
 class Signal<T> extends preset.SignalNode<Option<T>>
@@ -111,11 +115,13 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     bool? autoDispose,
     String? name,
     ValueComparator<T> equals = identical,
+    bool? trackPreviousValue,
   }) : this._internal(
          Some(initialValue),
          autoDispose: autoDispose,
          name: name,
          equals: equals,
+         trackPreviousValue: trackPreviousValue,
        );
 
   Signal._internal(
@@ -123,7 +129,10 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     this.equals = identical,
     String? name,
     bool? autoDispose,
+    bool? trackPreviousValue,
   }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+       trackPreviousValue =
+           trackPreviousValue ?? SolidartConfig.trackPreviousValue,
        identifier = ._(name),
        super(
          flags: system.ReactiveFlags.mutable,
@@ -135,6 +144,7 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     String? name,
     bool? autoDispose,
     ValueComparator<T> equals,
+    bool? trackPreviousValue,
   }) = LazySignal;
 
   @override
@@ -145,6 +155,11 @@ class Signal<T> extends preset.SignalNode<Option<T>>
 
   @override
   final ValueComparator<T> equals;
+
+  @override
+  final bool trackPreviousValue;
+
+  Option<T> _previousValue = const None();
 
   @override
   T get value {
@@ -159,6 +174,19 @@ class Signal<T> extends preset.SignalNode<Option<T>>
 
   @override
   T get untrackedValue => super.currentValue.unwrap();
+
+  @override
+  T? get previousValue {
+    if (!trackPreviousValue) return null;
+    value;
+    return _previousValue.safeUnwrap();
+  }
+
+  @override
+  T? get untrackedPreviousValue {
+    if (!trackPreviousValue) return null;
+    return _previousValue.safeUnwrap();
+  }
 
   // TODO(nank1ro): See ReadonlySignal TODO, If `ReadonlySignal` rename
   // to `ReadSignal`, the `.toReadonly` method should be rename?
@@ -175,11 +203,19 @@ class Signal<T> extends preset.SignalNode<Option<T>>
   @override
   bool didUpdate() {
     flags = system.ReactiveFlags.mutable;
-    if (equals(pendingValue.unwrap(), currentValue.unwrap())) {
+    final current = currentValue;
+    final pending = pendingValue;
+    if (current is Some<T> &&
+        pending is Some<T> &&
+        equals(pending.value, current.value)) {
       return false;
     }
 
-    currentValue = pendingValue;
+    if (trackPreviousValue && current is Some<T>) {
+      _previousValue = current;
+    }
+
+    currentValue = pending;
     return true;
   }
 }
@@ -189,11 +225,13 @@ class LazySignal<T> extends Signal<T> {
     String? name,
     bool? autoDispose,
     ValueComparator<T> equals = identical,
+    bool? trackPreviousValue,
   }) : super._internal(
          const None(),
          name: name,
          autoDispose: autoDispose,
          equals: equals,
+         trackPreviousValue: trackPreviousValue,
        );
 
   bool get isInitialized => currentValue is Some<T>;
@@ -226,7 +264,10 @@ class Computed<T> extends preset.ComputedNode<T>
     this.equals = identical,
     bool? autoDispose,
     String? name,
+    bool? trackPreviousValue,
   }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+       trackPreviousValue =
+           trackPreviousValue ?? SolidartConfig.trackPreviousValue,
        identifier = ._(name),
        super(flags: system.ReactiveFlags.none, getter: (_) => getter());
 
@@ -238,6 +279,11 @@ class Computed<T> extends preset.ComputedNode<T>
 
   @override
   final ValueComparator<T> equals;
+
+  @override
+  final bool trackPreviousValue;
+
+  Option<T> _previousValue = const None();
 
   @override
   T get value {
@@ -260,6 +306,19 @@ class Computed<T> extends preset.ComputedNode<T>
   }
 
   @override
+  T? get previousValue {
+    if (!trackPreviousValue) return null;
+    value;
+    return _previousValue.safeUnwrap();
+  }
+
+  @override
+  T? get untrackedPreviousValue {
+    if (!trackPreviousValue) return null;
+    return _previousValue.safeUnwrap();
+  }
+
+  @override
   void dispose() {
     if (isDisposed) return;
     Disposable.unlinkSubs(this);
@@ -276,9 +335,14 @@ class Computed<T> extends preset.ComputedNode<T>
 
     final prevSub = preset.setActiveSub(this);
     try {
-      final pendingValue = getter(currentValue);
-      if (equals(currentValue, pendingValue)) {
+      final previousValue = currentValue;
+      final pendingValue = getter(previousValue);
+      if (equals(previousValue, pendingValue)) {
         return false;
+      }
+
+      if (trackPreviousValue && (previousValue is T)) {
+        _previousValue = Some(previousValue);
       }
 
       currentValue = pendingValue;
