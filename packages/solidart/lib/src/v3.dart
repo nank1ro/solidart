@@ -41,6 +41,24 @@ final class SolidartConfig {
   static bool trackPreviousValue = true;
 }
 
+T untracked<T>(T Function() callback) {
+  final prevSub = preset.setActiveSub();
+  try {
+    return callback();
+  } finally {
+    preset.setActiveSub(prevSub);
+  }
+}
+
+T batch<T>(T Function() fn) {
+  preset.startBatch();
+  try {
+    return fn();
+  } finally {
+    preset.endBatch();
+  }
+}
+
 class Identifier {
   Identifier._(this.name) : value = _counter++;
   static int _counter = 0;
