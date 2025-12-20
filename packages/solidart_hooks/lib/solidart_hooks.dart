@@ -7,35 +7,32 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 
-/// Bind an existing signal to the hook widget
+/// Bind an existing signal to the hook widget.
 ///
-/// This will not dispose the signal when the widget is unmounted
-T useExistingSignal<T extends ReadSignal>(T value) {
+/// This will not dispose the signal when the widget is unmounted.
+T useExistingSignal<T extends ReadonlySignal>(T value) {
   final target = useMemoized(() => value, [value]);
   return use(_SignalHook('useExistingSignal', target, disposeOnUnmount: false));
 }
 
-/// {macro signal}
+/// Create a [Signal] inside a hook widget.
 Signal<T> useSignal<T>(
   /// The initial value of the signal.
   T initialValue, {
 
-  /// {macro SignalBase.name}
+  /// Optional name used by DevTools.
   String? name,
 
-  /// {macro SignalBase.equals}
-  bool? equals,
+  /// Whether the signal should auto-dispose when unused.
+  bool? autoDispose,
 
-  /// {@macro SignalBase.autoDispose}
-  bool? autoDispose = false,
-
-  /// {@macro SignalBase.trackInDevTools}
+  /// Whether to report updates to DevTools.
   bool? trackInDevTools,
 
-  /// {@macro SignalBase.comparator}
-  bool Function(T? a, T? b) comparator = identical,
+  /// Comparator used to skip equal updates.
+  ValueComparator<T> equals = identical,
 
-  /// {@macro SignalBase.trackPreviousValue}
+  /// Whether to track previous values.
   bool? trackPreviousValue,
 }) {
   final target = useMemoized(
@@ -45,134 +42,113 @@ Signal<T> useSignal<T>(
       name: name,
       equals: equals,
       trackInDevTools: trackInDevTools,
-      comparator: comparator,
       trackPreviousValue: trackPreviousValue,
     ),
     [],
   );
-  return use(
-    _SignalHook('useSignal', target, disposeOnUnmount: autoDispose ?? true),
-  );
+  return use(_SignalHook('useSignal', target));
 }
 
-/// {macro list-signal}
-ListSignal<T> useListSignal<T>(
+/// Create a [ReactiveList] inside a hook widget.
+ReactiveList<T> useReactiveList<T>(
   /// The initial value of the signal.
   Iterable<T> initialValue, {
 
-  /// {macro SignalBase.name}
+  /// Optional name used by DevTools.
   String? name,
 
-  /// {macro SignalBase.equals}
-  bool? equals,
+  /// Whether the reactive list should auto-dispose when unused.
+  bool? autoDispose,
 
-  /// {@macro SignalBase.autoDispose}
-  bool? autoDispose = false,
-
-  /// {@macro SignalBase.trackInDevTools}
+  /// Whether to report updates to DevTools.
   bool? trackInDevTools,
 
-  /// {@macro SignalBase.comparator}
-  bool Function(List<T>? a, List<T>? b) comparator = identical,
+  /// Comparator used to skip equal updates.
+  ValueComparator<List<T>> equals = identical,
 
-  /// {@macro SignalBase.trackPreviousValue}
+  /// Whether to track previous values.
   bool? trackPreviousValue,
 }) {
   final target = useMemoized(
-    () => ListSignal<T>(
+    () => ReactiveList<T>(
       initialValue,
       autoDispose: autoDispose,
       name: name,
       equals: equals,
       trackInDevTools: trackInDevTools,
-      comparator: comparator,
       trackPreviousValue: trackPreviousValue,
     ),
     [],
   );
-  return use(
-    _SignalHook('useListSignal', target, disposeOnUnmount: autoDispose ?? true),
-  );
+  return use(_SignalHook('useReactiveList', target));
 }
 
-/// {macro set-signal}
-SetSignal<T> useSetSignal<T>(
+/// Create a [ReactiveSet] inside a hook widget.
+ReactiveSet<T> useReactiveSet<T>(
   /// The initial value of the signal.
   Iterable<T> initialValue, {
 
-  /// {macro SignalBase.name}
+  /// Optional name used by DevTools.
   String? name,
 
-  /// {macro SignalBase.equals}
-  bool? equals,
+  /// Whether the reactive set should auto-dispose when unused.
+  bool? autoDispose,
 
-  /// {@macro SignalBase.autoDispose}
-  bool? autoDispose = false,
-
-  /// {@macro SignalBase.trackInDevTools}
+  /// Whether to report updates to DevTools.
   bool? trackInDevTools,
 
-  /// {@macro SignalBase.comparator}
-  bool Function(Set<T>? a, Set<T>? b) comparator = identical,
+  /// Comparator used to skip equal updates.
+  ValueComparator<Set<T>> equals = identical,
 
-  /// {@macro SignalBase.trackPreviousValue}
+  /// Whether to track previous values.
   bool? trackPreviousValue,
 }) {
   final target = useMemoized(
-    () => SetSignal<T>(
+    () => ReactiveSet<T>(
       initialValue,
       autoDispose: autoDispose,
       name: name,
       equals: equals,
       trackInDevTools: trackInDevTools,
-      comparator: comparator,
       trackPreviousValue: trackPreviousValue,
     ),
     [],
   );
-  return use(
-    _SignalHook('useSetSignal', target, disposeOnUnmount: autoDispose ?? true),
-  );
+  return use(_SignalHook('useReactiveSet', target));
 }
 
-/// {macro map-signal}
-MapSignal<K, V> useMapSignal<K, V>(
+/// Create a [ReactiveMap] inside a hook widget.
+ReactiveMap<K, V> useReactiveMap<K, V>(
   /// The initial value of the signal.
   Map<K, V> initialValue, {
 
-  /// {macro SignalBase.name}
+  /// Optional name used by DevTools.
   String? name,
 
-  /// {macro SignalBase.equals}
-  bool? equals,
+  /// Whether the reactive map should auto-dispose when unused.
+  bool? autoDispose,
 
-  /// {@macro SignalBase.autoDispose}
-  bool? autoDispose = false,
-
-  /// {@macro SignalBase.trackInDevTools}
+  /// Whether to report updates to DevTools.
   bool? trackInDevTools,
 
-  /// {@macro SignalBase.comparator}
-  bool Function(Map<K, V>? a, Map<K, V>? b) comparator = identical,
+  /// Comparator used to skip equal updates.
+  ValueComparator<Map<K, V>> equals = identical,
 
-  /// {@macro SignalBase.trackPreviousValue}
+  /// Whether to track previous values.
   bool? trackPreviousValue,
 }) {
   final target = useMemoized(
-    () => MapSignal<K, V>(
+    () => ReactiveMap<K, V>(
       initialValue,
       autoDispose: autoDispose,
       name: name,
       equals: equals,
       trackInDevTools: trackInDevTools,
-      comparator: comparator,
       trackPreviousValue: trackPreviousValue,
     ),
     [],
   );
-  return use(
-    _SignalHook('useMapSignal', target, disposeOnUnmount: autoDispose ?? true),
-  );
+  return use(_SignalHook('useReactiveMap', target));
 }
 
 /// Create a new computed signal
@@ -180,22 +156,19 @@ Computed<T> useComputed<T>(
   /// The selector function to compute the value.
   T Function() selector, {
 
-  /// {macro SignalBase.name}
+  /// Optional name used by DevTools.
   String? name,
 
-  /// {macro SignalBase.equals}
-  bool? equals,
+  /// Whether the computed should auto-dispose when unused.
+  bool? autoDispose,
 
-  /// {@macro SignalBase.autoDispose}
-  bool? autoDispose = false,
-
-  /// {@macro SignalBase.trackInDevTools}
+  /// Whether to report updates to DevTools.
   bool? trackInDevTools,
 
-  /// {@macro SignalBase.comparator}
-  bool Function(T? a, T? b) comparator = identical,
+  /// Comparator used to skip equal updates.
+  ValueComparator<T> equals = identical,
 
-  /// {@macro SignalBase.trackPreviousValue}
+  /// Whether to track previous values.
   bool? trackPreviousValue,
 }) {
   final instance = useRef(selector);
@@ -207,35 +180,32 @@ Computed<T> useComputed<T>(
       name: name,
       equals: equals,
       trackInDevTools: trackInDevTools,
-      comparator: comparator,
       trackPreviousValue: trackPreviousValue,
     ),
     [],
   );
-  return use(
-    _SignalHook('useComputed', target, disposeOnUnmount: autoDispose ?? true),
-  );
+  return use(_SignalHook('useComputed', target));
 }
 
-/// {macro resource}
+/// Create a [Resource] from a future-producing [fetcher].
 Resource<T> useResource<T>(
   /// The asynchrounous function used to retrieve data.
   final Future<T> Function()? fetcher, {
 
-  /// {macro SignalBase.name}
+  /// Optional name used by DevTools.
   String? name,
 
-  /// {macro SignalBase.equals}
-  bool? equals,
+  /// Whether the resource should auto-dispose when unused.
+  bool? autoDispose,
 
-  /// {@macro SignalBase.autoDispose}
-  bool? autoDispose = false,
-
-  /// {@macro SignalBase.trackInDevTools}
+  /// Whether to report updates to DevTools.
   bool? trackInDevTools,
 
+  /// Comparator used to skip equal updates.
+  ValueComparator<ResourceState<T>> equals = identical,
+
   /// Reactive signal values passed to the fetcher, optional.
-  final SignalBase<dynamic>? source,
+  final ReadonlySignal<dynamic>? source,
 
   /// Indicates whether the resource should be computed lazily, defaults to true
   final bool lazy = true,
@@ -264,30 +234,28 @@ Resource<T> useResource<T>(
     ),
     [],
   );
-  return use(
-    _SignalHook('useResource', target, disposeOnUnmount: autoDispose ?? true),
-  );
+  return use(_SignalHook('useResource', target));
 }
 
-/// {macro resource}
+/// Create a [Resource] from a stream factory.
 Resource<T> useResourceStream<T>(
   /// The asynchrounous function used to retrieve data.
   final Stream<T> Function()? stream, {
 
-  /// {macro SignalBase.name}
+  /// Optional name used by DevTools.
   String? name,
 
-  /// {macro SignalBase.equals}
-  bool? equals,
+  /// Whether the resource should auto-dispose when unused.
+  bool? autoDispose,
 
-  /// {@macro SignalBase.autoDispose}
-  bool? autoDispose = false,
-
-  /// {@macro SignalBase.trackInDevTools}
+  /// Whether to report updates to DevTools.
   bool? trackInDevTools,
 
+  /// Comparator used to skip equal updates.
+  ValueComparator<ResourceState<T>> equals = identical,
+
   /// Reactive signal values passed to the fetcher, optional.
-  final SignalBase<dynamic>? source,
+  final ReadonlySignal<dynamic>? source,
 
   /// Indicates whether the resource should be computed lazily, defaults to true
   final bool lazy = true,
@@ -320,52 +288,36 @@ Resource<T> useResourceStream<T>(
     _SignalHook(
       'useResourceStream',
       target,
-      disposeOnUnmount: autoDispose ?? true,
     ),
   );
 }
 
-/// Create a signal effect
+/// Create an effect inside a hook widget.
 void useSolidartEffect(
-  dynamic Function() cb, {
-
-  void Function(Object error)? onError,
-
-  /// The name of the effect, useful for logging
+  VoidCallback cb, {
+  /// The name of the effect, useful for logging.
   String? name,
 
-  /// Delay each effect reaction
-  Duration? delay,
-
-  /// Whether to automatically dispose the effect (defaults to true).
-  ///
-  /// This happens automatically when all the tracked dependencies are
-  /// disposed.
+  /// Whether the effect should auto-dispose when unused.
   bool? autoDispose,
 
-  /// Detach effect, default value is [SolidartConfig.detachEffects]
+  /// Detach effect, default value is [SolidartConfig.detachEffects].
   bool? detach,
-
-  /// Whether to automatically run the effect (defaults to true).
-  bool? autorun,
 }) {
   final instance = useRef(cb);
   instance.value = cb;
   useEffect(
     () => Effect(
       () => instance.value(),
-      onError: onError,
       name: name,
-      delay: delay,
       autoDispose: autoDispose,
       detach: detach,
-      autorun: autorun,
     ).dispose,
     [],
   );
 }
 
-class _SignalHook<T, S extends ReadSignal<T>> extends Hook<S> {
+class _SignalHook<T, S extends ReadonlySignal<T>> extends Hook<S> {
   const _SignalHook(this.type, this.target, {this.disposeOnUnmount = true});
 
   final String type;
@@ -376,7 +328,7 @@ class _SignalHook<T, S extends ReadSignal<T>> extends Hook<S> {
   _SignalHookState<T, S> createState() => _SignalHookState();
 }
 
-class _SignalHookState<T, S extends ReadSignal<T>>
+class _SignalHookState<T, S extends ReadonlySignal<T>>
     extends HookState<S, _SignalHook<T, S>> {
   @override
   void initHook() {

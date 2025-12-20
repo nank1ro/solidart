@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:solidart_hooks/solidart_hooks.dart';
 
-class UseMapSignalExample extends HookWidget {
-  const UseMapSignalExample({super.key});
+class UseReactiveMapExample extends HookWidget {
+  const UseReactiveMapExample({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final userRoles = useMapSignal<String, String>({'admin': 'John'});
+    final userRoles = useReactiveMap<String, String>({'admin': 'John'});
     return Scaffold(
-      appBar: AppBar(title: const Text('useMapSignal')),
+      appBar: AppBar(title: const Text('useReactiveMap')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
