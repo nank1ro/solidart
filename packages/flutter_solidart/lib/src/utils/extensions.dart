@@ -13,9 +13,9 @@ extension ReadonlySignalToValueNotifier<T> on ReadonlySignal<T> {
 }
 
 class _SignalValueNotifier<T> extends ValueNotifier<T> {
-  _SignalValueNotifier(this._signal) : super(_signal.value) {
+  _SignalValueNotifier(this._signal) : super(_readValue(_signal)) {
     _effect = Effect(
-      () => value = _signal.value,
+      () => value = _readValue(_signal),
       autoDispose: false,
       detach: true,
     );
@@ -30,6 +30,13 @@ class _SignalValueNotifier<T> extends ValueNotifier<T> {
     _effect.dispose();
     super.dispose();
   }
+}
+
+T _readValue<T>(ReadonlySignal<T> signal) {
+  if (signal is Resource) {
+    return (signal as Resource).state as T;
+  }
+  return signal.value;
 }
 
 /// {@template value-listenable-to-signal}

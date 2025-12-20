@@ -45,7 +45,7 @@ class MyHomePage extends StatelessWidget {
     return ElevatedButton(
       child: const Text('Increment'),
       onPressed: () {
-        counter.updateValue((value) => throw UnimplementedError());
+        counter.value = counter.value + 1;
       },
     );
   }
