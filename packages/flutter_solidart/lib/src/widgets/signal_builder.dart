@@ -76,6 +76,9 @@ class _SignalBuilderElement extends StatelessElement {
   void _runEffect() {
     _effect.deps = _depsHead;
     _effect.depsTail = _depsTail;
+    if (!mounted) {
+      return;
+    }
     if (_isBuilding || dirty) {
       return;
     }
