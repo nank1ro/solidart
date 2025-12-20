@@ -1,45 +1,64 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:flutter/foundation.dart';
+import 'package:solidart/v3.dart';
 
-/// {@template signal-to-value-notifier}
-/// Converts a [SignalBase] into a [ValueNotifier];
+/// {@template readonly-signal-to-value-notifier}
+/// Converts a [ReadonlySignal] into a [ValueNotifier].
+///
+/// The returned notifier stays in sync with the signal and disposes its
+/// internal effect when the notifier or the signal is disposed.
 /// {@endtemplate}
-extension SignalToValueNotifier<T> on SignalBase<T> {
-  /// {@macro signal-to-value-notifier}
-  ValueNotifier<T> toValueNotifier() {
-    final notifier = ValueNotifier(value);
-    final unobserve = Effect(() => notifier.value = value);
-    onDispose(unobserve.call);
-    return notifier;
+extension ReadonlySignalToValueNotifier<T> on ReadonlySignal<T> {
+  /// {@macro readonly-signal-to-value-notifier}
+  ValueNotifier<T> toValueNotifier() => _SignalValueNotifier(this);
+}
+
+class _SignalValueNotifier<T> extends ValueNotifier<T> {
+  _SignalValueNotifier(this._signal) : super(_signal.value) {
+    _effect = Effect(
+      () => value = _signal.value,
+      autoDispose: false,
+      detach: true,
+    );
+    _signal.onDispose(_effect.dispose);
+  }
+
+  final ReadonlySignal<T> _signal;
+  late final Effect _effect;
+
+  @override
+  void dispose() {
+    _effect.dispose();
+    super.dispose();
   }
 }
 
-/// {@template value-notifier-to-signal}
-/// Converts a [ValueNotifier] into a [Signal];
+/// {@template value-listenable-to-signal}
+/// Converts a [ValueListenable] into a [Signal] that mirrors its value.
+///
+/// Updates flow from the [ValueListenable] into the signal. Disposing the
+/// signal removes the listener.
 /// {@endtemplate}
-extension ValueNotifierToSignal<T> on ValueNotifier<T> {
-  /// {@macro value-notifier-to-signal}
+extension ValueListenableToSignal<T> on ValueListenable<T> {
+  /// {@macro value-listenable-to-signal}
   Signal<T> toSignal({
-    /// {macro SignalBase.name}
     String? name,
-
-    /// {macro SignalBase.autoDispose}
     bool? autoDispose,
-
-    /// {macro SignalBase.trackInDevTools}
+    bool? trackPreviousValue,
     bool? trackInDevTools,
+    ValueComparator<T> equals = identical,
   }) {
     final signal = Signal(
       value,
-      equals: true,
       name: name,
       autoDispose: autoDispose,
+      trackPreviousValue: trackPreviousValue,
       trackInDevTools: trackInDevTools,
+      equals: equals,
     );
 
-    void setValue() => signal.value = value;
-    addListener(setValue);
-    signal.onDispose(() => removeListener(setValue));
+    void sync() => signal.value = value;
+    addListener(sync);
+    signal.onDispose(() => removeListener(sync));
     return signal;
   }
 }

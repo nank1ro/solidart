@@ -18,7 +18,7 @@ class _LazyCounterPageState extends State<LazyCounterPage> {
       body: Center(
         child: SignalBuilder(
           builder: (_, _) {
-            return switch (counter.hasValue) {
+            return switch (counter.isInitialized) {
               true => Text('Counter: ${counter.value}'),
               false => const Text('Counter: not initialized'),
             };
@@ -32,7 +32,7 @@ class _LazyCounterPageState extends State<LazyCounterPage> {
             heroTag: "subtract hero",
             child: const Icon(Icons.remove),
             onPressed: () {
-              counter.hasValue ? counter.value -= 1 : counter.value = 0;
+              counter.isInitialized ? counter.value -= 1 : counter.value = 0;
             },
           ),
           const SizedBox(width: 8),
@@ -40,7 +40,7 @@ class _LazyCounterPageState extends State<LazyCounterPage> {
             heroTag: "add hero",
             child: const Icon(Icons.add),
             onPressed: () {
-              counter.hasValue ? counter.value += 1 : counter.value = 0;
+              counter.isInitialized ? counter.value += 1 : counter.value = 0;
             },
           ),
         ],
