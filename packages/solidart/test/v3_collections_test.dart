@@ -48,6 +48,49 @@ void main() {
       expect(list.previousValue, isNull);
       expect(list.untrackedPreviousValue, isNull);
     });
+
+    test('no-op mutations do not notify', () {
+      final list = ReactiveList([1, 2, 3]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      list.addAll([]);
+      list.insertAll(1, []);
+      list.replaceRange(0, 0, []);
+      list.setAll(0, [1, 2, 3]);
+      list.setRange(0, 3, [1, 2, 3]);
+      list.fillRange(1, 1);
+      list.removeWhere((_) => false);
+      list.retainWhere((_) => true);
+      list.sort();
+
+      expect(runs, 1);
+    });
+
+    test('empty list no-op mutations do not notify', () {
+      final list = ReactiveList<int>([]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      list.clear();
+      list.removeWhere((_) => true);
+      list.sort();
+      list.shuffle();
+
+      expect(runs, 1);
+    });
   });
 
   group('ReactiveMap', () {
@@ -82,6 +125,44 @@ void main() {
 
       expect(map.previousValue, {'a': 1});
     });
+
+    test('no-op mutations do not notify', () {
+      final map = ReactiveMap({'a': 1, 'b': 2});
+      var runs = 0;
+
+      Effect(() {
+        map.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      map.addAll({});
+      map.updateAll((key, value) => value);
+      map.removeWhere((_, __) => false);
+      map.putIfAbsent('a', () => 99);
+
+      expect(runs, 1);
+    });
+
+    test('empty map no-op mutations do not notify', () {
+      final map = ReactiveMap<String, int>({});
+      var runs = 0;
+
+      Effect(() {
+        map.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      map.clear();
+      map.addAll({});
+      map.removeWhere((_, __) => true);
+      map.updateAll((_, value) => value);
+
+      expect(runs, 1);
+    });
   });
 
   group('ReactiveSet', () {
@@ -115,6 +196,45 @@ void main() {
       set.add(2);
 
       expect(set.previousValue, {1});
+    });
+
+    test('no-op mutations do not notify', () {
+      final set = ReactiveSet({1, 2});
+      var runs = 0;
+
+      Effect(() {
+        set.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      set.addAll([]);
+      set.removeAll([]);
+      set.retainAll({1, 2});
+      set.removeWhere((_) => false);
+      set.retainWhere((_) => true);
+
+      expect(runs, 1);
+    });
+
+    test('empty set no-op mutations do not notify', () {
+      final set = ReactiveSet<int>({});
+      var runs = 0;
+
+      Effect(() {
+        set.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      set.clear();
+      set.addAll([]);
+      set.removeAll([]);
+      set.retainAll({});
+
+      expect(runs, 1);
     });
   });
 }

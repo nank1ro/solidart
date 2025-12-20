@@ -88,4 +88,28 @@ void main() {
       expect(computed.untrackedPreviousValue, isNull);
     });
   });
+
+  group('LazySignal previous value', () {
+    test('throws when read before initialization', () {
+      final lazy = LazySignal<int>();
+      expect(() => lazy.value, throwsStateError);
+    });
+
+    test('tracks previous only after initialized and read', () {
+      final lazy = LazySignal<int>();
+
+      lazy.value = 1;
+
+      expect(lazy.previousValue, isNull);
+      expect(lazy.isInitialized, isTrue);
+
+      lazy.value = 2;
+
+      expect(lazy.untrackedPreviousValue, isNull);
+
+      lazy.value;
+
+      expect(lazy.untrackedPreviousValue, 1);
+    });
+  });
 }
