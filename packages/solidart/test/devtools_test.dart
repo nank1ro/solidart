@@ -50,8 +50,9 @@ void main() {
     expect(observer.updated, 0);
     expect(observer.disposed, 0);
 
-    signal.value = 1;
-    signal.value;
+    signal
+      ..value = 1
+      ..value;
 
     expect(observer.updated, 1);
 
@@ -64,11 +65,10 @@ void main() {
     final observer = _Observer();
     SolidartConfig.observers.add(observer);
 
-    final signal = Signal(0, trackInDevTools: false);
-
-    signal.value = 1;
-    signal.value;
-    signal.dispose();
+    Signal(0, trackInDevTools: false)
+      ..value = 1
+      ..value
+      ..dispose();
 
     expect(observer.created, 0);
     expect(observer.updated, 0);
@@ -80,7 +80,7 @@ void main() {
     final observer = _Observer();
     SolidartConfig.observers.add(observer);
 
-    final signal = Signal(0, trackInDevTools: true);
+    final _ = Signal(0, trackInDevTools: true);
 
     expect(observer.created, 1);
   });

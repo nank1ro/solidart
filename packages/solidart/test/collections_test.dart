@@ -33,20 +33,25 @@ void main() {
     test('tracks previous value after read', () {
       final list = ReactiveList([1, 2]);
 
-      expect(list.previousValue, isNull);
+      final values = (
+        initial: list.previousValue,
+        afterAdd: (list..add(3)).previousValue,
+      );
 
-      list.add(3);
-
-      expect(list.previousValue, [1, 2]);
+      expect(values.initial, isNull);
+      expect(values.afterAdd, [1, 2]);
     });
 
     test('respects trackPreviousValue false', () {
       final list = ReactiveList([1], trackPreviousValue: false);
 
-      list.add(2);
+      final values = (
+        previous: (list..add(2)).previousValue,
+        untracked: list.untrackedPreviousValue,
+      );
 
-      expect(list.previousValue, isNull);
-      expect(list.untrackedPreviousValue, isNull);
+      expect(values.previous, isNull);
+      expect(values.untracked, isNull);
     });
 
     test('no-op mutations do not notify', () {
@@ -60,15 +65,16 @@ void main() {
 
       expect(runs, 1);
 
-      list.addAll([]);
-      list.insertAll(1, []);
-      list.replaceRange(0, 0, []);
-      list.setAll(0, [1, 2, 3]);
-      list.setRange(0, 3, [1, 2, 3]);
-      list.fillRange(1, 1);
-      list.removeWhere((_) => false);
-      list.retainWhere((_) => true);
-      list.sort();
+      list
+        ..addAll([])
+        ..insertAll(1, [])
+        ..replaceRange(0, 0, [])
+        ..setAll(0, [1, 2, 3])
+        ..setRange(0, 3, [1, 2, 3])
+        ..fillRange(1, 1)
+        ..removeWhere((_) => false)
+        ..retainWhere((_) => true)
+        ..sort();
 
       expect(runs, 1);
     });
@@ -84,10 +90,11 @@ void main() {
 
       expect(runs, 1);
 
-      list.clear();
-      list.removeWhere((_) => true);
-      list.sort();
-      list.shuffle();
+      list
+        ..clear()
+        ..removeWhere((_) => true)
+        ..sort()
+        ..shuffle();
 
       expect(runs, 1);
     });
@@ -99,7 +106,7 @@ void main() {
       var runs = 0;
 
       Effect(() {
-        map['a'];
+        final _ = map['a'];
         runs++;
       });
 
@@ -121,9 +128,9 @@ void main() {
     test('tracks previous value after read', () {
       final map = ReactiveMap({'a': 1});
 
-      map['a'] = 2;
+      final previous = (map..['a'] = 2).previousValue;
 
-      expect(map.previousValue, {'a': 1});
+      expect(previous, {'a': 1});
     });
 
     test('no-op mutations do not notify', () {
@@ -137,10 +144,11 @@ void main() {
 
       expect(runs, 1);
 
-      map.addAll({});
-      map.updateAll((key, value) => value);
-      map.removeWhere((_, __) => false);
-      map.putIfAbsent('a', () => 99);
+      map
+        ..addAll({})
+        ..updateAll((key, value) => value)
+        ..removeWhere((key, value) => false)
+        ..putIfAbsent('a', () => 99);
 
       expect(runs, 1);
     });
@@ -156,10 +164,11 @@ void main() {
 
       expect(runs, 1);
 
-      map.clear();
-      map.addAll({});
-      map.removeWhere((_, __) => true);
-      map.updateAll((_, value) => value);
+      map
+        ..clear()
+        ..addAll({})
+        ..removeWhere((key, value) => true)
+        ..updateAll((key, value) => value);
 
       expect(runs, 1);
     });
@@ -193,9 +202,9 @@ void main() {
     test('tracks previous value after read', () {
       final set = ReactiveSet({1});
 
-      set.add(2);
+      final previous = (set..add(2)).previousValue;
 
-      expect(set.previousValue, {1});
+      expect(previous, {1});
     });
 
     test('no-op mutations do not notify', () {
@@ -209,11 +218,12 @@ void main() {
 
       expect(runs, 1);
 
-      set.addAll([]);
-      set.removeAll([]);
-      set.retainAll({1, 2});
-      set.removeWhere((_) => false);
-      set.retainWhere((_) => true);
+      set
+        ..addAll([])
+        ..removeAll([])
+        ..retainAll({1, 2})
+        ..removeWhere((_) => false)
+        ..retainWhere((_) => true);
 
       expect(runs, 1);
     });
@@ -229,10 +239,11 @@ void main() {
 
       expect(runs, 1);
 
-      set.clear();
-      set.addAll([]);
-      set.removeAll([]);
-      set.retainAll({});
+      set
+        ..clear()
+        ..addAll([])
+        ..removeAll([])
+        ..retainAll({});
 
       expect(runs, 1);
     });

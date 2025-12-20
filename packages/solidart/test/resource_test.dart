@@ -126,7 +126,7 @@ void main() {
         },
       );
 
-      resource.state;
+      final _ = resource.state;
       await Future<void>.delayed(Duration.zero);
       expect(calls, 1);
 
@@ -143,28 +143,31 @@ void main() {
       expect(resource.state.asReady?.value, 2);
     });
 
-    test('fetcher error transitions to error then recovers on refresh', () async {
-      var shouldThrow = true;
+    test(
+      'fetcher error transitions to error then recovers on refresh',
+      () async {
+        var shouldThrow = true;
 
-      final resource = Resource(
-        () async {
-          if (shouldThrow) {
-            throw StateError('boom');
-          }
-          return 42;
-        },
-        lazy: false,
-      );
+        final resource = Resource(
+          () async {
+            if (shouldThrow) {
+              throw StateError('boom');
+            }
+            return 42;
+          },
+          lazy: false,
+        );
 
-      await resource.resolve();
+        await resource.resolve();
 
-      expect(resource.state.hasError, isTrue);
+        expect(resource.state.hasError, isTrue);
 
-      shouldThrow = false;
-      await resource.refresh();
+        shouldThrow = false;
+        await resource.refresh();
 
-      expect(resource.state.asReady?.value, 42);
-    });
+        expect(resource.state.asReady?.value, 42);
+      },
+    );
 
     test('source change triggers a single refresh', () async {
       final source = Signal(0);
@@ -190,6 +193,8 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(calls, 2);
+
+      resource.dispose();
     });
 
     test('debounce groups source-triggered refreshes', () {
@@ -211,16 +216,19 @@ void main() {
 
         expect(calls, 1);
 
-        source.value = 1;
-        source.value = 2;
+        source
+          ..value = 1
+          ..value = 2;
 
-        async.elapse(const Duration(milliseconds: 49));
-        async.flushMicrotasks();
+        async
+          ..elapse(const Duration(milliseconds: 49))
+          ..flushMicrotasks();
 
         expect(calls, 1);
 
-        async.elapse(const Duration(milliseconds: 1));
-        async.flushMicrotasks();
+        async
+          ..elapse(const Duration(milliseconds: 1))
+          ..flushMicrotasks();
 
         expect(calls, 2);
 
@@ -236,7 +244,9 @@ void main() {
       );
 
       await resource.resolve();
-      resource.state;
+      {
+        final _ = resource.state;
+      }
 
       expect(resource.untrackedPreviousState?.isLoading, isTrue);
 
@@ -244,7 +254,9 @@ void main() {
 
       expect(resource.untrackedPreviousState?.isLoading, isTrue);
 
-      resource.state;
+      {
+        final _ = resource.state;
+      }
 
       expect(resource.untrackedPreviousState?.asReady?.value, 1);
     });
@@ -270,8 +282,9 @@ void main() {
         source.value = 1;
         resource.dispose();
 
-        async.elapse(const Duration(milliseconds: 50));
-        async.flushMicrotasks();
+        async
+          ..elapse(const Duration(milliseconds: 50))
+          ..flushMicrotasks();
 
         expect(calls, 1);
       });
@@ -402,8 +415,8 @@ void main() {
 
   group('resource state extensions', () {
     test('flags and accessors for ready/loading/error', () {
-      final ready = ResourceState<int>.ready(1, isRefreshing: true);
-      final loading = ResourceState<int>.loading();
+      const ready = ResourceState<int>.ready(1, isRefreshing: true);
+      const loading = ResourceState<int>.loading();
       final error = ResourceState<int>.error(
         StateError('boom'),
         stackTrace: StackTrace.current,
@@ -439,14 +452,14 @@ void main() {
     });
 
     test('when/maybeWhen/maybeMap behave as expected', () {
-      final ready = ResourceState<int>.ready(2);
+      const ready = ResourceState<int>.ready(2);
       final error = ResourceState<int>.error(StateError('boom'));
-      final loading = ResourceState<int>.loading();
+      const loading = ResourceState<int>.loading();
 
       expect(
         ready.when(
           ready: (value) => 'ready $value',
-          error: (_, __) => 'error',
+          error: (_, stackTrace) => 'error',
           loading: () => 'loading',
         ),
         'ready 2',
@@ -455,7 +468,7 @@ void main() {
       expect(
         error.when(
           ready: (_) => 'ready',
-          error: (err, __) => err.toString(),
+          error: (err, stackTrace) => err.toString(),
           loading: () => 'loading',
         ),
         'Bad state: boom',
@@ -464,7 +477,7 @@ void main() {
       expect(
         loading.when(
           ready: (_) => 'ready',
-          error: (_, __) => 'error',
+          error: (_, stackTrace) => 'error',
           loading: () => 'loading',
         ),
         'loading',
@@ -478,7 +491,7 @@ void main() {
       expect(
         error.maybeWhen(
           orElse: () => 'fallback',
-          error: (err, __) => err.runtimeType.toString(),
+          error: (err, stackTrace) => err.runtimeType.toString(),
         ),
         'StateError',
       );
