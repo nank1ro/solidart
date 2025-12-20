@@ -1,6 +1,3 @@
-// ignore_for_file: public_member_api_docs
-// TODO(medz): Add code comments
-
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
@@ -11,51 +8,130 @@ import 'package:meta/meta.dart';
 import 'package:solidart/deps/preset.dart' as preset;
 import 'package:solidart/deps/system.dart' as system;
 
+/// Compares two values for equality.
+///
+/// Return `true` when the update should be skipped because values are
+/// considered equivalent.
 typedef ValueComparator<T> = bool Function(T? a, T? b);
+
+/// Lazily produces a value.
 typedef ValueGetter<T> = T Function();
+
+/// A callback that returns no value.
 typedef VoidCallback = ValueGetter<void>;
 
+/// An optional value container.
+///
+/// Use [Some] to represent presence and [None] to represent absence without
+/// relying on `null`.
 sealed class Option<T> {
+  /// Base constructor for option values.
   const Option();
 
+  /// Returns the contained value or throws if this is [None].
   T unwrap() => switch (this) {
     Some<T>(:final value) => value,
     _ => throw StateError('Option is None'),
   };
 
+  /// Returns the contained value or `null` if this is [None].
   T? safeUnwrap() => switch (this) {
     Some<T>(:final value) => value,
     _ => null,
   };
 }
 
+/// A present optional value.
 final class Some<T> extends Option<T> {
+  /// Creates an option that wraps [value].
   const Some(this.value);
 
+  /// The wrapped value.
   final T value;
 }
 
+/// An absent optional value.
 final class None<T> extends Option<T> {
+  /// Creates an option with no value.
   const None();
 }
 
+/// {@template v3-config}
+/// Global configuration for v3 reactive primitives.
+///
+/// These flags provide defaults for newly created signals/effects/resources.
+/// You can override them per-instance via constructor parameters.
+/// {@endtemplate}
 final class SolidartConfig {
   const SolidartConfig._();
 
+  /// Whether nodes auto-dispose when they lose all subscribers.
+  ///
+  /// When enabled, signals/computeds/effects may dispose themselves once
+  /// nothing depends on them.
   static bool autoDispose = false;
+
+  /// Whether nested effects detach from parent subscriptions.
+  ///
+  /// When `true`, inner effects do not become dependencies of their parent
+  /// effect unless explicitly linked.
   static bool detachEffects = false;
+
+  /// Whether to track previous values by default.
+  ///
+  /// Previous values are captured only after a signal has been read at least
+  /// once.
   static bool trackPreviousValue = true;
+
+  /// Whether to keep values while refreshing resources.
+  ///
+  /// When `true`, a refresh marks the state as `isRefreshing` instead of
+  /// replacing it with `loading`.
   static bool useRefreshing = true;
+
+  /// Whether DevTools tracking is enabled.
+  ///
+  /// Signals only emit DevTools events when both this flag and
+  /// `trackInDevTools` are `true`.
   static bool devToolsEnabled = false;
 
+  /// Registered observers for signal lifecycle events.
+  ///
+  /// Observers are notified only when `trackInDevTools` is enabled for the
+  /// signal instance.
   static final observers = <SolidartObserver>[];
 }
 
+/// {@template v3-observer}
+/// Observer for signal lifecycle events.
+///
+/// Use this for logging or instrumentation without depending on DevTools:
+/// ```dart
+/// class Logger extends SolidartObserver {
+///   @override
+///   void didCreateSignal(ReadonlySignal<Object?> signal) {
+///     print('created: ${signal.identifier.value}');
+///   }
+///   @override
+///   void didUpdateSignal(ReadonlySignal<Object?> signal) {}
+///   @override
+///   void didDisposeSignal(ReadonlySignal<Object?> signal) {}
+/// }
+///
+/// SolidartConfig.observers.add(Logger());
+/// ```
+/// {@endtemplate}
 abstract class SolidartObserver {
+  /// {@macro v3-observer}
   const SolidartObserver();
 
+  /// Called when a signal is created.
   void didCreateSignal(ReadonlySignal<Object?> signal);
+
+  /// Called when a signal updates.
   void didUpdateSignal(ReadonlySignal<Object?> signal);
+
+  /// Called when a signal is disposed.
   void didDisposeSignal(ReadonlySignal<Object?> signal);
 }
 
@@ -203,6 +279,18 @@ Object? _computedValue<T>(Computed<T> signal) {
   return null;
 }
 
+/// Runs [callback] without tracking dependencies.
+///
+/// This is useful when you want to read or write signals inside an effect
+/// without establishing a dependency.
+///
+/// ```dart
+/// final count = Signal(0);
+/// Effect(() {
+///   print(count.value);
+///   untracked(() => count.value = count.value + 1);
+/// });
+/// ```
 T untracked<T>(T Function() callback) {
   final prevSub = preset.setActiveSub();
   try {
@@ -212,6 +300,21 @@ T untracked<T>(T Function() callback) {
   }
 }
 
+/// Batches signal updates and flushes once at the end.
+///
+/// Nested batches are supported; the final flush happens when the outermost
+/// batch completes.
+///
+/// ```dart
+/// final a = Signal(1);
+/// final b = Signal(2);
+/// Effect(() => print('sum: ${a.value + b.value}'));
+///
+/// batch(() {
+///   a.value = 3;
+///   b.value = 4;
+/// });
+/// ```
 T batch<T>(T Function() fn) {
   preset.startBatch();
   try {
@@ -221,31 +324,50 @@ T batch<T>(T Function() fn) {
   }
 }
 
+/// A unique identifier with an optional name.
+///
+/// Used by DevTools and diagnostics to track instances.
 class Identifier {
   Identifier._(this.name) : value = _counter++;
   static int _counter = 0;
 
+  /// Optional human-readable name.
   final String? name;
+
+  /// Unique numeric identifier.
   final int value;
 }
 
+/// Base configuration shared by reactive primitives.
 abstract interface class Configuration {
+  /// Identifier for the instance.
   Identifier get identifier;
+
+  /// Whether the instance auto-disposes.
   bool get autoDispose;
 }
 
+/// Disposable behavior for reactive primitives.
 abstract class Disposable {
+  /// Whether this instance has been disposed.
   bool get isDisposed;
 
+  /// Registers a callback to run on dispose.
   void onDispose(VoidCallback callback);
+
+  /// Disposes the instance.
   void dispose();
 
+  /// Whether the node can be auto-disposed.
   static bool canAutoDispose(system.ReactiveNode node) => switch (node) {
     Disposable(:final isDisposed) && Configuration(:final autoDispose) =>
       !isDisposed && autoDispose,
     _ => false,
   };
 
+  /// Unlinks dependencies from a node.
+  ///
+  /// This is used to break reactive links during disposal.
   static void unlinkDeps(system.ReactiveNode node) {
     var link = node.deps;
     while (link != null) {
@@ -259,6 +381,9 @@ abstract class Disposable {
     }
   }
 
+  /// Unlinks subscribers from a node.
+  ///
+  /// This is used to break reactive links during disposal.
   static void unlinkSubs(system.ReactiveNode node) {
     var link = node.subs;
     while (link != null) {
@@ -273,24 +398,98 @@ abstract class Disposable {
   }
 }
 
+/// Common configuration for signals.
 abstract interface class SignalConfiguration<T> implements Configuration {
+  /// Comparator used to skip equal updates.
+  ///
+  /// When it returns `true`, the new value is treated as equal and the update
+  /// is skipped.
   ValueComparator<T> get equals;
+
+  /// Whether to track previous values.
+  ///
+  /// Previous values are captured on successful updates after a tracked read.
   bool get trackPreviousValue;
+
+  /// Whether to report to DevTools.
   bool get trackInDevTools;
 }
 
+/// Read-only reactive value.
+///
+/// Reading [value] establishes a dependency; [untrackedValue] does not.
+/// This interface is implemented by [Signal], [Computed], and [Resource].
+///
+/// ```dart
+/// final count = Signal(0);
+/// ReadonlySignal<int> readonly = count.toReadonly();
+/// ```
 // TODO(nank1ro): Maybe rename to `ReadSignal`? medz: I still recommend `ReadonlySignal` because it is semantically clearer., https://github.com/nank1ro/solidart/pull/166#issuecomment-3623175977
 abstract interface class ReadonlySignal<T>
     implements system.ReactiveNode, Disposable, SignalConfiguration<T> {
+  /// Returns the current value and tracks dependencies.
   T get value;
+
+  /// Returns the current value without tracking.
   T get untrackedValue;
+
+  /// Returns the previous value (tracked read).
+  ///
+  /// This may return `null` if tracking is disabled or the signal has not been
+  /// read since the last update.
   T? get previousValue;
+
+  /// Returns the previous value without tracking.
   T? get untrackedPreviousValue;
 }
 
+/// {@template v3-signal}
+/// # Signals
+/// Signals are the cornerstone of reactivity in v3. They store values that
+/// change over time, and any reactive computation that reads a signal will
+/// automatically update when the signal changes.
+///
+/// Create a signal with an initial value:
+/// ```dart
+/// final counter = Signal(0);
+/// ```
+///
+/// Read the current value:
+/// ```dart
+/// counter.value; // 0
+/// ```
+///
+/// Update the value:
+/// ```dart
+/// counter.value++;
+/// // or
+/// counter.value = 10;
+/// ```
+///
+/// Signals support previous value tracking. When enabled, `previousValue`
+/// updates only after the signal has been read at least once:
+/// ```dart
+/// final count = Signal(0);
+/// count.value = 1;
+/// count.previousValue; // null (not read yet)
+/// count.value;         // establishes tracking
+/// count.previousValue; // 0
+/// ```
+///
+/// Signals can be created lazily using [Signal.lazy]. A lazy signal does not
+/// have a value until it is first assigned, and reading it early throws
+/// [StateError].
+/// {@endtemplate}
+/// {@template v3-signal-equals}
+/// Updates are skipped when [equals] reports the new value is equivalent to
+/// the previous one.
+/// {@endtemplate}
 class Signal<T> extends preset.SignalNode<Option<T>>
     with DisposableMixin
     implements ReadonlySignal<T> {
+  /// {@macro v3-signal}
+  ///
+  /// {@macro v3-signal-equals}
   Signal(
     T initialValue, {
     bool? autoDispose,
@@ -327,6 +526,10 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     _notifySignalCreation(this);
   }
 
+  /// {@macro v3-signal}
+  ///
+  /// This is a lazy signal: it has no value at construction time.
+  /// Reading [value] before the first assignment throws [StateError].
   factory Signal.lazy({
     String? name,
     bool? autoDispose,
@@ -358,6 +561,9 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     return super.get().unwrap();
   }
 
+  /// Sets the current value.
+  ///
+  /// {@macro v3-signal-equals}
   set value(T newValue) {
     assert(!isDisposed, 'Signal is disposed');
     set(Some(newValue));
@@ -381,6 +587,7 @@ class Signal<T> extends preset.SignalNode<Option<T>>
 
   // TODO(nank1ro): See ReadonlySignal TODO, If `ReadonlySignal` rename
   // to `ReadSignal`, the `.toReadonly` method should be rename?
+  /// Returns a read-only view of this signal.
   ReadonlySignal<T> toReadonly() => this;
 
   @override
@@ -413,7 +620,18 @@ class Signal<T> extends preset.SignalNode<Option<T>>
   }
 }
 
+/// A signal that starts uninitialized until first set.
+///
+/// This is the concrete type behind [Signal.lazy]. Reading [value] before the
+/// first assignment throws [StateError].
+///
+/// ```dart
+/// final lazy = Signal.lazy<int>();
+/// lazy.value = 1;
+/// print(lazy.value); // 1
+/// ```
 class LazySignal<T> extends Signal<T> {
+  /// Creates a lazy signal.
   LazySignal({
     String? name,
     bool? autoDispose,
@@ -429,6 +647,9 @@ class LazySignal<T> extends Signal<T> {
          trackInDevTools: trackInDevTools,
        );
 
+  /// Whether the signal has been initialized.
+  ///
+  /// This becomes `true` after the first assignment.
   bool get isInitialized => currentValue is Some<T>;
 
   @override
@@ -453,7 +674,23 @@ class LazySignal<T> extends Signal<T> {
   }
 }
 
+/// {@template v3-reactive-list}
+/// A reactive wrapper around a [List] that copies on write.
+///
+/// Mutations create a new list instance so that updates are observable:
+/// ```dart
+/// final list = ReactiveList([1, 2]);
+/// Effect(() => print(list.length));
+/// list.add(3); // triggers effect
+/// ```
+///
+/// Reads (like `length` or index access) establish dependencies; the usual
+/// list API is supported.
+/// {@endtemplate}
 class ReactiveList<E> extends Signal<List<E>> with ListMixin<E> {
+  /// {@macro v3-reactive-list}
+  ///
+  /// Creates a reactive list with the provided initial values.
   ReactiveList(
     Iterable<E> initialValue, {
     bool? autoDispose,
@@ -488,9 +725,7 @@ class ReactiveList<E> extends Signal<List<E>> with ListMixin<E> {
   set length(int newLength) {
     final current = untrackedValue;
     if (current.length == newLength) return;
-    final next = List<E>.of(current);
-    next.length = newLength;
-    value = next;
+    value = List<E>.of(current)..length = newLength;
   }
 
   @override
@@ -567,8 +802,8 @@ class ReactiveList<E> extends Signal<List<E>> with ListMixin<E> {
   }
 
   @override
-  void replaceRange(int start, int end, Iterable<E> replacements) {
-    final next = _copy()..replaceRange(start, end, replacements);
+  void replaceRange(int start, int end, Iterable<E> newContents) {
+    final next = _copy()..replaceRange(start, end, newContents);
     if (_listEquals(untrackedValue, next)) return;
     value = next;
   }
@@ -588,9 +823,9 @@ class ReactiveList<E> extends Signal<List<E>> with ListMixin<E> {
   }
 
   @override
-  void fillRange(int start, int end, [E? fillValue]) {
+  void fillRange(int start, int end, [E? fill]) {
     if (end <= start) return;
-    final next = _copy()..fillRange(start, end, fillValue);
+    final next = _copy()..fillRange(start, end, fill);
     if (_listEquals(untrackedValue, next)) return;
     value = next;
   }
@@ -638,10 +873,26 @@ class ReactiveList<E> extends Signal<List<E>> with ListMixin<E> {
 
   @override
   String toString() =>
-      'ReactiveList<$E>(value: ${untrackedValue}, previousValue: ${untrackedPreviousValue})';
+      'ReactiveList<$E>(value: $untrackedValue, '
+      'previousValue: $untrackedPreviousValue)';
 }
 
+/// {@template v3-reactive-set}
+/// A reactive wrapper around a [Set] that copies on write.
+///
+/// Mutations create a new set instance so that updates are observable:
+/// ```dart
+/// final set = ReactiveSet({1});
+/// Effect(() => print(set.length));
+/// set.add(2); // triggers effect
+/// ```
+///
+/// Reads (like `length` or `contains`) establish dependencies.
+/// {@endtemplate}
 class ReactiveSet<E> extends Signal<Set<E>> with SetMixin<E> {
+  /// {@macro v3-reactive-set}
+  ///
+  /// Creates a reactive set with the provided initial values.
   ReactiveSet(
     Iterable<E> initialValue, {
     bool? autoDispose,
@@ -751,10 +1002,26 @@ class ReactiveSet<E> extends Signal<Set<E>> with SetMixin<E> {
 
   @override
   String toString() =>
-      'ReactiveSet<$E>(value: ${untrackedValue}, previousValue: ${untrackedPreviousValue})';
+      'ReactiveSet<$E>(value: $untrackedValue, '
+      'previousValue: $untrackedPreviousValue)';
 }
 
+/// {@template v3-reactive-map}
+/// A reactive wrapper around a [Map] that copies on write.
+///
+/// Mutations create a new map instance so that updates are observable:
+/// ```dart
+/// final map = ReactiveMap({'a': 1});
+/// Effect(() => print(map['a']));
+/// map['a'] = 2; // triggers effect
+/// ```
+///
+/// Reads (like `[]`, `keys`, or `length`) establish dependencies.
+/// {@endtemplate}
 class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
+  /// {@macro v3-reactive-map}
+  ///
+  /// Creates a reactive map with the provided initial values.
   ReactiveMap(
     Map<K, V> initialValue, {
     bool? autoDispose,
@@ -836,9 +1103,9 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   }
 
   @override
-  bool containsValue(Object? candidate) {
+  bool containsValue(Object? value) {
     this.value;
-    return untrackedValue.containsValue(candidate);
+    return untrackedValue.containsValue(value);
   }
 
   @override
@@ -891,8 +1158,7 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   void updateAll(V Function(K key, V value) update) {
     final current = untrackedValue;
     if (current.isEmpty) return;
-    final next = Map<K, V>.of(current);
-    next.updateAll(update);
+    final next = Map<K, V>.of(current)..updateAll(update);
     if (next.length == current.length &&
         next.keys.every((key) {
           return current.containsKey(key) && current[key] == next[key];
@@ -917,12 +1183,31 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
 
   @override
   String toString() =>
-      'ReactiveMap<$K, $V>(value: ${untrackedValue}, previousValue: ${untrackedPreviousValue})';
+      'ReactiveMap<$K, $V>(value: $untrackedValue, '
+      'previousValue: $untrackedPreviousValue)';
 }
 
+/// {@template v3-computed}
+/// # Computed
+/// A computed signal derives its value from other signals. It is read-only
+/// and recalculates whenever any dependency changes.
+///
+/// Use `Computed` to derive state or combine multiple signals:
+/// ```dart
+/// final firstName = Signal('Josh');
+/// final lastName = Signal('Brown');
+/// final fullName = Computed(() => '${firstName.value} ${lastName.value}');
+/// ```
+///
+/// Computeds only notify when the derived value changes. You can customize
+/// equality via [equals] to skip updates for equivalent values.
+///
+/// Like signals, computeds can track previous values once they have been read.
+/// {@endtemplate}
 class Computed<T> extends preset.ComputedNode<T>
     with DisposableMixin
     implements ReadonlySignal<T> {
+  /// {@macro v3-computed}
   Computed(
     ValueGetter<T> getter, {
     this.equals = identical,
@@ -1028,9 +1313,29 @@ class Computed<T> extends preset.ComputedNode<T>
   }
 }
 
+/// {@template v3-effect}
+/// # Effect
+/// Effects run a side-effect whenever any signal they read changes.
+///
+/// ```dart
+/// final counter = Signal(0);
+/// Effect(() {
+///   print('count: ${counter.value}');
+/// });
+/// ```
+///
+/// Effects run once immediately when created. If you need a lazy effect,
+/// create it with [Effect.manual] and call [run] yourself.
+///
+/// Nested effects can either attach to their parent (default) or detach by
+/// passing `detach: true` or by enabling [SolidartConfig.detachEffects].
+///
+/// Call [dispose] to stop the effect and release dependencies.
+/// {@endtemplate}
 class Effect extends preset.EffectNode
     with DisposableMixin
     implements Disposable, Configuration {
+  /// {@macro v3-effect}
   factory Effect(
     VoidCallback callback, {
     bool? autoDispose,
@@ -1043,6 +1348,26 @@ class Effect extends preset.EffectNode
     detach: detach,
   )..run();
 
+  /// Creates an effect without running it.
+  ///
+  /// Use this when you need to *delay* the first run or decide *when* the
+  /// effect should start tracking dependencies. Common cases:
+  /// - you must create several signals first and only then start the effect
+  /// - you want to control the first run in tests
+  /// - you need conditional startup (e.g. after async setup)
+  ///
+  /// The effect will not track anything until you call [run]:
+  /// ```dart
+  /// final count = Signal(0);
+  /// final effect = Effect.manual(() {
+  ///   print('count: ${count.value}');
+  /// });
+  ///
+  /// count.value = 1; // no output yet
+  /// effect.run();    // prints "count: 1" and starts tracking
+  /// ```
+  ///
+  /// If you want the effect to run immediately, use the [Effect] factory.
   Effect.manual(
     VoidCallback callback, {
     bool? autoDispose,
@@ -1063,8 +1388,10 @@ class Effect extends preset.EffectNode
   @override
   final Identifier identifier;
 
+  /// Whether this effect detaches from parent subscriptions.
   final bool detach;
 
+  /// Runs the effect and tracks dependencies.
   void run() {
     final prevSub = preset.setActiveSub(this);
     if (!detach && prevSub != null) {
@@ -1088,7 +1415,40 @@ class Effect extends preset.EffectNode
   }
 }
 
+/// {@template v3-resource}
+/// # Resource
+/// A resource is a signal designed for async data. It wraps the common states
+/// of asynchronous work: `ready`, `loading`, and `error`.
+///
+/// Resources can be driven by:
+/// - a `fetcher` that returns a `Future`
+/// - a `stream` that yields values over time
+/// - an optional `source` signal that triggers refreshes
+///
+/// Example using a fetcher:
+/// ```dart
+/// final userId = Signal(1);
+///
+/// Future<String> fetchUser() async {
+///   final id = userId.value;
+///   return 'user:$id';
+/// }
+///
+/// final user = Resource(fetchUser, source: userId);
+/// ```
+///
+/// The current state is available via [state] and provides helpers like
+/// `when`, `maybeWhen`, `asReady`, `asError`, `isLoading`, and `isRefreshing`.
+///
+/// The [resolve] method starts the resource once. The [refresh] method forces
+/// a new fetch or re-subscribes to the stream. When [useRefreshing] is true,
+/// refresh updates the current state with `isRefreshing` instead of resetting
+/// to `loading`.
+/// {@endtemplate}
 class Resource<T> extends Signal<ResourceState<T>> {
+  /// {@macro v3-resource}
+  ///
+  /// Creates a resource backed by a future-producing [fetcher].
   Resource(
     this.fetcher, {
     this.source,
@@ -1116,6 +1476,23 @@ class Resource<T> extends Signal<ResourceState<T>> {
     }
   }
 
+  /// {@macro v3-resource}
+  ///
+  /// Creates a resource backed by a stream factory.
+  ///
+  /// Use this when your data source is an ongoing stream (e.g. sockets,
+  /// Firestore snapshots, or SSE). The stream is subscribed on resolve and
+  /// re-subscribed when [refresh] is called or when [source] changes.
+  ///
+  /// ```dart
+  /// final ticks = Resource.stream(
+  ///   () => Stream.periodic(const Duration(seconds: 1), (i) => i),
+  ///   lazy: false,
+  /// );
+  /// ```
+  ///
+  /// When a refresh happens, the previous subscription is cancelled and
+  /// events from older subscriptions are ignored.
   Resource.stream(
     this.stream, {
     this.source,
@@ -1143,11 +1520,31 @@ class Resource<T> extends Signal<ResourceState<T>> {
     }
   }
 
+  /// Optional source signal that triggers refreshes when it changes.
+  ///
+  /// When [source] updates, the resource refreshes. If [debounceDelay] is set,
+  /// multiple source changes are coalesced.
   final ReadonlySignal<dynamic>? source;
+
+  /// Fetches the resource value.
   final Future<T> Function()? fetcher;
+
+  /// Provides a stream of resource values.
   final Stream<T> Function()? stream;
+
+  /// Whether the resource is resolved lazily.
+  ///
+  /// When `true`, the resource resolves on first read or when [resolve] is
+  /// called explicitly.
   final bool lazy;
+
+  /// Whether to keep previous value while refreshing.
+  ///
+  /// When `true`, refresh updates the current state with `isRefreshing` rather
+  /// than replacing it with `loading`.
   final bool useRefreshing;
+
+  /// Optional debounce duration for source-triggered refreshes.
   final Duration? debounceDelay;
 
   bool _resolved = false;
@@ -1157,23 +1554,33 @@ class Resource<T> extends Signal<ResourceState<T>> {
   StreamSubscription<T>? _streamSubscription;
   Timer? _debounceTimer;
 
+  /// Returns the current state, resolving lazily if needed.
   ResourceState<T> get state {
     _resolveIfNeeded();
     return value;
   }
 
+  /// Sets the current state.
   set state(ResourceState<T> next) => value = next;
 
+  /// Returns the previous state (tracked read), or `null`.
+  ///
+  /// Previous state is available only after a tracked read.
   ResourceState<T>? get previousState {
     _resolveIfNeeded();
     if (!_resolved) return null;
     return previousValue;
   }
 
+  /// Returns the current state without tracking.
   ResourceState<T> get untrackedState => untrackedValue;
 
+  /// Returns the previous state without tracking.
   ResourceState<T>? get untrackedPreviousState => untrackedPreviousValue;
 
+  /// Resolves the resource if it has not been resolved yet.
+  ///
+  /// Multiple calls are coalesced into a single in-flight resolve.
   Future<void> resolve() async {
     if (isDisposed) return;
     if (_resolveFuture != null) return _resolveFuture!;
@@ -1187,6 +1594,10 @@ class Resource<T> extends Signal<ResourceState<T>> {
     return _resolveFuture!;
   }
 
+  /// Re-fetches or re-subscribes to the resource.
+  ///
+  /// If the resource has not been resolved yet, this triggers [resolve]
+  /// instead.
   Future<void> refresh() async {
     if (!_resolved) {
       await resolve();
@@ -1320,20 +1731,51 @@ class Resource<T> extends Signal<ResourceState<T>> {
   }
 }
 
+/// {@template v3-resource-state}
+/// Represents the state of a [Resource].
+///
+/// A resource is always in one of:
+/// - `ready(data)` when a value is available
+/// - `loading()` while work is in progress
+/// - `error(error)` when a failure occurs
+///
+/// Use [ResourceStateExtensions] helpers to map or pattern-match:
+/// ```dart
+/// final state = resource.state;
+/// final label = state.when(
+///   ready: (data) => 'ready: $data',
+///   error: (err, _) => 'error: $err',
+///   loading: () => 'loading',
+/// );
+/// ```
+/// {@endtemplate}
 @sealed
 @immutable
 sealed class ResourceState<T> {
+  /// Base constructor for resource states.
+  const ResourceState();
+
+  /// {@macro v3-resource-state}
+  ///
+  /// Creates a ready state with [data].
   const factory ResourceState.ready(T data, {bool isRefreshing}) =
       ResourceReady<T>;
+
+  /// {@macro v3-resource-state}
+  ///
+  /// Creates a loading state.
   const factory ResourceState.loading() = ResourceLoading<T>;
+
+  /// {@macro v3-resource-state}
+  ///
+  /// Creates an error state.
   const factory ResourceState.error(
     Object error, {
     StackTrace? stackTrace,
     bool isRefreshing,
   }) = ResourceError<T>;
 
-  const ResourceState();
-
+  /// Maps each concrete state to a value.
   R map<R>({
     required R Function(ResourceReady<T> ready) ready,
     required R Function(ResourceError<T> error) error,
@@ -1341,11 +1783,16 @@ sealed class ResourceState<T> {
   });
 }
 
+/// Ready state containing data.
 @immutable
 class ResourceReady<T> implements ResourceState<T> {
+  /// Creates a ready state with [value].
   const ResourceReady(this.value, {this.isRefreshing = false});
 
+  /// The resource value.
   final T value;
+
+  /// Whether the resource is refreshing.
   final bool isRefreshing;
 
   @override
@@ -1357,6 +1804,7 @@ class ResourceReady<T> implements ResourceState<T> {
     return ready(this);
   }
 
+  /// Returns a copy with updated fields.
   ResourceReady<T> copyWith({
     T? value,
     bool? isRefreshing,
@@ -1384,8 +1832,10 @@ class ResourceReady<T> implements ResourceState<T> {
   int get hashCode => Object.hash(runtimeType, value, isRefreshing);
 }
 
+/// Loading state.
 @immutable
 class ResourceLoading<T> implements ResourceState<T> {
+  /// Creates a loading state.
   const ResourceLoading();
 
   @override
@@ -1407,16 +1857,23 @@ class ResourceLoading<T> implements ResourceState<T> {
   int get hashCode => runtimeType.hashCode;
 }
 
+/// Error state containing an error and optional stack trace.
 @immutable
 class ResourceError<T> implements ResourceState<T> {
+  /// Creates an error state.
   const ResourceError(
     this.error, {
     this.stackTrace,
     this.isRefreshing = false,
   });
 
+  /// The error object.
   final Object error;
+
+  /// Optional stack trace.
   final StackTrace? stackTrace;
+
+  /// Whether the resource is refreshing.
   final bool isRefreshing;
 
   @override
@@ -1428,6 +1885,7 @@ class ResourceError<T> implements ResourceState<T> {
     return error(this);
   }
 
+  /// Returns a copy with updated fields.
   ResourceError<T> copyWith({
     Object? error,
     StackTrace? stackTrace,
@@ -1459,28 +1917,43 @@ class ResourceError<T> implements ResourceState<T> {
   int get hashCode => Object.hash(runtimeType, error, stackTrace, isRefreshing);
 }
 
+/// Convenience accessors for [ResourceState].
+///
+/// Includes common flags (`isLoading`, `isReady`, `hasError`), casting helpers
+/// (`asReady`, `asError`), and pattern matching helpers (`when`, `maybeWhen`,
+/// `maybeMap`).
 extension ResourceStateExtensions<T> on ResourceState<T> {
+  /// Whether this state is loading.
   bool get isLoading => this is ResourceLoading<T>;
+
+  /// Whether this state is an error.
   bool get hasError => this is ResourceError<T>;
+
+  /// Whether this state is ready.
   bool get isReady => this is ResourceReady<T>;
+
+  /// Whether this state is marked as refreshing.
   bool get isRefreshing => switch (this) {
     ResourceReady<T>(:final isRefreshing) => isRefreshing,
     ResourceError<T>(:final isRefreshing) => isRefreshing,
     ResourceLoading<T>() => false,
   };
 
+  /// Casts to [ResourceReady] if possible.
   ResourceReady<T>? get asReady => map(
     ready: (r) => r,
     error: (_) => null,
     loading: (_) => null,
   );
 
+  /// Casts to [ResourceError] if possible.
   ResourceError<T>? get asError => map(
     error: (e) => e,
     ready: (_) => null,
     loading: (_) => null,
   );
 
+  /// Returns the value for ready state, throws for error state.
   T? get value => map(
     ready: (r) => r.value,
     // ignore: only_throw_errors
@@ -1488,12 +1961,14 @@ extension ResourceStateExtensions<T> on ResourceState<T> {
     loading: (_) => null,
   );
 
+  /// Returns the error for error state.
   Object? get error => map(
     error: (r) => r.error,
     ready: (_) => null,
     loading: (_) => null,
   );
 
+  /// Executes callbacks for each state.
   R when<R>({
     required R Function(T data) ready,
     required R Function(Object error, StackTrace? stackTrace) error,
@@ -1506,6 +1981,7 @@ extension ResourceStateExtensions<T> on ResourceState<T> {
     );
   }
 
+  /// Executes callbacks for available handlers, otherwise [orElse].
   R maybeWhen<R>({
     required R Function() orElse,
     R Function(T data)? ready,
@@ -1528,6 +2004,7 @@ extension ResourceStateExtensions<T> on ResourceState<T> {
     );
   }
 
+  /// Executes callbacks for available handlers, otherwise [orElse].
   R maybeMap<R>({
     required R Function() orElse,
     R Function(ResourceReady<T> ready)? ready,
@@ -1551,8 +2028,10 @@ extension ResourceStateExtensions<T> on ResourceState<T> {
   }
 }
 
+/// Default [Disposable] implementation using cleanup callbacks.
 mixin DisposableMixin implements Disposable {
   @internal
+  /// Registered cleanup callbacks invoked on dispose.
   late final cleanups = <VoidCallback>[];
 
   @override
