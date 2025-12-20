@@ -3,6 +3,8 @@
 
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
+import 'dart:developer' as dev;
 import 'dart:math';
 
 import 'package:meta/meta.dart';
@@ -44,6 +46,161 @@ final class SolidartConfig {
   static bool detachEffects = false;
   static bool trackPreviousValue = true;
   static bool useRefreshing = true;
+  static bool devToolsEnabled = false;
+
+  static final observers = <SolidartObserver>[];
+}
+
+abstract class SolidartObserver {
+  const SolidartObserver();
+
+  void didCreateSignal(ReadonlySignal<Object?> signal);
+  void didUpdateSignal(ReadonlySignal<Object?> signal);
+  void didDisposeSignal(ReadonlySignal<Object?> signal);
+}
+
+void _notifySignalCreation(ReadonlySignal<Object?> signal) {
+  if (signal.trackInDevTools && SolidartConfig.observers.isNotEmpty) {
+    for (final observer in SolidartConfig.observers) {
+      observer.didCreateSignal(signal);
+    }
+  }
+  _notifyDevToolsAboutSignal(signal, eventType: _DevToolsEventType.created);
+}
+
+void _notifySignalUpdate(ReadonlySignal<Object?> signal) {
+  if (signal.trackInDevTools && SolidartConfig.observers.isNotEmpty) {
+    for (final observer in SolidartConfig.observers) {
+      observer.didUpdateSignal(signal);
+    }
+  }
+  _notifyDevToolsAboutSignal(signal, eventType: _DevToolsEventType.updated);
+}
+
+void _notifySignalDisposal(ReadonlySignal<Object?> signal) {
+  if (signal.trackInDevTools && SolidartConfig.observers.isNotEmpty) {
+    for (final observer in SolidartConfig.observers) {
+      observer.didDisposeSignal(signal);
+    }
+  }
+  _notifyDevToolsAboutSignal(signal, eventType: _DevToolsEventType.disposed);
+}
+
+enum _DevToolsEventType {
+  created,
+  updated,
+  disposed,
+}
+
+dynamic _toJson(Object? obj) {
+  try {
+    return jsonEncode(obj);
+  } catch (_) {
+    if (obj is List) {
+      return obj.map(_toJson).toList().toString();
+    }
+    if (obj is Set) {
+      return obj.map(_toJson).toList().toString();
+    }
+    if (obj is Map) {
+      return obj
+          .map((key, value) => MapEntry(_toJson(key), _toJson(value)))
+          .toString();
+    }
+    return jsonEncode(obj.toString());
+  }
+}
+
+void _notifyDevToolsAboutSignal(
+  ReadonlySignal<Object?> signal, {
+  required _DevToolsEventType eventType,
+}) {
+  if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
+  final eventName = 'ext.solidart.v3.signal.${eventType.name}';
+  final value = _signalValue(signal);
+  final previousValue = _signalPreviousValue(signal);
+  final hasPreviousValue = _hasPreviousValue(signal);
+
+  dev.postEvent(eventName, {
+    '_id': signal.identifier.value.toString(),
+    'name': signal.identifier.name,
+    'value': _toJson(value),
+    'previousValue': _toJson(previousValue),
+    'hasPreviousValue': hasPreviousValue,
+    'type': _signalType(signal),
+    'valueType': value.runtimeType.toString(),
+    if (hasPreviousValue)
+      'previousValueType': previousValue.runtimeType.toString(),
+    'disposed': signal.isDisposed,
+    'autoDispose': signal.autoDispose,
+    'listenerCount': _listenerCount(signal),
+    'lastUpdate': DateTime.now().toIso8601String(),
+  });
+}
+
+String _signalType(ReadonlySignal<Object?> signal) => switch (signal) {
+  Resource() => 'Resource',
+  ReactiveList() => 'ReactiveList',
+  ReactiveMap() => 'ReactiveMap',
+  ReactiveSet() => 'ReactiveSet',
+  LazySignal() => 'LazySignal',
+  Signal() => 'Signal',
+  Computed() => 'Computed',
+  _ => 'ReadonlySignal',
+};
+
+int _listenerCount(system.ReactiveNode node) {
+  var count = 0;
+  var link = node.subs;
+  while (link != null) {
+    count++;
+    link = link.nextSub;
+  }
+  return count;
+}
+
+bool _hasPreviousValue(ReadonlySignal<Object?> signal) {
+  if (!signal.trackPreviousValue) return false;
+  if (signal is Signal) {
+    return signal._previousValue is Some;
+  }
+  if (signal is Computed) {
+    return signal._previousValue is Some;
+  }
+  return false;
+}
+
+Object? _signalValue(ReadonlySignal<Object?> signal) {
+  if (signal is Resource) {
+    return _resourceValue(signal.untrackedState);
+  }
+  if (signal is LazySignal && !signal.isInitialized) {
+    return null;
+  }
+  if (signal is Computed) {
+    return _computedValue(signal);
+  }
+  return signal.untrackedValue;
+}
+
+Object? _signalPreviousValue(ReadonlySignal<Object?> signal) {
+  if (signal is Resource) {
+    return _resourceValue(signal.untrackedPreviousState);
+  }
+  return signal.untrackedPreviousValue;
+}
+
+Object? _resourceValue(ResourceState<dynamic>? state) {
+  if (state == null) return null;
+  return state.maybeWhen(orElse: () => null, ready: (value) => value);
+}
+
+Object? _computedValue<T>(Computed<T> signal) {
+  final current = signal.currentValue;
+  if (current != null || null is T) {
+    return current;
+  }
+  return null;
 }
 
 T untracked<T>(T Function() callback) {
@@ -119,6 +276,7 @@ abstract class Disposable {
 abstract interface class SignalConfiguration<T> implements Configuration {
   ValueComparator<T> get equals;
   bool get trackPreviousValue;
+  bool get trackInDevTools;
 }
 
 // TODO(nank1ro): Maybe rename to `ReadSignal`? medz: I still recommend `ReadonlySignal` because it is semantically clearer., https://github.com/nank1ro/solidart/pull/166#issuecomment-3623175977
@@ -139,12 +297,14 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     String? name,
     ValueComparator<T> equals = identical,
     bool? trackPreviousValue,
+    bool? trackInDevTools,
   }) : this._internal(
          Some(initialValue),
          autoDispose: autoDispose,
          name: name,
          equals: equals,
          trackPreviousValue: trackPreviousValue,
+         trackInDevTools: trackInDevTools,
        );
 
   Signal._internal(
@@ -153,21 +313,26 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     String? name,
     bool? autoDispose,
     bool? trackPreviousValue,
+    bool? trackInDevTools,
   }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
        trackPreviousValue =
            trackPreviousValue ?? SolidartConfig.trackPreviousValue,
+       trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
        identifier = ._(name),
        super(
          flags: system.ReactiveFlags.mutable,
          currentValue: initialValue,
          pendingValue: initialValue,
-       );
+       ) {
+    _notifySignalCreation(this);
+  }
 
   factory Signal.lazy({
     String? name,
     bool? autoDispose,
     ValueComparator<T> equals,
     bool? trackPreviousValue,
+    bool? trackInDevTools,
   }) = LazySignal;
 
   @override
@@ -181,6 +346,9 @@ class Signal<T> extends preset.SignalNode<Option<T>>
 
   @override
   final bool trackPreviousValue;
+
+  @override
+  final bool trackInDevTools;
 
   Option<T> _previousValue = const None();
 
@@ -221,6 +389,7 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     Disposable.unlinkSubs(this);
     preset.stop(this);
     super.dispose();
+    _notifySignalDisposal(this);
   }
 
   @override
@@ -239,6 +408,7 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     }
 
     currentValue = pending;
+    _notifySignalUpdate(this);
     return true;
   }
 }
@@ -249,12 +419,14 @@ class LazySignal<T> extends Signal<T> {
     bool? autoDispose,
     ValueComparator<T> equals = identical,
     bool? trackPreviousValue,
+    bool? trackInDevTools,
   }) : super._internal(
          const None(),
          name: name,
          autoDispose: autoDispose,
          equals: equals,
          trackPreviousValue: trackPreviousValue,
+         trackInDevTools: trackInDevTools,
        );
 
   bool get isInitialized => currentValue is Some<T>;
@@ -286,12 +458,14 @@ class ReactiveList<E> extends Signal<List<E>> with ListMixin<E> {
     String? name,
     ValueComparator<List<E>> equals = identical,
     bool? trackPreviousValue,
+    bool? trackInDevTools,
   }) : super(
          List<E>.of(initialValue),
          autoDispose: autoDispose,
          name: name,
          equals: equals,
          trackPreviousValue: trackPreviousValue,
+         trackInDevTools: trackInDevTools,
        );
 
   List<E> _copy() => List<E>.of(untrackedValue);
@@ -472,12 +646,14 @@ class ReactiveSet<E> extends Signal<Set<E>> with SetMixin<E> {
     String? name,
     ValueComparator<Set<E>> equals = identical,
     bool? trackPreviousValue,
+    bool? trackInDevTools,
   }) : super(
          Set<E>.of(initialValue),
          autoDispose: autoDispose,
          name: name,
          equals: equals,
          trackPreviousValue: trackPreviousValue,
+         trackInDevTools: trackInDevTools,
        );
 
   Set<E> _copy() => Set<E>.of(untrackedValue);
@@ -583,12 +759,14 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
     String? name,
     ValueComparator<Map<K, V>> equals = identical,
     bool? trackPreviousValue,
+    bool? trackInDevTools,
   }) : super(
          Map<K, V>.of(initialValue),
          autoDispose: autoDispose,
          name: name,
          equals: equals,
          trackPreviousValue: trackPreviousValue,
+         trackInDevTools: trackInDevTools,
        );
 
   Map<K, V> _copy() => Map<K, V>.of(untrackedValue);
@@ -749,11 +927,15 @@ class Computed<T> extends preset.ComputedNode<T>
     bool? autoDispose,
     String? name,
     bool? trackPreviousValue,
+    bool? trackInDevTools,
   }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
        trackPreviousValue =
            trackPreviousValue ?? SolidartConfig.trackPreviousValue,
+       trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
        identifier = ._(name),
-       super(flags: system.ReactiveFlags.none, getter: (_) => getter());
+       super(flags: system.ReactiveFlags.none, getter: (_) => getter()) {
+    _notifySignalCreation(this);
+  }
 
   @override
   final bool autoDispose;
@@ -766,6 +948,9 @@ class Computed<T> extends preset.ComputedNode<T>
 
   @override
   final bool trackPreviousValue;
+
+  @override
+  final bool trackInDevTools;
 
   Option<T> _previousValue = const None();
 
@@ -809,6 +994,7 @@ class Computed<T> extends preset.ComputedNode<T>
     Disposable.unlinkDeps(this);
     preset.stop(this);
     super.dispose();
+    _notifySignalDisposal(this);
   }
 
   @override
@@ -830,6 +1016,7 @@ class Computed<T> extends preset.ComputedNode<T>
       }
 
       currentValue = pendingValue;
+      _notifySignalUpdate(this);
       return true;
     } finally {
       preset.activeSub = prevSub;
@@ -909,6 +1096,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     this.debounceDelay,
     bool? autoDispose,
     String? name,
+    bool? trackInDevTools,
     ValueComparator<ResourceState<T>> equals = identical,
   }) : stream = null,
        useRefreshing = useRefreshing ?? SolidartConfig.useRefreshing,
@@ -919,6 +1107,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
          equals: equals,
          trackPreviousValue:
              trackPreviousState ?? SolidartConfig.trackPreviousValue,
+         trackInDevTools: trackInDevTools,
        ) {
     if (!lazy) {
       _resolveIfNeeded();
@@ -934,6 +1123,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     this.debounceDelay,
     bool? autoDispose,
     String? name,
+    bool? trackInDevTools,
     ValueComparator<ResourceState<T>> equals = identical,
   }) : fetcher = null,
        useRefreshing = useRefreshing ?? SolidartConfig.useRefreshing,
@@ -944,6 +1134,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
          equals: equals,
          trackPreviousValue:
              trackPreviousState ?? SolidartConfig.trackPreviousValue,
+         trackInDevTools: trackInDevTools,
        ) {
     if (!lazy) {
       _resolveIfNeeded();
