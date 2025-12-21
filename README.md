@@ -53,7 +53,7 @@ To change the value, you can use:
 // Set the value to 2
 counter.value = 2;
 // Update the value based on the current value
-counter.updateValue((value) => value * 2);
+counter.value *= 2;
 ```
 
 ### Effect
@@ -177,8 +177,8 @@ SignalBuilder(
 )
 ```
 
-The `on` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
-The are also other convenience methods to handle only specific states.
+The `when` method forces you to handle all the states of a Resource (_ready_, _error_ and _loading_).
+There are also convenience helpers like `maybeWhen`, `asReady`, and `asError`.
 
 ### Dependency Injection
 

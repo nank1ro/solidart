@@ -1,21 +1,21 @@
 ---
-title: Map Signal
-description: Learn MapSignal in solidart
+title: Reactive Map
+description: Learn ReactiveMap in solidart
 sidebar:
-  order: 1
+  order: 3
 ---
 
-A `MapSignal` is a special signal that can be used to represent a map of values.
+A `ReactiveMap` is a reactive wrapper around a `Map` that copies on write.
 
-When you modify any element on the map, the `MapSignal` will automatically notify its observers.
+When you modify any element on the map, the `ReactiveMap` will automatically notify its observers.
 
 ```dart
-final items = MapSignal({'a': 1, 'b': 2});
+final items = ReactiveMap({'a': 1, 'b': 2});
 
-items.observe((previousValue, value) {
-  print("Items changed: $previousValue -> $value");
+Effect(() {
+  print('Items: ${items.value}');
 });
 
-items.add({'c': 3}); // prints "Items changed: {'a': 1, 'b': 2} -> {'a': 1, 'b': 2, 'c': 3}"
-items.remove('a'); // prints "Items changed: {'a': 1, 'b': 2, 'c': 3} -> {'b': 2, 'c': 3}"
+items['c'] = 3; // prints "Items: {a: 1, b: 2, c: 3}"
+items.remove('a'); // prints "Items: {b: 2, c: 3}"
 ```
