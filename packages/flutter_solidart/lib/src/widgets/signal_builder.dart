@@ -104,12 +104,11 @@ class _SignalBuilderElement extends StatelessElement {
     preset.cycle++;
     try {
       SolidartConfig.detachEffects = true;
-      final built = super.build();
+      return super.build();
+    } finally {
       preset.purgeDeps(_effect);
       _depsHead = _effect.deps;
       _depsTail = _effect.depsTail;
-      return built;
-    } finally {
       SolidartConfig.detachEffects = prevDetach;
       preset.setActiveSub(prevSub);
       _effect.flags &= ~system.ReactiveFlags.recursedCheck;
