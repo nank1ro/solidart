@@ -153,6 +153,24 @@ void main() {
       expect(runs, 1);
     });
 
+    test('addAll updates existing keys', () {
+      final map = ReactiveMap({'a': 1});
+      var runs = 0;
+
+      Effect(() {
+        map['a'];
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      map.addAll({'a': 1});
+      expect(runs, 1);
+
+      map.addAll({'a': 2});
+      expect(runs, 2);
+    });
+
     test('empty map no-op mutations do not notify', () {
       final map = ReactiveMap<String, int>({});
       var runs = 0;
