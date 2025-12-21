@@ -33,11 +33,11 @@ Dart, you must dispose manually to avoid leaks:
 
 ```dart
 final items = ReactiveMap({'a': 1});
-final disposeEffect = Effect(() {
+final effect = Effect(() {
   print(items.value);
-}).dispose;
+});
 
 // Later
-disposeEffect();
+effect.dispose();
 items.dispose();
 ```
