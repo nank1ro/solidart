@@ -6,10 +6,15 @@ sidebar:
 ---
 
 A `ReactiveMap` is a reactive wrapper around a `Map` that copies on write.
+Copy on write means each modification produces a new map instance, so observers
+always see a consistent, immutable-like snapshot of the data.
 
-When you modify any element on the map, the `ReactiveMap` will automatically notify its observers.
+When you modify any element on the map, the `ReactiveMap` will automatically
+notify its observers.
 
 ```dart
+import 'package:solidart/solidart.dart';
+
 final items = ReactiveMap({'a': 1, 'b': 2});
 
 Effect(() {
@@ -18,4 +23,21 @@ Effect(() {
 
 items['c'] = 3; // prints "Items: {a: 1, b: 2, c: 3}"
 items.remove('a'); // prints "Items: {b: 2, c: 3}"
+```
+
+## Memory management
+
+In Flutter contexts, signals and effects can auto-dispose when
+`SolidartConfig.autoDispose` is enabled and nothing depends on them. In pure
+Dart, you must dispose manually to avoid leaks:
+
+```dart
+final items = ReactiveMap({'a': 1});
+final disposeEffect = Effect(() {
+  print(items.value);
+}).dispose;
+
+// Later
+disposeEffect();
+items.dispose();
 ```
