@@ -5,8 +5,8 @@ sidebar:
   order: 3
 ---
 
-A `ReactiveMap` is a reactive wrapper around a `Map` that copies on write.
-Copy on write means each modification produces a new map instance, so observers
+A `ReactiveMap` is a reactive wrapper around a `Map` that uses copy-on-write.
+Copy-on-write means each modification produces a new map instance, so observers
 always see a consistent, immutable-like snapshot of the data.
 
 When you modify any element on the map, the `ReactiveMap` will automatically

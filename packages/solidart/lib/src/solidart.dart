@@ -175,37 +175,43 @@ dynamic _toJson(Object? obj, [int depth = 0, Set<Object>? visited]) {
     return jsonEncode(obj);
   } catch (_) {
     if (obj is List) {
-      visited ??= Set<Object>.identity();
-      if (!visited.add(obj)) return '<circular>';
+      final visitedSet = visited ?? Set<Object>.identity();
+      if (!visitedSet.add(obj)) return '<circular>';
       try {
-        return obj.map((e) => _toJson(e, depth + 1, visited)).toList().toString();
+        return obj
+            .map((e) => _toJson(e, depth + 1, visitedSet))
+            .toList()
+            .toString();
       } finally {
-        visited.remove(obj);
+        visitedSet.remove(obj);
       }
     }
     if (obj is Set) {
-      visited ??= Set<Object>.identity();
-      if (!visited.add(obj)) return '<circular>';
+      final visitedSet = visited ?? Set<Object>.identity();
+      if (!visitedSet.add(obj)) return '<circular>';
       try {
-        return obj.map((e) => _toJson(e, depth + 1, visited)).toList().toString();
+        return obj
+            .map((e) => _toJson(e, depth + 1, visitedSet))
+            .toList()
+            .toString();
       } finally {
-        visited.remove(obj);
+        visitedSet.remove(obj);
       }
     }
     if (obj is Map) {
-      visited ??= Set<Object>.identity();
-      if (!visited.add(obj)) return '<circular>';
+      final visitedSet = visited ?? Set<Object>.identity();
+      if (!visitedSet.add(obj)) return '<circular>';
       try {
         return obj
             .map(
               (key, value) => MapEntry(
-                _toJson(key, depth + 1, visited),
-                _toJson(value, depth + 1, visited),
+                _toJson(key, depth + 1, visitedSet),
+                _toJson(value, depth + 1, visitedSet),
               ),
             )
             .toString();
       } finally {
-        visited.remove(obj);
+        visitedSet.remove(obj);
       }
     }
     return jsonEncode(obj.toString());

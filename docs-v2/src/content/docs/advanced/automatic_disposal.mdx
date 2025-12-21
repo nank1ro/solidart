@@ -6,7 +6,12 @@ sidebar:
 ---
 import { Aside } from '@astrojs/starlight/components';
 
-<Aside type="tip">TL;DR: Dispose Effects you create in widgets. Signals/computed/resources only auto-dispose when autoDispose is enabled and nothing depends on them. When SolidartConfig.autoDispose is false, you MUST manually dispose Signals, Computeds, and Resources to avoid leaks.</Aside>
+<Aside type="tip">
+TL;DR:
+- Dispose Effects you create in widgets.
+- Signals/Computeds/Resources only auto-dispose when autoDispose is enabled and nothing depends on them.
+- When SolidartConfig.autoDispose is false, you MUST manually dispose Signals, Computeds, and Resources to avoid leaks.
+</Aside>
 
 In v3, `SolidartConfig.autoDispose` defaults to `false`. That means signals,
 computeds, resources, and effects are not automatically disposed unless you
