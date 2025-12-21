@@ -6,7 +6,7 @@ sidebar:
 ---
 import { Aside } from '@astrojs/starlight/components';
 
-<Aside type="tip">TL;DR: Dispose Effects you create in widgets. Signals/computed/resources only auto-dispose when autoDispose is enabled and nothing depends on them.</Aside>
+<Aside type="tip">TL;DR: Dispose Effects you create in widgets. Signals/computed/resources only auto-dispose when autoDispose is enabled and nothing depends on them. When SolidartConfig.autoDispose is false, you MUST manually dispose Signals, Computeds, and Resources to avoid leaks.</Aside>
 
 In v3, `SolidartConfig.autoDispose` defaults to `false`. That means signals,
 computeds, resources, and effects are not automatically disposed unless you
@@ -25,8 +25,8 @@ final counter = Signal(0, autoDispose: true);
 ```
 
 When auto-dispose is enabled, `Signal`, `Computed`, and `Resource` will dispose
-when they have no subscribers. `Effect` will dispose when its tracked
-dependencies are disposed.
+when they have no subscribers. `Effect` will dispose only after all of its
+tracked dependencies are disposed (not when any single dependency is disposed).
 
 ## Disposing effects in widgets
 
