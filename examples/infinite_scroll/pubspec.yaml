@@ -12,7 +12,7 @@ dependencies:
   disco: ^1.0.3+1
   flutter:
     sdk: flutter
-  flutter_solidart: 3.0.0-dev.1
+  flutter_solidart: 3.0.0-dev.2
   http: ^1.6.0
 
 dev_dependencies:
