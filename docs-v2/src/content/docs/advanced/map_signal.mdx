@@ -27,9 +27,10 @@ items.remove('a'); // prints "Items: {b: 2, c: 3}"
 
 ## Memory management
 
-In Flutter contexts, signals and effects can auto-dispose when
-`SolidartConfig.autoDispose` is enabled and nothing depends on them. In pure
-Dart, you must dispose manually to avoid leaks:
+Signals (including `ReactiveMap`) can auto-dispose in Flutter contexts when
+`SolidartConfig.autoDispose` is enabled and nothing depends on them. Effects
+should always be disposed manually (automatic Effect disposal is rare in
+practice), and in pure Dart you must dispose all primitives to avoid leaks:
 
 ```dart
 final items = ReactiveMap({'a': 1});
