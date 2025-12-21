@@ -1100,7 +1100,7 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
     final current = untrackedValue;
     final existing = current[key];
     if (current.containsKey(key) && existing == value) return;
-    final next = Map<K, V>.of(current);
+    final next = _copy();
     next[key] = value;
     this.value = next;
   }
@@ -1121,7 +1121,7 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   V? remove(Object? key) {
     final current = untrackedValue;
     if (!current.containsKey(key)) return null;
-    final next = Map<K, V>.of(current);
+    final next = _copy();
     final removed = next.remove(key);
     value = next;
     return removed;
@@ -1161,7 +1161,7 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   void addAll(Map<K, V> other) {
     if (other.isEmpty) return;
     final current = untrackedValue;
-    final next = Map<K, V>.of(current)..addAll(other);
+    final next = _copy()..addAll(other);
     if (_mapEquals(next, current)) return;
     value = next;
   }
@@ -1172,7 +1172,7 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
     if (current.containsKey(key)) {
       return current[key] as V;
     }
-    final next = Map<K, V>.of(current);
+    final next = _copy();
     final value = ifAbsent();
     next[key] = value;
     this.value = next;
@@ -1190,14 +1190,14 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
       if (ifAbsent == null) {
         throw ArgumentError.value(key, 'key', 'Key not in map.');
       }
-      final next = Map<K, V>.of(current);
+      final next = _copy();
       final value = ifAbsent();
       next[key] = value;
       this.value = next;
       return value;
     }
 
-    final next = Map<K, V>.of(current);
+    final next = _copy();
     final value = update(next[key] as V);
     next[key] = value;
     this.value = next;
@@ -1208,7 +1208,7 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   void updateAll(V Function(K key, V value) update) {
     final current = untrackedValue;
     if (current.isEmpty) return;
-    final next = Map<K, V>.of(current)..updateAll(update);
+    final next = _copy()..updateAll(update);
     if (next.length == current.length &&
         next.keys.every((key) {
           return current.containsKey(key) && current[key] == next[key];
@@ -1222,7 +1222,7 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   void removeWhere(bool Function(K key, V value) test) {
     final current = untrackedValue;
     if (current.isEmpty) return;
-    final next = Map<K, V>.of(current)..removeWhere(test);
+    final next = _copy()..removeWhere(test);
     if (next.length == current.length) return;
     value = next;
   }
