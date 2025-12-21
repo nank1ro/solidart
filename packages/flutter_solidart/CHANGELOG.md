@@ -1,3 +1,8 @@
+## 3.0.0-dev.2
+
+- **CHORE**: Bump `solidart` dependency to `3.0.0-dev.2`.
+- **DOCS**: Refresh examples for `LazySignal` and v3 dependency pins.
+
 ## 3.0.0-dev.1
 
 - **BREAKING**: Remove Flutter-specific core wrappers under `src/core/*`; `flutter_solidart` now re-exports `solidart/solidart.dart` directly.

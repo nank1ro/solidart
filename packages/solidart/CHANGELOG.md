@@ -1,3 +1,11 @@
+## 3.0.0-dev.2
+
+- **FEAT**: Add `untracked` and `batch` helpers for non-tracking reads and batched updates.
+- **FEAT**: Add previous value tracking (`previousValue`, `untrackedPreviousValue`) and `trackPreviousValue` support.
+- **FEAT**: Introduce `ReactiveList`, `ReactiveMap`, and `ReactiveSet` copy-on-write collections.
+- **FEAT**: Expand `Resource` with fetcher/stream constructors, debounced source refreshes, and `previousState` access.
+- **TEST**: Add v3 coverage for previous value, resources, untracked, and batch behavior.
+
 ## 3.0.0-dev.1
 
 - **BREAKING**: Remove all v2 implementation code (`src/core`, `src/extensions`, v2 utils).

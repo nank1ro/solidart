@@ -1,3 +1,7 @@
+## 3.1.3
+
+- **CHORE**: Bump `flutter_solidart` dependency to `3.0.0-dev.2`.
+
 ## 3.1.2
 
 ### Changes from solidart
