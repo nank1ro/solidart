@@ -168,20 +168,45 @@ enum _DevToolsEventType {
   disposed,
 }
 
-dynamic _toJson(Object? obj) {
+dynamic _toJson(Object? obj, [int depth = 0, Set<Object>? visited]) {
+  const maxDepth = 20;
+  if (depth > maxDepth) return '<max depth exceeded>';
   try {
     return jsonEncode(obj);
   } catch (_) {
     if (obj is List) {
-      return obj.map(_toJson).toList().toString();
+      visited ??= Set<Object>.identity();
+      if (!visited.add(obj)) return '<circular>';
+      try {
+        return obj.map((e) => _toJson(e, depth + 1, visited)).toList().toString();
+      } finally {
+        visited.remove(obj);
+      }
     }
     if (obj is Set) {
-      return obj.map(_toJson).toList().toString();
+      visited ??= Set<Object>.identity();
+      if (!visited.add(obj)) return '<circular>';
+      try {
+        return obj.map((e) => _toJson(e, depth + 1, visited)).toList().toString();
+      } finally {
+        visited.remove(obj);
+      }
     }
     if (obj is Map) {
-      return obj
-          .map((key, value) => MapEntry(_toJson(key), _toJson(value)))
-          .toString();
+      visited ??= Set<Object>.identity();
+      if (!visited.add(obj)) return '<circular>';
+      try {
+        return obj
+            .map(
+              (key, value) => MapEntry(
+                _toJson(key, depth + 1, visited),
+                _toJson(value, depth + 1, visited),
+              ),
+            )
+            .toString();
+      } finally {
+        visited.remove(obj);
+      }
     }
     return jsonEncode(obj.toString());
   }
