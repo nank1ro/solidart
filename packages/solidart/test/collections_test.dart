@@ -158,7 +158,7 @@ void main() {
       var runs = 0;
 
       Effect(() {
-        map['a'];
+        final _ = map['a'];
         runs++;
       });
 
