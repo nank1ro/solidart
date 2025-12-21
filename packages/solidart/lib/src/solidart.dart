@@ -1048,6 +1048,16 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
 
   Map<K, V> _copy() => Map<K, V>.of(untrackedValue);
 
+  bool _mapEquals(Map<K, V> a, Map<K, V> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (!b.containsKey(entry.key)) return false;
+      if (b[entry.key] != entry.value) return false;
+    }
+    return true;
+  }
+
   @override
   V? operator [](Object? key) {
     value;
@@ -1119,8 +1129,9 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   @override
   void addAll(Map<K, V> other) {
     if (other.isEmpty) return;
-    final next = _copy()..addAll(other);
-    if (next.length == untrackedValue.length) return;
+    final current = untrackedValue;
+    final next = Map<K, V>.of(current)..addAll(other);
+    if (_mapEquals(next, current)) return;
     value = next;
   }
 
