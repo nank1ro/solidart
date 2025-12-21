@@ -1302,13 +1302,7 @@ class Computed<T> extends preset.ComputedNode<T>
     if (currentValue != null || null is T) {
       return currentValue as T;
     }
-
-    final prevSub = preset.setActiveSub();
-    try {
-      return value;
-    } finally {
-      preset.activeSub = prevSub;
-    }
+    return untracked(() => value);
   }
 
   @override
