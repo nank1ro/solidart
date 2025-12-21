@@ -13,32 +13,47 @@ The effect automatically subscribes to any signal and reruns when any of them ch
 So let's create an Effect that reruns whenever `counter` changes:
 
 ```dart
-final disposeEffect = Effect(() {
-    print("The count is now ${counter.value}");
+final counter = Signal(0);
+final effect = Effect(() {
+  print('The count is now ${counter.value}');
 });
 ```
 
-The effect run immediately and prints `The count is now 0`;
-
+The effect runs immediately and prints `The count is now 0`.
 
 Try incrementing the counter by 1:
 ```dart
 counter.value++;
 ```
 
-The effect prints `The count is now 1`;
+The effect prints `The count is now 1`.
 
-The `Effect` class returns a `Dispose` callback, invoke it to stop listening and clearing the effect.
+To stop the effect, call `dispose()`:
 
 ```dart
-final disposeEffect = Effect(() {
-    print("The count is now ${counter.value}");
+final effect = Effect(() {
+  print('The count is now ${counter.value}');
 });
 
 // Somewhere else, dispose the effect
-disposeEffect();
+effect.dispose();
 ```
 
-<Aside>The effect runs immediately with the current signals' values</Aside>
+<Aside>The effect runs immediately with the current signals' values.</Aside>
 
 <Aside type="caution">An effect is useless after it is disposed, you must not use it anymore.</Aside>
+
+## Lazy effects
+
+If you want to create an effect without running it immediately, use `Effect.manual` and call `run()` later.
+
+```dart
+final counter = Signal(0);
+final effect = Effect.manual(() {
+  print('Count: ${counter.value}');
+});
+
+counter.value = 1; // no output yet
+
+effect.run(); // prints "Count: 1" and starts tracking
+```

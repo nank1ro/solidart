@@ -1,0 +1,276 @@
+---
+title: Migration (v2 -> v3)
+description: Upgrade guide for solidart v3
+---
+This guide covers the breaking changes when moving from solidart v2.x to v3.
+
+## 1) Update package versions
+
+Update all Solidart ecosystem packages together:
+
+```yaml
+# pubspec.yaml
+
+dependencies:
+  solidart: ^3.0.0
+  flutter_solidart: ^3.0.0
+  solidart_hooks: ^3.1.0
+
+dev_dependencies:
+  solidart_lint: ^3.0.0
+```
+
+## 2) Imports and entry points
+
+The public entry points stay the same in v3. Keep using the standard imports:
+
+```dart
+import 'package:solidart/solidart.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
+```
+
+## 3) API mapping (v2 -> v3)
+
+### Signals and ReadSignal
+
+| v2 API | v3 API | Notes |
+| --- | --- | --- |
+| `ReadSignal<T>` | `ReadonlySignal<T>` | Read-only interface renamed. Use `toReadonly()` to create one. |
+| `toReadSignal()` | `toReadonly()` | Read-only conversion rename. |
+| `signal()` / `ReadSignal.call()` | `signal.value` | Call operator removed. |
+| `signal.set(value)` | `signal.value = value` | Setter only. |
+| `signal.updateValue(fn)` | `signal.value = fn(signal.value)` | No helper method. |
+| `signal.observe(listener, fireImmediately)` | `Effect(() { ... })` | Use effects for reactive side effects. |
+| `signal.until(condition, timeout)` | — | Removed. Use `Completer` + `Effect` (example below). |
+| `hasPreviousValue` | — | Removed. Use `previousValue` / `untrackedPreviousValue`. |
+| `SignalOptions` | named params | `name`, `autoDispose`, `equals`, `trackPreviousValue`, `trackInDevTools`. |
+
+**Until replacement (v2 -> v3):** (requires `dart:async`)
+```dart
+final completer = Completer<int>();
+late final Effect effect;
+effect = Effect(() {
+  final value = counter.value;
+  if (value >= 10 && !completer.isCompleted) {
+    completer.complete(value);
+    effect.dispose();
+  }
+});
+await completer.future;
+```
+
+### Computed
+
+| v2 API | v3 API | Notes |
+| --- | --- | --- |
+| `Computed(selector, options)` | `Computed(selector, ...)` | Options are named params. |
+| `computed()` | `computed.value` | Call operator removed. |
+| `Computed.run()` | `computed.value` | No manual run; reading evaluates lazily. |
+
+### Effect
+
+| v2 API | v3 API | Notes |
+| --- | --- | --- |
+| `Effect((dispose) { ... }, onError, options)` | `Effect(() { ... }, autoDispose:, name:, detach:)` | Callback no longer receives `dispose`. |
+| `EffectOptions(delay: ...)` | — | Delay removed; use your own debounce/timer if needed. |
+| `effect()` to dispose | `effect.dispose()` | Call operator removed. |
+| `Effect.manual` | `Effect.manual` | Still available; call `run()` to start tracking. |
+
+### Resource
+
+| v2 API | v3 API | Notes |
+| --- | --- | --- |
+| `Resource(fetcher, source: SignalBase)` | `Resource(fetcher, source: ReadonlySignal)` | `SignalBase` removed. |
+| `ResourceOptions` | named params | `name`, `autoDispose`, `equals`, `trackInDevTools`, `useRefreshing`, `debounceDelay`, `trackPreviousState`. |
+| `resource.update((state) => ...)` | `resource.state = ...` | Write the new state directly. |
+| `resource.select(selector)` | `Computed(() => ...)` | Use `Computed` to derive data. |
+| `resource.untilReady()` | — | Removed. Use `Completer` + `Effect`. |
+| `ResourceState.on / maybeOn` | `when / maybeWhen` | `on`/`maybeOn` removed. |
+| `ResourceState.value` / `call()` | `asReady?.value` / `when` | Use extensions and pattern matching. |
+| `ResourceUnresolved` | — | Removed; initial state is `loading`. |
+
+### Collections
+
+| v2 API | v3 API | Notes |
+| --- | --- | --- |
+| `ListSignal<T>` | `ReactiveList<T>` | Copy-on-write collection. |
+| `SetSignal<T>` | `ReactiveSet<T>` | Copy-on-write collection. |
+| `MapSignal<K,V>` | `ReactiveMap<K,V>` | Copy-on-write collection. |
+| `useListSignal` | `useReactiveList` | Hook renamed. |
+| `useSetSignal` | `useReactiveSet` | Hook renamed. |
+| `useMapSignal` | `useReactiveMap` | Hook renamed. |
+
+### Flutter integration
+
+| v2 API | v3 API | Notes |
+| --- | --- | --- |
+| `ReadSignal.toValueNotifier()` | `ReadonlySignal.toValueNotifier()` | Now provided via extension. |
+| `ValueListenable.toSignal()` | `ValueListenable.toSignal()` | Still available via extension. |
+
+## 4) Behavioral differences
+
+- **Auto-dispose default changed**: v2 defaults `SolidartConfig.autoDispose` to `true`, v3 defaults to `false`. If you relied on auto-dispose, enable it globally or per-instance:
+  ```dart
+  SolidartConfig.autoDispose = true;
+  final signal = Signal(0, autoDispose: true);
+  ```
+- **DevTools tracking default changed**: v2 defaults to `kDebugMode`, v3 defaults to `false`. Enable it explicitly if you need observer events:
+  ```dart
+  SolidartConfig.devToolsEnabled = true;
+  final signal = Signal(0, trackInDevTools: true);
+  ```
+- **Previous value tracking is read-driven**: `previousValue` / `previousState` update only after a tracked read.
+- **Nullable previous values**: `hasPreviousValue` was removed, so `previousValue == null` can mean either “no previous value” or “previous value was null.” Use a sentinel or wrap nullable values if you need to distinguish.
+- **Reactive collections are copy-on-write**: mutating methods replace the internal collection value. Avoid mutating `untrackedValue` directly.
+- **Effect timing and errors**: `EffectOptions.delay` and `onError` were removed. Use `Timer`/debounce and `try/catch` inside the effect.
+- **Nested effects**: v3 adds `detach` / `SolidartConfig.detachEffects` to control whether inner effects become dependencies of their parent.
+
+## 5) Signals: API changes
+
+### Read-only signals
+
+`toReadSignal()` and `ReadSignal` were removed. Use `ReadonlySignal` and
+`toReadonly()` instead.
+
+**Before (v2):**
+```dart
+final counter = Signal(0);
+final readOnly = counter.toReadSignal();
+```
+
+**After (v3):**
+```dart
+final counter = Signal(0);
+final readOnly = counter.toReadonly();
+```
+
+### Updating values
+
+`updateValue` is gone. Update via `.value` and your own logic.
+
+**Before (v2):**
+```dart
+counter.updateValue((value) => value + 1);
+```
+
+**After (v3):**
+```dart
+counter.value += 1;
+```
+
+### Observing changes
+
+`observe` was removed. Use `Effect` for reactive side effects.
+
+**Before (v2):**
+```dart
+counter.observe((prev, next) {
+  print('from $prev to $next');
+});
+```
+
+**After (v3):**
+```dart
+Effect(() {
+  final next = counter.value;
+  final prev = counter.untrackedPreviousValue;
+  print('from $prev to $next');
+});
+```
+
+### Previous values
+
+`previousValue` now updates only after a tracked read. You also get
+`untrackedPreviousValue` and can disable tracking with `trackPreviousValue`.
+
+```dart
+final counter = Signal(0, trackPreviousValue: true);
+final _ = counter.value; // tracked read
+counter.value = 1;
+print(counter.previousValue); // 0
+```
+
+## 6) Reactive collections
+
+`ListSignal`, `MapSignal`, and `SetSignal` have been replaced by
+`ReactiveList`, `ReactiveMap`, and `ReactiveSet`.
+
+**Before (v2):**
+```dart
+final todos = ListSignal<String>([]);
+```
+
+**After (v3):**
+```dart
+final todos = ReactiveList<String>([]);
+```
+
+### Hooks rename
+
+If you use `solidart_hooks`, update the hook names:
+
+- `useListSignal` -> `useReactiveList`
+- `useSetSignal` -> `useReactiveSet`
+- `useMapSignal` -> `useReactiveMap`
+
+## 7) Untracked and batch helpers
+
+Use the new global helpers to opt out of tracking or batch updates:
+
+```dart
+untracked(() {
+  // reads here do not create dependencies
+  print(counter.value);
+});
+
+batch(() {
+  counter.value++;
+  other.value++;
+});
+```
+
+## 8) Resource updates
+
+Resources keep the same concept but have a clearer API:
+
+- `Resource.state` is the primary value.
+- `previousState` / `untrackedPreviousState` are available for history.
+- `Resource.stream` is the stream-based constructor.
+- `debounceDelay` debounces source-triggered refreshes.
+- `useRefreshing` controls `isRefreshing` behavior.
+
+```dart
+final userId = Signal(1);
+final user = Resource(fetchUser, source: userId, debounceDelay: Duration(milliseconds: 300));
+
+SignalBuilder(
+  builder: (_, __) => user.state.when(
+    ready: (data) => Text(data.name),
+    loading: () => const CircularProgressIndicator(),
+    error: (e, _) => Text('Error: $e'),
+  ),
+);
+```
+
+## 9) Flutter integration
+
+`flutter_solidart` now re-exports `solidart/solidart.dart` directly and only
+adds Flutter widgets and extensions. Core wrappers were removed.
+
+New conversion helpers:
+
+```dart
+final notifier = counter.toReadonly().toValueNotifier();
+final signal = someValueListenable.toSignal();
+```
+
+## 10) Removed APIs (summary)
+
+- `toReadSignal`, `ReadSignal`, `SignalBase`
+- `SignalOptions`, `ResourceOptions`, `EffectOptions`
+- `updateValue`, `observe`, `until`
+- `ListSignal`, `MapSignal`, `SetSignal`
+- `Debouncer` and other v2-only utils
+
+If you hit a missing API, prefer the v3 primitives (`Signal`, `Computed`,
+`Effect`, `Resource`) and the new helpers (`untracked`, `batch`).

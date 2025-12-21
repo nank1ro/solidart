@@ -1,21 +1,21 @@
 ---
-title: Set Signal
-description: Learn SetSignal in solidart
+title: Reactive Set
+description: Learn ReactiveSet in solidart
 sidebar:
-  order: 1
+  order: 2
 ---
 
-A `SetSignal` is a special signal that can be used to represent a set of values.
+A `ReactiveSet` is a reactive wrapper around a `Set` that copies on write.
 
-When you modify any element on the set, the `SetSignal` will automatically notify its observers.
+When you modify any element on the set, the `ReactiveSet` will automatically notify its observers.
 
 ```dart
-final items = SetSignal({1, 2});
+final items = ReactiveSet({1, 2});
 
-items.observe((previousValue, value) {
-  print("Items changed: $previousValue -> $value");
+Effect(() {
+  print('Items: ${items.value}');
 });
 
-items.add(3); // prints "Items changed: [1, 2] -> [1, 2, 3]"
-items.remove(1); // prints "Items changed: [1, 2, 3] -> [2, 3]"
+items.add(3); // prints "Items: {1, 2, 3}"
+items.remove(1); // prints "Items: {2, 3}"
 ```
