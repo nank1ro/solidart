@@ -2,6 +2,7 @@ import 'package:auth_flow/notifiers/auth_notifier.dart';
 import 'package:auth_flow/ui/home_page.dart';
 import 'package:auth_flow/ui/login_page.dart';
 import 'package:auth_flow/ui/profile_page.dart';
+import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:go_router/go_router.dart';
 
 class AppRouter {
@@ -10,7 +11,7 @@ class AppRouter {
   final AuthNotifier authNotifier;
 
   late final router = GoRouter(
-    refreshListenable: authNotifier.isLoggedIn,
+    refreshListenable: authNotifier.isLoggedIn.toValueNotifier(),
     redirect: (context, state) {
       final isLoggedIn = authNotifier.isLoggedIn.value;
       if (!isLoggedIn && state.matchedLocation != '/login') {
