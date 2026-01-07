@@ -114,7 +114,7 @@ class _SignalsState extends State<Signals> {
     final type = filterType.value;
     final viewDisposed = showDisposed.value;
     final onlyActiveDuplicates = showOnlyActiveDuplicates.value;
-    return signals.value.entries
+    final filtered = signals.value.entries
         .where(
           (entry) =>
               entry.value.name.toString().toLowerCase().contains(
@@ -133,6 +133,18 @@ class _SignalsState extends State<Signals> {
           return sameName.length > 1 && !entry.value.disposed;
         })
         .toList();
+
+    // Sort by lastUpdate (newest first), then by disposed status (active first)
+    filtered.sort((a, b) {
+      final disposedCompare = a.value.disposed ? 1 : -1;
+      final disposedCompare2 = b.value.disposed ? 1 : -1;
+      if (disposedCompare != disposedCompare2) {
+        return disposedCompare.compareTo(disposedCompare2);
+      }
+      return b.value.lastUpdate.compareTo(a.value.lastUpdate);
+    });
+
+    return filtered;
   });
 
   @override
@@ -346,15 +358,7 @@ class _SignalsState extends State<Signals> {
                                 itemCount: filteredSignals.value.length,
                                 padding: EdgeInsets.symmetric(horizontal: 4),
                                 itemBuilder: (BuildContext context, int index) {
-                                  final sortedSignals = filteredSignals.value
-                                    ..sort(
-                                      (a, b) => b.value.lastUpdate.compareTo(
-                                        a.value.lastUpdate,
-                                      ),
-                                    )
-                                    ..sort((a, b) => a.value.disposed ? 1 : -1);
-
-                                  final entry = sortedSignals.elementAt(index);
+                                  final entry = filteredSignals.value[index];
                                   final name = entry.value.name;
                                   final signal = entry.value;
                                   return SignalBuilder(
