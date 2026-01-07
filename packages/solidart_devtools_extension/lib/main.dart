@@ -100,6 +100,7 @@ class SignalData {
 
 class _SignalsState extends State<Signals> {
   late final StreamSubscription<Object>? sub;
+  late final StreamSubscription<Object>? isolateEventSub;
   final selectedSignalId = Signal<String?>(null);
   final searchController = SearchController();
   final searchText = Signal<String>('');
@@ -170,7 +171,7 @@ class _SignalsState extends State<Signals> {
         });
 
     // Listen for hot restart events to clear signals
-    vmService.onIsolateEvent.listen((event) {
+    isolateEventSub = vmService.onIsolateEvent.listen((event) {
       if (event.kind == 'IsolateReload' || event.kind == 'IsolateStart') {
         signals.clear();
       }
@@ -184,6 +185,7 @@ class _SignalsState extends State<Signals> {
   @override
   void dispose() {
     sub?.cancel();
+    isolateEventSub?.cancel();
     searchController.dispose();
     selectedSignalId.dispose();
     searchText.dispose();
