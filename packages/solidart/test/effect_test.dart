@@ -142,7 +142,6 @@ void main() {
 
     child.dispose();
   });
-
 }
 
 List<system.ReactiveNode> _depsOf(system.ReactiveNode node) {

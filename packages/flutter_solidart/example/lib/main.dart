@@ -19,9 +19,7 @@ class Logger implements SolidartObserver {
   @override
   void didCreateSignal(ReadonlySignal<Object?> signal) {
     final value = _safeValue(signal);
-    dev.log(
-      'didCreateSignal(name: ${signal.identifier.name}, value: $value)',
-    );
+    dev.log('didCreateSignal(name: ${signal.identifier.name}, value: $value)');
   }
 
   @override

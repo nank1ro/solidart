@@ -284,17 +284,13 @@ Resource<T> useResourceStream<T>(
     ),
     [],
   );
-  return use(
-    _SignalHook(
-      'useResourceStream',
-      target,
-    ),
-  );
+  return use(_SignalHook('useResourceStream', target));
 }
 
 /// Create an effect inside a hook widget.
 void useSolidartEffect(
   VoidCallback cb, {
+
   /// The name of the effect, useful for logging.
   String? name,
 

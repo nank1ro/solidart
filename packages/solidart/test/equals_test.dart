@@ -50,4 +50,25 @@ void main() {
     source.value = 3; // parity changed (odd), recompute
     expect(runs, 2);
   });
+
+  test('Signal.toReadonly() converts to readonly', () {
+    final signal = Signal(42);
+    final readonly = signal.toReadonly();
+
+    expect(readonly, isA<ReadonlySignal<int>>());
+    expect(readonly.value, 42);
+
+    // Verify it tracks changes
+    var runs = 0;
+    Effect(() {
+      readonly.value;
+      runs++;
+    });
+
+    expect(runs, 1);
+
+    signal.value = 100;
+    expect(runs, 2);
+    expect(readonly.value, 100);
+  });
 }

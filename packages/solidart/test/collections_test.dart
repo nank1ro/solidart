@@ -98,6 +98,164 @@ void main() {
 
       expect(runs, 1);
     });
+
+    test('length setter modifies list', () {
+      final list = ListSignal([1, 2, 3, 4]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+      expect(list.length, 4);
+
+      // Test shortening the list
+      list.length = 2;
+      expect(runs, 2);
+      expect(list.value, [1, 2]);
+
+      // Test setting to current length (no-op)
+      list.length = 2;
+      expect(runs, 2);
+    });
+
+    test('[] operator reads elements', () {
+      final list = ListSignal([1, 2, 3]);
+      var runs = 0;
+
+      Effect(() {
+        list[1];
+        runs++;
+      });
+
+      expect(runs, 1);
+      expect(list[0], 1);
+      expect(list[1], 2);
+      expect(list[2], 3);
+
+      list[1] = 5;
+      expect(runs, 2);
+    });
+
+    test('insert and insertAll add elements', () {
+      final list = ListSignal([1, 3]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      list.insert(1, 2);
+      expect(runs, 2);
+      expect(list.value, [1, 2, 3]);
+
+      list.insertAll(0, [-1, 0]);
+      expect(runs, 3);
+      expect(list.value, [-1, 0, 1, 2, 3]);
+    });
+
+    test('removeRange removes elements', () {
+      final list = ListSignal([1, 2, 3, 4, 5]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      list.removeRange(1, 3);
+      expect(runs, 2);
+      expect(list.value, [1, 4, 5]);
+    });
+
+    test('replaceRange replaces elements', () {
+      final list = ListSignal([1, 2, 3, 4]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      list.replaceRange(1, 3, [10, 20]);
+      expect(runs, 2);
+      expect(list.value, [1, 10, 20, 4]);
+    });
+
+    test('setAll modifies elements', () {
+      final list = ListSignal([1, 2, 3, 4]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      list.setAll(1, [10, 20]);
+      expect(runs, 2);
+      expect(list.value, [1, 10, 20, 4]);
+    });
+
+    test('setRange modifies elements', () {
+      final list = ListSignal([1, 2, 3, 4]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      list.setRange(1, 3, [10, 20]);
+      expect(runs, 2);
+      expect(list.value, [1, 10, 20, 4]);
+    });
+
+    test('fillRange fills elements', () {
+      final list = ListSignal([1, 2, 3, 4]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      list.fillRange(1, 3, 0);
+      expect(runs, 2);
+      expect(list.value, [1, 0, 0, 4]);
+    });
+
+    test('shuffle randomizes list', () {
+      final list = ListSignal([1, 2, 3, 4, 5]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      list.shuffle();
+      expect(runs, 2);
+      expect(list.length, 5);
+      // Can't test exact order due to randomness, but all elements should still exist
+      expect(list.value.toSet(), {1, 2, 3, 4, 5});
+    });
   });
 
   group('MapSignal', () {
@@ -190,6 +348,113 @@ void main() {
 
       expect(runs, 1);
     });
+
+    test('putIfAbsent adds new keys', () {
+      final map = MapSignal({'a': 1});
+      var runs = 0;
+
+      Effect(() {
+        map.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      final value1 = map.putIfAbsent('a', () => 99);
+      expect(value1, 1);
+      expect(runs, 1);
+
+      final value2 = map.putIfAbsent('b', () => 2);
+      expect(value2, 2);
+      expect(runs, 2);
+      expect(map.value, {'a': 1, 'b': 2});
+    });
+
+    test('update modifies existing keys', () {
+      final map = MapSignal({'a': 1, 'b': 2});
+      var runs = 0;
+
+      Effect(() {
+        map['a'];
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      map.update('a', (value) => value + 10);
+      expect(runs, 2);
+      expect(map['a'], 11);
+
+      map.update('c', (value) => value, ifAbsent: () => 3);
+      expect(runs, 3);
+      expect(map['c'], 3);
+    });
+
+    test('updateAll modifies all values', () {
+      final map = MapSignal({'a': 1, 'b': 2});
+      var runs = 0;
+
+      Effect(() {
+        map.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      map.updateAll((key, value) => value * 2);
+      expect(runs, 2);
+      expect(map.value, {'a': 2, 'b': 4});
+    });
+
+    test('removeWhere removes matching entries', () {
+      final map = MapSignal({'a': 1, 'b': 2, 'c': 3});
+      var runs = 0;
+
+      Effect(() {
+        map.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      map.removeWhere((key, value) => value % 2 == 0);
+      expect(runs, 2);
+      expect(map.value, {'a': 1, 'c': 3});
+    });
+
+    test('containsKey checks for keys', () {
+      final map = MapSignal({'a': 1, 'b': 2});
+      var runs = 0;
+
+      Effect(() {
+        map.containsKey('a');
+        runs++;
+      });
+
+      expect(runs, 1);
+      expect(map.containsKey('a'), true);
+      expect(map.containsKey('c'), false);
+
+      map['c'] = 3;
+      expect(runs, 2);
+    });
+
+    test('containsValue checks for values', () {
+      final map = MapSignal({'a': 1, 'b': 2});
+      var runs = 0;
+
+      Effect(() {
+        map.containsValue(1);
+        runs++;
+      });
+
+      expect(runs, 1);
+      expect(map.containsValue(1), true);
+      expect(map.containsValue(3), false);
+
+      map['a'] = 10;
+      expect(runs, 2);
+    });
   });
 
   group('SetSignal', () {
@@ -264,6 +529,71 @@ void main() {
         ..retainAll({});
 
       expect(runs, 1);
+    });
+
+    test('lookup finds elements', () {
+      final set = SetSignal({1, 2, 3});
+      var runs = 0;
+
+      Effect(() {
+        set.lookup(2);
+        runs++;
+      });
+
+      expect(runs, 1);
+      expect(set.lookup(2), 2);
+      expect(set.lookup(4), isNull);
+
+      set.add(4);
+      expect(runs, 2);
+    });
+
+    test('addAll with existing elements', () {
+      final set = SetSignal({1, 2});
+      var runs = 0;
+
+      Effect(() {
+        set.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      set.addAll([1, 2, 3, 4]);
+      expect(runs, 2);
+      expect(set.value, {1, 2, 3, 4});
+    });
+
+    test('removeAll removes multiple elements', () {
+      final set = SetSignal({1, 2, 3, 4, 5});
+      var runs = 0;
+
+      Effect(() {
+        set.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      set.removeAll([2, 4]);
+      expect(runs, 2);
+      expect(set.value, {1, 3, 5});
+    });
+
+    test('retainAll keeps only specified elements', () {
+      final set = SetSignal({1, 2, 3, 4, 5});
+      var runs = 0;
+
+      Effect(() {
+        set.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      set.retainAll([2, 4, 6]);
+      expect(runs, 2);
+      expect(set.value, {2, 4});
     });
   });
 }
