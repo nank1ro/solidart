@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:solidart_hooks/solidart_hooks.dart';
 
-class UseReactiveListExample extends HookWidget {
-  const UseReactiveListExample({super.key});
+class UseListSignalExample extends HookWidget {
+  const UseListSignalExample({super.key});
 
   @override
   Widget build(BuildContext context) {
