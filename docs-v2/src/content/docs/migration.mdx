@@ -192,26 +192,18 @@ print(counter.previousValue); // 0
 
 ## 6) Reactive collections
 
-`ListSignal`, `MapSignal`, and `SetSignal` have been replaced by
-`ReactiveList`, `ReactiveMap`, and `ReactiveSet`.
+`ReactiveList`, `ReactiveMap`, and `ReactiveSet` have been replaced by
+`ListSignal`, `MapSignal`, and `SetSignal`.
 
 **Before (v2):**
-```dart
-final todos = ListSignal<String>([]);
-```
-
-**After (v3):**
 ```dart
 final todos = ReactiveList<String>([]);
 ```
 
-### Hooks rename
-
-If you use `solidart_hooks`, update the hook names:
-
-- `useListSignal` -> `useReactiveList`
-- `useSetSignal` -> `useReactiveSet`
-- `useMapSignal` -> `useReactiveMap`
+**After (v3):**
+```dart
+final todos = ListSignal<String>([]);
+```
 
 ## 7) Untracked and batch helpers
 
@@ -269,7 +261,7 @@ final signal = someValueListenable.toSignal();
 - `toReadSignal`, `ReadSignal`, `SignalBase`
 - `SignalOptions`, `ResourceOptions`, `EffectOptions`
 - `updateValue`, `observe`, `until`
-- `ListSignal`, `MapSignal`, `SetSignal`
+- `ReactiveList`, `ReactiveMap`, `ReactiveSet`
 - `Debouncer` and other v2-only utils
 
 If you hit a missing API, prefer the v3 primitives (`Signal`, `Computed`,

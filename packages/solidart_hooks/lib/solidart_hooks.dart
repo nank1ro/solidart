@@ -189,7 +189,7 @@ Computed<T> useComputed<T>(
 
 /// Create a [Resource] from a future-producing [fetcher].
 Resource<T> useResource<T>(
-  /// The asynchrounous function used to retrieve data.
+  /// The asynchronous function used to retrieve data.
   final Future<T> Function()? fetcher, {
 
   /// Optional name used by DevTools.
@@ -239,7 +239,7 @@ Resource<T> useResource<T>(
 
 /// Create a [Resource] from a stream factory.
 Resource<T> useResourceStream<T>(
-  /// The asynchrounous function used to retrieve data.
+  /// The asynchronous function used to retrieve data.
   final Stream<T> Function()? stream, {
 
   /// Optional name used by DevTools.

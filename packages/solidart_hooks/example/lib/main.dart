@@ -54,19 +54,19 @@ class HookListScreen extends HookWidget {
       example: () => const UseSignalExample(),
     ),
     HookInfo(
-      title: 'useReactiveList',
-      description: 'Create a reactive list',
-      example: () => const UseReactiveListExample(),
+      title: 'useListSignal',
+      description: 'Create a list signal',
+      example: () => const UseListSignalExample(),
     ),
     HookInfo(
-      title: 'useReactiveSet',
-      description: 'Create a reactive set',
-      example: () => const UseReactiveSetExample(),
+      title: 'useSetSignal',
+      description: 'Create a set signal',
+      example: () => const UseSetSignalExample(),
     ),
     HookInfo(
-      title: 'useReactiveMap',
-      description: 'Create a reactive map',
-      example: () => const UseReactiveMapExample(),
+      title: 'useMapSignal',
+      description: 'Create a map signal',
+      example: () => const UseMapSignalExample(),
     ),
     HookInfo(
       title: 'useComputed',
