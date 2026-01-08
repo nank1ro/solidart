@@ -126,7 +126,7 @@ void main() {
       var runs = 0;
 
       Effect(() {
-        list[1];
+        final _ = list[1];
         runs++;
       });
 
@@ -253,7 +253,8 @@ void main() {
       list.shuffle();
       expect(runs, 2);
       expect(list.length, 5);
-      // Can't test exact order due to randomness, but all elements should still exist
+      // Can't test exact order due to randomness, but all elements should still
+      // exist.
       expect(list.value.toSet(), {1, 2, 3, 4, 5});
     });
   });
@@ -375,7 +376,7 @@ void main() {
       var runs = 0;
 
       Effect(() {
-        map['a'];
+        final _ = map['a'];
         runs++;
       });
 
@@ -417,7 +418,7 @@ void main() {
 
       expect(runs, 1);
 
-      map.removeWhere((key, value) => value % 2 == 0);
+      map.removeWhere((key, value) => value.isEven);
       expect(runs, 2);
       expect(map.value, {'a': 1, 'c': 3});
     });

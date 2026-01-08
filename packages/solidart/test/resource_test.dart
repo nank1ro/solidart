@@ -506,9 +506,9 @@ void main() {
     });
 
     test('ResourceReady equality and copyWith', () {
-      final ready1 = ResourceReady(42);
-      final ready2 = ResourceReady(42);
-      final ready3 = ResourceReady(43);
+      const ready1 = ResourceReady(42);
+      const ready2 = ResourceReady(42);
+      const ready3 = ResourceReady(43);
 
       expect(ready1, equals(ready2));
       expect(ready1, isNot(equals(ready3)));
@@ -520,9 +520,9 @@ void main() {
     });
 
     test('ResourceError equality and copyWith', () {
-      final error1 = ResourceError<int>('error1', stackTrace: StackTrace.empty);
-      final error2 = ResourceError<int>('error1', stackTrace: StackTrace.empty);
-      final error3 = ResourceError<int>('error2', stackTrace: StackTrace.empty);
+      const error1 = ResourceError<int>('error1', stackTrace: StackTrace.empty);
+      const error2 = ResourceError<int>('error1', stackTrace: StackTrace.empty);
+      const error3 = ResourceError<int>('error2', stackTrace: StackTrace.empty);
 
       expect(error1, equals(error2));
       expect(error1, isNot(equals(error3)));
