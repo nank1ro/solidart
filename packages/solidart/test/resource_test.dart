@@ -504,5 +504,74 @@ void main() {
         'loading',
       );
     });
+
+    test('ResourceReady equality and copyWith', () {
+      final ready1 = ResourceReady(42);
+      final ready2 = ResourceReady(42);
+      final ready3 = ResourceReady(43);
+
+      expect(ready1, equals(ready2));
+      expect(ready1, isNot(equals(ready3)));
+      expect(ready1.hashCode, equals(ready2.hashCode));
+
+      final copied = ready1.copyWith(value: 100);
+      expect(copied.value, 100);
+      expect(copied, isNot(equals(ready1)));
+    });
+
+    test('ResourceError equality and copyWith', () {
+      final error1 = ResourceError<int>('error1', stackTrace: StackTrace.empty);
+      final error2 = ResourceError<int>('error1', stackTrace: StackTrace.empty);
+      final error3 = ResourceError<int>('error2', stackTrace: StackTrace.empty);
+
+      expect(error1, equals(error2));
+      expect(error1, isNot(equals(error3)));
+      expect(error1.hashCode, equals(error2.hashCode));
+
+      final copied = error1.copyWith(error: 'new error');
+      expect(copied.error, 'new error');
+      expect(copied, isNot(equals(error1)));
+
+      final copiedStack = error1.copyWith(stackTrace: StackTrace.current);
+      expect(copiedStack.stackTrace, isNot(equals(error1.stackTrace)));
+    });
+
+    test('ResourceLoading equality and hashCode', () {
+      const loading1 = ResourceLoading<int>();
+      const loading2 = ResourceLoading<int>();
+
+      expect(loading1, equals(loading2));
+      expect(loading1.hashCode, equals(loading2.hashCode));
+    });
+  });
+
+  group('Resource previousState', () {
+    test('tracks previous state after transitions', () async {
+      final resource = Resource(() async => 42);
+
+      expect(resource.previousState, isNull);
+
+      await resource.resolve();
+      expect(resource.state.asReady?.value, 42);
+      expect(resource.previousState?.isLoading, isTrue);
+
+      await resource.refresh();
+      expect(resource.previousState?.asReady?.value, 42);
+    });
+
+    test('untrackedPreviousState does not create dependencies', () async {
+      final resource = Resource(() async => 42);
+      var runs = 0;
+
+      Effect(() {
+        resource.untrackedPreviousState;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      await resource.resolve();
+      expect(runs, 1); // Should not trigger effect
+    });
   });
 }

@@ -16,7 +16,13 @@ class LoginPage extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 final controller = AuthNotifier.provider.of(context);
-                controller.login(User(id: '1', name: 'John Doe', email: 'john.doe@example.com'));
+                controller.login(
+                  User(
+                    id: '1',
+                    name: 'John Doe',
+                    email: 'john.doe@example.com',
+                  ),
+                );
               },
               child: Text('Login'),
             ),

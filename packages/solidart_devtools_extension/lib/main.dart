@@ -138,8 +138,7 @@ class _SignalsState extends State<Signals> {
     sub = vmService.onExtensionEvent
         .where((e) {
           final kind = e.extensionKind;
-          return kind != null &&
-              kind.startsWith('ext.solidart.v3.signal');
+          return kind != null && kind.startsWith('ext.solidart.v3.signal');
         })
         .listen((event) {
           final data = event.extensionData?.data;

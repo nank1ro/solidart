@@ -8,8 +8,11 @@ class User {
   final String name;
   final String email;
 
-  factory User.fromMap(Map<String, dynamic> map) =>
-      User(id: map['id'] as String, name: map['name'] as String, email: map['email'] as String);
+  factory User.fromMap(Map<String, dynamic> map) => User(
+    id: map['id'] as String,
+    name: map['name'] as String,
+    email: map['email'] as String,
+  );
 
   Map<String, dynamic> toMap() => {'id': id, 'name': name, 'email': email};
 }

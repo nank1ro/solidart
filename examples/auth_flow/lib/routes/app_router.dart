@@ -26,7 +26,9 @@ class AppRouter {
       GoRoute(
         path: '/',
         builder: (_, _) => const HomePage(title: 'Home'),
-        routes: [GoRoute(path: 'profile', builder: (_, _) => const ProfilePage())],
+        routes: [
+          GoRoute(path: 'profile', builder: (_, _) => const ProfilePage()),
+        ],
       ),
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
     ],

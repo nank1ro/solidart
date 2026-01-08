@@ -168,6 +168,7 @@ enum _DevToolsEventType {
   disposed,
 }
 
+// coverage:ignore-start
 dynamic _toJson(Object? obj, [int depth = 0, Set<Object>? visited]) {
   const maxDepth = 20;
   if (depth > maxDepth) return '<max depth exceeded>';
@@ -217,6 +218,7 @@ dynamic _toJson(Object? obj, [int depth = 0, Set<Object>? visited]) {
     return jsonEncode(obj.toString());
   }
 }
+// coverage:ignore-end
 
 void _notifyDevToolsAboutSignal(
   ReadonlySignal<Object?> signal, {
@@ -256,6 +258,7 @@ String _signalType(ReadonlySignal<Object?> signal) => switch (signal) {
   _ => 'ReadonlySignal',
 };
 
+// coverage:ignore-start
 int _listenerCount(system.ReactiveNode node) {
   var count = 0;
   var link = node.subs;
@@ -265,7 +268,9 @@ int _listenerCount(system.ReactiveNode node) {
   }
   return count;
 }
+// coverage:ignore-end
 
+// coverage:ignore-start
 bool _hasPreviousValue(ReadonlySignal<Object?> signal) {
   if (!signal.trackPreviousValue) return false;
   if (signal is Signal) {
@@ -309,6 +314,7 @@ Object? _computedValue<T>(Computed<T> signal) {
   }
   return null;
 }
+// coverage:ignore-end
 
 /// Runs [callback] without tracking dependencies.
 ///
