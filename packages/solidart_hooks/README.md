@@ -164,7 +164,7 @@ class Example extends HookWidget {
 }
 ```
 
-## useReactiveList
+## useListSignal
 
 How to create a new list signal inside of a hook widget:
 
@@ -172,7 +172,7 @@ How to create a new list signal inside of a hook widget:
 class Example extends HookWidget {
   @override
   Widget build(BuildContext context) {
-    final items = useReactiveList<String>(['Item1', 'Item2']);
+    final items = useListSignal<String>(['Item1', 'Item2']);
     return Scaffold(
       body: Center(
         child: SignalBuilder(
@@ -193,7 +193,7 @@ class Example extends HookWidget {
 The widget will automatically rebuild when the list changes.
 The signal will get disposed when the widget gets unmounted.
 
-## useReactiveSet
+## useSetSignal
 
 How to create a new set signal inside of a hook widget:
 
@@ -201,7 +201,7 @@ How to create a new set signal inside of a hook widget:
 class Example extends HookWidget {
   @override
   Widget build(BuildContext context) {
-    final uniqueItems = useReactiveSet<String>({'Item1', 'Item2'});
+    final uniqueItems = useSetSignal<String>({'Item1', 'Item2'});
     return Scaffold(
       body: Center(
         child: SignalBuilder(
@@ -222,7 +222,7 @@ class Example extends HookWidget {
 The widget will automatically rebuild when the set changes.
 The signal will get disposed when the widget gets unmounted.
 
-## useReactiveMap
+## useMapSignal
 
 How to create a new map signal inside of a hook widget:
 
@@ -230,7 +230,7 @@ How to create a new map signal inside of a hook widget:
 class Example extends HookWidget {
   @override
   Widget build(BuildContext context) {
-    final userRoles = useReactiveMap<String, String>({'admin': 'John'});
+    final userRoles = useMapSignal<String, String>({'admin': 'John'});
     return Scaffold(
       body: Center(
         child: Column(

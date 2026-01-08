@@ -11,7 +11,7 @@ class ListSignalPage extends StatefulWidget {
 }
 
 class _ListSignalPageState extends State<ListSignalPage> {
-  final items = ReactiveList([1, 2], name: 'items');
+  final items = ListSignal([1, 2], name: 'items');
 
   @override
   void dispose() {
@@ -22,7 +22,7 @@ class _ListSignalPageState extends State<ListSignalPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ReactiveList')),
+      appBar: AppBar(title: const Text('ListSignal')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

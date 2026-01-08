@@ -13,7 +13,7 @@ class MapSignalPage extends StatefulWidget {
 }
 
 class _MapSignalPageState extends State<MapSignalPage> {
-  final items = ReactiveMap({'a': 1, 'b': 2}, name: 'items');
+  final items = MapSignal({'a': 1, 'b': 2}, name: 'items');
 
   @override
   void dispose() {
@@ -31,7 +31,7 @@ class _MapSignalPageState extends State<MapSignalPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ReactiveMap')),
+      appBar: AppBar(title: const Text('MapSignal')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

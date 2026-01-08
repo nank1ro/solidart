@@ -247,9 +247,9 @@ void _notifyDevToolsAboutSignal(
 
 String _signalType(ReadonlySignal<Object?> signal) => switch (signal) {
   Resource() => 'Resource',
-  ReactiveList() => 'ReactiveList',
-  ReactiveMap() => 'ReactiveMap',
-  ReactiveSet() => 'ReactiveSet',
+  ListSignal() => 'ListSignal',
+  MapSignal() => 'MapSignal',
+  SetSignal() => 'SetSignal',
   LazySignal() => 'LazySignal',
   Signal() => 'Signal',
   Computed() => 'Computed',
@@ -713,12 +713,12 @@ class LazySignal<T> extends Signal<T> {
   }
 }
 
-/// {@template v3-reactive-list}
+/// {@template v3-list-signal}
 /// A reactive wrapper around a [List] that copies on write.
 ///
 /// Mutations create a new list instance so that updates are observable:
 /// ```dart
-/// final list = ReactiveList([1, 2]);
+/// final list = ListSignal([1, 2]);
 /// Effect(() => print(list.length));
 /// list.add(3); // triggers effect
 /// ```
@@ -726,11 +726,11 @@ class LazySignal<T> extends Signal<T> {
 /// Reads (like `length` or index access) establish dependencies; the usual
 /// list API is supported.
 /// {@endtemplate}
-class ReactiveList<E> extends Signal<List<E>> with ListMixin<E> {
-  /// {@macro v3-reactive-list}
+class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
+  /// {@macro v3-list-signal}
   ///
   /// Creates a reactive list with the provided initial values.
-  ReactiveList(
+  ListSignal(
     Iterable<E> initialValue, {
     bool? autoDispose,
     String? name,
@@ -908,31 +908,31 @@ class ReactiveList<E> extends Signal<List<E>> with ListMixin<E> {
   }
 
   @override
-  List<R> cast<R>() => ReactiveList<R>(untrackedValue.cast<R>());
+  List<R> cast<R>() => ListSignal<R>(untrackedValue.cast<R>());
 
   @override
   String toString() =>
-      'ReactiveList<$E>(value: $untrackedValue, '
+      'ListSignal<$E>(value: $untrackedValue, '
       'previousValue: $untrackedPreviousValue)';
 }
 
-/// {@template v3-reactive-set}
+/// {@template v3-set-signal}
 /// A reactive wrapper around a [Set] that copies on write.
 ///
 /// Mutations create a new set instance so that updates are observable:
 /// ```dart
-/// final set = ReactiveSet({1});
+/// final set = SetSignal({1});
 /// Effect(() => print(set.length));
 /// set.add(2); // triggers effect
 /// ```
 ///
 /// Reads (like `length` or `contains`) establish dependencies.
 /// {@endtemplate}
-class ReactiveSet<E> extends Signal<Set<E>> with SetMixin<E> {
-  /// {@macro v3-reactive-set}
+class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
+  /// {@macro v3-set-signal}
   ///
   /// Creates a reactive set with the provided initial values.
-  ReactiveSet(
+  SetSignal(
     Iterable<E> initialValue, {
     bool? autoDispose,
     String? name,
@@ -1037,31 +1037,31 @@ class ReactiveSet<E> extends Signal<Set<E>> with SetMixin<E> {
   Set<E> toSet() => Set<E>.of(untrackedValue);
 
   @override
-  Set<R> cast<R>() => ReactiveSet<R>(untrackedValue.cast<R>());
+  Set<R> cast<R>() => SetSignal<R>(untrackedValue.cast<R>());
 
   @override
   String toString() =>
-      'ReactiveSet<$E>(value: $untrackedValue, '
+      'SetSignal<$E>(value: $untrackedValue, '
       'previousValue: $untrackedPreviousValue)';
 }
 
-/// {@template v3-reactive-map}
+/// {@template v3-map-signal}
 /// A reactive wrapper around a [Map] that copies on write.
 ///
 /// Mutations create a new map instance so that updates are observable:
 /// ```dart
-/// final map = ReactiveMap({'a': 1});
+/// final map = MapSignal({'a': 1});
 /// Effect(() => print(map['a']));
 /// map['a'] = 2; // triggers effect
 /// ```
 ///
 /// Reads (like `[]`, `keys`, or `length`) establish dependencies.
 /// {@endtemplate}
-class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
-  /// {@macro v3-reactive-map}
+class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
+  /// {@macro v3-map-signal}
   ///
   /// Creates a reactive map with the provided initial values.
-  ReactiveMap(
+  MapSignal(
     Map<K, V> initialValue, {
     bool? autoDispose,
     String? name,
@@ -1229,11 +1229,11 @@ class ReactiveMap<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
 
   @override
   Map<RK, RV> cast<RK, RV>() =>
-      ReactiveMap<RK, RV>(untrackedValue.cast<RK, RV>());
+      MapSignal<RK, RV>(untrackedValue.cast<RK, RV>());
 
   @override
   String toString() =>
-      'ReactiveMap<$K, $V>(value: $untrackedValue, '
+      'MapSignal<$K, $V>(value: $untrackedValue, '
       'previousValue: $untrackedPreviousValue)';
 }
 

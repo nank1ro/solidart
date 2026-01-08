@@ -7,10 +7,10 @@ class UseReactiveListExample extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = useReactiveList<String>(['Item1', 'Item2']);
+    final items = useListSignal<String>(['Item1', 'Item2']);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('useReactiveList')),
+      appBar: AppBar(title: const Text('useListSignal')),
       body: Center(
         child: SignalBuilder(
           builder: (context, child) {

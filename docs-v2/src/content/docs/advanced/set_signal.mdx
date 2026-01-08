@@ -1,16 +1,16 @@
 ---
-title: Reactive Set
-description: Learn ReactiveSet in solidart
+title: Set Signal
+description: Learn SetSignal in solidart
 sidebar:
   order: 2
 ---
 
-A `ReactiveSet` is a reactive wrapper around a `Set` that copies on write.
+A `SetSignal` is a reactive wrapper around a `Set` that copies on write.
 
-When you modify any element on the set, the `ReactiveSet` will automatically notify its observers.
+When you modify any element on the set, the `SetSignal` will automatically notify its observers.
 
 ```dart
-final items = ReactiveSet({1, 2});
+final items = SetSignal({1, 2});
 
 Effect(() {
   print('Items: ${items.value}');

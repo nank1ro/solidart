@@ -1,16 +1,16 @@
 ---
-title: Reactive List
-description: Learn ReactiveList in solidart
+title: List Signal
+description: Learn ListSignal in solidart
 sidebar:
   order: 1
 ---
 
-A `ReactiveList` is a reactive wrapper around a `List` that copies on write.
+A `ListSignal` is a reactive wrapper around a `List` that copies on write.
 
-When you modify any element on the list, the `ReactiveList` will automatically notify its observers.
+When you modify any element on the list, the `ListSignal` will automatically notify its observers.
 
 ```dart
-final items = ReactiveList([1, 2]);
+final items = ListSignal([1, 2]);
 
 Effect(() {
   print('Items: ${items.value}');
