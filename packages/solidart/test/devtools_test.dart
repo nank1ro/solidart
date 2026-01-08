@@ -104,13 +104,27 @@ void main() {
   });
 
   test('Computed participates in DevTools events', () {
+    final observer = _Observer();
+    SolidartConfig.observers.add(observer);
+
     final source = Signal(1);
     final computed = Computed(() => source.value * 2);
 
+    // Verify creation events for both source and computed.
+    expect(observer.created, 2);
+
     expect(computed.value, 2);
+    final updatedAfterFirstRead = observer.updated;
 
     source.value = 2;
+    expect(source.value, 2);
+    final updatedAfterSource = observer.updated;
+    expect(updatedAfterSource, greaterThan(updatedAfterFirstRead));
 
     expect(computed.value, 4);
+    expect(observer.updated, greaterThan(updatedAfterSource));
+
+    source.dispose();
+    computed.dispose();
   });
 }

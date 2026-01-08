@@ -703,7 +703,7 @@ class LazySignal<T> extends Signal<T> {
       return super.value;
     }
     throw StateError(
-      'LazySignal is not initialized, Please call `.value = <newValue>` first.',
+      'LazySignal is not initialized, please call `.value = <newValue>` first.',
     );
   }
 
