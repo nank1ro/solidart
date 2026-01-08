@@ -1803,7 +1803,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
 @immutable
 sealed class ResourceState<T> {
   /// Base constructor for resource states.
-  const ResourceState();
+  const ResourceState(); // coverage:ignore-line
 
   /// {@macro v3-resource-state}
   ///

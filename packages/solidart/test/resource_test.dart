@@ -551,6 +551,40 @@ void main() {
       );
     });
 
+    test(
+      'maybeWhen and maybeMap fall back to orElse when handler is absent',
+      () {
+        final error = ResourceState<int>.error(StateError('boom'));
+        const loading = ResourceState<int>.loading();
+        final ready = ResourceState<int>.ready(DateTime.now().microsecond);
+
+        expect(
+          error.maybeWhen(orElse: () => 'fallback'),
+          'fallback',
+        );
+
+        expect(
+          loading.maybeWhen(orElse: () => 'fallback'),
+          'fallback',
+        );
+
+        expect(
+          ready.maybeMap(orElse: () => 'fallback'),
+          'fallback',
+        );
+
+        expect(
+          error.maybeMap(orElse: () => 'fallback'),
+          'fallback',
+        );
+
+        expect(
+          loading.maybeMap(orElse: () => 'fallback'),
+          'fallback',
+        );
+      },
+    );
+
     test('ResourceReady equality and copyWith', () {
       const ready1 = ResourceReady(42);
       const ready2 = ResourceReady(42);
@@ -604,6 +638,12 @@ void main() {
       expect(loading.toString(), 'ResourceLoading<int>()');
       expect(error.toString(), contains('ResourceError<int>'));
       expect(error.toString(), contains('refreshing: true'));
+    });
+
+    test('ResourceState factories can be invoked at runtime', () {
+      final state = ResourceState<int>.ready(DateTime.now().microsecond);
+
+      expect(state, isA<ResourceReady<int>>());
     });
   });
 

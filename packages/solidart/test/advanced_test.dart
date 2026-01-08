@@ -26,11 +26,12 @@ void main() {
       ..onDispose(() => calls++)
       ..onDispose(() => calls++);
 
-    disposable.dispose();
+    final dispose = disposable.dispose;
+    dispose();
     expect(calls, 2);
 
     // Subsequent dispose should be a no-op.
-    disposable.dispose();
+    dispose();
     expect(calls, 2);
   });
 
