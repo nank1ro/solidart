@@ -7,10 +7,10 @@ class UseReactiveSetExample extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final uniqueItems = useReactiveSet<String>({'Item1', 'Item2'});
+    final uniqueItems = useSetSignal<String>({'Item1', 'Item2'});
 
     return Scaffold(
-      appBar: AppBar(title: const Text('useReactiveSet')),
+      appBar: AppBar(title: const Text('useSetSignal')),
       body: Center(
         child: SignalBuilder(
           builder: (context, child) {

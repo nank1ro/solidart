@@ -11,7 +11,7 @@ class SetSignalPage extends StatefulWidget {
 }
 
 class _SetSignalPageState extends State<SetSignalPage> {
-  final items = ReactiveSet({1, 2}, name: 'items');
+  final items = SetSignal({1, 2}, name: 'items');
 
   @override
   void dispose() {
@@ -22,7 +22,7 @@ class _SetSignalPageState extends State<SetSignalPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ReactiveSet')),
+      appBar: AppBar(title: const Text('SetSignal')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

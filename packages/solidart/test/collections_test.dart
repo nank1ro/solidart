@@ -2,9 +2,9 @@ import 'package:solidart/solidart.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('ReactiveList', () {
+  group('ListSignal', () {
     test('reacts to mutations', () {
-      final list = ReactiveList([1, 2]);
+      final list = ListSignal([1, 2]);
       var runs = 0;
 
       Effect(() {
@@ -31,7 +31,7 @@ void main() {
     });
 
     test('tracks previous value after read', () {
-      final list = ReactiveList([1, 2]);
+      final list = ListSignal([1, 2]);
 
       final values = (
         initial: list.previousValue,
@@ -43,7 +43,7 @@ void main() {
     });
 
     test('respects trackPreviousValue false', () {
-      final list = ReactiveList([1], trackPreviousValue: false);
+      final list = ListSignal([1], trackPreviousValue: false);
 
       final values = (
         previous: (list..add(2)).previousValue,
@@ -55,7 +55,7 @@ void main() {
     });
 
     test('no-op mutations do not notify', () {
-      final list = ReactiveList([1, 2, 3]);
+      final list = ListSignal([1, 2, 3]);
       var runs = 0;
 
       Effect(() {
@@ -80,7 +80,7 @@ void main() {
     });
 
     test('empty list no-op mutations do not notify', () {
-      final list = ReactiveList<int>([]);
+      final list = ListSignal<int>([]);
       var runs = 0;
 
       Effect(() {
@@ -100,9 +100,9 @@ void main() {
     });
   });
 
-  group('ReactiveMap', () {
+  group('MapSignal', () {
     test('reacts to mutations', () {
-      final map = ReactiveMap({'a': 1});
+      final map = MapSignal({'a': 1});
       var runs = 0;
 
       Effect(() {
@@ -126,7 +126,7 @@ void main() {
     });
 
     test('tracks previous value after read', () {
-      final map = ReactiveMap({'a': 1});
+      final map = MapSignal({'a': 1});
 
       final previous = (map..['a'] = 2).previousValue;
 
@@ -134,7 +134,7 @@ void main() {
     });
 
     test('no-op mutations do not notify', () {
-      final map = ReactiveMap({'a': 1, 'b': 2});
+      final map = MapSignal({'a': 1, 'b': 2});
       var runs = 0;
 
       Effect(() {
@@ -154,7 +154,7 @@ void main() {
     });
 
     test('addAll updates existing keys', () {
-      final map = ReactiveMap({'a': 1});
+      final map = MapSignal({'a': 1});
       var runs = 0;
 
       Effect(() {
@@ -172,7 +172,7 @@ void main() {
     });
 
     test('empty map no-op mutations do not notify', () {
-      final map = ReactiveMap<String, int>({});
+      final map = MapSignal<String, int>({});
       var runs = 0;
 
       Effect(() {
@@ -192,9 +192,9 @@ void main() {
     });
   });
 
-  group('ReactiveSet', () {
+  group('SetSignal', () {
     test('reacts to mutations', () {
-      final set = ReactiveSet({1});
+      final set = SetSignal({1});
       var runs = 0;
 
       Effect(() {
@@ -218,7 +218,7 @@ void main() {
     });
 
     test('tracks previous value after read', () {
-      final set = ReactiveSet({1});
+      final set = SetSignal({1});
 
       final previous = (set..add(2)).previousValue;
 
@@ -226,7 +226,7 @@ void main() {
     });
 
     test('no-op mutations do not notify', () {
-      final set = ReactiveSet({1, 2});
+      final set = SetSignal({1, 2});
       var runs = 0;
 
       Effect(() {
@@ -247,7 +247,7 @@ void main() {
     });
 
     test('empty set no-op mutations do not notify', () {
-      final set = ReactiveSet<int>({});
+      final set = SetSignal<int>({});
       var runs = 0;
 
       Effect(() {

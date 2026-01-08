@@ -45,9 +45,9 @@ enum SignalType {
   lazySignal,
   computed,
   resource,
-  reactiveList,
-  reactiveMap,
-  reactiveSet;
+  listSignal,
+  mapSignal,
+  setSignal;
 
   static SignalType byName(String name) {
     return switch (name) {
@@ -56,9 +56,9 @@ enum SignalType {
       'LazySignal' => SignalType.lazySignal,
       'Computed' => SignalType.computed,
       'Resource' => SignalType.resource,
-      'ReactiveList' => SignalType.reactiveList,
-      'ReactiveMap' => SignalType.reactiveMap,
-      'ReactiveSet' => SignalType.reactiveSet,
+      'ListSignal' => SignalType.listSignal,
+      'MapSignal' => SignalType.mapSignal,
+      'SetSignal' => SignalType.setSignal,
       _ => SignalType.signal,
     };
   }
@@ -108,7 +108,7 @@ class _SignalsState extends State<Signals> {
   final searchText = Signal<String>('');
   final filterType = Signal<SignalType?>(null);
   final showDisposed = Signal<bool>(true);
-  final signals = ReactiveMap<String, SignalData>({});
+  final signals = MapSignal<String, SignalData>({});
 
   late final filteredSignals = Computed(() {
     final lowercasedSearch = searchText.value.toLowerCase();

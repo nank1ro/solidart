@@ -1,21 +1,21 @@
 ---
 title: Reactive Map
-description: Learn ReactiveMap in solidart
+description: Learn MapSignal in solidart
 sidebar:
   order: 3
 ---
 
-A `ReactiveMap` is a reactive wrapper around a `Map` that uses copy-on-write.
+A `MapSignal` is a reactive wrapper around a `Map` that uses copy-on-write.
 Copy-on-write means each modification produces a new map instance, so observers
 always see a consistent, immutable-like snapshot of the data.
 
-When you modify any element on the map, the `ReactiveMap` will automatically
+When you modify any element on the map, the `MapSignal` will automatically
 notify its observers.
 
 ```dart
 import 'package:solidart/solidart.dart';
 
-final items = ReactiveMap({'a': 1, 'b': 2});
+final items = MapSignal({'a': 1, 'b': 2});
 
 Effect(() {
   print('Items: ${items.value}');
@@ -27,13 +27,13 @@ items.remove('a'); // prints "Items: {b: 2, c: 3}"
 
 ## Memory management
 
-Signals (including `ReactiveMap`) can auto-dispose in Flutter contexts when
+Signals (including `MapSignal`) can auto-dispose in Flutter contexts when
 `SolidartConfig.autoDispose` is enabled and nothing depends on them. Effects
 should always be disposed manually (automatic Effect disposal is rare in
 practice), and in pure Dart you must dispose all primitives to avoid leaks:
 
 ```dart
-final items = ReactiveMap({'a': 1});
+final items = MapSignal({'a': 1});
 final effect = Effect(() {
   print(items.value);
 });

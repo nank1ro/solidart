@@ -49,15 +49,15 @@ Signal<T> useSignal<T>(
   return use(_SignalHook('useSignal', target));
 }
 
-/// Create a [ReactiveList] inside a hook widget.
-ReactiveList<T> useReactiveList<T>(
+/// Create a [ListSignal] inside a hook widget.
+ListSignal<T> useListSignal<T>(
   /// The initial value of the signal.
   Iterable<T> initialValue, {
 
   /// Optional name used by DevTools.
   String? name,
 
-  /// Whether the reactive list should auto-dispose when unused.
+  /// Whether the list signal should auto-dispose when unused.
   bool? autoDispose,
 
   /// Whether to report updates to DevTools.
@@ -70,7 +70,7 @@ ReactiveList<T> useReactiveList<T>(
   bool? trackPreviousValue,
 }) {
   final target = useMemoized(
-    () => ReactiveList<T>(
+    () => ListSignal<T>(
       initialValue,
       autoDispose: autoDispose,
       name: name,
@@ -80,18 +80,18 @@ ReactiveList<T> useReactiveList<T>(
     ),
     [],
   );
-  return use(_SignalHook('useReactiveList', target));
+  return use(_SignalHook('useListSignal', target));
 }
 
-/// Create a [ReactiveSet] inside a hook widget.
-ReactiveSet<T> useReactiveSet<T>(
+/// Create a [SetSignal] inside a hook widget.
+SetSignal<T> useSetSignal<T>(
   /// The initial value of the signal.
   Iterable<T> initialValue, {
 
   /// Optional name used by DevTools.
   String? name,
 
-  /// Whether the reactive set should auto-dispose when unused.
+  /// Whether the set signal should auto-dispose when unused.
   bool? autoDispose,
 
   /// Whether to report updates to DevTools.
@@ -104,7 +104,7 @@ ReactiveSet<T> useReactiveSet<T>(
   bool? trackPreviousValue,
 }) {
   final target = useMemoized(
-    () => ReactiveSet<T>(
+    () => SetSignal<T>(
       initialValue,
       autoDispose: autoDispose,
       name: name,
@@ -114,18 +114,18 @@ ReactiveSet<T> useReactiveSet<T>(
     ),
     [],
   );
-  return use(_SignalHook('useReactiveSet', target));
+  return use(_SignalHook('useSetSignal', target));
 }
 
-/// Create a [ReactiveMap] inside a hook widget.
-ReactiveMap<K, V> useReactiveMap<K, V>(
+/// Create a [MapSignal] inside a hook widget.
+MapSignal<K, V> useMapSignal<K, V>(
   /// The initial value of the signal.
   Map<K, V> initialValue, {
 
   /// Optional name used by DevTools.
   String? name,
 
-  /// Whether the reactive map should auto-dispose when unused.
+  /// Whether the map signal should auto-dispose when unused.
   bool? autoDispose,
 
   /// Whether to report updates to DevTools.
@@ -138,7 +138,7 @@ ReactiveMap<K, V> useReactiveMap<K, V>(
   bool? trackPreviousValue,
 }) {
   final target = useMemoized(
-    () => ReactiveMap<K, V>(
+    () => MapSignal<K, V>(
       initialValue,
       autoDispose: autoDispose,
       name: name,
@@ -148,7 +148,7 @@ ReactiveMap<K, V> useReactiveMap<K, V>(
     ),
     [],
   );
-  return use(_SignalHook('useReactiveMap', target));
+  return use(_SignalHook('useMapSignal', target));
 }
 
 /// Create a new computed signal

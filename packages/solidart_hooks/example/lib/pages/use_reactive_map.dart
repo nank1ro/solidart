@@ -7,9 +7,9 @@ class UseReactiveMapExample extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userRoles = useReactiveMap<String, String>({'admin': 'John'});
+    final userRoles = useMapSignal<String, String>({'admin': 'John'});
     return Scaffold(
-      appBar: AppBar(title: const Text('useReactiveMap')),
+      appBar: AppBar(title: const Text('useMapSignal')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

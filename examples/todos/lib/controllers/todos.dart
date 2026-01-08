@@ -18,10 +18,10 @@ final todosControllerProvider = Provider<TodosController>(
 class TodosController {
   TodosController({
     List<Todo> initialTodos = const [],
-  }) : todos = ReactiveList(initialTodos);
+  }) : todos = ListSignal(initialTodos);
 
   // The list of todos
-  final ReactiveList<Todo> todos;
+  final ListSignal<Todo> todos;
 
   /// The list of completed todos
   late final completedTodos = Computed(
