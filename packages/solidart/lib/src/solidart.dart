@@ -63,7 +63,7 @@ final class None<T> extends Option<T> {
 /// You can override them per-instance via constructor parameters.
 /// {@endtemplate}
 final class SolidartConfig {
-  const SolidartConfig._();
+  const SolidartConfig._(); // coverage:ignore-line
 
   /// Whether nodes auto-dispose when they lose all subscribers.
   ///

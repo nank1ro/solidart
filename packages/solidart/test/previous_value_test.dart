@@ -117,6 +117,15 @@ void main() {
 
       expectPreviousValues(computed, previous: null, untracked: null);
     });
+
+    test('untrackedValue computes when not initialized', () {
+      final source = Signal(2);
+      final computed = Computed(() => source.value * 2);
+
+      final value = computed.untrackedValue;
+
+      expect(value, 4);
+    });
   });
 
   group('LazySignal previous value', () {
