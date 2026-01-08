@@ -505,6 +505,52 @@ void main() {
       );
     });
 
+    test('maybeWhen and maybeMap use provided handlers', () {
+      const ready = ResourceState<int>.ready(3);
+      final error = ResourceState<int>.error(StateError('boom'));
+      const loading = ResourceState<int>.loading();
+
+      expect(
+        ready.maybeWhen(
+          orElse: () => 'fallback',
+          ready: (value) => 'ready $value',
+        ),
+        'ready 3',
+      );
+
+      expect(
+        error.maybeWhen(
+          orElse: () => 'fallback',
+          error: (err, stackTrace) => err.runtimeType.toString(),
+        ),
+        'StateError',
+      );
+
+      expect(
+        loading.maybeWhen(
+          orElse: () => 'fallback',
+          loading: () => 'loading',
+        ),
+        'loading',
+      );
+
+      expect(
+        ready.maybeMap(
+          orElse: () => 'fallback',
+          ready: (state) => 'ready ${state.value}',
+        ),
+        'ready 3',
+      );
+
+      expect(
+        error.maybeMap(
+          orElse: () => 'fallback',
+          error: (state) => state.error.runtimeType.toString(),
+        ),
+        'StateError',
+      );
+    });
+
     test('ResourceReady equality and copyWith', () {
       const ready1 = ResourceReady(42);
       const ready2 = ResourceReady(42);
@@ -542,6 +588,22 @@ void main() {
 
       expect(loading1, equals(loading2));
       expect(loading1.hashCode, equals(loading2.hashCode));
+    });
+
+    test('ResourceState toString outputs useful descriptions', () {
+      const ready = ResourceReady<int>(1, isRefreshing: true);
+      const loading = ResourceLoading<int>();
+      const error = ResourceError<int>(
+        'boom',
+        stackTrace: StackTrace.empty,
+        isRefreshing: true,
+      );
+
+      expect(ready.toString(), contains('ResourceReady<int>'));
+      expect(ready.toString(), contains('refreshing: true'));
+      expect(loading.toString(), 'ResourceLoading<int>()');
+      expect(error.toString(), contains('ResourceError<int>'));
+      expect(error.toString(), contains('refreshing: true'));
     });
   });
 

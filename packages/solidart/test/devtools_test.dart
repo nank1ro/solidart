@@ -22,6 +22,19 @@ class _Observer implements SolidartObserver {
   }
 }
 
+class _ConstObserver extends SolidartObserver {
+  const _ConstObserver();
+
+  @override
+  void didCreateSignal(ReadonlySignal<Object?> signal) {}
+
+  @override
+  void didUpdateSignal(ReadonlySignal<Object?> signal) {}
+
+  @override
+  void didDisposeSignal(ReadonlySignal<Object?> signal) {}
+}
+
 void main() {
   late bool previousDevToolsEnabled;
   late List<SolidartObserver> previousObservers;
@@ -83,5 +96,21 @@ void main() {
     final _ = Signal(0, trackInDevTools: true);
 
     expect(observer.created, 1);
+  });
+
+  test('SolidartObserver supports const subclasses', () {
+    const observer = _ConstObserver();
+    expect(observer, isA<SolidartObserver>());
+  });
+
+  test('Computed participates in DevTools events', () {
+    final source = Signal(1);
+    final computed = Computed(() => source.value * 2);
+
+    expect(computed.value, 2);
+
+    source.value = 2;
+
+    expect(computed.value, 4);
   });
 }

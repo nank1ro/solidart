@@ -257,6 +257,109 @@ void main() {
       // exist.
       expect(list.value.toSet(), {1, 2, 3, 4, 5});
     });
+
+    test('addAll appends elements', () {
+      final list = ListSignal([1]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      list.addAll([2, 3]);
+
+      expect(runs, 2);
+      expect(list.value, [1, 2, 3]);
+    });
+
+    test('removeAt and removeLast return removed values', () {
+      final list = ListSignal([1, 2, 3]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      final removedAt = list.removeAt(1);
+      expect(removedAt, 2);
+      expect(runs, 2);
+      expect(list.value, [1, 3]);
+
+      final removedLast = list.removeLast();
+      expect(removedLast, 3);
+      expect(runs, 3);
+      expect(list.value, [1]);
+    });
+
+    test('clear empties non-empty list', () {
+      final list = ListSignal([1, 2]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      list.clear();
+
+      expect(runs, 2);
+      expect(list.value, isEmpty);
+    });
+
+    test('sort reorders list when needed', () {
+      final list = ListSignal([2, 1]);
+      var runs = 0;
+
+      Effect(() {
+        list[0];
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      list.sort();
+
+      expect(runs, 2);
+      expect(list.value, [1, 2]);
+    });
+
+    test('removeWhere and retainWhere update list', () {
+      final list = ListSignal([1, 2, 3, 4]);
+      var runs = 0;
+
+      Effect(() {
+        list.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      list.removeWhere((value) => value.isEven);
+      expect(runs, 2);
+      expect(list.value, [1, 3]);
+
+      list.retainWhere((value) => value > 1);
+      expect(runs, 3);
+      expect(list.value, [3]);
+    });
+
+    test('cast and toString expose list details', () {
+      final list = ListSignal<num>([1, 2]);
+      final casted = list.cast<int>();
+
+      expect(casted, isA<ListSignal<int>>());
+      expect((casted as ListSignal<int>).value, [1, 2]);
+      expect(list.toString(), contains('ListSignal<num>'));
+      expect(list.toString(), contains('value: [1, 2]'));
+    });
   });
 
   group('MapSignal', () {
@@ -456,6 +559,48 @@ void main() {
       map['a'] = 10;
       expect(runs, 2);
     });
+
+    test('keys/isEmpty/isNotEmpty and clear reflect state', () {
+      final map = MapSignal({'a': 1, 'b': 2});
+      var runs = 0;
+
+      Effect(() {
+        map.keys;
+        runs++;
+      });
+
+      expect(runs, 1);
+      expect(map.keys.toSet(), {'a', 'b'});
+      expect(map.isEmpty, isFalse);
+      expect(map.isNotEmpty, isTrue);
+
+      map.clear();
+
+      expect(runs, 2);
+      expect(map.value, isEmpty);
+      expect(map.isEmpty, isTrue);
+      expect(map.isNotEmpty, isFalse);
+    });
+
+    test('update throws when key missing and no ifAbsent', () {
+      final map = MapSignal({'a': 1});
+
+      expect(
+        () => map.update('b', (value) => value + 1),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('toString reports current and previous values', () {
+      final map = MapSignal({'a': 1});
+      map['a'] = 2;
+      map.value;
+
+      final description = map.toString();
+
+      expect(description, contains('MapSignal<String, int>'));
+      expect(description, contains('value: {a: 2}'));
+    });
   });
 
   group('SetSignal', () {
@@ -595,6 +740,43 @@ void main() {
       set.retainAll([2, 4, 6]);
       expect(runs, 2);
       expect(set.value, {2, 4});
+    });
+
+    test('iterator, toSet, cast, and toString work as expected', () {
+      final set = SetSignal<num>({1, 2});
+
+      final iterator = set.iterator;
+      expect(iterator.moveNext(), isTrue);
+
+      expect(set.toSet(), {1, 2});
+
+      final casted = set.cast<int>();
+      expect(casted, isA<SetSignal<int>>());
+      expect((casted as SetSignal<int>).value, {1, 2});
+
+      final description = set.toString();
+      expect(description, contains('SetSignal<num>'));
+      expect(description, contains('value: {1, 2}'));
+    });
+
+    test('removeWhere and retainWhere update set', () {
+      final set = SetSignal({1, 2, 3, 4});
+      var runs = 0;
+
+      Effect(() {
+        set.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      set.removeWhere((value) => value.isEven);
+      expect(runs, 2);
+      expect(set.value, {1, 3});
+
+      set.retainWhere((value) => value > 1);
+      expect(runs, 3);
+      expect(set.value, {3});
     });
   });
 }
