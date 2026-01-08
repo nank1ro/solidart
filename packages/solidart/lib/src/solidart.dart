@@ -123,7 +123,7 @@ final class SolidartConfig {
 /// {@endtemplate}
 abstract class SolidartObserver {
   /// {@macro v3-observer}
-  const SolidartObserver();
+  const SolidartObserver(); // coverage:ignore-line
 
   /// Called when a signal is created.
   void didCreateSignal(ReadonlySignal<Object?> signal);
