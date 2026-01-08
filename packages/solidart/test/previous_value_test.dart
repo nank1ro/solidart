@@ -126,6 +126,17 @@ void main() {
 
       expect(value, 4);
     });
+
+    test('untrackedValue returns cached value when available', () {
+      final source = Signal(3);
+      final computed = Computed(() => source.value * 2);
+
+      expect(computed.value, 6);
+
+      final value = computed.untrackedValue;
+
+      expect(value, 6);
+    });
   });
 
   group('LazySignal previous value', () {

@@ -319,7 +319,7 @@ void main() {
       var runs = 0;
 
       Effect(() {
-        list[0];
+        final _ = list[0];
         runs++;
       });
 
@@ -759,6 +759,23 @@ void main() {
       expect(description, contains('value: {1, 2}'));
     });
 
+    test('clear empties non-empty set', () {
+      final set = SetSignal({1, 2});
+      var runs = 0;
+
+      Effect(() {
+        set.length;
+        runs++;
+      });
+
+      expect(runs, 1);
+
+      set.clear();
+
+      expect(runs, 2);
+      expect(set.value, isEmpty);
+    });
+
     test('removeWhere and retainWhere update set', () {
       final set = SetSignal({1, 2, 3, 4});
       var runs = 0;
@@ -778,5 +795,13 @@ void main() {
       expect(runs, 3);
       expect(set.value, {3});
     });
+  });
+
+  test('MapSignal cast returns a new typed signal', () {
+    final map = MapSignal<String, num>({'a': 1});
+    final casted = map.cast<String, int>();
+
+    expect(casted, isA<MapSignal<String, int>>());
+    expect((casted as MapSignal<String, int>)['a'], 1);
   });
 }
