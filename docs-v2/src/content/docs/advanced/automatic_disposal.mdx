@@ -8,8 +8,9 @@ import { Aside } from '@astrojs/starlight/components';
 
 <Aside type="tip">
 TL;DR:
-- Dispose all Effects manually
+- Best practice: Dispose Effects manually in widgets for explicit lifecycle control
 - Signals/Computeds/Resources only auto-dispose when autoDispose is enabled and nothing depends on them.
+- Effects can also auto-dispose when autoDispose is enabled, but only after ALL their tracked dependencies are disposed.
 - When SolidartConfig.autoDispose is false, you MUST manually dispose Signals, Computeds, and Resources to avoid leaks.
 </Aside>
 
@@ -29,11 +30,17 @@ Or per instance:
 final counter = Signal(0, autoDispose: true);
 ```
 
-When auto-dispose is enabled, `Signal`, `Computed`, and `Resource` will dispose
-when they have no subscribers. `Effect` will dispose only after all of its
-tracked dependencies are disposed (not when any single dependency is disposed).
+When auto-dispose is enabled:
+- `Signal`, `Computed`, and `Resource` auto-dispose when they have no subscribers
+- `Effect` auto-disposes only after ALL its tracked dependencies are disposed or disconnected
 
-## Disposing effects in widgets
+**Best practice:** Even with auto-dispose enabled, manually dispose Effects in widgets
+for explicit lifecycle control and easier debugging.
+
+## Disposing effects you create manually
+
+Effects can be created in widgets or in business-logic classes (for example,
+`Notifier` classes with disco). Dispose them where they are owned.
 
 Effects created inside widgets should be disposed in `dispose()`:
 
