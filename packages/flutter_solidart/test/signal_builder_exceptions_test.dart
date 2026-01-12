@@ -69,4 +69,28 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
+
+  testWidgets(
+    'SignalBuilder.build asserts without dependencies (covers _isBuilding guard)',
+    (tester) async {
+      final previousAssert =
+          SolidartConfig.assertSignalBuilderWithoutDependencies;
+      SolidartConfig.assertSignalBuilderWithoutDependencies = true;
+      addTearDown(
+        () => SolidartConfig.assertSignalBuilderWithoutDependencies =
+            previousAssert,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SignalBuilder(
+            builder: (context, child) => const SizedBox(),
+          ),
+        ),
+      );
+
+      final exception = tester.takeException();
+      expect(exception, isA<AssertionError>());
+    },
+  );
 }
