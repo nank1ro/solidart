@@ -71,7 +71,8 @@ void main() {
   );
 
   testWidgets(
-    'SignalBuilder.build asserts without dependencies (covers _isBuilding guard)',
+    'SignalBuilder.build asserts without dependencies '
+    '(covers _isBuilding guard)',
     (tester) async {
       final previousAssert =
           SolidartConfig.assertSignalBuilderWithoutDependencies;
