@@ -21,6 +21,9 @@ Effect(() {
   print('Items: ${items.value}');
 });
 
+// Remember to call effect.dispose() when you're done.
+// See: /advanced/automatic-disposal
+
 items['c'] = 3; // prints "Items: {a: 1, b: 2, c: 3}"
 items.remove('a'); // prints "Items: {b: 2, c: 3}"
 ```
