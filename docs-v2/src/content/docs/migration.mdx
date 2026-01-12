@@ -37,9 +37,9 @@ import 'package:flutter_solidart/flutter_solidart.dart';
 | --- | --- | --- |
 | `ReadSignal<T>` | `ReadonlySignal<T>` | Read-only interface renamed. Use `toReadonly()` to create one. |
 | `toReadSignal()` | `toReadonly()` | Read-only conversion rename. |
-| `signal()` / `ReadSignal.call()` | `signal.value` | Call operator removed. |
+| `signal()` / `ReadSignal.call()` | `signal.value` | Call operator still works; `.value` is preferred. |
 | `signal.set(value)` | `signal.value = value` | Setter only. |
-| `signal.updateValue(fn)` | `signal.value = fn(signal.value)` | No helper method. |
+| `signal.updateValue(fn)` | `signal.value = fn(signal.untrackedValue)` | Use `untrackedValue` to match v2 semantics. |
 | `signal.observe(listener, fireImmediately)` | `Effect(() { ... })` | Use effects for reactive side effects. |
 | `signal.until(condition, timeout)` | — | Removed. Use `Completer` + `Effect` (example below). |
 | `hasPreviousValue` | — | Removed. Use `previousValue` / `untrackedPreviousValue`. |
@@ -64,7 +64,7 @@ await completer.future;
 | v2 API | v3 API | Notes |
 | --- | --- | --- |
 | `Computed(selector, options)` | `Computed(selector, ...)` | Options are named params. |
-| `computed()` | `computed.value` | Call operator removed. |
+| `computed()` | `computed.value` | Call operator still works; `.value` is preferred. |
 | `Computed.run()` | `computed.value` | No manual run; reading evaluates lazily. |
 
 ### Effect
@@ -146,7 +146,8 @@ final readOnly = counter.toReadonly();
 
 ### Updating values
 
-`updateValue` is gone. Update via `.value` and your own logic.
+`updateValue` is gone. Update via `.value` and your own logic. Use
+`untrackedValue` if you want the old no-tracking behavior.
 
 **Before (v2):**
 ```dart
@@ -155,7 +156,7 @@ counter.updateValue((value) => value + 1);
 
 **After (v3):**
 ```dart
-counter.value += 1;
+counter.value = counter.untrackedValue + 1;
 ```
 
 ### Observing changes

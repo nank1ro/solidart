@@ -4,6 +4,7 @@ description: Learn SignalBuilder in flutter_solidart
 sidebar:
   order: 1
 ---
+import { Aside } from '@astrojs/starlight/components';
 
 A magic widget builder that automatically rebuilds every time signals used inside its builder change.
 
@@ -36,5 +37,18 @@ class _SampleCounterState extends State<SampleCounter> {
 }
 ```
 
-`SignalBuilder` tracks dependencies automatically. If no signal is read inside
-`builder`, it simply builds once and does not subscribe to updates.
+`SignalBuilder` tracks dependencies automatically.
+
+<Aside type="caution">
+By default, if no __active__ signals are detected inside the builder method, an
+assertion error will be thrown in debug mode. This helps catch cases where you
+forgot to read a signal inside the builder.
+
+If you need to build with the latest value of a disposed signal, you can
+disable this behavior by setting
+`SolidartConfig.assertSignalBuilderWithoutDependencies = false` before
+`runApp()`.
+</Aside>
+
+If you disable the assertion, a `SignalBuilder` without dependencies builds
+once and does not subscribe to updates.

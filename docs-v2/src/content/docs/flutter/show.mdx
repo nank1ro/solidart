@@ -48,7 +48,7 @@ class _SampleState extends State<Sample> {
   @override
   Widget build(BuildContext context) {
     return Show(
-      when: () => loggedIn.value,
+      when: loggedIn,
       builder: (context) => const Text('Logged In'),
       fallback: (context) => const Text('Logged out'),
     );
@@ -60,6 +60,8 @@ The `Show` widget conditionally renders its `builder` or the `fallback` widget b
 The `fallback` widget builder is optional, by default nothing is rendered.
 
 The `Show` widget takes a function that returns a `bool`.
+Signals are callable, so you can pass them directly (for example, `when: loggedIn`)
+or use `.value` if you prefer.
 You can easily convert any type to `bool`, for example:
 
 ```dart {9} {13-17}

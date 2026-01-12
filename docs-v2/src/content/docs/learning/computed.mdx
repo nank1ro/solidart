@@ -67,10 +67,10 @@ Effect(() {
 });
 
 // just update the name, the effect above doesn't run because the age has not changed
-user.value = user.value.copyWith(name: 'new-name');
+user.value = user.untrackedValue.copyWith(name: 'new-name');
 
 // just update the age, the effect above prints
-user.value = user.value.copyWith(age: 21);
+user.value = user.untrackedValue.copyWith(age: 21);
 ```
 
 A computed is not a `Signal` but a `ReadonlySignal`.

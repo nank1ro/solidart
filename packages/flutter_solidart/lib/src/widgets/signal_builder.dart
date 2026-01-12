@@ -104,7 +104,15 @@ class _SignalBuilderElement extends StatelessElement {
     preset.cycle++;
     try {
       SolidartConfig.detachEffects = true;
-      return super.build();
+      final built = super.build();
+      if (SolidartConfig.assertSignalBuilderWithoutDependencies) {
+        assert(_effect.depsTail != null, '''
+SignalBuilder must detect at least one Signal, Computed, or Resource during the build.
+This may mean your reactive values were disposed.
+You can disable this check by setting `SolidartConfig.assertSignalBuilderWithoutDependencies = false` before `runApp()`.
+          ''');
+      }
+      return built;
     } finally {
       preset.purgeDeps(_effect);
       _depsHead = _effect.deps;

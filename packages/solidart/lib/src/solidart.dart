@@ -95,6 +95,17 @@ final class SolidartConfig {
   /// `trackInDevTools` are `true`.
   static bool devToolsEnabled = false;
 
+  /// Whether to assert that SignalBuilder has at least one dependency during
+  /// its build. Defaults to true.
+  ///
+  /// If you set this to false, you must ensure that the SignalBuilder has at
+  /// least one dependency, otherwise it won't rebuild when the signals change.
+  ///
+  /// The ability to disable this assertion is provided for advanced use cases
+  /// where you might have a SignalBuilder that builds something based on
+  /// disposed signals where you might be interested in their latest values.
+  static bool assertSignalBuilderWithoutDependencies = true;
+
   /// Registered observers for signal lifecycle events.
   ///
   /// Observers are notified only when `trackInDevTools` is enabled for the
@@ -475,6 +486,9 @@ abstract interface class ReadonlySignal<T>
   /// Returns the current value and tracks dependencies.
   T get value;
 
+  /// Returns [value]. This allows using a signal as a callable.
+  T call();
+
   /// Returns the current value without tracking.
   T get untrackedValue;
 
@@ -605,6 +619,9 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     assert(!isDisposed, 'Signal is disposed');
     return super.get().unwrap();
   }
+
+  @override
+  T call() => value;
 
   /// Sets the current value.
   ///
@@ -1302,6 +1319,9 @@ class Computed<T> extends preset.ComputedNode<T>
     assert(!isDisposed, 'Computed is disposed');
     return get();
   }
+
+  @override
+  T call() => value;
 
   @override
   T get untrackedValue {

@@ -2,7 +2,7 @@
 title: MapSignal
 description: Learn MapSignal in solidart
 sidebar:
-  order: 3
+  order: 1
 ---
 
 A `MapSignal` is a reactive wrapper around a `Map` that uses copy-on-write.
@@ -25,20 +25,4 @@ items['c'] = 3; // prints "Items: {a: 1, b: 2, c: 3}"
 items.remove('a'); // prints "Items: {b: 2, c: 3}"
 ```
 
-## Memory management
-
-Signals (including `MapSignal`) can auto-dispose in Flutter contexts when
-`SolidartConfig.autoDispose` is enabled and nothing depends on them. Effects
-should always be disposed manually (automatic Effect disposal is rare in
-practice), and in pure Dart you must dispose all primitives to avoid leaks:
-
-```dart
-final items = MapSignal({'a': 1});
-final effect = Effect(() {
-  print(items.value);
-});
-
-// Later
-effect.dispose();
-items.dispose();
-```
+For disposal guidelines, see the automatic disposal guide.
