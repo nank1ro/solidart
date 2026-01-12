@@ -8,7 +8,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 <Aside type="tip">
 TL;DR:
-- Dispose Effects you create in widgets.
+- Dispose all Effects manually
 - Signals/Computeds/Resources only auto-dispose when autoDispose is enabled and nothing depends on them.
 - When SolidartConfig.autoDispose is false, you MUST manually dispose Signals, Computeds, and Resources to avoid leaks.
 </Aside>
