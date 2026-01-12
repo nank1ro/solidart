@@ -19,7 +19,7 @@ void main() {
 
   test('ReadonlySignal call() works on typed reference', () {
     final counter = Signal(0);
-    final ReadonlySignal<int> readonly = counter.toReadonly();
+    final readonly = counter.toReadonly();
 
     expect(readonly(), 0);
 
