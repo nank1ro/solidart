@@ -47,8 +47,8 @@ class SignalBuilder extends StatelessWidget {
   ///
   /// This argument is optional and can be null if the entire widget subtree
   /// the [builder] builds depends on the value of the signals.
-  /// If you have a widget in the subtree that do not depend on the values of
-  /// the signals, use this argument, because it won't be rebuilded.
+  /// If you have a widget in the subtree that does not depend on the values of
+  /// the signals, use this argument, because it won't be rebuilt.
   /// {@endtemplate}
   final Widget? child;
 
