@@ -60,13 +60,15 @@ void main() {
       ),
     );
   });
-  testWidgets('Show widget works properly', (tester) async {
+  testWidgets('Show widget toggles branches and rebuilds on changes', (
+    tester,
+  ) async {
     final s = Signal(true);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: Show(
-            when: () => s.value,
+            when: s,
             builder: (context) => const Text('Builder'),
             fallback: (context) => const Text('Fallback'),
           ),
@@ -80,10 +82,43 @@ void main() {
     expect(fallbackFinder, findsNothing);
 
     s.value = false;
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(builderFinder, findsNothing);
     expect(fallbackFinder, findsOneWidget);
+
+    s.value = true;
+    await tester.pump();
+
+    expect(builderFinder, findsOneWidget);
+    expect(fallbackFinder, findsNothing);
+  });
+
+  testWidgets('Show widget cleans up subscriptions on unmount', (tester) async {
+    final previousAutoDispose = SolidartConfig.autoDispose;
+    SolidartConfig.autoDispose = true;
+    addTearDown(() => SolidartConfig.autoDispose = previousAutoDispose);
+
+    final s = Signal(true, autoDispose: true);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Show(
+            when: s,
+            builder: (context) => const Text('Builder'),
+            fallback: (context) => const Text('Fallback'),
+          ),
+        ),
+      ),
+    );
+
+    expect(s.isDisposed, isFalse);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+
+    expect(s.isDisposed, isTrue);
   });
 
   testWidgets('SignalBuilder widget works properly in ResourceReady state', (
