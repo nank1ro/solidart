@@ -38,7 +38,7 @@ tracked dependencies are disposed (not when any single dependency is disposed).
 Effects created inside widgets should be disposed in `dispose()`:
 
 ```dart
-class ExampleState extends State<Example> {
+class _ExampleState extends State<Example> {
   late final Effect _effect;
   final count = Signal(0);
 
