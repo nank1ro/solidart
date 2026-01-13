@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
 import 'pages/use_signal.dart';
-import 'pages/use_reactive_list.dart';
-import 'pages/use_reactive_set.dart';
-import 'pages/use_reactive_map.dart';
+import 'pages/use_list_signal.dart';
+import 'pages/use_set_signal.dart';
+import 'pages/use_map_signal.dart';
 import 'pages/use_computed.dart';
 import 'pages/use_resource.dart';
 import 'pages/use_resource_stream.dart';
