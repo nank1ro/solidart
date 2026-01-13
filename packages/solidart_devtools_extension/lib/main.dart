@@ -138,16 +138,16 @@ class _SignalsState extends State<Signals> {
     sub = vmService.onExtensionEvent
         .where((e) {
           final kind = e.extensionKind;
-          return kind != null && kind.startsWith('ext.solidart.v3.signal');
+          return kind != null && kind.startsWith('ext.solidart.signal');
         })
         .listen((event) {
           final data = event.extensionData?.data;
           if (data == null) return;
           final kind = event.extensionKind;
           switch (kind) {
-            case 'ext.solidart.v3.signal.created':
-            case 'ext.solidart.v3.signal.updated':
-            case 'ext.solidart.v3.signal.disposed':
+            case 'ext.solidart.signal.created':
+            case 'ext.solidart.signal.updated':
+            case 'ext.solidart.signal.disposed':
               final signalId = data['_id'].toString();
               signals[signalId] = SignalData(
                 name: data['name'] ?? data['_id'],
