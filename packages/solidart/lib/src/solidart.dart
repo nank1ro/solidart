@@ -14,6 +14,12 @@ import 'package:solidart/deps/system.dart' as system;
 /// considered equivalent.
 typedef ValueComparator<T> = bool Function(T? a, T? b);
 
+/// Signature for callbacks fired when a signal changes.
+typedef ObserveCallback<T> = void Function(T? previousValue, T value);
+
+/// Disposer returned by [ObserveSignal.observe].
+typedef DisposeObservation = void Function();
+
 /// Lazily produces a value.
 typedef ValueGetter<T> = T Function();
 
@@ -500,6 +506,35 @@ abstract interface class ReadonlySignal<T>
 
   /// Returns the previous value without tracking.
   T? get untrackedPreviousValue;
+}
+
+/// Observes [ReadonlySignal] changes with previous and current values.
+extension ObserveSignal<T> on ReadonlySignal<T> {
+  /// Observe the signal and invoke [listener] whenever the value changes.
+  ///
+  /// When [fireImmediately] is `true`, the listener runs once on subscription.
+  /// Returns a disposer that stops the observation.
+  DisposeObservation observe(
+    ObserveCallback<T> listener, {
+    bool fireImmediately = false,
+  }) {
+    var skipped = false;
+    final effect = Effect(
+      () {
+        value;
+        if (!fireImmediately && !skipped) {
+          skipped = true;
+          return;
+        }
+        untracked(() {
+          listener(untrackedPreviousValue, untrackedValue);
+        });
+      },
+      detach: true,
+    );
+
+    return effect.dispose;
+  }
 }
 
 /// {@template v3-signal}
