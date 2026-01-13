@@ -3,7 +3,15 @@
 library;
 
 export 'package:solidart/solidart.dart'
-    hide Computed, LazySignal, ReadonlySignal, Resource, Signal;
+    hide
+        Computed,
+        LazySignal,
+        ListSignal,
+        MapSignal,
+        ReadonlySignal,
+        Resource,
+        SetSignal,
+        Signal;
 
 export 'src/core/computed.dart';
 export 'src/core/resource.dart';

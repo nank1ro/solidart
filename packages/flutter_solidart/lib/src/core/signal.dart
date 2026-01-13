@@ -43,3 +43,48 @@ class LazySignal<T> extends core.LazySignal<T>
     super.trackInDevTools,
   });
 }
+
+/// A Solidart [core.ListSignal] that is also a Flutter [ValueListenable].
+class ListSignal<E> extends core.ListSignal<E>
+    with SignalValueListenableMixin<List<E>>
+    implements ReadonlySignal<List<E>> {
+  /// Creates a new [ListSignal] and exposes it as a [ValueListenable].
+  ListSignal(
+    super.initialValue, {
+    super.autoDispose,
+    super.name,
+    super.equals,
+    super.trackPreviousValue,
+    super.trackInDevTools,
+  });
+}
+
+/// A Solidart [core.SetSignal] that is also a Flutter [ValueListenable].
+class SetSignal<E> extends core.SetSignal<E>
+    with SignalValueListenableMixin<Set<E>>
+    implements ReadonlySignal<Set<E>> {
+  /// Creates a new [SetSignal] and exposes it as a [ValueListenable].
+  SetSignal(
+    super.initialValue, {
+    super.autoDispose,
+    super.name,
+    super.equals,
+    super.trackPreviousValue,
+    super.trackInDevTools,
+  });
+}
+
+/// A Solidart [core.MapSignal] that is also a Flutter [ValueListenable].
+class MapSignal<K, V> extends core.MapSignal<K, V>
+    with SignalValueListenableMixin<Map<K, V>>
+    implements ReadonlySignal<Map<K, V>> {
+  /// Creates a new [MapSignal] and exposes it as a [ValueListenable].
+  MapSignal(
+    super.initialValue, {
+    super.autoDispose,
+    super.name,
+    super.equals,
+    super.trackPreviousValue,
+    super.trackInDevTools,
+  });
+}
