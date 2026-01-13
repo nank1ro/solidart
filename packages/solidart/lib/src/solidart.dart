@@ -62,7 +62,7 @@ final class None<T> extends Option<T> {
   const None();
 }
 
-/// {@template v3-config}
+/// {@template solidart.config}
 /// Global configuration for v3 reactive primitives.
 ///
 /// These flags provide defaults for newly created signals/effects/resources.
@@ -119,7 +119,7 @@ final class SolidartConfig {
   static final observers = <SolidartObserver>[];
 }
 
-/// {@template v3-observer}
+/// {@template solidart.observer}
 /// Observer for signal lifecycle events.
 ///
 /// Use this for logging or instrumentation without depending on DevTools:
@@ -139,7 +139,7 @@ final class SolidartConfig {
 /// ```
 /// {@endtemplate}
 abstract class SolidartObserver {
-  /// {@macro v3-observer}
+  /// {@macro solidart.observer}
   const SolidartObserver(); // coverage:ignore-line
 
   /// Called when a signal is created.
@@ -537,7 +537,7 @@ extension ObserveSignal<T> on ReadonlySignal<T> {
   }
 }
 
-/// {@template v3-signal}
+/// {@template solidart.signal}
 /// # Signals
 /// Signals are the cornerstone of reactivity in v3. They store values that
 /// change over time, and any reactive computation that reads a signal will
@@ -574,16 +574,16 @@ extension ObserveSignal<T> on ReadonlySignal<T> {
 /// have a value until it is first assigned, and reading it early throws
 /// [StateError].
 /// {@endtemplate}
-/// {@template v3-signal-equals}
+/// {@template solidart.signal-equals}
 /// Updates are skipped when [equals] reports the new value is equivalent to
 /// the previous one.
 /// {@endtemplate}
 class Signal<T> extends preset.SignalNode<Option<T>>
     with DisposableMixin
     implements ReadonlySignal<T> {
-  /// {@macro v3-signal}
+  /// {@macro solidart.signal}
   ///
-  /// {@macro v3-signal-equals}
+  /// {@macro solidart.signal-equals}
   Signal(
     T initialValue, {
     bool? autoDispose,
@@ -620,7 +620,7 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     _notifySignalCreation(this);
   }
 
-  /// {@macro v3-signal}
+  /// {@macro solidart.signal}
   ///
   /// This is a lazy signal: it has no value at construction time.
   /// Reading [value] before the first assignment throws [StateError].
@@ -660,7 +660,7 @@ class Signal<T> extends preset.SignalNode<Option<T>>
 
   /// Sets the current value.
   ///
-  /// {@macro v3-signal-equals}
+  /// {@macro solidart.signal-equals}
   set value(T newValue) {
     assert(!isDisposed, 'Signal is disposed');
     set(Some(newValue));
@@ -771,7 +771,7 @@ class LazySignal<T> extends Signal<T> {
   }
 }
 
-/// {@template v3-list-signal}
+/// {@template solidart.list-signal}
 /// A reactive wrapper around a [List] that copies on write.
 ///
 /// Mutations create a new list instance so that updates are observable:
@@ -785,7 +785,7 @@ class LazySignal<T> extends Signal<T> {
 /// list API is supported.
 /// {@endtemplate}
 class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
-  /// {@macro v3-list-signal}
+  /// {@macro solidart.list-signal}
   ///
   /// Creates a reactive list with the provided initial values.
   ListSignal(
@@ -974,7 +974,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
       'previousValue: $untrackedPreviousValue)';
 }
 
-/// {@template v3-set-signal}
+/// {@template solidart.set-signal}
 /// A reactive wrapper around a [Set] that copies on write.
 ///
 /// Mutations create a new set instance so that updates are observable:
@@ -987,7 +987,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
 /// Reads (like `length` or `contains`) establish dependencies.
 /// {@endtemplate}
 class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
-  /// {@macro v3-set-signal}
+  /// {@macro solidart.set-signal}
   ///
   /// Creates a reactive set with the provided initial values.
   SetSignal(
@@ -1103,7 +1103,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
       'previousValue: $untrackedPreviousValue)';
 }
 
-/// {@template v3-map-signal}
+/// {@template solidart.map-signal}
 /// A reactive wrapper around a [Map] that copies on write.
 ///
 /// Mutations create a new map instance so that updates are observable:
@@ -1116,7 +1116,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
 /// Reads (like `[]`, `keys`, or `length`) establish dependencies.
 /// {@endtemplate}
 class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
-  /// {@macro v3-map-signal}
+  /// {@macro solidart.map-signal}
   ///
   /// Creates a reactive map with the provided initial values.
   MapSignal(
@@ -1295,7 +1295,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
       'previousValue: $untrackedPreviousValue)';
 }
 
-/// {@template v3-computed}
+/// {@template solidart.computed}
 /// # Computed
 /// A computed signal derives its value from other signals. It is read-only
 /// and recalculates whenever any dependency changes.
@@ -1315,7 +1315,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
 class Computed<T> extends preset.ComputedNode<T>
     with DisposableMixin
     implements ReadonlySignal<T> {
-  /// {@macro v3-computed}
+  /// {@macro solidart.computed}
   Computed(
     ValueGetter<T> getter, {
     this.equals = identical,
@@ -1418,7 +1418,7 @@ class Computed<T> extends preset.ComputedNode<T>
   }
 }
 
-/// {@template v3-effect}
+/// {@template solidart.effect}
 /// # Effect
 /// Effects run a side-effect whenever any signal they read changes.
 ///
@@ -1440,7 +1440,7 @@ class Computed<T> extends preset.ComputedNode<T>
 class Effect extends preset.EffectNode
     with DisposableMixin
     implements Disposable, Configuration {
-  /// {@macro v3-effect}
+  /// {@macro solidart.effect}
   factory Effect(
     VoidCallback callback, {
     bool? autoDispose,
@@ -1520,7 +1520,7 @@ class Effect extends preset.EffectNode
   }
 }
 
-/// {@template v3-resource}
+/// {@template solidart.resource}
 /// # Resource
 /// A resource is a signal designed for async data. It wraps the common states
 /// of asynchronous work: `ready`, `loading`, and `error`.
@@ -1551,7 +1551,7 @@ class Effect extends preset.EffectNode
 /// to `loading`.
 /// {@endtemplate}
 class Resource<T> extends Signal<ResourceState<T>> {
-  /// {@macro v3-resource}
+  /// {@macro solidart.resource}
   ///
   /// Creates a resource backed by a future-producing [fetcher].
   Resource(
@@ -1581,7 +1581,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     }
   }
 
-  /// {@macro v3-resource}
+  /// {@macro solidart.resource}
   ///
   /// Creates a resource backed by a stream factory.
   ///
@@ -1836,7 +1836,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   }
 }
 
-/// {@template v3-resource-state}
+/// {@template solidart.resource-state}
 /// Represents the state of a [Resource].
 ///
 /// A resource is always in one of:
@@ -1860,18 +1860,18 @@ sealed class ResourceState<T> {
   /// Base constructor for resource states.
   const ResourceState(); // coverage:ignore-line
 
-  /// {@macro v3-resource-state}
+  /// {@macro solidart.resource-state}
   ///
   /// Creates a ready state with [data].
   const factory ResourceState.ready(T data, {bool isRefreshing}) =
       ResourceReady<T>;
 
-  /// {@macro v3-resource-state}
+  /// {@macro solidart.resource-state}
   ///
   /// Creates a loading state.
   const factory ResourceState.loading() = ResourceLoading<T>;
 
-  /// {@macro v3-resource-state}
+  /// {@macro solidart.resource-state}
   ///
   /// Creates an error state.
   const factory ResourceState.error(
