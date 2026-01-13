@@ -51,7 +51,6 @@ void main() {
   test('Resource.stream wrapper constructs and disposes', () {
     final resource = Resource.stream(
       () => Stream<int>.value(1),
-      lazy: true,
     );
 
     expect(resource, isA<Listenable>());
