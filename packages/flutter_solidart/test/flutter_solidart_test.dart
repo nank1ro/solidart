@@ -32,6 +32,20 @@ class NumberContainer {
 }
 
 void main() {
+  test('Signals, Computed, and Resource implement Listenable', () {
+    final signal = Signal(0);
+    final computed = Computed(() => signal.value * 2);
+    final resource = Resource(() async => 1);
+
+    expect(signal, isA<Listenable>());
+    expect(computed, isA<Listenable>());
+    expect(resource, isA<Listenable>());
+
+    signal.dispose();
+    computed.dispose();
+    resource.dispose();
+  });
+
   testWidgets('(Provider) Not found signal throws an error', (tester) async {
     final counterProvider = Provider((_) => Signal(0));
     final invalidCounterProvider = Provider((_) => Signal(0));
