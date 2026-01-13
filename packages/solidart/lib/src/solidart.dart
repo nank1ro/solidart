@@ -242,7 +242,7 @@ void _notifyDevToolsAboutSignal(
   required _DevToolsEventType eventType,
 }) {
   if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
-  final eventName = 'ext.solidart.v3.signal.${eventType.name}';
+  final eventName = 'ext.solidart.signal.${eventType.name}';
   final value = _signalValue(signal);
   final previousValue = _signalPreviousValue(signal);
   final hasPreviousValue = _hasPreviousValue(signal);
