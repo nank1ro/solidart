@@ -8,7 +8,6 @@ export 'package:solidart/solidart.dart'
         LazySignal,
         ListSignal,
         MapSignal,
-        ReadonlySignal,
         Resource,
         SetSignal,
         Signal;
