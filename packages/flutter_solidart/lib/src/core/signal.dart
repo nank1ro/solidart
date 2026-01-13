@@ -2,11 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_solidart/src/core/value_listenable_signal_mixin.dart';
 import 'package:solidart/solidart.dart' as core;
 
-abstract interface class ReadonlySignal<T> implements ValueListenable<T> {}
+/// A Solidart [core.ReadonlySignal] that is also a Flutter [ValueListenable].
+abstract interface class ReadonlySignal<T>
+    implements core.ReadonlySignal<T>, ValueListenable<T> {}
 
+/// A Solidart [core.Signal] that is also a Flutter [ValueListenable].
 class Signal<T> extends core.Signal<T>
     with SignalValueListenableMixin<T>
     implements ReadonlySignal<T> {
+  /// Creates a new [Signal] and exposes it as a [ValueListenable].
   Signal(
     super.initialValue, {
     super.autoDispose,
@@ -16,6 +20,7 @@ class Signal<T> extends core.Signal<T>
     super.trackInDevTools,
   });
 
+  /// Creates a lazy [Signal] and exposes it as a [ValueListenable].
   factory Signal.lazy({
     bool? autoDispose,
     String? name,
@@ -25,9 +30,11 @@ class Signal<T> extends core.Signal<T>
   }) = LazySignal<T>;
 }
 
+/// A lazy [Signal] that is also a Flutter [ValueListenable].
 class LazySignal<T> extends core.LazySignal<T>
     with SignalValueListenableMixin<T>
     implements Signal<T>, ReadonlySignal<T> {
+  /// Creates a lazy [Signal] and exposes it as a [ValueListenable].
   LazySignal({
     super.autoDispose,
     super.name,
