@@ -148,9 +148,13 @@ class _SignalsState extends State<Signals> {
             case 'ext.solidart.signal.created':
             case 'ext.solidart.signal.updated':
             case 'ext.solidart.signal.disposed':
-              final signalId = data['_id'].toString();
+              final id = data['_id'];
+              final signalId =
+                  id == null
+                      ? DateTime.now().microsecondsSinceEpoch.toString()
+                      : id.toString();
               signals[signalId] = SignalData(
-                name: data['name'] ?? data['_id'],
+                name: data['name'] ?? id ?? signalId,
                 value: jsonDecode(data['value'] ?? 'null'),
                 hasPreviousValue: data['hasPreviousValue'],
                 previousValue: jsonDecode(data['previousValue'] ?? 'null'),
