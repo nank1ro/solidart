@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:solidart/solidart.dart';
 
+/// Adds Flutter [ValueListenable] behavior to a Solidart [ReadonlySignal].
 mixin SignalValueListenableMixin<T> on ReadonlySignal<T>
     implements ValueListenable<T> {
   final List<VoidCallback> _listeners = <VoidCallback>[];
