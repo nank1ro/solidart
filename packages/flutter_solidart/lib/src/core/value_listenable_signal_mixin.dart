@@ -1,19 +1,19 @@
 import 'package:flutter/foundation.dart';
-import 'package:solidart/solidart.dart';
+import 'package:solidart/solidart.dart' as core;
 
-/// Adds Flutter [ValueListenable] behavior to a Solidart [ReadonlySignal].
-mixin SignalValueListenableMixin<T> on ReadonlySignal<T>
+/// Adds Flutter [ValueListenable] behavior to a Solidart [core.ReadonlySignal].
+mixin SignalValueListenableMixin<T> on core.ReadonlySignal<T>
     implements ValueListenable<T> {
   final List<VoidCallback> _listeners = <VoidCallback>[];
 
-  Effect? _effect;
+  core.Effect? _effect;
   bool _skipped = false;
   bool _disposeAttached = false;
 
   void _ensureEffect() {
     if (_effect != null) return;
     _skipped = false;
-    _effect = Effect(
+    _effect = core.Effect(
       () {
         value;
         if (!_skipped) {

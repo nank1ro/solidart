@@ -32,7 +32,10 @@ class NumberContainer {
 }
 
 void main() {
-  test('Signals, Computed, Resources, and collections implement Listenable', () {
+  test(
+    'Signals, Computed, Resources, and collections '
+    'implement Listenable',
+    () {
     final signal = Signal(0);
     final computed = Computed(() => signal.value * 2);
     final resource = Resource(() async => 1);
@@ -53,7 +56,8 @@ void main() {
     listSignal.dispose();
     setSignal.dispose();
     mapSignal.dispose();
-  });
+  },
+  );
 
   testWidgets('(Provider) Not found signal throws an error', (tester) async {
     final counterProvider = Provider((_) => Signal(0));
