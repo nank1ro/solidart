@@ -1,10 +1,13 @@
 export 'src/solidart.dart'
     show
         Computed,
+        DisposeObservation,
         Effect,
         LazySignal,
         ListSignal,
         MapSignal,
+        ObserveCallback,
+        ObserveSignal,
         ReadonlySignal,
         Resource,
         ResourceError,
