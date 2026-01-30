@@ -88,4 +88,3 @@ mixin DisposableMixin implements Disposable {
     cleanups.add(callback);
   }
 }
-// coverage:ignore-end
