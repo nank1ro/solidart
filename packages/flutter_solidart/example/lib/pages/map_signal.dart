@@ -21,7 +21,7 @@ class _MapSignalPageState extends State<MapSignalPage> {
   void initState() {
     super.initState();
     items.observe((previousValue, value) {
-      print('项目已更改：$previousValue -> $value');
+      print('Items changed: $previousValue -> $value');
     });
   }
 
