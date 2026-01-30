@@ -18,7 +18,9 @@ import 'package:flutter_solidart/flutter_solidart.dart';
 class Logger implements SolidartObserver {
   @override
   void didCreateSignal(ReadonlySignal<Object?> signal) {
-    final value = _safeValue(signal);
+    final value = signal is Signal && !signal.isInitialized
+        ? 'uninitialized'
+        : signal.value;
     dev.log('didCreateSignal(name: ${signal.identifier.name}, value: $value)');
   }
 
@@ -30,19 +32,8 @@ class Logger implements SolidartObserver {
   @override
   void didUpdateSignal(ReadonlySignal<Object?> signal) {
     dev.log(
-      'didUpdateSignal(name: ${signal.identifier.name}, previousValue: ${signal.previousValue}, value: ${_safeValue(signal)})',
+      'didUpdateSignal(name: ${signal.identifier.name}, previousValue: ${signal.previousValue}, value: ${signal.value})',
     );
-  }
-}
-
-Object? _safeValue(ReadonlySignal<Object?> signal) {
-  if (signal is LazySignal && !signal.isInitialized) {
-    return 'uninitialized';
-  }
-  try {
-    return signal.value;
-  } on StateError {
-    return 'uninitialized';
   }
 }
 
