@@ -30,7 +30,6 @@ resolution: workspace
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  cupertino_icons: ^1.0.2
   disco: ^1.0.0
   flutter:
     sdk: flutter
