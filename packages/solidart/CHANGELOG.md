@@ -5,14 +5,13 @@
 - **BREAKING**: Signals now use the v3 surface from `solidart.dart`; read-only usage is through `ReadonlySignal`.
 - **BREAKING**: `Signal.toReadSignal()` renamed to `toReadonly()`.
 - **REMOVED**: `SignalBase`, `ReadSignal`/`ReadableSignal`, `Signal.setValue`/`updateValue`, `Signal.hasValue`/`hasPreviousValue`, `Signal.listenerCount`, and `ToggleBoolSignal`.
-- **REMOVED**: `Signal.until` (and related `FutureOrThenExtension`).
 - **ADDED**: `ReadonlySignal` and `ObserveSignal.observe` for any `ReadonlySignal` (signals, computeds, resources).
+- **ADDED**: `ReadonlySignal.until` for awaiting signal conditions (signals, computeds, resources).
 - **ADDED**: `LazySignal` type with `Signal.lazy` returning it and `isInitialized` support.
 
 ### Computed
 
 - **BREAKING**: Computeds are part of the v3 surface and use the `ReadonlySignal` API.
-- **REMOVED**: `Computed.until` (and related `FutureOrThenExtension`).
 
 ### Effect
 
@@ -21,8 +20,8 @@
 ### Resource
 
 - **BREAKING**: `ResourceExtensions` renamed to `ResourceStateExtensions` (`on`/`maybeOn` removed).
-- **REMOVED**: `Resource.update`, `Resource.until`, and `Resource.untilReady`.
-- **ADDED**: public `Resource.resolve()`.
+- **REMOVED**: `Resource.update`.
+- **ADDED**: public `Resource.resolve()` and `Resource.untilReady()`.
 
 ### Core / Shared
 
@@ -30,7 +29,7 @@
 - **BREAKING**: `SolidartConfig.equals` is removed; update skipping now uses the per-instance `equals` comparator (defaults to `identical`).
 - **BREAKING**: Default auto-disposal is now opt-in; `SolidartConfig.autoDispose` defaults to `false`.
 - **BREAKING**: Named identifiers now live on `identifier`/`identifier.name`, and `SolidartObserver` receives `ReadonlySignal` instances.
-- **REMOVED**: `Debouncer`/`DebounceOperation` and Solidart exception types (`SolidartException`, `SolidartReactionException`, `SolidartCaughtException`).
+- **REMOVED**: `Debouncer`/`DebounceOperation`, `FutureOrThenExtension`, and Solidart exception types (`SolidartException`, `SolidartReactionException`, `SolidartCaughtException`).
 - **ADDED**: `Disposable`/`DisposableMixin`, `Identifier`, `Configuration`, `Option`/`Some`/`None`.
 - **REFACTOR**: Collection signals are reimplemented on the v3 core with copy-on-write updates and standard `ListMixin`/`SetMixin`/`MapMixin` APIs.
 - **CHORE**: Upgrade `alien_signals` to `^2.1.1` and add `fake_async` for tests.

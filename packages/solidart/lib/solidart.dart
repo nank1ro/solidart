@@ -19,6 +19,7 @@ export 'src/solidart.dart'
         Signal,
         SolidartConfig,
         SolidartObserver,
+        UntilSignal,
         ValueComparator,
         batch,
         untracked;
