@@ -12,7 +12,7 @@ final todosControllerProvider = Provider<TodosController>(
 /// - `add`: Add a todo in the list of [todos]
 /// - `remove`: Removes a todo with the given id from the list of [todos]
 /// - `toggle`: Toggles a todo with the given id
-/// The list of todos exposed is a [ReadSignal] so the user cannot mutate
+/// The list of todos exposed is a [ReadonlySignal] so the user cannot mutate
 /// the signal without using this controller.
 @immutable
 class TodosController {

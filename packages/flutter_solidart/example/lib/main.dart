@@ -17,20 +17,22 @@ import 'package:flutter_solidart/flutter_solidart.dart';
 ///
 class Logger implements SolidartObserver {
   @override
-  void didCreateSignal(SignalBase<Object?> signal) {
-    final value = signal.hasValue ? signal.value : 'undefined';
-    dev.log('didCreateSignal(name: ${signal.name}, value: $value)');
+  void didCreateSignal(ReadonlySignal<Object?> signal) {
+    final value = signal is Signal && !signal.isInitialized
+        ? 'uninitialized'
+        : signal.value;
+    dev.log('didCreateSignal(name: ${signal.identifier.name}, value: $value)');
   }
 
   @override
-  void didDisposeSignal(SignalBase<Object?> signal) {
-    dev.log('didDisposeSignal(name: ${signal.name})');
+  void didDisposeSignal(ReadonlySignal<Object?> signal) {
+    dev.log('didDisposeSignal(name: ${signal.identifier.name})');
   }
 
   @override
-  void didUpdateSignal(SignalBase<Object?> signal) {
+  void didUpdateSignal(ReadonlySignal<Object?> signal) {
     dev.log(
-      'didUpdateSignal(name: ${signal.name}, previousValue: ${signal.previousValue}, value: ${signal.value})',
+      'didUpdateSignal(name: ${signal.identifier.name}, previousValue: ${signal.previousValue}, value: ${signal.value})',
     );
   }
 }

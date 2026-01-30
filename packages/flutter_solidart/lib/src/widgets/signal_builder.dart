@@ -1,7 +1,7 @@
-// ignore_for_file: document_ignores
-
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
+import 'package:solidart/deps/preset.dart' as preset;
+import 'package:solidart/deps/system.dart' as system;
 import 'package:solidart/solidart.dart';
 
 /// {@template signalbuilder}
@@ -47,8 +47,8 @@ class SignalBuilder extends StatelessWidget {
   ///
   /// This argument is optional and can be null if the entire widget subtree
   /// the [builder] builds depends on the value of the signals.
-  /// If you have a widget in the subtree that do not depend on the values of
-  /// the signals, use this argument, because it won't be rebuilded.
+  /// If you have a widget in the subtree that does not depend on the values of
+  /// the signals, use this argument, because it won't be rebuilt.
   /// {@endtemplate}
   final Widget? child;
 
@@ -63,45 +63,64 @@ class SignalBuilder extends StatelessWidget {
 class _SignalBuilderElement extends StatelessElement {
   _SignalBuilderElement(SignalBuilder super.widget);
 
-  late final effect = Effect(
-    scheduler,
-    detach: true,
+  late final Effect _effect = Effect.manual(
+    _runEffect,
     autoDispose: false,
-    autorun: false,
+    detach: true,
   );
 
-  void scheduler() {
-    if (dirty) return;
+  bool _isBuilding = false;
+  system.Link? _depsHead;
+  system.Link? _depsTail;
+
+  void _runEffect() {
+    _effect.deps = _depsHead;
+    _effect.depsTail = _depsTail;
+    if (!mounted) {
+      return;
+    }
+    if (_isBuilding || dirty) {
+      return;
+    }
     markNeedsBuild();
   }
 
   @override
   void unmount() {
-    effect.dispose();
+    _effect.deps = _depsHead;
+    _effect.depsTail = _depsTail;
+    _effect.dispose();
     super.unmount();
   }
 
   @override
   Widget build() {
-    final prevSub = reactiveSystem.activeSub;
-    // ignore: invalid_use_of_protected_member
-    final node = reactiveSystem.activeSub = effect.subscriber;
-
+    _isBuilding = true;
+    final prevDetach = SolidartConfig.detachEffects;
+    final prevSub = preset.setActiveSub(_effect);
+    _effect.depsTail = null;
+    _effect.flags =
+        system.ReactiveFlags.watching | system.ReactiveFlags.recursedCheck;
+    preset.cycle++;
     try {
+      SolidartConfig.detachEffects = true;
       final built = super.build();
       if (SolidartConfig.assertSignalBuilderWithoutDependencies) {
-        assert(node.deps != null, '''
+        assert(_effect.depsTail != null, '''
 SignalBuilder must detect at least one Signal, Computed, or Resource during the build.
-This may mean your reactive values were disposed. 
-You can disable this check by setting `SolidartConfig.assertSignalBuilderWithoutDependencies = false` before `runApp()`'
+This may mean your reactive values were disposed.
+You can disable this check by setting `SolidartConfig.assertSignalBuilderWithoutDependencies = false` before `runApp()`.
           ''');
       }
-      // ignore: invalid_use_of_internal_member
-      effect.setDependencies(node);
-
       return built;
     } finally {
-      reactiveSystem.activeSub = prevSub;
+      preset.purgeDeps(_effect);
+      _depsHead = _effect.deps;
+      _depsTail = _effect.depsTail;
+      SolidartConfig.detachEffects = prevDetach;
+      preset.setActiveSub(prevSub);
+      _effect.flags &= ~system.ReactiveFlags.recursedCheck;
+      _isBuilding = false;
     }
   }
 }

@@ -1,27 +1,44 @@
-part of 'core.dart';
+part of '../solidart.dart';
 
-/// {@template solidart-config}
-/// The global configuration of the reactive system.
+/// {@template solidart.config}
+/// Global configuration for v3 reactive primitives.
+///
+/// These flags provide defaults for newly created signals/effects/resources.
+/// You can override them per-instance via constructor parameters.
 /// {@endtemplate}
-abstract class SolidartConfig {
-  /// Whether to use the equality operator when updating the signal, defaults to
-  /// false
-  static bool equals = false;
+final class SolidartConfig {
+  const SolidartConfig._(); // coverage:ignore-line
 
-  /// Whether to enable the auto disposal of the reactive system, defaults to
-  /// true.
-  static bool autoDispose = true;
+  /// Whether nodes auto-dispose when they lose all subscribers.
+  ///
+  /// When enabled, signals/computeds/effects may dispose themselves once
+  /// nothing depends on them.
+  static bool autoDispose = false;
 
-  /// Whether to enable the DevTools extension, defaults to false.
-  static bool devToolsEnabled = false;
+  /// Whether nested effects detach from parent subscriptions.
+  ///
+  /// When `true`, inner effects do not become dependencies of their parent
+  /// effect unless explicitly linked.
+  static bool detachEffects = false;
 
-  /// Whether to track the previous value of the signal, defaults to true.
+  /// Whether to track previous values by default.
+  ///
+  /// Previous values are captured only after a signal has been read at least
+  /// once.
   static bool trackPreviousValue = true;
 
-  /// {@macro Resource.useRefreshing}
+  /// Whether to keep values while refreshing resources.
+  ///
+  /// When `true`, a refresh marks the state as `isRefreshing` instead of
+  /// replacing it with `loading`.
   static bool useRefreshing = true;
 
-  // coverage:ignore-start
+  /// Whether DevTools tracking is enabled.
+  ///
+  /// Signals only emit DevTools events when both this flag and
+  /// `trackInDevTools` are `true`.
+  static bool devToolsEnabled = false;
+
   /// Whether to assert that SignalBuilder has at least one dependency during
   /// its build. Defaults to true.
   ///
@@ -32,35 +49,10 @@ abstract class SolidartConfig {
   /// where you might have a SignalBuilder that builds something based on
   /// disposed signals where you might be interested in their latest values.
   static bool assertSignalBuilderWithoutDependencies = true;
-  // coverage:ignore-end
 
-  /// The list of observers.
+  /// Registered observers for signal lifecycle events.
+  ///
+  /// Observers are notified only when `trackInDevTools` is enabled for the
+  /// signal instance.
   static final observers = <SolidartObserver>[];
-
-  /// If you want nested effects to have their own independent behavior, you can
-  /// set this to true so that the Reactive system creates a dependency chain
-  /// for nested inner effects. Defaults to false.
-  static bool detachEffects = false;
-}
-
-/// {@template solidart-observer}
-/// An object that listens to the changes of the reactive system.
-///
-/// This can be used for logging purposes.
-/// {@endtemplate}
-abstract class SolidartObserver {
-  // coverage:ignore-start
-
-  /// {@macro solidart-observer}
-  const SolidartObserver();
-  // coverage:ignore-end
-
-  /// A signal has been created.
-  void didCreateSignal(SignalBase<Object?> signal);
-
-  /// A signal has been updated.
-  void didUpdateSignal(SignalBase<Object?> signal);
-
-  /// A signal has been disposed.
-  void didDisposeSignal(SignalBase<Object?> signal);
 }

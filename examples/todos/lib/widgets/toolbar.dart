@@ -17,12 +17,12 @@ class _ToolbarState extends State<Toolbar> {
 
   /// All the derived signals, they will react only when the `length` property
   /// changes
-  late final allTodosCount = Computed(() => todosController.todos().length);
+  late final allTodosCount = Computed(() => todosController.todos.length);
   late final incompleteTodosCount = Computed(
-    () => todosController.incompleteTodos().length,
+    () => todosController.incompleteTodos.value.length,
   );
   late final completedTodosCount = Computed(
-    () => todosController.completedTodos().length,
+    () => todosController.completedTodos.value.length,
   );
 
   @override
@@ -34,7 +34,7 @@ class _ToolbarState extends State<Toolbar> {
   }
 
   /// Maps the given [filter] to the correct list of todos
-  ReadSignal<int> mapFilterToTodosList(TodosFilter filter) {
+  ReadonlySignal<int> mapFilterToTodosList(TodosFilter filter) {
     switch (filter) {
       case TodosFilter.all:
         return allTodosCount;

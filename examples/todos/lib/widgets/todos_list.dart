@@ -22,7 +22,7 @@ class _TodoListState extends State<TodoList> {
   late final todosController = todosControllerProvider.of(context);
 
   // Given a [filter] return the correct list of todos
-  ReadSignal<List<Todo>> mapFilterToTodosList(TodosFilter filter) {
+  ReadonlySignal<List<Todo>> mapFilterToTodosList(TodosFilter filter) {
     switch (filter) {
       case TodosFilter.all:
         return todosController.todos;

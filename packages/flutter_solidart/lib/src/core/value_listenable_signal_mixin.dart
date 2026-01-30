@@ -1,36 +1,55 @@
-// coverage:ignore-file
 import 'package:flutter/foundation.dart';
-import 'package:solidart/solidart.dart' as solidart;
+import 'package:solidart/solidart.dart' as core;
 
-/// [ValueNotifier] implementation for [solidart.Signal]
-mixin ValueListenableSignalMixin<T> on solidart.ReadSignal<T>
+/// Adds Flutter [ValueListenable] behavior to a Solidart [core.ReadonlySignal].
+mixin SignalValueListenableMixin<T> on core.ReadonlySignal<T>
     implements ValueListenable<T> {
-  final _listeners = <VoidCallback, solidart.DisposeObservation>{};
+  final List<VoidCallback> _listeners = <VoidCallback>[];
 
-  /// If true, the callback will be run when the listener is added
-  bool get fireImmediately => false;
+  core.Effect? _effect;
+  bool _skipped = false;
+  bool _disposeAttached = false;
+
+  void _ensureEffect() {
+    if (_effect != null) return;
+    _skipped = false;
+    _effect = core.Effect(
+      () {
+        value;
+        if (!_skipped) {
+          _skipped = true;
+          return;
+        }
+        if (_listeners.isEmpty) return;
+        for (final callback in List<VoidCallback>.from(_listeners)) {
+          callback();
+        }
+      },
+      autoDispose: false,
+      detach: true,
+    );
+    if (!_disposeAttached) {
+      _disposeAttached = true;
+      onDispose(() {
+        _effect?.dispose();
+        _effect = null;
+        _listeners.clear();
+      });
+    }
+  }
 
   @override
   void addListener(VoidCallback listener) {
-    _listeners.putIfAbsent(listener, () {
-      return observe((_, _) {
-        listener();
-      }, fireImmediately: fireImmediately);
-    });
+    _listeners.add(listener);
+    _ensureEffect();
   }
 
   @override
   void removeListener(VoidCallback listener) {
-    final cleanup = _listeners.remove(listener);
-    cleanup?.call();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    for (final cleanup in _listeners.values) {
-      cleanup();
+    _listeners.remove(listener);
+    if (_listeners.isEmpty) {
+      _effect?.dispose();
+      _effect = null;
     }
-    _listeners.clear();
   }
 }

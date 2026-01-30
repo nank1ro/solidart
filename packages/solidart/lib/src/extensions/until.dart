@@ -1,15 +1,14 @@
-import 'dart:async';
+part of '../solidart.dart';
 
-import 'package:solidart/solidart.dart';
-
-/// Extension that adds the `until` method to [SignalBase] classes.
-extension Until<T> on SignalBase<T> {
-  /// Returns the future that completes when the [condition] evaluates to true.
-  /// If the [condition] is already true, it completes immediately.
+/// Waits until a signal satisfies a condition.
+extension UntilSignal<T> on ReadonlySignal<T> {
+  /// Returns a future that completes when [condition] becomes true.
   ///
-  /// The [timeout] parameter specifies the maximum time to wait for the
-  /// condition to be met. If provided and the timeout is reached before the
-  /// condition is met, the future will complete with a [TimeoutException].
+  /// If [condition] is already true, this returns the current value
+  /// immediately.
+  ///
+  /// When [timeout] is provided, the returned future completes with a
+  /// [TimeoutException] if the condition is not met in time.
   FutureOr<T> until(
     bool Function(T value) condition, {
     Duration? timeout,
@@ -23,25 +22,28 @@ extension Until<T> on SignalBase<T> {
     void dispose() {
       effect.dispose();
       timer?.cancel();
+      timer = null;
     }
 
     effect = Effect(
       () {
-        if (condition(value)) {
-          dispose();
-          completer.complete(value);
+        final current = value;
+        if (!condition(current)) return;
+        dispose();
+        if (!completer.isCompleted) {
+          completer.complete(current);
         }
       },
       autoDispose: false,
     );
 
-    // Start timeout timer if specified
+    onDispose(dispose);
+
     if (timeout != null) {
       timer = Timer(timeout, () {
-        if (!completer.isCompleted) {
-          dispose();
-          completer.completeError(TimeoutException(null, timeout));
-        }
+        if (completer.isCompleted) return;
+        dispose();
+        completer.completeError(TimeoutException(null, timeout));
       });
     }
 

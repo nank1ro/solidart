@@ -1,3 +1,7 @@
+## 3.2.0-dev.0 (Unreleased)
+
+- **CHORE**: Bump `flutter_solidart` dependency to `3.0.0-dev.2`.
+
 ## 3.1.2
 
 ### Changes from solidart
@@ -19,14 +23,18 @@
 ## 3.0.0
 
 - **BREAKING CHANGE**: `SignalHook` no longer calls `setState` to trigger a rebuild when the signal changes. Instead, you should use `SignalBuilder` to listen to signal changes and rebuild the UI accordingly. This change improves performance and reduces unnecessary rebuilds. You can also use `useListenable` if you want to trigger a rebuild on signal changes.
+
   ### Migration Guide
 
   **Before (v2.x):**
+
   ```dart
   final count = useSignal(0);
   return Text('Count: ${count.value}'); // Auto-rebuilds
   ```
+
   **After (v3.x):**
+
   ```dart
   final count = useSignal(0);
   return SignalBuilder(
@@ -35,11 +43,13 @@
   ```
 
   Or use `useListenable` for full widget rebuild:
+
   ```dart
   final count = useSignal(0);
   useListenable(count);
   return Text('Count: ${count.value}');
   ```
+
   This is inline with the behaviour of `useValueNotifier` from `flutter_hooks`.
 
 ## 2.0.0

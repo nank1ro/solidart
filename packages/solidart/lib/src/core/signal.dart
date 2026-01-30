@@ -1,172 +1,186 @@
-part of 'core.dart';
+part of '../solidart.dart';
 
-/// {@template signal}
+/// {@template solidart.signal}
 /// # Signals
-/// Signals are the cornerstone of reactivity in `solidart`. They contain
-/// values that change over time; when you change a signal's value, it
-/// automatically updates anything that uses it.
+/// Signals are the cornerstone of reactivity in v3. They store values that
+/// change over time, and any reactive computation that reads a signal will
+/// automatically update when the signal changes.
 ///
-/// Create the signal with:
-///
+/// Create a signal with an initial value:
 /// ```dart
 /// final counter = Signal(0);
-/// ````
+/// ```
 ///
-/// The argument passed to the create call is the initial value, and the return
-/// value is the signal.
-///
-/// To retrieve the current signal value use:
+/// Read the current value:
 /// ```dart
 /// counter.value; // 0
-/// // or
-/// counter(); // 0
 /// ```
 ///
-/// To update the current signal value you can use:
+/// Update the value:
 /// ```dart
-/// counter.value++; // increase by 1
+/// counter.value++;
 /// // or
-/// counter.set(2); // sets the value to 2
-/// // or
-/// counter.value = 5; // sets the value to 5
-/// // or
-/// counter.update((v) => v * 2); // update based on the current value
+/// counter.value = 10;
 /// ```
-
-/// ## Derived Signals
 ///
-/// You may want to subscribe only to a sub-field of a `Signal` value.
+/// Signals support previous value tracking. When enabled, `previousValue`
+/// updates only after the signal has been read at least once:
 /// ```dart
-/// // sample User class
-/// class User {
-///   const User({
-///     required this.name,
-///     required this.age,
-///   });
-///
-///   final String name;
-///   final int age;
-///
-///   User copyWith({
-///     String? name,
-///     int? age,
-///   }) {
-///     return User(
-///       name: name ?? this.name,
-///       age: age ?? this.age,
-///     );
-///   }
-/// }
-///
-/// // create a user signal
-/// final user = Signal(const User(name: "name", age: 20));
-///
-/// // create a derived signal just for the age
-/// final age = Computed(() => user().age);
-///
-/// // adding an effect to print the age
-/// Effect((_) {
-///   print('age changed from ${age.previousValue} into ${age.value}');
-/// });
-///
-/// // just update the name, the effect above doesn't run because the age has not changed
-/// user.update((value) => value.copyWith(name: 'new-name'));
-///
-/// // just update the age, the effect above prints
-/// user.update((value) => value.copyWith(age: 21));
+/// final count = Signal(0);
+/// count.value = 1;
+/// count.previousValue; // null (not read yet)
+/// count.value;         // establishes tracking
+/// count.previousValue; // 0
 /// ```
 ///
-/// A derived signal is not of type `Signal` but is a `ReadSignal`.
-/// The difference with a normal `Signal` is that a `ReadSignal` doesn't have a
-/// value setter, in other words it's a __read-only__ signal.
-///
-/// You can also use derived signals in other ways, like here:
-/// ```dart
-/// final counter = Signal(0);
-/// final doubleCounter = Computed(() => counter() * 2);
-/// ```
-///
-/// Every time the `counter` signal changes, the doubleCounter updates with the
-/// new doubled `counter` value.
-///
-/// You can also transform the value type into a `bool`:
-/// ```dart
-/// final counter = Signal(0); // type: int
-/// final isGreaterThan5 = Computed(() => counter() > 5); // type: bool
-/// ```
-///
-/// `isGreaterThan5` will update only when the `counter` value becomes lower/greater than `5`.
-/// - If the `counter` value is `0`, `isGreaterThan5` is equal to `false`.
-/// - If you update the value to `1`, `isGreaterThan5` doesn't emit a new
-/// value, but still contains `false`.
-/// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
+/// Signals can be created lazily using [Signal.lazy]. A lazy signal does not
+/// have a value until it is first assigned, and reading it early throws
+/// [StateError].
 /// {@endtemplate}
-class Signal<T> extends ReadableSignal<T> {
-  /// {@macro signal}
-  Signal(
-    super.initialValue, {
-
-    /// {@macro SignalBase.name}
-    super.name,
-
-    /// {@macro SignalBase.equals}
-    super.equals,
-
-    /// {@macro SignalBase.autoDispose}
-    super.autoDispose,
-
-    /// {@macro SignalBase.trackInDevTools}
-    super.trackInDevTools,
-
-    /// {@macro SignalBase.comparator}
-    super.comparator = identical,
-
-    /// {@macro SignalBase.trackPreviousValue}
-    super.trackPreviousValue,
-  });
-
-  /// {@macro signal}
+/// {@template solidart.signal-equals}
+/// Updates are skipped when [equals] reports the new value is equivalent to
+/// the previous one.
+/// {@endtemplate}
+class Signal<T> extends preset.SignalNode<Option<T>>
+    with DisposableMixin
+    implements ReadonlySignal<T> {
+  /// {@macro solidart.signal}
   ///
-  /// This is a lazy signal, it doesn't have a value at the moment of creation.
-  /// But would throw a StateError if you try to access the value before setting
-  /// one.
-  Signal.lazy({
-    /// {@macro SignalBase.name}
-    super.name,
+  /// {@macro solidart.signal-equals}
+  Signal(
+    T initialValue, {
+    bool? autoDispose,
+    String? name,
+    ValueComparator<T> equals = identical,
+    bool? trackPreviousValue,
+    bool? trackInDevTools,
+  }) : this._internal(
+         Some(initialValue),
+         autoDispose: autoDispose,
+         name: name,
+         equals: equals,
+         trackPreviousValue: trackPreviousValue,
+         trackInDevTools: trackInDevTools,
+       );
 
-    /// {@macro SignalBase.equals}
-    super.equals,
+  /// {@macro solidart.signal}
+  ///
+  /// This is a lazy signal: it has no value at construction time.
+  /// Reading [value] before the first assignment throws [StateError].
+  factory Signal.lazy({
+    String? name,
+    bool? autoDispose,
+    ValueComparator<T> equals,
+    bool? trackPreviousValue,
+    bool? trackInDevTools,
+  }) = LazySignal;
 
-    /// {@macro SignalBase.autoDispose}
-    super.autoDispose,
-
-    /// {@macro SignalBase.trackInDevTools}
-    super.trackInDevTools,
-
-    /// {@macro SignalBase.comparator}
-    super.comparator = identical,
-
-    /// {@macro SignalBase.trackPreviousValue}
-    super.trackPreviousValue,
-  }) : super.lazy();
-
-  /// {@macro set-signal-value}
-  set value(T newValue) => setValue(newValue);
-
-  /// Calls a function with the current value and assigns the result as the
-  /// new value.
-  T updateValue(T Function(T value) callback) =>
-      value = callback(_untrackedValue);
-
-  /// Converts this [Signal] into a [ReadableSignal]
-  /// Use this method to remove the visility to the value setter.
-  ReadableSignal<T> toReadSignal() => this;
+  Signal._internal(
+    Option<T> initialValue, {
+    this.equals = identical,
+    String? name,
+    bool? autoDispose,
+    bool? trackPreviousValue,
+    bool? trackInDevTools,
+  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+       trackPreviousValue =
+           trackPreviousValue ?? SolidartConfig.trackPreviousValue,
+       trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
+       identifier = ._(name),
+       super(
+         flags: system.ReactiveFlags.mutable,
+         currentValue: initialValue,
+         pendingValue: initialValue,
+       ) {
+    _notifySignalCreation(this);
+  }
 
   @override
-  // ignore: overridden_fields
-  final _id = ReactiveName.nameFor('Signal');
+  final bool autoDispose;
 
   @override
-  String toString() =>
-      '''Signal<$T>(value: $_untrackedValue, previousValue: $_untrackedPreviousValue)''';
+  final Identifier identifier;
+
+  @override
+  final ValueComparator<T> equals;
+
+  @override
+  final bool trackPreviousValue;
+
+  @override
+  final bool trackInDevTools;
+
+  Option<T> _previousValue = const None();
+
+  /// Whether the signal has been initialized.
+  ///
+  /// Regular signals are always initialized at construction time.
+  bool get isInitialized => true;
+
+  @override
+  T? get previousValue {
+    if (!trackPreviousValue) return null;
+    value;
+    return _previousValue.safeUnwrap();
+  }
+
+  @override
+  T? get untrackedPreviousValue {
+    if (!trackPreviousValue) return null;
+    return _previousValue.safeUnwrap();
+  }
+
+  @override
+  T get untrackedValue => super.currentValue.unwrap();
+
+  @override
+  T get value {
+    assert(!isDisposed, 'Signal is disposed');
+    return super.get().unwrap();
+  }
+
+  /// Sets the current value.
+  ///
+  /// {@macro solidart.signal-equals}
+  set value(T newValue) {
+    assert(!isDisposed, 'Signal is disposed');
+    set(Some(newValue));
+  }
+
+  @override
+  T call() => value;
+
+  // TODO(nank1ro): See ReadonlySignal TODO, If `ReadonlySignal` rename
+  // to `ReadSignal`, the `.toReadonly` method should be rename?
+  @override
+  bool didUpdate() {
+    flags = system.ReactiveFlags.mutable;
+    final current = currentValue;
+    final pending = pendingValue;
+    if (current is Some<T> &&
+        pending is Some<T> &&
+        equals(pending.value, current.value)) {
+      return false;
+    }
+
+    if (trackPreviousValue && current is Some<T>) {
+      _previousValue = current;
+    }
+
+    currentValue = pending;
+    _notifySignalUpdate(this);
+    return true;
+  }
+
+  @override
+  void dispose() {
+    if (isDisposed) return;
+    Disposable.unlinkSubs(this);
+    preset.stop(this);
+    super.dispose();
+    _notifySignalDisposal(this);
+  }
+
+  /// Returns a read-only view of this signal.
+  ReadonlySignal<T> toReadonly() => this;
 }

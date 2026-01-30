@@ -1,35 +1,35 @@
-// coverage:ignore-file
-import 'package:flutter_solidart/src/core/value_notifier_signal_mixin.dart';
-import 'package:solidart/solidart.dart' as solidart;
+import 'package:flutter/foundation.dart';
+import 'package:flutter_solidart/src/core/value_listenable_signal_mixin.dart';
+import 'package:solidart/solidart.dart' as core;
 
-/// {@macro resource}
-class Resource<T> extends solidart.Resource<T>
-    with ValueNotifierSignalMixin<solidart.ResourceState<T>> {
-  /// {@macro resource}
+/// A Solidart [core.Resource] that is also a Flutter [ValueListenable].
+class Resource<T> extends core.Resource<T>
+    with SignalValueListenableMixin<core.ResourceState<T>> {
+  /// Creates a new [Resource] and exposes it as a [ValueListenable].
   Resource(
     super.fetcher, {
-    super.equals,
-    super.name,
-    super.autoDispose,
-    super.lazy,
-    super.trackInDevTools,
-    super.useRefreshing,
-    super.debounceDelay,
     super.source,
+    super.lazy,
+    super.useRefreshing,
     super.trackPreviousState,
+    super.debounceDelay,
+    super.autoDispose,
+    super.name,
+    super.trackInDevTools,
+    super.equals,
   });
 
-  /// {@macro resource}
+  /// Creates a stream-based [Resource] and exposes it as a [ValueListenable].
   Resource.stream(
     super.stream, {
-    super.equals,
-    super.name,
-    super.autoDispose,
-    super.lazy,
-    super.trackInDevTools,
-    super.useRefreshing,
-    super.debounceDelay,
     super.source,
+    super.lazy,
+    super.useRefreshing,
     super.trackPreviousState,
+    super.debounceDelay,
+    super.autoDispose,
+    super.name,
+    super.trackInDevTools,
+    super.equals,
   }) : super.stream();
 }

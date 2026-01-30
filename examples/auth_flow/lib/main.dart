@@ -9,7 +9,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initLocalStorage();
 
-  runApp(ProviderScope(providers: [AuthNotifier.provider], child: const MyApp()));
+  runApp(
+    ProviderScope(providers: [AuthNotifier.provider], child: const MyApp()),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -39,7 +41,9 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp.router(
       title: 'Auth Demo - GoRouter',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      ),
       routerConfig: router,
     );
   }

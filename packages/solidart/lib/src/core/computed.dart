@@ -1,257 +1,124 @@
-part of 'core.dart';
+part of '../solidart.dart';
 
-/// {@template computed}
-/// A special Signal that notifies only whenever the selected
-/// values change.
+/// {@template solidart.computed}
+/// # Computed
+/// A computed signal derives its value from other signals. It is read-only
+/// and recalculates whenever any dependency changes.
 ///
-/// You may want to subscribe only to sub-field of a `Signal` value or to
-/// combine multiple signal values.
+/// Use `Computed` to derive state or combine multiple signals:
 /// ```dart
-/// // first name signal
 /// final firstName = Signal('Josh');
-///
-/// // last name signal
 /// final lastName = Signal('Brown');
-///
-/// // derived signal, updates automatically when firstName or lastName change
-/// final fullName = Computed(() => '${firstName()} ${lastName()}');
-///
-/// print(fullName()); // prints Josh Brown
-///
-/// // just update the name, the effect above doesn't run because the age has not changed
-/// user.update((value) => value.copyWith(name: 'new-name'));
-///
-/// // just update the age, the effect above prints
-/// user.update((value) => value.copyWith(age: 21));
+/// final fullName = Computed(() => '${firstName.value} ${lastName.value}');
 /// ```
 ///
-/// A derived signal is not of type `Signal` but is a `ReadSignal`.
-/// The difference with a normal `Signal` is that a `ReadSignal` doesn't have a
-/// value setter, in other words it's a __read-only__ signal.
+/// Computeds only notify when the derived value changes. You can customize
+/// equality via [equals] to skip updates for equivalent values.
 ///
-/// You can also use derived signals in other ways, like here:
-/// ```dart
-/// final counter = Signal(0);
-/// final doubleCounter = Computed(() => counter() * 2);
-/// ```
-///
-/// Every time the `counter` signal changes, the doubleCounter updates with the
-/// new doubled `counter` value.
-///
-/// You can also transform the value type like:
-/// ```dart
-/// final counter = Signal(0); // counter contains the value type `int`
-/// final isGreaterThan5 = Computed(() => counter() > 5); // isGreaterThan5 contains the value type `bool`
-/// ```
-///
-/// `isGreaterThan5` will update only when the `counter` value becomes lower/greater than `5`.
-/// - If the `counter` value is `0`, `isGreaterThan5` is equal to `false`.
-/// - If you update the value to `1`, `isGreaterThan5` doesn't emit a new
-/// value, but still contains `false`.
-/// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
+/// Like signals, computeds can track previous values once they have been read.
 /// {@endtemplate}
-class Computed<T> extends ReadSignal<T> {
-  /// {@macro computed}
+class Computed<T> extends preset.ComputedNode<T>
+    with DisposableMixin
+    implements ReadonlySignal<T> {
+  /// {@macro solidart.computed}
   Computed(
-    this.selector, {
-
-    /// {@macro SignalBase.name}
-    super.name,
-
-    /// {@macro SignalBase.equals}
-    super.equals,
-
-    /// {@macro SignalBase.autoDispose}
-    super.autoDispose,
-
-    /// {@macro SignalBase.trackInDevTools}
-    super.trackInDevTools,
-
-    /// {@macro SignalBase.comparator}
-    super.comparator = identical,
-
-    /// {@macro SignalBase.trackPreviousValue}
-    super.trackPreviousValue,
-  }) {
-    var runnedOnce = false;
-    _internalComputed = _AlienComputed(
-      this,
-      (previousValue) {
-        if (trackPreviousValue && previousValue is T) {
-          _hasPreviousValue = true;
-          _untrackedPreviousValue = _previousValue = previousValue;
-        }
-
-        try {
-          _untrackedValue = selector();
-
-          if (runnedOnce) {
-            _notifySignalUpdate();
-          } else {
-            runnedOnce = true;
-          }
-          return _untrackedValue;
-        } catch (e, s) {
-          throw SolidartCaughtException(e, stackTrace: s);
-        }
-      },
-    );
-
-    _notifySignalCreation();
+    ValueGetter<T> getter, {
+    this.equals = identical,
+    bool? autoDispose,
+    String? name,
+    bool? trackPreviousValue,
+    bool? trackInDevTools,
+  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+       trackPreviousValue =
+           trackPreviousValue ?? SolidartConfig.trackPreviousValue,
+       trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
+       identifier = ._(name),
+       super(flags: system.ReactiveFlags.none, getter: (_) => getter()) {
+    _notifySignalCreation(this);
   }
 
-  /// The selector applied
-  final T Function() selector;
-
-  late final _AlienComputed<T> _internalComputed;
-
-  bool _disposed = false;
-
-  late T _untrackedValue;
-
-  T? _previousValue;
-
-  T? _untrackedPreviousValue;
-
-  // Whether or not there is a previous value
-  bool _hasPreviousValue = false;
-
-  // Keeps track of all the callbacks passed to [onDispose].
-  // Used later to fire each callback when this signal is disposed.
-  final _onDisposeCallbacks = <VoidCallback>[];
-
-  // A computed signal is always initialized
   @override
-  bool get hasValue => true;
-
-  final _deps = <alien.ReactiveNode>{};
+  final bool autoDispose;
 
   @override
-  void dispose() {
-    if (_disposed) return;
+  final Identifier identifier;
 
-    _internalComputed.dispose();
-    _disposed = true;
-    for (final dep in _deps) {
-      if (dep is _AlienSignal) dep.parent._mayDispose();
-      if (dep is _AlienComputed) dep.parent._mayDispose();
+  @override
+  final ValueComparator<T> equals;
+
+  @override
+  final bool trackPreviousValue;
+
+  @override
+  final bool trackInDevTools;
+
+  Option<T> _previousValue = const None();
+
+  @override
+  T? get previousValue {
+    if (!trackPreviousValue) return null;
+    value;
+    return _previousValue.safeUnwrap();
+  }
+
+  @override
+  T? get untrackedPreviousValue {
+    if (!trackPreviousValue) return null;
+    return _previousValue.safeUnwrap();
+  }
+
+  @override
+  T get untrackedValue {
+    if (currentValue != null || null is T) {
+      return currentValue as T;
     }
-
-    _deps.clear();
-
-    for (final cb in _onDisposeCallbacks) {
-      cb();
-    }
-    _onDisposeCallbacks.clear();
-    _notifySignalDisposal();
+    return untracked(() => value);
   }
 
   @override
   T get value {
-    if (_disposed) {
-      return _untrackedValue;
-    }
-
-    final value = reactiveSystem.getComputedValue(_internalComputed);
-    if (autoDispose) {
-      _mayDispose();
-    }
-
-    return value;
+    assert(!isDisposed, 'Computed is disposed');
+    return get();
   }
 
   @override
-  T call() {
-    return value;
-  }
-
-  /// Returns the previous value of the computed.
-  @override
-  T? get previousValue {
-    if (!trackPreviousValue) return null;
-    // cause observation
-    if (!disposed) value;
-    return _previousValue;
-  }
-
-  /// Returns the untracked value of the computed.
-  @override
-  T get untrackedValue {
-    return _untrackedValue;
-  }
-
-  /// Returns the untracked previous value of the computed.
-  @override
-  T? get untrackedPreviousValue {
-    return _untrackedPreviousValue;
-  }
+  T call() => value;
 
   @override
-  void _mayDispose() {
-    if (_disposed || !autoDispose) return;
-    if (_internalComputed.deps == null && _internalComputed.subs == null) {
-      dispose();
-    } else {
-      _deps.clear();
+  bool didUpdate() {
+    preset.cycle++;
+    depsTail = null;
+    flags = system.ReactiveFlags.mutable | system.ReactiveFlags.recursedCheck;
 
-      var link = _internalComputed.deps;
-      for (; link != null; link = link.nextDep) {
-        final dep = link.dep;
-        _deps.add(dep);
+    final prevSub = preset.setActiveSub(this);
+    try {
+      final previousValue = currentValue;
+      final pendingValue = getter(previousValue);
+      if (equals(previousValue, pendingValue)) {
+        return false;
       }
+
+      if (trackPreviousValue && (previousValue is T)) {
+        _previousValue = Some(previousValue);
+      }
+
+      currentValue = pendingValue;
+      _notifySignalUpdate(this);
+      return true;
+    } finally {
+      preset.activeSub = prevSub;
+      flags &= ~system.ReactiveFlags.recursedCheck;
+      preset.purgeDeps(this);
     }
   }
 
   @override
-  bool get disposed => _disposed;
-
-  @override
-  bool get hasPreviousValue {
-    if (!trackPreviousValue) return false;
-    // cause observation
-    value;
-    return _hasPreviousValue;
-  }
-
-  // coverage:ignore-start
-  @override
-  int get listenerCount => _deps.length;
-  // coverage:ignore-end
-
-  @override
-  void onDispose(VoidCallback cb) {
-    _onDisposeCallbacks.add(cb);
-  }
-
-  // coverage:ignore-start
-  /// Indicates if the [oldValue] and the [newValue] are equal
-  @override
-  bool _compare(T? oldValue, T? newValue) {
-    // skip if the value are equals
-    if (equals) {
-      return oldValue == newValue;
-    }
-
-    // return the [comparator] result
-    return comparator(oldValue, newValue);
-  }
-  // coverage:ignore-end
-
-  /// Manually runs the computed to update its value.
-  /// This is usually not necessary, as the computed will automatically
-  /// update when its dependencies change.
-  /// However, in some cases, you may want to force an update.
-  void run() {
-    if (_disposed) return;
-    _internalComputed.update();
-  }
-
-  @override
-  final _id = ReactiveName.nameFor('Computed');
-
-  @override
-  String toString() {
-    value;
-    return '''Computed<$T>(value: $untrackedValue, previousValue: $untrackedPreviousValue)''';
+  void dispose() {
+    if (isDisposed) return;
+    Disposable.unlinkDeps(this);
+    Disposable.unlinkSubs(this);
+    preset.stop(this);
+    super.dispose();
+    _notifySignalDisposal(this);
   }
 }

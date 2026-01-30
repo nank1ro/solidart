@@ -10,12 +10,12 @@ class EffectsPage extends StatefulWidget {
 
 class _EffectsPageState extends State<EffectsPage> {
   final count = Signal(0, name: 'count');
-  late final DisposeEffect disposeEffect;
+  late final Effect effect;
 
   @override
   void initState() {
     super.initState();
-    disposeEffect = Effect(() {
+    effect = Effect(() {
       // ignore: avoid_print
       print("The count is now ${count.value}");
     });
@@ -23,7 +23,7 @@ class _EffectsPageState extends State<EffectsPage> {
 
   @override
   void dispose() {
-    disposeEffect();
+    effect.dispose();
     super.dispose();
   }
 

@@ -1,240 +1,103 @@
-part of 'core.dart';
+part of '../solidart.dart';
 
-/// Dispose function
-typedef DisposeEffect = void Function();
-
-/// The reaction interface
-abstract class ReactionInterface {
-  /// Indicate if the reaction is dispose
-  bool get disposed;
-
-  /// Tries to dispose the effects, if no listeners are present
-  // ignore: unused_element
-  void _mayDispose();
-
-  /// Disposes the reaction
-  void dispose();
-}
-
-/// {@template effect}
-/// Signals are trackable values, but they are only one half of the equation.
-/// To complement those are observers that can be updated by those trackable
-/// values. An effect is one such observer; it runs a side effect that depends
-/// on signals.
+/// {@template solidart.effect}
+/// # Effect
+/// Effects run a side-effect whenever any signal they read changes.
 ///
-/// An effect can be created by using `Effect`.
-/// The effect subscribes automatically to any signal used in the callback and
-/// reruns when any of them change.
-///
-/// So let's create an `Effect` that reruns whenever `counter` changes:
 /// ```dart
-/// // sample signal
 /// final counter = Signal(0);
-///
-/// // effect creation
 /// Effect(() {
-///     print("The count is now ${counter.value}");
-/// });
-/// // The effect prints `The count is now 0`;
-///
-/// // increment the counter
-/// counter.value++;
-///
-/// // The effect prints `The count is now 1`;
-/// ```
-///
-/// The `Effect` method returns a `Dispose` class giving you a more
-/// advanced usage:
-/// ```dart
-/// final dispose = Effect(() {
-///     print("The count is now ${counter.value}");
+///   print('count: ${counter.value}');
 /// });
 /// ```
 ///
-/// Whenever you want to stop the effect from running, you just have to call
-/// the returned callback of the `Effect` method:
-/// ```dart
-/// final disposeEffect = Effect(() { /* your code */ });
-/// // later
-/// disposeEffect(); // this will stop the effect from running
-/// ```
+/// Effects run once immediately when created. If you need a lazy effect,
+/// create it with [Effect.manual] and call [run] yourself.
 ///
-/// Any effect runs at least once immediately when is created with the current
-/// signals values.
+/// Nested effects can either attach to their parent (default) or detach by
+/// passing `detach: true` or by enabling [SolidartConfig.detachEffects].
 ///
-/// > An effect is useless after it is disposed, you must not use it anymore.
+/// Call [dispose] to stop the effect and release dependencies.
 /// {@endtemplate}
-class Effect implements ReactionInterface {
-  /// {@macro effect}
+class Effect extends preset.EffectNode
+    with DisposableMixin
+    implements Disposable, Configuration {
+  /// {@macro solidart.effect}
   factory Effect(
-    void Function() callback, {
-    ErrorCallback? onError,
-
-    /// The name of the effect, useful for logging
-    String? name,
-
-    /// Delay each effect reaction
-    Duration? delay,
-
-    /// Whether to automatically dispose the effect (defaults to true).
-    ///
-    /// This happens automatically when all the tracked dependencies are
-    /// disposed.
+    VoidCallback callback, {
     bool? autoDispose,
-
-    /// Detach effect, default value is [SolidartConfig.detachEffects]
+    String? name,
     bool? detach,
+  }) => .manual(
+    callback,
+    autoDispose: autoDispose,
+    name: name,
+    detach: detach,
+  )..run();
 
-    /// Whether to automatically run the effect (defaults to true).
-    bool? autorun,
-  }) {
-    late Effect effect;
-
-    try {
-      final effectiveName = name ?? ReactiveName.nameFor('Effect');
-      final effectiveAutoDispose = autoDispose ?? SolidartConfig.autoDispose;
-      if (delay == null) {
-        effect = Effect._internal(
-          callback: () => callback(),
-          onError: onError,
-          name: effectiveName,
-          autoDispose: effectiveAutoDispose,
-          detach: detach,
-        );
-      } else {
-        final scheduler = createDelayedScheduler(delay);
-        var isScheduled = false;
-        Timer? timer;
-
-        effect = Effect._internal(
-          callback: () {
-            if (!isScheduled) {
-              isScheduled = true;
-
-              // coverage:ignore-start
-              timer?.cancel();
-              // coverage:ignore-end
-              timer = null;
-
-              timer = scheduler(() {
-                isScheduled = false;
-                if (!effect.disposed) {
-                  callback();
-                } else {
-                  // coverage:ignore-start
-                  timer?.cancel();
-                  // coverage:ignore-end
-                }
-              });
-            }
-          },
-          onError: onError,
-          name: effectiveName,
-          autoDispose: effectiveAutoDispose,
-          detach: detach,
-        );
-      }
-      return effect;
-    } finally {
-      if (autorun ?? true) effect.run();
-    }
-  }
-
-  /// {@macro effect}
-  Effect._internal({
-    required VoidCallback callback,
-    required this.name,
-    required this.autoDispose,
-    ErrorCallback? onError,
+  /// Creates an effect without running it.
+  ///
+  /// Use this when you need to *delay* the first run or decide *when* the
+  /// effect should start tracking dependencies. Common cases:
+  /// - you must create several signals first and only then start the effect
+  /// - you want to control the first run in tests
+  /// - you need conditional startup (e.g. after async setup)
+  ///
+  /// The effect will not track anything until you call [run]:
+  /// ```dart
+  /// final count = Signal(0);
+  /// final effect = Effect.manual(() {
+  ///   print('count: ${count.value}');
+  /// });
+  ///
+  /// count.value = 1; // no output yet
+  /// effect.run();    // prints "count: 1" and starts tracking
+  /// ```
+  ///
+  /// If you want the effect to run immediately, use the [Effect] factory.
+  Effect.manual(
+    VoidCallback callback, {
+    bool? autoDispose,
+    String? name,
     bool? detach,
-  }) : _onError = onError {
-    _internalEffect = _AlienEffect(this, callback, detach: detach);
-  }
+  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+       identifier = ._(name),
+       detach = detach ?? SolidartConfig.detachEffects,
+       super(
+         fn: callback,
+         flags:
+             system.ReactiveFlags.watching | system.ReactiveFlags.recursedCheck,
+       );
 
-  /// The name of the effect, useful for logging purposes.
-  final String name;
-
-  /// Whether to automatically dispose the effect (defaults to true).
+  @override
   final bool autoDispose;
 
-  /// Optionally handle the error case
-  final ErrorCallback? _onError;
-
-  bool _disposed = false;
-
-  late final _AlienEffect _internalEffect;
-
-  final _deps = <alien.ReactiveNode>{};
-
-  /// The subscriber of the effect, do not use it directly.
-  @protected
-  alien.ReactiveNode get subscriber => _internalEffect;
-
   @override
-  bool get disposed => _disposed;
+  final Identifier identifier;
 
-  /// Runs the effect, tracking any signal read during the execution.
-  void run() {
-    final currentSub = reactiveSystem.activeSub;
-    if (!SolidartConfig.detachEffects && currentSub != null) {
-      if (currentSub is! _AlienEffect ||
-          (!_internalEffect.detach && !currentSub.detach)) {
-        reactiveSystem.link(_internalEffect, currentSub);
-      }
-    }
-    final prevSub = reactiveSystem.setCurrentSub(_internalEffect);
+  /// Whether this effect detaches from parent subscriptions.
+  final bool detach;
 
-    try {
-      _internalEffect.run();
-    } catch (e, s) {
-      if (_onError != null) {
-        _onError.call(SolidartCaughtException(e, stackTrace: s));
-      } else {
-        rethrow;
-      }
-    } finally {
-      reactiveSystem.setCurrentSub(prevSub);
-      if (SolidartConfig.autoDispose) {
-        _mayDispose();
-      }
-    }
-  }
-
-  /// Sets the dependencies of the effect, do not use it directly.
-  @internal
-  void setDependencies(alien.ReactiveNode node) {
-    _deps
-      ..clear()
-      ..addAll(node.getDependencies());
-  }
-
-  /// Invalidates the effect.
-  ///
-  /// After this operation the effect is useless.
-  void call() => dispose();
-
-  /// Invalidates the effect.
-  ///
-  /// After this operation the effect is useless.
   @override
   void dispose() {
-    if (_disposed) return;
-    _disposed = true;
-
-    final dependencies = {...subscriber.getDependencies(), ..._deps};
-    _internalEffect.dispose();
-    subscriber.mayDisposeDependencies(dependencies);
+    if (isDisposed) return;
+    Disposable.unlinkDeps(this);
+    preset.stop(this);
+    super.dispose();
   }
 
-  @override
-  void _mayDispose() {
-    if (_disposed) return;
+  /// Runs the effect and tracks dependencies.
+  void run() {
+    final prevSub = preset.setActiveSub(this);
+    if (!detach && prevSub != null) {
+      preset.link(this, prevSub, 0);
+    }
 
-    if (SolidartConfig.autoDispose) {
-      if (!autoDispose || _disposed) return;
-      if (subscriber.deps?.dep == null) {
-        dispose();
-      }
+    try {
+      fn();
+    } finally {
+      preset.activeSub = prevSub;
+      flags &= ~system.ReactiveFlags.recursedCheck;
     }
   }
 }

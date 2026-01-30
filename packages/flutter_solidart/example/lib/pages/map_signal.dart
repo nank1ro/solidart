@@ -21,7 +21,7 @@ class _MapSignalPageState extends State<MapSignalPage> {
   void initState() {
     super.initState();
     items.observe((previousValue, value) {
-      print("Items changed: $previousValue -> $value");
+      print('Items changed: $previousValue -> $value');
     });
   }
 
@@ -41,7 +41,7 @@ class _MapSignalPageState extends State<MapSignalPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('SetSignal')),
+      appBar: AppBar(title: const Text('MapSignal')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

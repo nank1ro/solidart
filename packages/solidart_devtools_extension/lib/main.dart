@@ -40,8 +40,9 @@ class Signals extends StatefulWidget {
 }
 
 enum SignalType {
-  readSignal,
+  readonlySignal,
   signal,
+  lazySignal,
   computed,
   resource,
   listSignal,
@@ -50,8 +51,9 @@ enum SignalType {
 
   static SignalType byName(String name) {
     return switch (name) {
-      'ReadSignal' => SignalType.readSignal,
+      'ReadonlySignal' => SignalType.readonlySignal,
       'Signal' => SignalType.signal,
+      'LazySignal' => SignalType.lazySignal,
       'Computed' => SignalType.computed,
       'Resource' => SignalType.resource,
       'ListSignal' => SignalType.listSignal,
@@ -93,6 +95,7 @@ class SignalData {
     return value.toString().toLowerCase().contains(search) ||
         previousValue.toString().toLowerCase().contains(search) ||
         valueType.toLowerCase().contains(search) ||
+        type.name.toLowerCase().contains(search) ||
         (previousValueType != null &&
             previousValueType!.toLowerCase().contains(search));
   }
@@ -134,17 +137,23 @@ class _SignalsState extends State<Signals> {
     final vmService = await serviceManager.onServiceAvailable;
     sub = vmService.onExtensionEvent
         .where((e) {
-          return e.extensionKind?.startsWith('ext.solidart.signal') ?? false;
+          final kind = e.extensionKind;
+          return kind != null && kind.startsWith('ext.solidart.signal');
         })
         .listen((event) {
           final data = event.extensionData?.data;
           if (data == null) return;
-          switch (event.extensionKind) {
+          final kind = event.extensionKind;
+          switch (kind) {
             case 'ext.solidart.signal.created':
             case 'ext.solidart.signal.updated':
             case 'ext.solidart.signal.disposed':
-              signals[data['_id']] = SignalData(
-                name: data['name'] ?? data['_id'],
+              final id = data['_id'];
+              final signalId = id == null
+                  ? DateTime.now().microsecondsSinceEpoch.toString()
+                  : id.toString();
+              signals[signalId] = SignalData(
+                name: data['name'] ?? id ?? signalId,
                 value: jsonDecode(data['value'] ?? 'null'),
                 hasPreviousValue: data['hasPreviousValue'],
                 previousValue: jsonDecode(data['previousValue'] ?? 'null'),

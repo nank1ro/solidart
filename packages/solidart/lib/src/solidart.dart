@@ -1,0 +1,34 @@
+import 'dart:async';
+import 'dart:collection';
+import 'dart:convert';
+import 'dart:developer' as dev;
+import 'dart:math';
+
+import 'package:meta/meta.dart';
+import 'package:solidart/deps/preset.dart' as preset;
+import 'package:solidart/deps/system.dart' as system;
+
+part 'core/typedefs.dart';
+part 'core/configuration.dart';
+part 'core/disposable.dart';
+part 'core/identifier.dart';
+part 'core/option.dart';
+part 'core/readonly_signal.dart';
+part 'core/signal_configuration.dart';
+part 'core/config.dart';
+part 'core/devtools.dart';
+part 'core/batch.dart';
+part 'core/untracked.dart';
+part 'core/observer.dart';
+part 'core/effect.dart';
+part 'core/computed.dart';
+part 'core/signal.dart';
+part 'core/lazy_signal.dart';
+part 'core/list_signal.dart';
+part 'core/map_signal.dart';
+part 'core/set_signal.dart';
+part 'extensions/observe_signal.dart';
+part 'extensions/until.dart';
+part 'resources/resource.dart';
+part 'resources/resource_state.dart';
+part 'resources/resource_state_extensions.dart';

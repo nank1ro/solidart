@@ -1,14 +1,22 @@
-part of 'core.dart';
+part of '../solidart.dart';
 
-/// Execute a callback that will not be tracked by the reactive system.
+/// Runs [callback] without tracking dependencies.
 ///
-/// This can be useful inside Effects or Observations to prevent a signal from
-/// being tracked.
+/// This is useful when you want to read or write signals inside an effect
+/// without establishing a dependency.
+///
+/// ```dart
+/// final count = Signal(0);
+/// Effect(() {
+///   print(count.value);
+///   untracked(() => count.value = count.value + 1);
+/// });
+/// ```
 T untracked<T>(T Function() callback) {
-  final prevSub = reactiveSystem.setCurrentSub(null);
+  final prevSub = preset.setActiveSub();
   try {
     return callback();
   } finally {
-    reactiveSystem.setCurrentSub(prevSub);
+    preset.setActiveSub(prevSub);
   }
 }

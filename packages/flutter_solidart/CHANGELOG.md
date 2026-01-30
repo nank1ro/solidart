@@ -1,3 +1,31 @@
+## 3.0.0-dev.0 (Unreleased)
+
+### Signals
+
+- **BREAKING**: Flutter `Signal`, `Computed`, `Resource`, and collection wrappers now implement `ValueListenable` only (the `ValueNotifier` mixins are removed).
+- **REMOVED**: `ValueNotifierSignalMixin` and `ValueListenableSignalMixin` exports.
+- **BREAKING**: `Signal.toReadSignal()` is replaced by `toReadonly()` and `ReadableSignal` is removed in favor of `ReadonlySignal`.
+- **REMOVED**: `Signal.updateValue` and `ToggleBoolSignal`.
+- **ADDED**: `LazySignal` wrapper returned by `Signal.lazy`.
+
+### Resource
+
+- **BREAKING**: Resource state helpers align with v3 (`ResourceStateExtensions` with `when`/`maybeWhen`; `on`/`maybeOn` removed).
+- **ADDED**: `Resource.resolve()` is now public (via core).
+
+### Widgets
+
+- **REFACTOR**: `SignalBuilder` reworked for v3 dependency tracking.
+- **REFACTOR**: `Show` simplified to a `StatelessWidget` backed by `SignalBuilder`.
+
+### Interop
+
+- **BREAKING**: `SignalBase.toValueNotifier()` becomes `ReadonlySignal.toValueNotifier()`, and `ValueNotifier.toSignal()` becomes `ValueListenable.toSignal()`.
+
+### Dependencies
+
+- **CHORE**: Bump `solidart` to `3.0.0-dev.0`.
+
 ## 2.7.2
 
 ### Changes from solidart
@@ -87,8 +115,8 @@
 - **REFACTOR**: Update `alien_signals` dependency from `^0.2.1` to `^0.4.3` with significant performance improvements (thanks to @medz).
 - **REFACTOR**: Replace custom reactive node implementations with `alien.ReactiveNode` for better compatibility and performance (thanks to @medz).
 - **REFACTOR**: Simplify signal, computed and effect implementations by leveraging new `alien_signals` API (thanks to @medz).
-- **PERFORMANCE**: Improve performance by removing redundant tracking operations in the reactive system  (thanks to @medz).
-- **FIX**: Add proper cleanup for disposed nodes to prevent memory leaks  (thanks to @medz).
+- **PERFORMANCE**: Improve performance by removing redundant tracking operations in the reactive system (thanks to @medz).
+- **FIX**: Add proper cleanup for disposed nodes to prevent memory leaks (thanks to @medz).
 - **FIX**: Fix potential memory leaks in auto-dispose scenarios (thanks to @medz).
 - **FIX**: Clear queued flag when running effects in `ReactiveSystem` to ensure proper effect execution (thanks to @medz).
 - **CHORE**: Reorder dev_dependencies in pubspec.yaml for improved organization and readability (thanks to @medz).
@@ -127,8 +155,8 @@
 
 ### Changes from solidart
 
-- *CHORE*: Remove deprecated `createSignal`, `createComputed`, `createEffect` and `createResource` helpers.
-- *CHORE*: Remove `SignalOptions` and `ResourceOptions` classes.
+- _CHORE_: Remove deprecated `createSignal`, `createComputed`, `createEffect` and `createResource` helpers.
+- _CHORE_: Remove `SignalOptions` and `ResourceOptions` classes.
 
 ## 2.0.0-dev.1
 
@@ -197,7 +225,7 @@ Update solidart version
 ### Changes from solidart
 
 - **FEAT**: Add 3 new signals: `ListSignal`, `SetSignal` and `MapSignal`. Now you can easily be notified of every change of a list, set or map.
-   _Before_:
+  _Before_:
 
   ```dart
   final list = Signal([1, 2]);
@@ -242,6 +270,7 @@ The core of the library has been rewritten in order to support automatic depende
 
 - The `Show` widget now takes a functions that returns a `bool`.
   You can easily convert any type to `bool`, for example:
+
   ```dart
   final count = createSignal(0);
 
@@ -254,11 +283,13 @@ The core of the library has been rewritten in order to support automatic depende
     );
   }
   ```
+
 - Converting a `ValueNotifier` into a `Signal` now uses the `equals` comparator to keep the consistency.
 - Rename `resource` parameter of `ResourceWidgetBuilder` into `resourceState`. (thanks to @manuel-plavsic)
 - **FEAT** Allow multiple providers of the same type by specifying an `id`entifier.
 
   ### Provider declaration:
+
   ```dart
   SolidProvider<NumberProvider>(
     create: () => const NumberProvider(1),
@@ -271,6 +302,7 @@ The core of the library has been rewritten in order to support automatic depende
   ```
 
   ### Access a specific provider
+
   ```dart
   final numberProvider1 = context.get<NumberProvider>(1);
   final numberProvider2 = context.get<NumberProvider>(2);
@@ -298,6 +330,7 @@ The core of the library has been rewritten in order to support automatic depende
     ],
   ),
   ```
+
 - **FEAT** You can access a specific `Signal` without specifing an `id`entifier, for example:
   ```dart
   // to get the signal
@@ -372,11 +405,11 @@ The core of the library has been rewritten in order to support automatic depende
 - **CHORE**: Move `refreshing` from `ResourceWidgetBuilder` into the `ResourceState`. (thanks to @manuel-plavsic)
 - **FEAT**: Add `hasPreviousValue` getter to `ReadSignal`. (thanks to @manuel-plavsic)
 - **FEAT** Before, only the `fetcher` reacted to the `source`.
-Now also the `stream` reacts to the `source` changes by subscribing again to the stream.
-In addition, the `stream` parameter of the Resource has been changed from `Stream` into a `Stream Function()` in order to be able to listen to a new stream if it changed.
+  Now also the `stream` reacts to the `source` changes by subscribing again to the stream.
+  In addition, the `stream` parameter of the Resource has been changed from `Stream` into a `Stream Function()` in order to be able to listen to a new stream if it changed.
 - **FEAT**: Add the `select` method on the `Resource` class.
-The `select` function allows filtering the `Resource`'s data by reading only the properties that you care about.
-The advantage is that you keep handling the loading and error states.
+  The `select` function allows filtering the `Resource`'s data by reading only the properties that you care about.
+  The advantage is that you keep handling the loading and error states.
 - **FEAT**: Make the `Resource` to auto-resolve when accessing its `state`.
 - **CHORE**: The `refetch` method of a `Resource` has been renamed to `refresh`.
 - **FEAT**: You can decide whether to use `createSignal()` or directly the `Signal()` constructor, now the're equivalent. The same applies to all the other `create` functions.
@@ -389,8 +422,8 @@ The advantage is that you keep handling the loading and error states.
 ### Changes from solidart
 
 - **FEAT**: Add the select method on the Resource class.
-The select function allows filtering the Resource's data by reading only the properties that you care about.
-The advantage is that you keep handling the loading and error states.
+  The select function allows filtering the Resource's data by reading only the properties that you care about.
+  The advantage is that you keep handling the loading and error states.
 - **FEAT**: Make the Resource to auto-resolve when accessing its state
 
 ## 1.0.0-dev902
@@ -414,6 +447,7 @@ The advantage is that you keep handling the loading and error states.
 - **FEAT** Allow multiple providers of the same type by specifying an `id`entifier.
 
   ### Provider declaration:
+
   ```dart
   SolidProvider<NumberProvider>(
     create: () => const NumberProvider(1),
@@ -426,6 +460,7 @@ The advantage is that you keep handling the loading and error states.
   ```
 
   ### Access a specific provider
+
   ```dart
   final numberProvider1 = context.get<NumberProvider>(1);
   final numberProvider2 = context.get<NumberProvider>(2);
@@ -468,8 +503,8 @@ The advantage is that you keep handling the loading and error states.
 ### Changes from solidart
 
 - **FEAT** Before, only the `fetcher` reacted to the `source`.
-Now also the `stream` reacts to the `source` changes by subscribing again to the stream.
-In addition, the `stream` parameter of the Resource has been changed from `Stream` into a `Stream Function()` in order to be able to listen to a new stream if it changed
+  Now also the `stream` reacts to the `source` changes by subscribing again to the stream.
+  In addition, the `stream` parameter of the Resource has been changed from `Stream` into a `Stream Function()` in order to be able to listen to a new stream if it changed
 
 ## 1.0.0-dev6
 
