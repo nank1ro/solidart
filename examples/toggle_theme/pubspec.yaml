@@ -35,7 +35,7 @@ dependencies:
   disco: ^1.0.0
   flutter:
     sdk: flutter
-  flutter_solidart: 3.0.0-dev.2
+  flutter_solidart: 3.0.0-dev.0
 
 dev_dependencies:
   flutter_test:

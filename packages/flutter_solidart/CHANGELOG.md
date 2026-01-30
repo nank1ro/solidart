@@ -1,16 +1,30 @@
-## 3.0.0-dev.2
+## 3.0.0-dev.0 (Unreleased)
 
-- **CHORE**: Bump `solidart` dependency to `3.0.0-dev.2`.
-- **DOCS**: Refresh examples for `LazySignal` and v3 dependency pins.
+### Signals
 
-## 3.0.0-dev.1
+- **BREAKING**: Flutter `Signal`, `Computed`, `Resource`, and collection wrappers now implement `ValueListenable` only (the `ValueNotifier` mixins are removed).
+- **REMOVED**: `ValueNotifierSignalMixin` and `ValueListenableSignalMixin` exports.
+- **BREAKING**: `Signal.toReadSignal()` is replaced by `toReadonly()` and `ReadableSignal` is removed in favor of `ReadonlySignal`.
+- **REMOVED**: `Signal.updateValue` and `ToggleBoolSignal`.
+- **ADDED**: `LazySignal` wrapper returned by `Signal.lazy`.
 
-- **BREAKING**: Remove Flutter-specific core wrappers under `src/core/*`; `flutter_solidart` now re-exports `solidart/solidart.dart` directly.
-- **BREAKING**: Replace `ListSignal`/`MapSignal`/`SetSignal` with `ReactiveList`/`ReactiveMap`/`ReactiveSet`.
-- **BREAKING**: Replace `toReadSignal()` with `toReadonly()` and remove legacy `SignalBase`/`ReadableSignal` surfaces.
-- **FEAT**: Add v3 conversion extensions: `ReadonlySignal.toValueNotifier()` and `ValueListenable.toSignal()`.
-- **REFACTOR**: Rewrite `SignalBuilder` and `Show` to use v3 effects + dependency tracking.
-- **DOCS**: Update README, examples, and tests to v3 syntax (`.value`, `isInitialized`, `Effect.dispose()`).
+### Resource
+
+- **BREAKING**: Resource state helpers align with v3 (`ResourceStateExtensions` with `when`/`maybeWhen`; `on`/`maybeOn` removed).
+- **ADDED**: `Resource.resolve()` is now public (via core).
+
+### Widgets
+
+- **REFACTOR**: `SignalBuilder` reworked for v3 dependency tracking.
+- **REFACTOR**: `Show` simplified to a `StatelessWidget` backed by `SignalBuilder`.
+
+### Interop
+
+- **BREAKING**: `SignalBase.toValueNotifier()` becomes `ReadonlySignal.toValueNotifier()`, and `ValueNotifier.toSignal()` becomes `ValueListenable.toSignal()`.
+
+### Dependencies
+
+- **CHORE**: Bump `solidart` to `3.0.0-dev.0`.
 
 ## 2.7.2
 
