@@ -9,7 +9,7 @@ class LazyCounterPage extends StatefulWidget {
 }
 
 class _LazyCounterPageState extends State<LazyCounterPage> {
-  final counter = LazySignal<int>(name: 'lazyCounter');
+  final counter = Signal<int>.lazy(name: 'lazyCounter');
 
   @override
   Widget build(BuildContext context) {
@@ -17,11 +17,11 @@ class _LazyCounterPageState extends State<LazyCounterPage> {
       appBar: AppBar(title: const Text('Lazy Counter')),
       body: Center(
         child: SignalBuilder(
-          builder: (_, _) {
-            return switch (counter.isInitialized) {
-              true => Text('Counter: ${counter.value}'),
-              false => const Text('Counter: not initialized'),
-            };
+          builder: (_, _) => switch (counter) {
+            LazySignal(isInitialized: true) => Text(
+              'Counter: ${counter.value}',
+            ),
+            _ => const Text('Counter: not initialized'),
           },
         ),
       ),
@@ -32,7 +32,12 @@ class _LazyCounterPageState extends State<LazyCounterPage> {
             heroTag: "subtract hero",
             child: const Icon(Icons.remove),
             onPressed: () {
-              counter.isInitialized ? counter.value -= 1 : counter.value = 0;
+              if (counter case LazySignal(isInitialized: false)) {
+                counter.value = 0;
+                return;
+              }
+
+              counter.value -= 1;
             },
           ),
           const SizedBox(width: 8),
@@ -40,7 +45,12 @@ class _LazyCounterPageState extends State<LazyCounterPage> {
             heroTag: "add hero",
             child: const Icon(Icons.add),
             onPressed: () {
-              counter.isInitialized ? counter.value += 1 : counter.value = 0;
+              if (counter case LazySignal(isInitialized: false)) {
+                counter.value = 0;
+                return;
+              }
+
+              counter.value += 1;
             },
           ),
         ],
