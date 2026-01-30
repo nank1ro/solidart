@@ -44,7 +44,11 @@ class LazySignal<T> extends Signal<T> {
   bool didUpdate() {
     if (!isInitialized) {
       flags = system.ReactiveFlags.mutable;
+      if (trackPreviousValue) {
+        _previousValue = const None();
+      }
       currentValue = pendingValue;
+      _notifySignalUpdate(this);
       return true;
     }
 
