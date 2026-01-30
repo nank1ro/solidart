@@ -36,27 +36,27 @@ void main() {
     'Signals, Computed, Resources, and collections '
     'implement Listenable',
     () {
-    final signal = Signal(0);
-    final computed = Computed(() => signal.value * 2);
-    final resource = Resource(() async => 1);
-    final listSignal = ListSignal([1, 2, 3]);
-    final setSignal = SetSignal({1, 2, 3});
-    final mapSignal = MapSignal({'a': 1});
+      final signal = Signal(0);
+      final computed = Computed(() => signal.value * 2);
+      final resource = Resource(() async => 1);
+      final listSignal = ListSignal([1, 2, 3]);
+      final setSignal = SetSignal({1, 2, 3});
+      final mapSignal = MapSignal({'a': 1});
 
-    expect(signal, isA<Listenable>());
-    expect(computed, isA<Listenable>());
-    expect(resource, isA<Listenable>());
-    expect(listSignal, isA<Listenable>());
-    expect(setSignal, isA<Listenable>());
-    expect(mapSignal, isA<Listenable>());
+      expect(signal, isA<Listenable>());
+      expect(computed, isA<Listenable>());
+      expect(resource, isA<Listenable>());
+      expect(listSignal, isA<Listenable>());
+      expect(setSignal, isA<Listenable>());
+      expect(mapSignal, isA<Listenable>());
 
-    signal.dispose();
-    computed.dispose();
-    resource.dispose();
-    listSignal.dispose();
-    setSignal.dispose();
-    mapSignal.dispose();
-  },
+      signal.dispose();
+      computed.dispose();
+      resource.dispose();
+      listSignal.dispose();
+      setSignal.dispose();
+      mapSignal.dispose();
+    },
   );
 
   testWidgets('(Provider) Not found signal throws an error', (tester) async {
