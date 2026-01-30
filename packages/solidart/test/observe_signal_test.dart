@@ -14,15 +14,21 @@ void main() {
       expect(calls, isEmpty);
 
       signal.value = 1;
-      expect(calls, equals(<List<int?>>[
-        <int?>[0, 1],
-      ]));
+      expect(
+        calls,
+        equals(<List<int?>>[
+          <int?>[0, 1],
+        ]),
+      );
 
       dispose();
       signal.value = 2;
-      expect(calls, equals(<List<int?>>[
-        <int?>[0, 1],
-      ]));
+      expect(
+        calls,
+        equals(<List<int?>>[
+          <int?>[0, 1],
+        ]),
+      );
 
       signal.dispose();
     });
@@ -38,9 +44,12 @@ void main() {
         fireImmediately: true,
       );
 
-      expect(calls, equals(<List<int?>>[
-        <int?>[null, 5],
-      ]));
+      expect(
+        calls,
+        equals(<List<int?>>[
+          <int?>[null, 5],
+        ]),
+      );
 
       dispose();
       signal.dispose();
