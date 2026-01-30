@@ -620,6 +620,11 @@ class Signal<T> extends preset.SignalNode<Option<T>>
     _notifySignalCreation(this);
   }
 
+  /// Whether the signal has been initialized.
+  ///
+  /// Regular signals are always initialized at construction time.
+  bool get isInitialized => true;
+
   /// {@macro solidart.signal}
   ///
   /// This is a lazy signal: it has no value at construction time.
@@ -744,9 +749,7 @@ class LazySignal<T> extends Signal<T> {
          trackInDevTools: trackInDevTools,
        );
 
-  /// Whether the signal has been initialized.
-  ///
-  /// This becomes `true` after the first assignment.
+  @override
   bool get isInitialized => currentValue is Some<T>;
 
   @override
