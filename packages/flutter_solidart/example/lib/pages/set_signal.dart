@@ -19,7 +19,7 @@ class _SetSignalPageState extends State<SetSignalPage> {
   void initState() {
     super.initState();
     items.observe((previousValue, value) {
-      print('项目已更改：$previousValue -> $value');
+      print('Items changed: $previousValue -> $value');
     });
   }
 
