@@ -175,6 +175,7 @@ dynamic _toJson(Object? obj, [int depth = 0, Set<Object>? visited]) {
     return jsonEncode(obj.toString());
   }
 }
+// coverage:ignore-end
 
 enum _DevToolsEventType {
   created,
