@@ -63,15 +63,6 @@ export default defineConfig({
           autogenerate: { directory: 'advanced' },
         },
         {
-          label: 'Migration',
-          items: [
-            {
-              label: 'v2 -> v3',
-              link: '/migration',
-            },
-          ],
-        },
-        {
           label: 'Examples',
           link: '/examples',
         }

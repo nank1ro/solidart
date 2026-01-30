@@ -38,10 +38,6 @@ SignalBuilder(
 ),
 ```
 
-`Resource.state` is the primary value. You can also access `previousState` and
-`untrackedPreviousState` to read historical values. `previousState` updates
-only after a tracked read of `state`.
-
 A Resource can also be driven by a `Stream`.
 
 ```dart
@@ -53,16 +49,6 @@ final stream = Stream.periodic(
 final resource = Resource.stream(() => stream);
 
 // the widget usage is the same as above, no changes needed
-```
-
-## Lazy resources and resolve
-
-Resources are lazy by default. They start loading the first time you read
-`state`, or when you call `resolve()` explicitly:
-
-```dart
-final user = Resource(fetchUser, lazy: true);
-await user.resolve(); // starts the fetch immediately
 ```
 
 You may ask yourself: why not just use a `Future` or a `Stream` directly?

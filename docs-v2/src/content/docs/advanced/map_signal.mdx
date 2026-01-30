@@ -1,31 +1,21 @@
 ---
-title: MapSignal
+title: Map Signal
 description: Learn MapSignal in solidart
 sidebar:
-  order: 3
+  order: 1
 ---
 
-A `MapSignal` is a reactive wrapper around a `Map` that uses copy-on-write.
-Copy-on-write means each modification produces a new map instance, so observers
-always see a consistent, immutable-like snapshot of the data.
+A `MapSignal` is a special signal that can be used to represent a map of values.
 
-When you modify any element on the map, the `MapSignal` will automatically
-notify its observers.
+When you modify any element on the map, the `MapSignal` will automatically notify its observers.
 
 ```dart
-import 'package:solidart/solidart.dart';
-
 final items = MapSignal({'a': 1, 'b': 2});
 
-Effect(() {
-  print('Items: ${items.value}');
+items.observe((previousValue, value) {
+  print("Items changed: $previousValue -> $value");
 });
 
-// Remember to call effect.dispose() when you're done.
-// See: /advanced/automatic-disposal
-
-items['c'] = 3; // prints "Items: {a: 1, b: 2, c: 3}"
-items.remove('a'); // prints "Items: {b: 2, c: 3}"
+items.add({'c': 3}); // prints "Items changed: {'a': 1, 'b': 2} -> {'a': 1, 'b': 2, 'c': 3}"
+items.remove('a'); // prints "Items changed: {'a': 1, 'b': 2, 'c': 3} -> {'b': 2, 'c': 3}"
 ```
-
-For disposal guidelines, see the automatic disposal guide.
