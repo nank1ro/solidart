@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -12,6 +14,14 @@ class SetSignalPage extends StatefulWidget {
 
 class _SetSignalPageState extends State<SetSignalPage> {
   final items = SetSignal({1, 2}, name: 'items');
+
+  @override
+  void initState() {
+    super.initState();
+    items.observe((previousValue, value) {
+      print('项目已更改：$previousValue -> $value');
+    });
+  }
 
   @override
   void dispose() {
