@@ -17,10 +17,8 @@ class _LazyCounterPageState extends State<LazyCounterPage> {
       appBar: AppBar(title: const Text('Lazy Counter')),
       body: Center(
         child: SignalBuilder(
-          builder: (_, _) => switch (counter) {
-            LazySignal(isInitialized: true) => Text(
-              'Counter: ${counter.value}',
-            ),
+          builder: (_, _) => switch (counter.isInitialized) {
+            true => Text('Counter: ${counter.value}'),
             _ => const Text('Counter: not initialized'),
           },
         ),
@@ -32,7 +30,7 @@ class _LazyCounterPageState extends State<LazyCounterPage> {
             heroTag: "subtract hero",
             child: const Icon(Icons.remove),
             onPressed: () {
-              if (counter case LazySignal(isInitialized: false)) {
+              if (!counter.isInitialized) {
                 counter.value = 0;
                 return;
               }
@@ -45,7 +43,7 @@ class _LazyCounterPageState extends State<LazyCounterPage> {
             heroTag: "add hero",
             child: const Icon(Icons.add),
             onPressed: () {
-              if (counter case LazySignal(isInitialized: false)) {
+              if (!counter.isInitialized) {
                 counter.value = 0;
                 return;
               }
