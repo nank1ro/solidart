@@ -35,11 +35,14 @@ void main() {
         );
 
         var completed = false;
-        expectLater(future, throwsA(isA<TimeoutException>()))
-            .whenComplete(() => completed = true);
+        expectLater(
+          future,
+          throwsA(isA<TimeoutException>()),
+        ).whenComplete(() => completed = true);
 
-        async.elapse(const Duration(seconds: 1));
-        async.flushMicrotasks();
+        async
+          ..elapse(const Duration(seconds: 1))
+          ..flushMicrotasks();
 
         expect(completed, isTrue);
       });
