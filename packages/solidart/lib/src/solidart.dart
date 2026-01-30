@@ -8,148 +8,111 @@ import 'package:meta/meta.dart';
 import 'package:solidart/deps/preset.dart' as preset;
 import 'package:solidart/deps/system.dart' as system;
 
-/// Compares two values for equality.
+/// Batches signal updates and flushes once at the end.
 ///
-/// Return `true` when the update should be skipped because values are
-/// considered equivalent.
-typedef ValueComparator<T> = bool Function(T? a, T? b);
-
-/// Signature for callbacks fired when a signal changes.
-typedef ObserveCallback<T> = void Function(T? previousValue, T value);
-
-/// Disposer returned by [ObserveSignal.observe].
-typedef DisposeObservation = void Function();
-
-/// Lazily produces a value.
-typedef ValueGetter<T> = T Function();
-
-/// A callback that returns no value.
-typedef VoidCallback = ValueGetter<void>;
-
-/// An optional value container.
+/// Nested batches are supported; the final flush happens when the outermost
+/// batch completes.
 ///
-/// Use [Some] to represent presence and [None] to represent absence without
-/// relying on `null`.
-sealed class Option<T> {
-  /// Base constructor for option values.
-  const Option();
-
-  /// Returns the contained value or throws if this is [None].
-  T unwrap() => switch (this) {
-    Some<T>(:final value) => value,
-    _ => throw StateError('Option is None'),
-  };
-
-  /// Returns the contained value or `null` if this is [None].
-  T? safeUnwrap() => switch (this) {
-    Some<T>(:final value) => value,
-    _ => null,
-  };
-}
-
-/// A present optional value.
-final class Some<T> extends Option<T> {
-  /// Creates an option that wraps [value].
-  const Some(this.value);
-
-  /// The wrapped value.
-  final T value;
-}
-
-/// An absent optional value.
-final class None<T> extends Option<T> {
-  /// Creates an option with no value.
-  const None();
-}
-
-/// {@template solidart.config}
-/// Global configuration for v3 reactive primitives.
-///
-/// These flags provide defaults for newly created signals/effects/resources.
-/// You can override them per-instance via constructor parameters.
-/// {@endtemplate}
-final class SolidartConfig {
-  const SolidartConfig._(); // coverage:ignore-line
-
-  /// Whether nodes auto-dispose when they lose all subscribers.
-  ///
-  /// When enabled, signals/computeds/effects may dispose themselves once
-  /// nothing depends on them.
-  static bool autoDispose = false;
-
-  /// Whether nested effects detach from parent subscriptions.
-  ///
-  /// When `true`, inner effects do not become dependencies of their parent
-  /// effect unless explicitly linked.
-  static bool detachEffects = false;
-
-  /// Whether to track previous values by default.
-  ///
-  /// Previous values are captured only after a signal has been read at least
-  /// once.
-  static bool trackPreviousValue = true;
-
-  /// Whether to keep values while refreshing resources.
-  ///
-  /// When `true`, a refresh marks the state as `isRefreshing` instead of
-  /// replacing it with `loading`.
-  static bool useRefreshing = true;
-
-  /// Whether DevTools tracking is enabled.
-  ///
-  /// Signals only emit DevTools events when both this flag and
-  /// `trackInDevTools` are `true`.
-  static bool devToolsEnabled = false;
-
-  /// Whether to assert that SignalBuilder has at least one dependency during
-  /// its build. Defaults to true.
-  ///
-  /// If you set this to false, you must ensure that the SignalBuilder has at
-  /// least one dependency, otherwise it won't rebuild when the signals change.
-  ///
-  /// The ability to disable this assertion is provided for advanced use cases
-  /// where you might have a SignalBuilder that builds something based on
-  /// disposed signals where you might be interested in their latest values.
-  static bool assertSignalBuilderWithoutDependencies = true;
-
-  /// Registered observers for signal lifecycle events.
-  ///
-  /// Observers are notified only when `trackInDevTools` is enabled for the
-  /// signal instance.
-  static final observers = <SolidartObserver>[];
-}
-
-/// {@template solidart.observer}
-/// Observer for signal lifecycle events.
-///
-/// Use this for logging or instrumentation without depending on DevTools:
 /// ```dart
-/// class Logger extends SolidartObserver {
-///   @override
-///   void didCreateSignal(ReadonlySignal<Object?> signal) {
-///     print('created: ${signal.identifier.value}');
-///   }
-///   @override
-///   void didUpdateSignal(ReadonlySignal<Object?> signal) {}
-///   @override
-///   void didDisposeSignal(ReadonlySignal<Object?> signal) {}
-/// }
+/// final a = Signal(1);
+/// final b = Signal(2);
+/// Effect(() => print('sum: ${a.value + b.value}'));
 ///
-/// SolidartConfig.observers.add(Logger());
+/// batch(() {
+///   a.value = 3;
+///   b.value = 4;
+/// });
 /// ```
-/// {@endtemplate}
-abstract class SolidartObserver {
-  /// {@macro solidart.observer}
-  const SolidartObserver(); // coverage:ignore-line
+T batch<T>(T Function() fn) {
+  preset.startBatch();
+  try {
+    return fn();
+  } finally {
+    preset.endBatch();
+  }
+}
 
-  /// Called when a signal is created.
-  void didCreateSignal(ReadonlySignal<Object?> signal);
+/// Runs [callback] without tracking dependencies.
+///
+/// This is useful when you want to read or write signals inside an effect
+/// without establishing a dependency.
+///
+/// ```dart
+/// final count = Signal(0);
+/// Effect(() {
+///   print(count.value);
+///   untracked(() => count.value = count.value + 1);
+/// });
+/// ```
+T untracked<T>(T Function() callback) {
+  final prevSub = preset.setActiveSub();
+  try {
+    return callback();
+  } finally {
+    preset.setActiveSub(prevSub);
+  }
+}
 
-  /// Called when a signal updates.
-  void didUpdateSignal(ReadonlySignal<Object?> signal);
+Object? _computedValue<T>(Computed<T> signal) {
+  final current = signal.currentValue;
+  if (current != null || null is T) {
+    return current;
+  }
+  return null;
+}
 
-  /// Called when a signal is disposed.
-  void didDisposeSignal(ReadonlySignal<Object?> signal);
+// coverage:ignore-end
+
+// coverage:ignore-start
+bool _hasPreviousValue(ReadonlySignal<Object?> signal) {
+  if (!signal.trackPreviousValue) return false;
+  if (signal is Signal) {
+    return signal._previousValue is Some;
+  }
+  if (signal is Computed) {
+    return signal._previousValue is Some;
+  }
+  return false;
+}
+
+// coverage:ignore-start
+int _listenerCount(system.ReactiveNode node) {
+  var count = 0;
+  var link = node.subs;
+  while (link != null) {
+    count++;
+    link = link.nextSub;
+  }
+  return count;
+}
+
+// coverage:ignore-end
+
+void _notifyDevToolsAboutSignal(
+  ReadonlySignal<Object?> signal, {
+  required _DevToolsEventType eventType,
+}) {
+  if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
+  final eventName = 'ext.solidart.signal.${eventType.name}';
+  final value = _signalValue(signal);
+  final previousValue = _signalPreviousValue(signal);
+  final hasPreviousValue = _hasPreviousValue(signal);
+
+  dev.postEvent(eventName, {
+    '_id': signal.identifier.value.toString(),
+    'name': signal.identifier.name,
+    'value': _toJson(value),
+    'previousValue': _toJson(previousValue),
+    'hasPreviousValue': hasPreviousValue,
+    'type': _signalType(signal),
+    'valueType': value.runtimeType.toString(),
+    if (hasPreviousValue)
+      'previousValueType': previousValue.runtimeType.toString(),
+    'disposed': signal.isDisposed,
+    'autoDispose': signal.autoDispose,
+    'listenerCount': _listenerCount(signal),
+    'lastUpdate': DateTime.now().toIso8601String(),
+  });
 }
 
 void _notifySignalCreation(ReadonlySignal<Object?> signal) {
@@ -161,15 +124,6 @@ void _notifySignalCreation(ReadonlySignal<Object?> signal) {
   _notifyDevToolsAboutSignal(signal, eventType: _DevToolsEventType.created);
 }
 
-void _notifySignalUpdate(ReadonlySignal<Object?> signal) {
-  if (signal.trackInDevTools && SolidartConfig.observers.isNotEmpty) {
-    for (final observer in SolidartConfig.observers) {
-      observer.didUpdateSignal(signal);
-    }
-  }
-  _notifyDevToolsAboutSignal(signal, eventType: _DevToolsEventType.updated);
-}
-
 void _notifySignalDisposal(ReadonlySignal<Object?> signal) {
   if (signal.trackInDevTools && SolidartConfig.observers.isNotEmpty) {
     for (final observer in SolidartConfig.observers) {
@@ -179,10 +133,49 @@ void _notifySignalDisposal(ReadonlySignal<Object?> signal) {
   _notifyDevToolsAboutSignal(signal, eventType: _DevToolsEventType.disposed);
 }
 
-enum _DevToolsEventType {
-  created,
-  updated,
-  disposed,
+void _notifySignalUpdate(ReadonlySignal<Object?> signal) {
+  if (signal.trackInDevTools && SolidartConfig.observers.isNotEmpty) {
+    for (final observer in SolidartConfig.observers) {
+      observer.didUpdateSignal(signal);
+    }
+  }
+  _notifyDevToolsAboutSignal(signal, eventType: _DevToolsEventType.updated);
+}
+
+Object? _resourceValue(ResourceState<dynamic>? state) {
+  if (state == null) return null;
+  return state.maybeWhen(orElse: () => null, ready: (value) => value);
+}
+
+Object? _signalPreviousValue(ReadonlySignal<Object?> signal) {
+  if (signal is Resource) {
+    return _resourceValue(signal.untrackedPreviousState);
+  }
+  return signal.untrackedPreviousValue;
+}
+
+String _signalType(ReadonlySignal<Object?> signal) => switch (signal) {
+  Resource() => 'Resource',
+  ListSignal() => 'ListSignal',
+  MapSignal() => 'MapSignal',
+  SetSignal() => 'SetSignal',
+  LazySignal() => 'LazySignal',
+  Signal() => 'Signal',
+  Computed() => 'Computed',
+  _ => 'ReadonlySignal',
+};
+
+Object? _signalValue(ReadonlySignal<Object?> signal) {
+  if (signal is Resource) {
+    return _resourceValue(signal.untrackedState);
+  }
+  if (signal is LazySignal && !signal.isInitialized) {
+    return null;
+  }
+  if (signal is Computed) {
+    return _computedValue(signal);
+  }
+  return signal.untrackedValue;
 }
 
 // coverage:ignore-start
@@ -235,170 +228,155 @@ dynamic _toJson(Object? obj, [int depth = 0, Set<Object>? visited]) {
     return jsonEncode(obj.toString());
   }
 }
-// coverage:ignore-end
 
-void _notifyDevToolsAboutSignal(
-  ReadonlySignal<Object?> signal, {
-  required _DevToolsEventType eventType,
-}) {
-  if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
-  final eventName = 'ext.solidart.signal.${eventType.name}';
-  final value = _signalValue(signal);
-  final previousValue = _signalPreviousValue(signal);
-  final hasPreviousValue = _hasPreviousValue(signal);
+/// Disposer returned by [ObserveSignal.observe].
+typedef DisposeObservation = void Function();
 
-  dev.postEvent(eventName, {
-    '_id': signal.identifier.value.toString(),
-    'name': signal.identifier.name,
-    'value': _toJson(value),
-    'previousValue': _toJson(previousValue),
-    'hasPreviousValue': hasPreviousValue,
-    'type': _signalType(signal),
-    'valueType': value.runtimeType.toString(),
-    if (hasPreviousValue)
-      'previousValueType': previousValue.runtimeType.toString(),
-    'disposed': signal.isDisposed,
-    'autoDispose': signal.autoDispose,
-    'listenerCount': _listenerCount(signal),
-    'lastUpdate': DateTime.now().toIso8601String(),
-  });
-}
+/// Signature for callbacks fired when a signal changes.
+typedef ObserveCallback<T> = void Function(T? previousValue, T value);
 
-String _signalType(ReadonlySignal<Object?> signal) => switch (signal) {
-  Resource() => 'Resource',
-  ListSignal() => 'ListSignal',
-  MapSignal() => 'MapSignal',
-  SetSignal() => 'SetSignal',
-  LazySignal() => 'LazySignal',
-  Signal() => 'Signal',
-  Computed() => 'Computed',
-  _ => 'ReadonlySignal',
-};
-
-// coverage:ignore-start
-int _listenerCount(system.ReactiveNode node) {
-  var count = 0;
-  var link = node.subs;
-  while (link != null) {
-    count++;
-    link = link.nextSub;
-  }
-  return count;
-}
-// coverage:ignore-end
-
-// coverage:ignore-start
-bool _hasPreviousValue(ReadonlySignal<Object?> signal) {
-  if (!signal.trackPreviousValue) return false;
-  if (signal is Signal) {
-    return signal._previousValue is Some;
-  }
-  if (signal is Computed) {
-    return signal._previousValue is Some;
-  }
-  return false;
-}
-
-Object? _signalValue(ReadonlySignal<Object?> signal) {
-  if (signal is Resource) {
-    return _resourceValue(signal.untrackedState);
-  }
-  if (signal is LazySignal && !signal.isInitialized) {
-    return null;
-  }
-  if (signal is Computed) {
-    return _computedValue(signal);
-  }
-  return signal.untrackedValue;
-}
-
-Object? _signalPreviousValue(ReadonlySignal<Object?> signal) {
-  if (signal is Resource) {
-    return _resourceValue(signal.untrackedPreviousState);
-  }
-  return signal.untrackedPreviousValue;
-}
-
-Object? _resourceValue(ResourceState<dynamic>? state) {
-  if (state == null) return null;
-  return state.maybeWhen(orElse: () => null, ready: (value) => value);
-}
-
-Object? _computedValue<T>(Computed<T> signal) {
-  final current = signal.currentValue;
-  if (current != null || null is T) {
-    return current;
-  }
-  return null;
-}
-// coverage:ignore-end
-
-/// Runs [callback] without tracking dependencies.
+/// Compares two values for equality.
 ///
-/// This is useful when you want to read or write signals inside an effect
-/// without establishing a dependency.
+/// Return `true` when the update should be skipped because values are
+/// considered equivalent.
+typedef ValueComparator<T> = bool Function(T? a, T? b);
+
+/// Lazily produces a value.
+typedef ValueGetter<T> = T Function();
+
+/// A callback that returns no value.
+typedef VoidCallback = ValueGetter<void>;
+
+/// {@template solidart.computed}
+/// # Computed
+/// A computed signal derives its value from other signals. It is read-only
+/// and recalculates whenever any dependency changes.
 ///
+/// Use `Computed` to derive state or combine multiple signals:
 /// ```dart
-/// final count = Signal(0);
-/// Effect(() {
-///   print(count.value);
-///   untracked(() => count.value = count.value + 1);
-/// });
+/// final firstName = Signal('Josh');
+/// final lastName = Signal('Brown');
+/// final fullName = Computed(() => '${firstName.value} ${lastName.value}');
 /// ```
-T untracked<T>(T Function() callback) {
-  final prevSub = preset.setActiveSub();
-  try {
-    return callback();
-  } finally {
-    preset.setActiveSub(prevSub);
+///
+/// Computeds only notify when the derived value changes. You can customize
+/// equality via [equals] to skip updates for equivalent values.
+///
+/// Like signals, computeds can track previous values once they have been read.
+/// {@endtemplate}
+class Computed<T> extends preset.ComputedNode<T>
+    with DisposableMixin
+    implements ReadonlySignal<T> {
+  /// {@macro solidart.computed}
+  Computed(
+    ValueGetter<T> getter, {
+    this.equals = identical,
+    bool? autoDispose,
+    String? name,
+    bool? trackPreviousValue,
+    bool? trackInDevTools,
+  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+       trackPreviousValue =
+           trackPreviousValue ?? SolidartConfig.trackPreviousValue,
+       trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
+       identifier = ._(name),
+       super(flags: system.ReactiveFlags.none, getter: (_) => getter()) {
+    _notifySignalCreation(this);
   }
-}
 
-/// Batches signal updates and flushes once at the end.
-///
-/// Nested batches are supported; the final flush happens when the outermost
-/// batch completes.
-///
-/// ```dart
-/// final a = Signal(1);
-/// final b = Signal(2);
-/// Effect(() => print('sum: ${a.value + b.value}'));
-///
-/// batch(() {
-///   a.value = 3;
-///   b.value = 4;
-/// });
-/// ```
-T batch<T>(T Function() fn) {
-  preset.startBatch();
-  try {
-    return fn();
-  } finally {
-    preset.endBatch();
+  @override
+  final bool autoDispose;
+
+  @override
+  final Identifier identifier;
+
+  @override
+  final ValueComparator<T> equals;
+
+  @override
+  final bool trackPreviousValue;
+
+  @override
+  final bool trackInDevTools;
+
+  Option<T> _previousValue = const None();
+
+  @override
+  T? get previousValue {
+    if (!trackPreviousValue) return null;
+    value;
+    return _previousValue.safeUnwrap();
   }
-}
 
-/// A unique identifier with an optional name.
-///
-/// Used by DevTools and diagnostics to track instances.
-class Identifier {
-  Identifier._(this.name) : value = _counter++;
-  static int _counter = 0;
+  @override
+  T? get untrackedPreviousValue {
+    if (!trackPreviousValue) return null;
+    return _previousValue.safeUnwrap();
+  }
 
-  /// Optional human-readable name.
-  final String? name;
+  @override
+  T get untrackedValue {
+    if (currentValue != null || null is T) {
+      return currentValue as T;
+    }
+    return untracked(() => value);
+  }
 
-  /// Unique numeric identifier.
-  final int value;
+  @override
+  T get value {
+    assert(!isDisposed, 'Computed is disposed');
+    return get();
+  }
+
+  @override
+  T call() => value;
+
+  @override
+  bool didUpdate() {
+    preset.cycle++;
+    depsTail = null;
+    flags = system.ReactiveFlags.mutable | system.ReactiveFlags.recursedCheck;
+
+    final prevSub = preset.setActiveSub(this);
+    try {
+      final previousValue = currentValue;
+      final pendingValue = getter(previousValue);
+      if (equals(previousValue, pendingValue)) {
+        return false;
+      }
+
+      if (trackPreviousValue && (previousValue is T)) {
+        _previousValue = Some(previousValue);
+      }
+
+      currentValue = pendingValue;
+      _notifySignalUpdate(this);
+      return true;
+    } finally {
+      preset.activeSub = prevSub;
+      flags &= ~system.ReactiveFlags.recursedCheck;
+      preset.purgeDeps(this);
+    }
+  }
+
+  @override
+  void dispose() {
+    if (isDisposed) return;
+    Disposable.unlinkDeps(this);
+    Disposable.unlinkSubs(this);
+    preset.stop(this);
+    super.dispose();
+    _notifySignalDisposal(this);
+  }
 }
 
 /// Base configuration shared by reactive primitives.
 abstract interface class Configuration {
-  /// Identifier for the instance.
-  Identifier get identifier;
-
   /// Whether the instance auto-disposes.
   bool get autoDispose;
+
+  /// Identifier for the instance.
+  Identifier get identifier;
 }
 
 /// Disposable behavior for reactive primitives.
@@ -406,11 +384,11 @@ abstract class Disposable {
   /// Whether this instance has been disposed.
   bool get isDisposed;
 
-  /// Registers a callback to run on dispose.
-  void onDispose(VoidCallback callback);
-
   /// Disposes the instance.
   void dispose();
+
+  /// Registers a callback to run on dispose.
+  void onDispose(VoidCallback callback);
 
   /// Whether the node can be auto-disposed.
   static bool canAutoDispose(system.ReactiveNode node) => switch (node) {
@@ -460,182 +438,105 @@ abstract class Disposable {
   }
 }
 
-/// Common configuration for signals.
-abstract interface class SignalConfiguration<T> implements Configuration {
-  /// Comparator used to skip equal updates.
-  ///
-  /// When it returns `true`, the new value is treated as equal and the update
-  /// is skipped.
-  ValueComparator<T> get equals;
+/// Default [Disposable] implementation using cleanup callbacks.
+mixin DisposableMixin implements Disposable {
+  @internal
+  /// Registered cleanup callbacks invoked on dispose.
+  late final cleanups = <VoidCallback>[];
 
-  /// Whether to track previous values.
-  ///
-  /// Previous values are captured on successful updates after a tracked read.
-  bool get trackPreviousValue;
+  @override
+  bool isDisposed = false;
 
-  /// Whether to report to DevTools.
-  bool get trackInDevTools;
-}
+  @mustCallSuper
+  @override
+  void dispose() {
+    if (isDisposed) return;
+    isDisposed = true;
+    try {
+      for (final callback in cleanups) {
+        callback();
+      }
+    } finally {
+      cleanups.clear();
+    }
+  }
 
-/// Read-only reactive value.
-///
-/// Reading [value] establishes a dependency; [untrackedValue] does not.
-/// This interface is implemented by [Signal], [Computed], and [Resource].
-///
-/// ```dart
-/// final count = Signal(0);
-/// ReadonlySignal<int> readonly = count.toReadonly();
-/// ```
-// TODO(nank1ro): Maybe rename to `ReadSignal`? medz: I still recommend `ReadonlySignal` because it is semantically clearer., https://github.com/nank1ro/solidart/pull/166#issuecomment-3623175977
-abstract interface class ReadonlySignal<T>
-    implements system.ReactiveNode, Disposable, SignalConfiguration<T> {
-  /// Returns the current value and tracks dependencies.
-  T get value;
-
-  /// Returns [value]. This allows using a signal as a callable.
-  T call();
-
-  /// Returns the current value without tracking.
-  T get untrackedValue;
-
-  /// Returns the previous value (tracked read).
-  ///
-  /// This may return `null` if tracking is disabled or the signal has not been
-  /// read since the last update.
-  T? get previousValue;
-
-  /// Returns the previous value without tracking.
-  T? get untrackedPreviousValue;
-}
-
-/// Observes [ReadonlySignal] changes with previous and current values.
-extension ObserveSignal<T> on ReadonlySignal<T> {
-  /// Observe the signal and invoke [listener] whenever the value changes.
-  ///
-  /// When [fireImmediately] is `true`, the listener runs once on subscription.
-  /// Returns a disposer that stops the observation.
-  DisposeObservation observe(
-    ObserveCallback<T> listener, {
-    bool fireImmediately = false,
-  }) {
-    var skipped = false;
-    final effect = Effect(
-      () {
-        value;
-        if (!fireImmediately && !skipped) {
-          skipped = true;
-          return;
-        }
-        untracked(() {
-          listener(untrackedPreviousValue, untrackedValue);
-        });
-      },
-      detach: true,
-    );
-
-    return effect.dispose;
+  @mustCallSuper
+  @override
+  void onDispose(VoidCallback callback) {
+    cleanups.add(callback);
   }
 }
+// coverage:ignore-end
 
-/// {@template solidart.signal}
-/// # Signals
-/// Signals are the cornerstone of reactivity in v3. They store values that
-/// change over time, and any reactive computation that reads a signal will
-/// automatically update when the signal changes.
+/// {@template solidart.effect}
+/// # Effect
+/// Effects run a side-effect whenever any signal they read changes.
 ///
-/// Create a signal with an initial value:
 /// ```dart
 /// final counter = Signal(0);
+/// Effect(() {
+///   print('count: ${counter.value}');
+/// });
 /// ```
 ///
-/// Read the current value:
-/// ```dart
-/// counter.value; // 0
-/// ```
+/// Effects run once immediately when created. If you need a lazy effect,
+/// create it with [Effect.manual] and call [run] yourself.
 ///
-/// Update the value:
-/// ```dart
-/// counter.value++;
-/// // or
-/// counter.value = 10;
-/// ```
+/// Nested effects can either attach to their parent (default) or detach by
+/// passing `detach: true` or by enabling [SolidartConfig.detachEffects].
 ///
-/// Signals support previous value tracking. When enabled, `previousValue`
-/// updates only after the signal has been read at least once:
-/// ```dart
-/// final count = Signal(0);
-/// count.value = 1;
-/// count.previousValue; // null (not read yet)
-/// count.value;         // establishes tracking
-/// count.previousValue; // 0
-/// ```
-///
-/// Signals can be created lazily using [Signal.lazy]. A lazy signal does not
-/// have a value until it is first assigned, and reading it early throws
-/// [StateError].
+/// Call [dispose] to stop the effect and release dependencies.
 /// {@endtemplate}
-/// {@template solidart.signal-equals}
-/// Updates are skipped when [equals] reports the new value is equivalent to
-/// the previous one.
-/// {@endtemplate}
-class Signal<T> extends preset.SignalNode<Option<T>>
+class Effect extends preset.EffectNode
     with DisposableMixin
-    implements ReadonlySignal<T> {
-  /// {@macro solidart.signal}
-  ///
-  /// {@macro solidart.signal-equals}
-  Signal(
-    T initialValue, {
+    implements Disposable, Configuration {
+  /// {@macro solidart.effect}
+  factory Effect(
+    VoidCallback callback, {
     bool? autoDispose,
     String? name,
-    ValueComparator<T> equals = identical,
-    bool? trackPreviousValue,
-    bool? trackInDevTools,
-  }) : this._internal(
-         Some(initialValue),
-         autoDispose: autoDispose,
-         name: name,
-         equals: equals,
-         trackPreviousValue: trackPreviousValue,
-         trackInDevTools: trackInDevTools,
-       );
+    bool? detach,
+  }) => .manual(
+    callback,
+    autoDispose: autoDispose,
+    name: name,
+    detach: detach,
+  )..run();
 
-  Signal._internal(
-    Option<T> initialValue, {
-    this.equals = identical,
-    String? name,
+  /// Creates an effect without running it.
+  ///
+  /// Use this when you need to *delay* the first run or decide *when* the
+  /// effect should start tracking dependencies. Common cases:
+  /// - you must create several signals first and only then start the effect
+  /// - you want to control the first run in tests
+  /// - you need conditional startup (e.g. after async setup)
+  ///
+  /// The effect will not track anything until you call [run]:
+  /// ```dart
+  /// final count = Signal(0);
+  /// final effect = Effect.manual(() {
+  ///   print('count: ${count.value}');
+  /// });
+  ///
+  /// count.value = 1; // no output yet
+  /// effect.run();    // prints "count: 1" and starts tracking
+  /// ```
+  ///
+  /// If you want the effect to run immediately, use the [Effect] factory.
+  Effect.manual(
+    VoidCallback callback, {
     bool? autoDispose,
-    bool? trackPreviousValue,
-    bool? trackInDevTools,
+    String? name,
+    bool? detach,
   }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
-       trackPreviousValue =
-           trackPreviousValue ?? SolidartConfig.trackPreviousValue,
-       trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
        identifier = ._(name),
+       detach = detach ?? SolidartConfig.detachEffects,
        super(
-         flags: system.ReactiveFlags.mutable,
-         currentValue: initialValue,
-         pendingValue: initialValue,
-       ) {
-    _notifySignalCreation(this);
-  }
-
-  /// Whether the signal has been initialized.
-  ///
-  /// Regular signals are always initialized at construction time.
-  bool get isInitialized => true;
-
-  /// {@macro solidart.signal}
-  ///
-  /// This is a lazy signal: it has no value at construction time.
-  /// Reading [value] before the first assignment throws [StateError].
-  factory Signal.lazy({
-    String? name,
-    bool? autoDispose,
-    ValueComparator<T> equals,
-    bool? trackPreviousValue,
-    bool? trackInDevTools,
-  }) = LazySignal;
+         fn: callback,
+         flags:
+             system.ReactiveFlags.watching | system.ReactiveFlags.recursedCheck,
+       );
 
   @override
   final bool autoDispose;
@@ -643,83 +544,45 @@ class Signal<T> extends preset.SignalNode<Option<T>>
   @override
   final Identifier identifier;
 
-  @override
-  final ValueComparator<T> equals;
-
-  @override
-  final bool trackPreviousValue;
-
-  @override
-  final bool trackInDevTools;
-
-  Option<T> _previousValue = const None();
-
-  @override
-  T get value {
-    assert(!isDisposed, 'Signal is disposed');
-    return super.get().unwrap();
-  }
-
-  @override
-  T call() => value;
-
-  /// Sets the current value.
-  ///
-  /// {@macro solidart.signal-equals}
-  set value(T newValue) {
-    assert(!isDisposed, 'Signal is disposed');
-    set(Some(newValue));
-  }
-
-  @override
-  T get untrackedValue => super.currentValue.unwrap();
-
-  @override
-  T? get previousValue {
-    if (!trackPreviousValue) return null;
-    value;
-    return _previousValue.safeUnwrap();
-  }
-
-  @override
-  T? get untrackedPreviousValue {
-    if (!trackPreviousValue) return null;
-    return _previousValue.safeUnwrap();
-  }
-
-  // TODO(nank1ro): See ReadonlySignal TODO, If `ReadonlySignal` rename
-  // to `ReadSignal`, the `.toReadonly` method should be rename?
-  /// Returns a read-only view of this signal.
-  ReadonlySignal<T> toReadonly() => this;
+  /// Whether this effect detaches from parent subscriptions.
+  final bool detach;
 
   @override
   void dispose() {
     if (isDisposed) return;
-    Disposable.unlinkSubs(this);
+    Disposable.unlinkDeps(this);
     preset.stop(this);
     super.dispose();
-    _notifySignalDisposal(this);
   }
 
-  @override
-  bool didUpdate() {
-    flags = system.ReactiveFlags.mutable;
-    final current = currentValue;
-    final pending = pendingValue;
-    if (current is Some<T> &&
-        pending is Some<T> &&
-        equals(pending.value, current.value)) {
-      return false;
+  /// Runs the effect and tracks dependencies.
+  void run() {
+    final prevSub = preset.setActiveSub(this);
+    if (!detach && prevSub != null) {
+      preset.link(this, prevSub, 0);
     }
 
-    if (trackPreviousValue && current is Some<T>) {
-      _previousValue = current;
+    try {
+      fn();
+    } finally {
+      preset.activeSub = prevSub;
+      flags &= ~system.ReactiveFlags.recursedCheck;
     }
-
-    currentValue = pending;
-    _notifySignalUpdate(this);
-    return true;
   }
+}
+
+/// A unique identifier with an optional name.
+///
+/// Used by DevTools and diagnostics to track instances.
+class Identifier {
+  Identifier._(this.name) : value = _counter++;
+  static int _counter = 0;
+
+  /// Optional human-readable name.
+  final String? name;
+
+  /// Unique numeric identifier.
+  final int value;
 }
 
 /// A signal that starts uninitialized until first set.
@@ -807,17 +670,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
          trackInDevTools: trackInDevTools,
        );
 
-  List<E> _copy() => List<E>.of(untrackedValue);
-
-  bool _listEquals(List<E> a, List<E> b) {
-    if (identical(a, b)) return true;
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
-
   @override
   int get length => value.length;
 
@@ -850,6 +702,23 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   void addAll(Iterable<E> iterable) {
     if (iterable.isEmpty) return;
     final next = _copy()..addAll(iterable);
+    value = next;
+  }
+
+  @override
+  List<R> cast<R>() => ListSignal<R>(untrackedValue.cast<R>());
+
+  @override
+  void clear() {
+    if (untrackedValue.isEmpty) return;
+    value = <E>[];
+  }
+
+  @override
+  void fillRange(int start, int end, [E? fill]) {
+    if (end <= start) return;
+    final next = _copy()..fillRange(start, end, fill);
+    if (_listEquals(untrackedValue, next)) return;
     value = next;
   }
 
@@ -902,9 +771,25 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   }
 
   @override
+  void removeWhere(bool Function(E element) test) {
+    final current = untrackedValue;
+    final next = List<E>.of(current)..removeWhere(test);
+    if (next.length == current.length) return;
+    value = next;
+  }
+
+  @override
   void replaceRange(int start, int end, Iterable<E> newContents) {
     final next = _copy()..replaceRange(start, end, newContents);
     if (_listEquals(untrackedValue, next)) return;
+    value = next;
+  }
+
+  @override
+  void retainWhere(bool Function(E element) test) {
+    final current = untrackedValue;
+    final next = List<E>.of(current)..retainWhere(test);
+    if (next.length == current.length) return;
     value = next;
   }
 
@@ -923,17 +808,11 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   }
 
   @override
-  void fillRange(int start, int end, [E? fill]) {
-    if (end <= start) return;
-    final next = _copy()..fillRange(start, end, fill);
+  void shuffle([Random? random]) {
+    if (untrackedValue.length < 2) return;
+    final next = _copy()..shuffle(random);
     if (_listEquals(untrackedValue, next)) return;
     value = next;
-  }
-
-  @override
-  void clear() {
-    if (untrackedValue.isEmpty) return;
-    value = <E>[];
   }
 
   @override
@@ -945,165 +824,20 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   }
 
   @override
-  void shuffle([Random? random]) {
-    if (untrackedValue.length < 2) return;
-    final next = _copy()..shuffle(random);
-    if (_listEquals(untrackedValue, next)) return;
-    value = next;
-  }
-
-  @override
-  void removeWhere(bool Function(E element) test) {
-    final current = untrackedValue;
-    final next = List<E>.of(current)..removeWhere(test);
-    if (next.length == current.length) return;
-    value = next;
-  }
-
-  @override
-  void retainWhere(bool Function(E element) test) {
-    final current = untrackedValue;
-    final next = List<E>.of(current)..retainWhere(test);
-    if (next.length == current.length) return;
-    value = next;
-  }
-
-  @override
-  List<R> cast<R>() => ListSignal<R>(untrackedValue.cast<R>());
-
-  @override
   String toString() =>
       'ListSignal<$E>(value: $untrackedValue, '
       'previousValue: $untrackedPreviousValue)';
-}
 
-/// {@template solidart.set-signal}
-/// A reactive wrapper around a [Set] that copies on write.
-///
-/// Mutations create a new set instance so that updates are observable:
-/// ```dart
-/// final set = SetSignal({1});
-/// Effect(() => print(set.length));
-/// set.add(2); // triggers effect
-/// ```
-///
-/// Reads (like `length` or `contains`) establish dependencies.
-/// {@endtemplate}
-class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
-  /// {@macro solidart.set-signal}
-  ///
-  /// Creates a reactive set with the provided initial values.
-  SetSignal(
-    Iterable<E> initialValue, {
-    bool? autoDispose,
-    String? name,
-    ValueComparator<Set<E>> equals = identical,
-    bool? trackPreviousValue,
-    bool? trackInDevTools,
-  }) : super(
-         Set<E>.of(initialValue),
-         autoDispose: autoDispose,
-         name: name,
-         equals: equals,
-         trackPreviousValue: trackPreviousValue,
-         trackInDevTools: trackInDevTools,
-       );
+  List<E> _copy() => List<E>.of(untrackedValue);
 
-  Set<E> _copy() => Set<E>.of(untrackedValue);
-
-  @override
-  int get length => value.length;
-
-  @override
-  Iterator<E> get iterator => value.iterator;
-
-  @override
-  bool contains(Object? element) {
-    value;
-    return untrackedValue.contains(element);
-  }
-
-  @override
-  E? lookup(Object? element) {
-    value;
-    return untrackedValue.lookup(element);
-  }
-
-  @override
-  bool add(E value) {
-    final current = untrackedValue;
-    if (current.contains(value)) return false;
-    final next = Set<E>.of(current)..add(value);
-    this.value = next;
+  bool _listEquals(List<E> a, List<E> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
     return true;
   }
-
-  @override
-  void addAll(Iterable<E> elements) {
-    if (elements.isEmpty) return;
-    final next = _copy()..addAll(elements);
-    if (next.length == untrackedValue.length) return;
-    value = next;
-  }
-
-  @override
-  bool remove(Object? value) {
-    final current = untrackedValue;
-    if (!current.contains(value)) return false;
-    final next = Set<E>.of(current)..remove(value);
-    this.value = next;
-    return true;
-  }
-
-  @override
-  void removeAll(Iterable<Object?> elements) {
-    if (elements.isEmpty) return;
-    final current = untrackedValue;
-    final next = Set<E>.of(current)..removeAll(elements);
-    if (next.length == current.length) return;
-    value = next;
-  }
-
-  @override
-  void retainAll(Iterable<Object?> elements) {
-    final current = untrackedValue;
-    final next = Set<E>.of(current)..retainAll(elements);
-    if (next.length == current.length) return;
-    value = next;
-  }
-
-  @override
-  void removeWhere(bool Function(E element) test) {
-    final current = untrackedValue;
-    final next = Set<E>.of(current)..removeWhere(test);
-    if (next.length == current.length) return;
-    value = next;
-  }
-
-  @override
-  void retainWhere(bool Function(E element) test) {
-    final current = untrackedValue;
-    final next = Set<E>.of(current)..retainWhere(test);
-    if (next.length == current.length) return;
-    value = next;
-  }
-
-  @override
-  void clear() {
-    if (untrackedValue.isEmpty) return;
-    value = <E>{};
-  }
-
-  @override
-  Set<E> toSet() => Set<E>.of(untrackedValue);
-
-  @override
-  Set<R> cast<R>() => SetSignal<R>(untrackedValue.cast<R>());
-
-  @override
-  String toString() =>
-      'SetSignal<$E>(value: $untrackedValue, '
-      'previousValue: $untrackedPreviousValue)';
 }
 
 /// {@template solidart.map-signal}
@@ -1138,16 +872,28 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
          trackInDevTools: trackInDevTools,
        );
 
-  Map<K, V> _copy() => Map<K, V>.of(untrackedValue);
+  @override
+  bool get isEmpty {
+    value;
+    return untrackedValue.isEmpty;
+  }
 
-  bool _mapEquals(Map<K, V> a, Map<K, V> b) {
-    if (identical(a, b)) return true;
-    if (a.length != b.length) return false;
-    for (final entry in a.entries) {
-      if (!b.containsKey(entry.key)) return false;
-      if (b[entry.key] != entry.value) return false;
-    }
-    return true;
+  @override
+  bool get isNotEmpty {
+    value;
+    return untrackedValue.isNotEmpty;
+  }
+
+  @override
+  Iterable<K> get keys {
+    value;
+    return untrackedValue.keys;
+  }
+
+  @override
+  int get length {
+    value;
+    return untrackedValue.length;
   }
 
   @override
@@ -1167,43 +913,22 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   }
 
   @override
+  void addAll(Map<K, V> other) {
+    if (other.isEmpty) return;
+    final current = untrackedValue;
+    final next = _copy()..addAll(other);
+    if (_mapEquals(next, current)) return;
+    value = next;
+  }
+
+  @override
+  Map<RK, RV> cast<RK, RV>() =>
+      MapSignal<RK, RV>(untrackedValue.cast<RK, RV>());
+
+  @override
   void clear() {
     if (untrackedValue.isEmpty) return;
     value = <K, V>{};
-  }
-
-  @override
-  Iterable<K> get keys {
-    value;
-    return untrackedValue.keys;
-  }
-
-  @override
-  V? remove(Object? key) {
-    final current = untrackedValue;
-    if (!current.containsKey(key)) return null;
-    final next = _copy();
-    final removed = next.remove(key);
-    value = next;
-    return removed;
-  }
-
-  @override
-  int get length {
-    value;
-    return untrackedValue.length;
-  }
-
-  @override
-  bool get isEmpty {
-    value;
-    return untrackedValue.isEmpty;
-  }
-
-  @override
-  bool get isNotEmpty {
-    value;
-    return untrackedValue.isNotEmpty;
   }
 
   @override
@@ -1219,15 +944,6 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   }
 
   @override
-  void addAll(Map<K, V> other) {
-    if (other.isEmpty) return;
-    final current = untrackedValue;
-    final next = _copy()..addAll(other);
-    if (_mapEquals(next, current)) return;
-    value = next;
-  }
-
-  @override
   V putIfAbsent(K key, V Function() ifAbsent) {
     final current = untrackedValue;
     if (current.containsKey(key)) {
@@ -1239,6 +955,30 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
     this.value = next;
     return value;
   }
+
+  @override
+  V? remove(Object? key) {
+    final current = untrackedValue;
+    if (!current.containsKey(key)) return null;
+    final next = _copy();
+    final removed = next.remove(key);
+    value = next;
+    return removed;
+  }
+
+  @override
+  void removeWhere(bool Function(K key, V value) test) {
+    final current = untrackedValue;
+    if (current.isEmpty) return;
+    final next = _copy()..removeWhere(test);
+    if (next.length == current.length) return;
+    value = next;
+  }
+
+  @override
+  String toString() =>
+      'MapSignal<$K, $V>(value: $untrackedValue, '
+      'previousValue: $untrackedPreviousValue)';
 
   @override
   V update(
@@ -1279,248 +1019,75 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
     value = next;
   }
 
-  @override
-  void removeWhere(bool Function(K key, V value) test) {
-    final current = untrackedValue;
-    if (current.isEmpty) return;
-    final next = _copy()..removeWhere(test);
-    if (next.length == current.length) return;
-    value = next;
-  }
+  Map<K, V> _copy() => Map<K, V>.of(untrackedValue);
 
-  @override
-  Map<RK, RV> cast<RK, RV>() =>
-      MapSignal<RK, RV>(untrackedValue.cast<RK, RV>());
-
-  @override
-  String toString() =>
-      'MapSignal<$K, $V>(value: $untrackedValue, '
-      'previousValue: $untrackedPreviousValue)';
-}
-
-/// {@template solidart.computed}
-/// # Computed
-/// A computed signal derives its value from other signals. It is read-only
-/// and recalculates whenever any dependency changes.
-///
-/// Use `Computed` to derive state or combine multiple signals:
-/// ```dart
-/// final firstName = Signal('Josh');
-/// final lastName = Signal('Brown');
-/// final fullName = Computed(() => '${firstName.value} ${lastName.value}');
-/// ```
-///
-/// Computeds only notify when the derived value changes. You can customize
-/// equality via [equals] to skip updates for equivalent values.
-///
-/// Like signals, computeds can track previous values once they have been read.
-/// {@endtemplate}
-class Computed<T> extends preset.ComputedNode<T>
-    with DisposableMixin
-    implements ReadonlySignal<T> {
-  /// {@macro solidart.computed}
-  Computed(
-    ValueGetter<T> getter, {
-    this.equals = identical,
-    bool? autoDispose,
-    String? name,
-    bool? trackPreviousValue,
-    bool? trackInDevTools,
-  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
-       trackPreviousValue =
-           trackPreviousValue ?? SolidartConfig.trackPreviousValue,
-       trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
-       identifier = ._(name),
-       super(flags: system.ReactiveFlags.none, getter: (_) => getter()) {
-    _notifySignalCreation(this);
-  }
-
-  @override
-  final bool autoDispose;
-
-  @override
-  final Identifier identifier;
-
-  @override
-  final ValueComparator<T> equals;
-
-  @override
-  final bool trackPreviousValue;
-
-  @override
-  final bool trackInDevTools;
-
-  Option<T> _previousValue = const None();
-
-  @override
-  T get value {
-    assert(!isDisposed, 'Computed is disposed');
-    return get();
-  }
-
-  @override
-  T call() => value;
-
-  @override
-  T get untrackedValue {
-    if (currentValue != null || null is T) {
-      return currentValue as T;
+  bool _mapEquals(Map<K, V> a, Map<K, V> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (!b.containsKey(entry.key)) return false;
+      if (b[entry.key] != entry.value) return false;
     }
-    return untracked(() => value);
-  }
-
-  @override
-  T? get previousValue {
-    if (!trackPreviousValue) return null;
-    value;
-    return _previousValue.safeUnwrap();
-  }
-
-  @override
-  T? get untrackedPreviousValue {
-    if (!trackPreviousValue) return null;
-    return _previousValue.safeUnwrap();
-  }
-
-  @override
-  void dispose() {
-    if (isDisposed) return;
-    Disposable.unlinkDeps(this);
-    Disposable.unlinkSubs(this);
-    preset.stop(this);
-    super.dispose();
-    _notifySignalDisposal(this);
-  }
-
-  @override
-  bool didUpdate() {
-    preset.cycle++;
-    depsTail = null;
-    flags = system.ReactiveFlags.mutable | system.ReactiveFlags.recursedCheck;
-
-    final prevSub = preset.setActiveSub(this);
-    try {
-      final previousValue = currentValue;
-      final pendingValue = getter(previousValue);
-      if (equals(previousValue, pendingValue)) {
-        return false;
-      }
-
-      if (trackPreviousValue && (previousValue is T)) {
-        _previousValue = Some(previousValue);
-      }
-
-      currentValue = pendingValue;
-      _notifySignalUpdate(this);
-      return true;
-    } finally {
-      preset.activeSub = prevSub;
-      flags &= ~system.ReactiveFlags.recursedCheck;
-      preset.purgeDeps(this);
-    }
+    return true;
   }
 }
 
-/// {@template solidart.effect}
-/// # Effect
-/// Effects run a side-effect whenever any signal they read changes.
+/// An absent optional value.
+final class None<T> extends Option<T> {
+  /// Creates an option with no value.
+  const None();
+}
+
+/// An optional value container.
+///
+/// Use [Some] to represent presence and [None] to represent absence without
+/// relying on `null`.
+sealed class Option<T> {
+  /// Base constructor for option values.
+  const Option();
+
+  /// Returns the contained value or `null` if this is [None].
+  T? safeUnwrap() => switch (this) {
+    Some<T>(:final value) => value,
+    _ => null,
+  };
+
+  /// Returns the contained value or throws if this is [None].
+  T unwrap() => switch (this) {
+    Some<T>(:final value) => value,
+    _ => throw StateError('Option is None'),
+  };
+}
+
+/// Read-only reactive value.
+///
+/// Reading [value] establishes a dependency; [untrackedValue] does not.
+/// This interface is implemented by [Signal], [Computed], and [Resource].
 ///
 /// ```dart
-/// final counter = Signal(0);
-/// Effect(() {
-///   print('count: ${counter.value}');
-/// });
+/// final count = Signal(0);
+/// ReadonlySignal<int> readonly = count.toReadonly();
 /// ```
-///
-/// Effects run once immediately when created. If you need a lazy effect,
-/// create it with [Effect.manual] and call [run] yourself.
-///
-/// Nested effects can either attach to their parent (default) or detach by
-/// passing `detach: true` or by enabling [SolidartConfig.detachEffects].
-///
-/// Call [dispose] to stop the effect and release dependencies.
-/// {@endtemplate}
-class Effect extends preset.EffectNode
-    with DisposableMixin
-    implements Disposable, Configuration {
-  /// {@macro solidart.effect}
-  factory Effect(
-    VoidCallback callback, {
-    bool? autoDispose,
-    String? name,
-    bool? detach,
-  }) => .manual(
-    callback,
-    autoDispose: autoDispose,
-    name: name,
-    detach: detach,
-  )..run();
-
-  /// Creates an effect without running it.
+// TODO(nank1ro): Maybe rename to `ReadSignal`? medz: I still recommend `ReadonlySignal` because it is semantically clearer., https://github.com/nank1ro/solidart/pull/166#issuecomment-3623175977
+abstract interface class ReadonlySignal<T>
+    implements system.ReactiveNode, Disposable, SignalConfiguration<T> {
+  /// Returns the previous value (tracked read).
   ///
-  /// Use this when you need to *delay* the first run or decide *when* the
-  /// effect should start tracking dependencies. Common cases:
-  /// - you must create several signals first and only then start the effect
-  /// - you want to control the first run in tests
-  /// - you need conditional startup (e.g. after async setup)
-  ///
-  /// The effect will not track anything until you call [run]:
-  /// ```dart
-  /// final count = Signal(0);
-  /// final effect = Effect.manual(() {
-  ///   print('count: ${count.value}');
-  /// });
-  ///
-  /// count.value = 1; // no output yet
-  /// effect.run();    // prints "count: 1" and starts tracking
-  /// ```
-  ///
-  /// If you want the effect to run immediately, use the [Effect] factory.
-  Effect.manual(
-    VoidCallback callback, {
-    bool? autoDispose,
-    String? name,
-    bool? detach,
-  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
-       identifier = ._(name),
-       detach = detach ?? SolidartConfig.detachEffects,
-       super(
-         fn: callback,
-         flags:
-             system.ReactiveFlags.watching | system.ReactiveFlags.recursedCheck,
-       );
+  /// This may return `null` if tracking is disabled or the signal has not been
+  /// read since the last update.
+  T? get previousValue;
 
-  @override
-  final bool autoDispose;
+  /// Returns the previous value without tracking.
+  T? get untrackedPreviousValue;
 
-  @override
-  final Identifier identifier;
+  /// Returns the current value without tracking.
+  T get untrackedValue;
 
-  /// Whether this effect detaches from parent subscriptions.
-  final bool detach;
+  /// Returns the current value and tracks dependencies.
+  T get value;
 
-  /// Runs the effect and tracks dependencies.
-  void run() {
-    final prevSub = preset.setActiveSub(this);
-    if (!detach && prevSub != null) {
-      preset.link(this, prevSub, 0);
-    }
-
-    try {
-      fn();
-    } finally {
-      preset.activeSub = prevSub;
-      flags &= ~system.ReactiveFlags.recursedCheck;
-    }
-  }
-
-  @override
-  void dispose() {
-    if (isDisposed) return;
-    Disposable.unlinkDeps(this);
-    preset.stop(this);
-    super.dispose();
-  }
+  /// Returns [value]. This allows using a signal as a callable.
+  T call();
 }
 
 /// {@template solidart.resource}
@@ -1662,15 +1229,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
   StreamSubscription<T>? _streamSubscription;
   Timer? _debounceTimer;
 
-  /// Returns the current state, resolving lazily if needed.
-  ResourceState<T> get state {
-    _resolveIfNeeded();
-    return value;
-  }
-
-  /// Sets the current state.
-  set state(ResourceState<T> next) => value = next;
-
   /// Returns the previous state (tracked read), or `null`.
   ///
   /// Previous state is available only after a tracked read.
@@ -1680,26 +1238,30 @@ class Resource<T> extends Signal<ResourceState<T>> {
     return previousValue;
   }
 
-  /// Returns the current state without tracking.
-  ResourceState<T> get untrackedState => untrackedValue;
+  /// Returns the current state, resolving lazily if needed.
+  ResourceState<T> get state {
+    _resolveIfNeeded();
+    return value;
+  }
+
+  /// Sets the current state.
+  set state(ResourceState<T> next) => value = next;
 
   /// Returns the previous state without tracking.
   ResourceState<T>? get untrackedPreviousState => untrackedPreviousValue;
 
-  /// Resolves the resource if it has not been resolved yet.
-  ///
-  /// Multiple calls are coalesced into a single in-flight resolve.
-  Future<void> resolve() async {
-    if (isDisposed) return;
-    if (_resolveFuture != null) return _resolveFuture!;
-    if (_resolved) return;
+  /// Returns the current state without tracking.
+  ResourceState<T> get untrackedState => untrackedValue;
 
-    _resolved = true;
-    _resolveFuture = _doResolve().whenComplete(() {
-      _resolveFuture = null;
-    });
-
-    return _resolveFuture!;
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
+    _sourceEffect?.dispose();
+    _sourceEffect = null;
+    _streamSubscription?.cancel();
+    _streamSubscription = null;
+    super.dispose();
   }
 
   /// Re-fetches or re-subscribes to the resource.
@@ -1722,21 +1284,20 @@ class Resource<T> extends Signal<ResourceState<T>> {
     }
   }
 
-  @override
-  void dispose() {
-    _debounceTimer?.cancel();
-    _debounceTimer = null;
-    _sourceEffect?.dispose();
-    _sourceEffect = null;
-    _streamSubscription?.cancel();
-    _streamSubscription = null;
-    super.dispose();
-  }
+  /// Resolves the resource if it has not been resolved yet.
+  ///
+  /// Multiple calls are coalesced into a single in-flight resolve.
+  Future<void> resolve() async {
+    if (isDisposed) return;
+    if (_resolveFuture != null) return _resolveFuture!;
+    if (_resolved) return;
 
-  void _resolveIfNeeded() {
-    if (!_resolved) {
-      unawaited(resolve());
-    }
+    _resolved = true;
+    _resolveFuture = _doResolve().whenComplete(() {
+      _resolveFuture = null;
+    });
+
+    return _resolveFuture!;
   }
 
   Future<void> _doResolve() async {
@@ -1751,6 +1312,52 @@ class Resource<T> extends Signal<ResourceState<T>> {
     if (source != null) {
       _setupSourceEffect();
     }
+  }
+
+  Future<void> _fetch() async {
+    final requestId = ++_version;
+    try {
+      final result = await fetcher!();
+      if (_isStale(requestId)) return;
+      state = ResourceState<T>.ready(result);
+    } catch (e, s) {
+      if (_isStale(requestId)) return;
+      state = ResourceState<T>.error(e, stackTrace: s);
+    }
+  }
+
+  bool _isStale(int requestId) => requestId != _version || isDisposed;
+
+  void _listenStream() {
+    final requestId = ++_version;
+    _streamSubscription = stream!().listen(
+      (data) {
+        if (_isStale(requestId)) return;
+        state = ResourceState<T>.ready(data);
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (_isStale(requestId)) return;
+        state = ResourceState<T>.error(error, stackTrace: stackTrace);
+      },
+    );
+  }
+
+  Future<void> _refetch() async {
+    _transition();
+    return _fetch();
+  }
+
+  void _resolveIfNeeded() {
+    if (!_resolved) {
+      unawaited(resolve());
+    }
+  }
+
+  void _resubscribe() {
+    _streamSubscription?.cancel();
+    _streamSubscription = null;
+    _transition();
+    _listenStream();
   }
 
   void _setupSourceEffect() {
@@ -1776,49 +1383,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
     );
   }
 
-  Future<void> _fetch() async {
-    final requestId = ++_version;
-    try {
-      final result = await fetcher!();
-      if (_isStale(requestId)) return;
-      state = ResourceState<T>.ready(result);
-    } catch (e, s) {
-      if (_isStale(requestId)) return;
-      state = ResourceState<T>.error(e, stackTrace: s);
-    }
-  }
-
-  Future<void> _refetch() async {
-    _transition();
-    return _fetch();
-  }
-
   void _subscribe() {
     _listenStream();
   }
-
-  void _resubscribe() {
-    _streamSubscription?.cancel();
-    _streamSubscription = null;
-    _transition();
-    _listenStream();
-  }
-
-  void _listenStream() {
-    final requestId = ++_version;
-    _streamSubscription = stream!().listen(
-      (data) {
-        if (_isStale(requestId)) return;
-        state = ResourceState<T>.ready(data);
-      },
-      onError: (Object error, StackTrace stackTrace) {
-        if (_isStale(requestId)) return;
-        state = ResourceState<T>.error(error, stackTrace: stackTrace);
-      },
-    );
-  }
-
-  bool _isStale(int requestId) => requestId != _version || isDisposed;
 
   void _transition() {
     if (!useRefreshing) {
@@ -1836,6 +1403,140 @@ class Resource<T> extends Signal<ResourceState<T>> {
         state = ResourceState<T>.loading();
       },
     );
+  }
+}
+
+/// Error state containing an error and optional stack trace.
+@immutable
+class ResourceError<T> implements ResourceState<T> {
+  /// Creates an error state.
+  const ResourceError(
+    this.error, {
+    this.stackTrace,
+    this.isRefreshing = false,
+  });
+
+  /// The error object.
+  final Object error;
+
+  /// Optional stack trace.
+  final StackTrace? stackTrace;
+
+  /// Whether the resource is refreshing.
+  final bool isRefreshing;
+
+  @override
+  int get hashCode => Object.hash(runtimeType, error, stackTrace, isRefreshing);
+
+  @override
+  bool operator ==(Object other) {
+    return runtimeType == other.runtimeType &&
+        other is ResourceError<T> &&
+        other.error == error &&
+        other.stackTrace == stackTrace &&
+        other.isRefreshing == isRefreshing;
+  }
+
+  /// Returns a copy with updated fields.
+  ResourceError<T> copyWith({
+    Object? error,
+    StackTrace? stackTrace,
+    bool? isRefreshing,
+  }) {
+    return ResourceError<T>(
+      error ?? this.error,
+      stackTrace: stackTrace ?? this.stackTrace,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
+    );
+  }
+
+  @override
+  R map<R>({
+    required R Function(ResourceReady<T> ready) ready,
+    required R Function(ResourceError<T> error) error,
+    required R Function(ResourceLoading<T> loading) loading,
+  }) {
+    return error(this);
+  }
+
+  @override
+  String toString() {
+    return 'ResourceError<$T>(error: $error, stackTrace: $stackTrace, '
+        'refreshing: $isRefreshing)';
+  }
+}
+
+/// Loading state.
+@immutable
+class ResourceLoading<T> implements ResourceState<T> {
+  /// Creates a loading state.
+  const ResourceLoading();
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  bool operator ==(Object other) => runtimeType == other.runtimeType;
+
+  @override
+  R map<R>({
+    required R Function(ResourceReady<T> ready) ready,
+    required R Function(ResourceError<T> error) error,
+    required R Function(ResourceLoading<T> loading) loading,
+  }) {
+    return loading(this);
+  }
+
+  @override
+  String toString() => 'ResourceLoading<$T>()';
+}
+
+/// Ready state containing data.
+@immutable
+class ResourceReady<T> implements ResourceState<T> {
+  /// Creates a ready state with [value].
+  const ResourceReady(this.value, {this.isRefreshing = false});
+
+  /// The resource value.
+  final T value;
+
+  /// Whether the resource is refreshing.
+  final bool isRefreshing;
+
+  @override
+  int get hashCode => Object.hash(runtimeType, value, isRefreshing);
+
+  @override
+  bool operator ==(Object other) {
+    return runtimeType == other.runtimeType &&
+        other is ResourceReady<T> &&
+        other.value == value &&
+        other.isRefreshing == isRefreshing;
+  }
+
+  /// Returns a copy with updated fields.
+  ResourceReady<T> copyWith({
+    T? value,
+    bool? isRefreshing,
+  }) {
+    return ResourceReady<T>(
+      value ?? this.value,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
+    );
+  }
+
+  @override
+  R map<R>({
+    required R Function(ResourceReady<T> ready) ready,
+    required R Function(ResourceError<T> error) error,
+    required R Function(ResourceLoading<T> loading) loading,
+  }) {
+    return ready(this);
+  }
+
+  @override
+  String toString() {
+    return 'ResourceReady<$T>(value: $value, refreshing: $isRefreshing)';
   }
 }
 
@@ -1865,9 +1566,12 @@ sealed class ResourceState<T> {
 
   /// {@macro solidart.resource-state}
   ///
-  /// Creates a ready state with [data].
-  const factory ResourceState.ready(T data, {bool isRefreshing}) =
-      ResourceReady<T>;
+  /// Creates an error state.
+  const factory ResourceState.error(
+    Object error, {
+    StackTrace? stackTrace,
+    bool isRefreshing,
+  }) = ResourceError<T>;
 
   /// {@macro solidart.resource-state}
   ///
@@ -1876,12 +1580,9 @@ sealed class ResourceState<T> {
 
   /// {@macro solidart.resource-state}
   ///
-  /// Creates an error state.
-  const factory ResourceState.error(
-    Object error, {
-    StackTrace? stackTrace,
-    bool isRefreshing,
-  }) = ResourceError<T>;
+  /// Creates a ready state with [data].
+  const factory ResourceState.ready(T data, {bool isRefreshing}) =
+      ResourceReady<T>;
 
   /// Maps each concrete state to a value.
   R map<R>({
@@ -1891,138 +1592,469 @@ sealed class ResourceState<T> {
   });
 }
 
-/// Ready state containing data.
-@immutable
-class ResourceReady<T> implements ResourceState<T> {
-  /// Creates a ready state with [value].
-  const ResourceReady(this.value, {this.isRefreshing = false});
+/// {@template solidart.set-signal}
+/// A reactive wrapper around a [Set] that copies on write.
+///
+/// Mutations create a new set instance so that updates are observable:
+/// ```dart
+/// final set = SetSignal({1});
+/// Effect(() => print(set.length));
+/// set.add(2); // triggers effect
+/// ```
+///
+/// Reads (like `length` or `contains`) establish dependencies.
+/// {@endtemplate}
+class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
+  /// {@macro solidart.set-signal}
+  ///
+  /// Creates a reactive set with the provided initial values.
+  SetSignal(
+    Iterable<E> initialValue, {
+    bool? autoDispose,
+    String? name,
+    ValueComparator<Set<E>> equals = identical,
+    bool? trackPreviousValue,
+    bool? trackInDevTools,
+  }) : super(
+         Set<E>.of(initialValue),
+         autoDispose: autoDispose,
+         name: name,
+         equals: equals,
+         trackPreviousValue: trackPreviousValue,
+         trackInDevTools: trackInDevTools,
+       );
 
-  /// The resource value.
+  @override
+  Iterator<E> get iterator => value.iterator;
+
+  @override
+  int get length => value.length;
+
+  @override
+  bool add(E value) {
+    final current = untrackedValue;
+    if (current.contains(value)) return false;
+    final next = Set<E>.of(current)..add(value);
+    this.value = next;
+    return true;
+  }
+
+  @override
+  void addAll(Iterable<E> elements) {
+    if (elements.isEmpty) return;
+    final next = _copy()..addAll(elements);
+    if (next.length == untrackedValue.length) return;
+    value = next;
+  }
+
+  @override
+  Set<R> cast<R>() => SetSignal<R>(untrackedValue.cast<R>());
+
+  @override
+  void clear() {
+    if (untrackedValue.isEmpty) return;
+    value = <E>{};
+  }
+
+  @override
+  bool contains(Object? element) {
+    value;
+    return untrackedValue.contains(element);
+  }
+
+  @override
+  E? lookup(Object? element) {
+    value;
+    return untrackedValue.lookup(element);
+  }
+
+  @override
+  bool remove(Object? value) {
+    final current = untrackedValue;
+    if (!current.contains(value)) return false;
+    final next = Set<E>.of(current)..remove(value);
+    this.value = next;
+    return true;
+  }
+
+  @override
+  void removeAll(Iterable<Object?> elements) {
+    if (elements.isEmpty) return;
+    final current = untrackedValue;
+    final next = Set<E>.of(current)..removeAll(elements);
+    if (next.length == current.length) return;
+    value = next;
+  }
+
+  @override
+  void removeWhere(bool Function(E element) test) {
+    final current = untrackedValue;
+    final next = Set<E>.of(current)..removeWhere(test);
+    if (next.length == current.length) return;
+    value = next;
+  }
+
+  @override
+  void retainAll(Iterable<Object?> elements) {
+    final current = untrackedValue;
+    final next = Set<E>.of(current)..retainAll(elements);
+    if (next.length == current.length) return;
+    value = next;
+  }
+
+  @override
+  void retainWhere(bool Function(E element) test) {
+    final current = untrackedValue;
+    final next = Set<E>.of(current)..retainWhere(test);
+    if (next.length == current.length) return;
+    value = next;
+  }
+
+  @override
+  Set<E> toSet() => Set<E>.of(untrackedValue);
+
+  @override
+  String toString() =>
+      'SetSignal<$E>(value: $untrackedValue, '
+      'previousValue: $untrackedPreviousValue)';
+
+  Set<E> _copy() => Set<E>.of(untrackedValue);
+}
+
+/// {@template solidart.signal}
+/// # Signals
+/// Signals are the cornerstone of reactivity in v3. They store values that
+/// change over time, and any reactive computation that reads a signal will
+/// automatically update when the signal changes.
+///
+/// Create a signal with an initial value:
+/// ```dart
+/// final counter = Signal(0);
+/// ```
+///
+/// Read the current value:
+/// ```dart
+/// counter.value; // 0
+/// ```
+///
+/// Update the value:
+/// ```dart
+/// counter.value++;
+/// // or
+/// counter.value = 10;
+/// ```
+///
+/// Signals support previous value tracking. When enabled, `previousValue`
+/// updates only after the signal has been read at least once:
+/// ```dart
+/// final count = Signal(0);
+/// count.value = 1;
+/// count.previousValue; // null (not read yet)
+/// count.value;         // establishes tracking
+/// count.previousValue; // 0
+/// ```
+///
+/// Signals can be created lazily using [Signal.lazy]. A lazy signal does not
+/// have a value until it is first assigned, and reading it early throws
+/// [StateError].
+/// {@endtemplate}
+/// {@template solidart.signal-equals}
+/// Updates are skipped when [equals] reports the new value is equivalent to
+/// the previous one.
+/// {@endtemplate}
+class Signal<T> extends preset.SignalNode<Option<T>>
+    with DisposableMixin
+    implements ReadonlySignal<T> {
+  /// {@macro solidart.signal}
+  ///
+  /// {@macro solidart.signal-equals}
+  Signal(
+    T initialValue, {
+    bool? autoDispose,
+    String? name,
+    ValueComparator<T> equals = identical,
+    bool? trackPreviousValue,
+    bool? trackInDevTools,
+  }) : this._internal(
+         Some(initialValue),
+         autoDispose: autoDispose,
+         name: name,
+         equals: equals,
+         trackPreviousValue: trackPreviousValue,
+         trackInDevTools: trackInDevTools,
+       );
+
+  /// {@macro solidart.signal}
+  ///
+  /// This is a lazy signal: it has no value at construction time.
+  /// Reading [value] before the first assignment throws [StateError].
+  factory Signal.lazy({
+    String? name,
+    bool? autoDispose,
+    ValueComparator<T> equals,
+    bool? trackPreviousValue,
+    bool? trackInDevTools,
+  }) = LazySignal;
+
+  Signal._internal(
+    Option<T> initialValue, {
+    this.equals = identical,
+    String? name,
+    bool? autoDispose,
+    bool? trackPreviousValue,
+    bool? trackInDevTools,
+  }) : autoDispose = autoDispose ?? SolidartConfig.autoDispose,
+       trackPreviousValue =
+           trackPreviousValue ?? SolidartConfig.trackPreviousValue,
+       trackInDevTools = trackInDevTools ?? SolidartConfig.devToolsEnabled,
+       identifier = ._(name),
+       super(
+         flags: system.ReactiveFlags.mutable,
+         currentValue: initialValue,
+         pendingValue: initialValue,
+       ) {
+    _notifySignalCreation(this);
+  }
+
+  @override
+  final bool autoDispose;
+
+  @override
+  final Identifier identifier;
+
+  @override
+  final ValueComparator<T> equals;
+
+  @override
+  final bool trackPreviousValue;
+
+  @override
+  final bool trackInDevTools;
+
+  Option<T> _previousValue = const None();
+
+  /// Whether the signal has been initialized.
+  ///
+  /// Regular signals are always initialized at construction time.
+  bool get isInitialized => true;
+
+  @override
+  T? get previousValue {
+    if (!trackPreviousValue) return null;
+    value;
+    return _previousValue.safeUnwrap();
+  }
+
+  @override
+  T? get untrackedPreviousValue {
+    if (!trackPreviousValue) return null;
+    return _previousValue.safeUnwrap();
+  }
+
+  @override
+  T get untrackedValue => super.currentValue.unwrap();
+
+  @override
+  T get value {
+    assert(!isDisposed, 'Signal is disposed');
+    return super.get().unwrap();
+  }
+
+  /// Sets the current value.
+  ///
+  /// {@macro solidart.signal-equals}
+  set value(T newValue) {
+    assert(!isDisposed, 'Signal is disposed');
+    set(Some(newValue));
+  }
+
+  @override
+  T call() => value;
+
+  // TODO(nank1ro): See ReadonlySignal TODO, If `ReadonlySignal` rename
+  // to `ReadSignal`, the `.toReadonly` method should be rename?
+  @override
+  bool didUpdate() {
+    flags = system.ReactiveFlags.mutable;
+    final current = currentValue;
+    final pending = pendingValue;
+    if (current is Some<T> &&
+        pending is Some<T> &&
+        equals(pending.value, current.value)) {
+      return false;
+    }
+
+    if (trackPreviousValue && current is Some<T>) {
+      _previousValue = current;
+    }
+
+    currentValue = pending;
+    _notifySignalUpdate(this);
+    return true;
+  }
+
+  @override
+  void dispose() {
+    if (isDisposed) return;
+    Disposable.unlinkSubs(this);
+    preset.stop(this);
+    super.dispose();
+    _notifySignalDisposal(this);
+  }
+
+  /// Returns a read-only view of this signal.
+  ReadonlySignal<T> toReadonly() => this;
+}
+
+/// Common configuration for signals.
+abstract interface class SignalConfiguration<T> implements Configuration {
+  /// Comparator used to skip equal updates.
+  ///
+  /// When it returns `true`, the new value is treated as equal and the update
+  /// is skipped.
+  ValueComparator<T> get equals;
+
+  /// Whether to report to DevTools.
+  bool get trackInDevTools;
+
+  /// Whether to track previous values.
+  ///
+  /// Previous values are captured on successful updates after a tracked read.
+  bool get trackPreviousValue;
+}
+
+/// {@template solidart.config}
+/// Global configuration for v3 reactive primitives.
+///
+/// These flags provide defaults for newly created signals/effects/resources.
+/// You can override them per-instance via constructor parameters.
+/// {@endtemplate}
+final class SolidartConfig {
+  const SolidartConfig._(); // coverage:ignore-line
+
+  /// Whether nodes auto-dispose when they lose all subscribers.
+  ///
+  /// When enabled, signals/computeds/effects may dispose themselves once
+  /// nothing depends on them.
+  static bool autoDispose = false;
+
+  /// Whether nested effects detach from parent subscriptions.
+  ///
+  /// When `true`, inner effects do not become dependencies of their parent
+  /// effect unless explicitly linked.
+  static bool detachEffects = false;
+
+  /// Whether to track previous values by default.
+  ///
+  /// Previous values are captured only after a signal has been read at least
+  /// once.
+  static bool trackPreviousValue = true;
+
+  /// Whether to keep values while refreshing resources.
+  ///
+  /// When `true`, a refresh marks the state as `isRefreshing` instead of
+  /// replacing it with `loading`.
+  static bool useRefreshing = true;
+
+  /// Whether DevTools tracking is enabled.
+  ///
+  /// Signals only emit DevTools events when both this flag and
+  /// `trackInDevTools` are `true`.
+  static bool devToolsEnabled = false;
+
+  /// Whether to assert that SignalBuilder has at least one dependency during
+  /// its build. Defaults to true.
+  ///
+  /// If you set this to false, you must ensure that the SignalBuilder has at
+  /// least one dependency, otherwise it won't rebuild when the signals change.
+  ///
+  /// The ability to disable this assertion is provided for advanced use cases
+  /// where you might have a SignalBuilder that builds something based on
+  /// disposed signals where you might be interested in their latest values.
+  static bool assertSignalBuilderWithoutDependencies = true;
+
+  /// Registered observers for signal lifecycle events.
+  ///
+  /// Observers are notified only when `trackInDevTools` is enabled for the
+  /// signal instance.
+  static final observers = <SolidartObserver>[];
+}
+
+/// {@template solidart.observer}
+/// Observer for signal lifecycle events.
+///
+/// Use this for logging or instrumentation without depending on DevTools:
+/// ```dart
+/// class Logger extends SolidartObserver {
+///   @override
+///   void didCreateSignal(ReadonlySignal<Object?> signal) {
+///     print('created: ${signal.identifier.value}');
+///   }
+///   @override
+///   void didUpdateSignal(ReadonlySignal<Object?> signal) {}
+///   @override
+///   void didDisposeSignal(ReadonlySignal<Object?> signal) {}
+/// }
+///
+/// SolidartConfig.observers.add(Logger());
+/// ```
+/// {@endtemplate}
+abstract class SolidartObserver {
+  /// {@macro solidart.observer}
+  const SolidartObserver(); // coverage:ignore-line
+
+  /// Called when a signal is created.
+  void didCreateSignal(ReadonlySignal<Object?> signal);
+
+  /// Called when a signal is disposed.
+  void didDisposeSignal(ReadonlySignal<Object?> signal);
+
+  /// Called when a signal updates.
+  void didUpdateSignal(ReadonlySignal<Object?> signal);
+}
+
+/// A present optional value.
+final class Some<T> extends Option<T> {
+  /// Creates an option that wraps [value].
+  const Some(this.value);
+
+  /// The wrapped value.
   final T value;
-
-  /// Whether the resource is refreshing.
-  final bool isRefreshing;
-
-  @override
-  R map<R>({
-    required R Function(ResourceReady<T> ready) ready,
-    required R Function(ResourceError<T> error) error,
-    required R Function(ResourceLoading<T> loading) loading,
-  }) {
-    return ready(this);
-  }
-
-  /// Returns a copy with updated fields.
-  ResourceReady<T> copyWith({
-    T? value,
-    bool? isRefreshing,
-  }) {
-    return ResourceReady<T>(
-      value ?? this.value,
-      isRefreshing: isRefreshing ?? this.isRefreshing,
-    );
-  }
-
-  @override
-  String toString() {
-    return 'ResourceReady<$T>(value: $value, refreshing: $isRefreshing)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return runtimeType == other.runtimeType &&
-        other is ResourceReady<T> &&
-        other.value == value &&
-        other.isRefreshing == isRefreshing;
-  }
-
-  @override
-  int get hashCode => Object.hash(runtimeType, value, isRefreshing);
 }
 
-/// Loading state.
-@immutable
-class ResourceLoading<T> implements ResourceState<T> {
-  /// Creates a loading state.
-  const ResourceLoading();
-
-  @override
-  R map<R>({
-    required R Function(ResourceReady<T> ready) ready,
-    required R Function(ResourceError<T> error) error,
-    required R Function(ResourceLoading<T> loading) loading,
-  }) {
-    return loading(this);
-  }
-
-  @override
-  String toString() => 'ResourceLoading<$T>()';
-
-  @override
-  bool operator ==(Object other) => runtimeType == other.runtimeType;
-
-  @override
-  int get hashCode => runtimeType.hashCode;
+enum _DevToolsEventType {
+  created,
+  updated,
+  disposed,
 }
 
-/// Error state containing an error and optional stack trace.
-@immutable
-class ResourceError<T> implements ResourceState<T> {
-  /// Creates an error state.
-  const ResourceError(
-    this.error, {
-    this.stackTrace,
-    this.isRefreshing = false,
-  });
-
-  /// The error object.
-  final Object error;
-
-  /// Optional stack trace.
-  final StackTrace? stackTrace;
-
-  /// Whether the resource is refreshing.
-  final bool isRefreshing;
-
-  @override
-  R map<R>({
-    required R Function(ResourceReady<T> ready) ready,
-    required R Function(ResourceError<T> error) error,
-    required R Function(ResourceLoading<T> loading) loading,
+/// Observes [ReadonlySignal] changes with previous and current values.
+extension ObserveSignal<T> on ReadonlySignal<T> {
+  /// Observe the signal and invoke [listener] whenever the value changes.
+  ///
+  /// When [fireImmediately] is `true`, the listener runs once on subscription.
+  /// Returns a disposer that stops the observation.
+  DisposeObservation observe(
+    ObserveCallback<T> listener, {
+    bool fireImmediately = false,
   }) {
-    return error(this);
-  }
-
-  /// Returns a copy with updated fields.
-  ResourceError<T> copyWith({
-    Object? error,
-    StackTrace? stackTrace,
-    bool? isRefreshing,
-  }) {
-    return ResourceError<T>(
-      error ?? this.error,
-      stackTrace: stackTrace ?? this.stackTrace,
-      isRefreshing: isRefreshing ?? this.isRefreshing,
+    var skipped = false;
+    final effect = Effect(
+      () {
+        value;
+        if (!fireImmediately && !skipped) {
+          skipped = true;
+          return;
+        }
+        untracked(() {
+          listener(untrackedPreviousValue, untrackedValue);
+        });
+      },
+      detach: true,
     );
-  }
 
-  @override
-  String toString() {
-    return 'ResourceError<$T>(error: $error, stackTrace: $stackTrace, '
-        'refreshing: $isRefreshing)';
+    return effect.dispose;
   }
-
-  @override
-  bool operator ==(Object other) {
-    return runtimeType == other.runtimeType &&
-        other is ResourceError<T> &&
-        other.error == error &&
-        other.stackTrace == stackTrace &&
-        other.isRefreshing == isRefreshing;
-  }
-
-  @override
-  int get hashCode => Object.hash(runtimeType, error, stackTrace, isRefreshing);
 }
 
 /// Convenience accessors for [ResourceState].
@@ -2031,11 +2063,32 @@ class ResourceError<T> implements ResourceState<T> {
 /// (`asReady`, `asError`), and pattern matching helpers (`when`, `maybeWhen`,
 /// `maybeMap`).
 extension ResourceStateExtensions<T> on ResourceState<T> {
-  /// Whether this state is loading.
-  bool get isLoading => this is ResourceLoading<T>;
+  /// Casts to [ResourceError] if possible.
+  ResourceError<T>? get asError => map(
+    error: (e) => e,
+    ready: (_) => null,
+    loading: (_) => null,
+  );
+
+  /// Casts to [ResourceReady] if possible.
+  ResourceReady<T>? get asReady => map(
+    ready: (r) => r,
+    error: (_) => null,
+    loading: (_) => null,
+  );
+
+  /// Returns the error for error state.
+  Object? get error => map(
+    error: (r) => r.error,
+    ready: (_) => null,
+    loading: (_) => null,
+  );
 
   /// Whether this state is an error.
   bool get hasError => this is ResourceError<T>;
+
+  /// Whether this state is loading.
+  bool get isLoading => this is ResourceLoading<T>;
 
   /// Whether this state is ready.
   bool get isReady => this is ResourceReady<T>;
@@ -2047,20 +2100,6 @@ extension ResourceStateExtensions<T> on ResourceState<T> {
     ResourceLoading<T>() => false,
   };
 
-  /// Casts to [ResourceReady] if possible.
-  ResourceReady<T>? get asReady => map(
-    ready: (r) => r,
-    error: (_) => null,
-    loading: (_) => null,
-  );
-
-  /// Casts to [ResourceError] if possible.
-  ResourceError<T>? get asError => map(
-    error: (e) => e,
-    ready: (_) => null,
-    loading: (_) => null,
-  );
-
   /// Returns the value for ready state, throws for error state.
   T? get value => map(
     ready: (r) => r.value,
@@ -2069,23 +2108,26 @@ extension ResourceStateExtensions<T> on ResourceState<T> {
     loading: (_) => null,
   );
 
-  /// Returns the error for error state.
-  Object? get error => map(
-    error: (r) => r.error,
-    ready: (_) => null,
-    loading: (_) => null,
-  );
-
-  /// Executes callbacks for each state.
-  R when<R>({
-    required R Function(T data) ready,
-    required R Function(Object error, StackTrace? stackTrace) error,
-    required R Function() loading,
+  /// Executes callbacks for available handlers, otherwise [orElse].
+  R maybeMap<R>({
+    required R Function() orElse,
+    R Function(ResourceReady<T> ready)? ready,
+    R Function(ResourceError<T> error)? error,
+    R Function(ResourceLoading<T> loading)? loading,
   }) {
     return map(
-      ready: (r) => ready(r.value),
-      error: (e) => error(e.error, e.stackTrace),
-      loading: (_) => loading(),
+      ready: (r) {
+        if (ready != null) return ready(r);
+        return orElse();
+      },
+      error: (e) {
+        if (error != null) return error(e);
+        return orElse();
+      },
+      loading: (l) {
+        if (loading != null) return loading(l);
+        return orElse();
+      },
     );
   }
 
@@ -2112,56 +2154,16 @@ extension ResourceStateExtensions<T> on ResourceState<T> {
     );
   }
 
-  /// Executes callbacks for available handlers, otherwise [orElse].
-  R maybeMap<R>({
-    required R Function() orElse,
-    R Function(ResourceReady<T> ready)? ready,
-    R Function(ResourceError<T> error)? error,
-    R Function(ResourceLoading<T> loading)? loading,
+  /// Executes callbacks for each state.
+  R when<R>({
+    required R Function(T data) ready,
+    required R Function(Object error, StackTrace? stackTrace) error,
+    required R Function() loading,
   }) {
     return map(
-      ready: (r) {
-        if (ready != null) return ready(r);
-        return orElse();
-      },
-      error: (e) {
-        if (error != null) return error(e);
-        return orElse();
-      },
-      loading: (l) {
-        if (loading != null) return loading(l);
-        return orElse();
-      },
+      ready: (r) => ready(r.value),
+      error: (e) => error(e.error, e.stackTrace),
+      loading: (_) => loading(),
     );
-  }
-}
-
-/// Default [Disposable] implementation using cleanup callbacks.
-mixin DisposableMixin implements Disposable {
-  @internal
-  /// Registered cleanup callbacks invoked on dispose.
-  late final cleanups = <VoidCallback>[];
-
-  @override
-  bool isDisposed = false;
-
-  @mustCallSuper
-  @override
-  void onDispose(VoidCallback callback) {
-    cleanups.add(callback);
-  }
-
-  @mustCallSuper
-  @override
-  void dispose() {
-    if (isDisposed) return;
-    isDisposed = true;
-    try {
-      for (final callback in cleanups) {
-        callback();
-      }
-    } finally {
-      cleanups.clear();
-    }
   }
 }
