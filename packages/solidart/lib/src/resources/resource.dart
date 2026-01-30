@@ -179,6 +179,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// If the resource has not been resolved yet, this triggers [resolve]
   /// instead.
   Future<void> refresh() async {
+    if (isDisposed) return;
     if (!_resolved) {
       await resolve();
       return;
