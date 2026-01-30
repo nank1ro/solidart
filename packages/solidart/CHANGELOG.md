@@ -1,7 +1,19 @@
-## 3.0.0-dev.\* (Unreleased)
+## 3.0.0-dev.0 (Unreleased)
 
-- **REFACTOR**: Rename `src/v3.dart` to `src/solidart.dart`.
-- **BREAKING**: Drop v2-only helpers like `until`, `Debouncer`, and v2 exceptions.
+- **BREAKING**: Replace the v2 public surface with the v3 API exported from `solidart.dart` and `advanced.dart`.
+- **BREAKING**: `SolidartConfig.equals` is removed; update skipping now uses the per-instance `equals` comparator (defaults to `identical`).
+- **BREAKING**: Default auto-disposal is now opt-in; `SolidartConfig.autoDispose` defaults to `false`.
+- **BREAKING**: `Signal.toReadSignal()` renamed to `toReadonly()`, and `ResourceExtensions` renamed to `ResourceStateExtensions` (`on`/`maybeOn` removed).
+- **BREAKING**: Effect API simplified by removing `autorun`, `delay`, and `onError`; use `Effect.manual()` and `run()` to control startup, and call `dispose()` (no callable effect).
+- **BREAKING**: Named identifiers now live on `identifier`/`identifier.name`, and `SolidartObserver` receives `ReadonlySignal` instances.
+- **REMOVED**: `SignalBase`, `ReadSignal`/`ReadableSignal`, `Signal.setValue`/`updateValue`, `Signal.hasValue`/`hasPreviousValue`, `Signal.listenerCount`, and `ToggleBoolSignal`.
+- **REMOVED**: `until` extensions (`Signal.until`, `Computed.until`, `Resource.until`, `Resource.untilReady`) and `FutureOrThenExtension`.
+- **REMOVED**: `Resource.update`, `Debouncer`/`DebounceOperation`, and Solidart exception types (`SolidartException`, `SolidartReactionException`, `SolidartCaughtException`).
+- **ADDED**: `ReadonlySignal` and `ObserveSignal.observe` for any `ReadonlySignal` (signals, computeds, resources).
+- **ADDED**: `LazySignal` type with `Signal.lazy` returning it and `isInitialized` support.
+- **ADDED**: `Disposable`/`DisposableMixin`, `Identifier`, `Configuration`, `Option`/`Some`/`None`, and public `Resource.resolve()`.
+- **REFACTOR**: Collection signals are reimplemented on the v3 core with copy-on-write updates and standard `ListMixin`/`SetMixin`/`MapMixin` APIs.
+- **CHORE**: Upgrade `alien_signals` to `^2.1.1` and add `fake_async` for tests.
 
 ## 2.8.3
 
