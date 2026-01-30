@@ -2,42 +2,20 @@
 title: List Signal
 description: Learn ListSignal in solidart
 sidebar:
-  order: 2
+  order: 1
 ---
-import { Aside } from '@astrojs/starlight/components';
 
-A `ListSignal` is a reactive wrapper around a `List` that copies on write.
+A `ListSignal` is a special signal that can be used to represent a list of values.
 
 When you modify any element on the list, the `ListSignal` will automatically notify its observers.
 
 ```dart
 final items = ListSignal([1, 2]);
 
-Effect(() {
-  print('Items: ${items.value}');
+items.observe((previousValue, value) {
+  print("Items changed: $previousValue -> $value");
 });
 
-// Remember to call effect.dispose() when you're done.
-// See: /advanced/automatic-disposal
-
-items.add(3); // prints "Items: [1, 2, 3]"
-items[0] = 10; // prints "Items: [10, 2, 3]"
+items.add(3); // prints "Items changed: [1, 2] -> [1, 2, 3]"
+items[0] = 10; // prints "Items changed: [1, 2, 3] -> [10, 2, 3]"
 ```
-
-<Aside type="note">
-In v2, `observe` skipped the initial run unless `fireImmediately` was true.
-Effects run immediately. To mimic the old behavior (for toasts or dialogs),
-skip the first run manually:
-
-```dart
-var skipped = false;
-Effect(() {
-  items.value; // track
-  if (!skipped) {
-    skipped = true;
-    return;
-  }
-  // side effect here
-});
-```
-</Aside>

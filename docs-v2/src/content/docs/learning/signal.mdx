@@ -51,24 +51,39 @@ To change the value, you can use:
 // Set the value to 2
 counter.value = 2;
 // Update the value based on the current value
-counter.value *= 2;
+counter.updateValue((value) => value * 2);
 ```
 
 ## Make a read-only signal
 
-If you want to create a signal that can only be read but not modified directly, you can use the `toReadonly` method.
+If you want to create a signal that can only be read but not modified directly, you can use the `toReadSignal` method.
 
 ```dart
 final counter = Signal(0);
-final readOnlyCounter = counter.toReadonly();
+final readOnlyCounter = counter.toReadSignal();
 print(readOnlyCounter.value); // prints 0
 // The code below is invalid and will cause a compile-time error because no setter is present
 readOnlyCounter.value = 2;
 ```
 
-## React to changes
+## Observe the signal
 
-Use an `Effect` to react to changes in one or more signals:
+To react to changes in a Signal you can use the `observe` method:
+```dart {2-4}
+final counter = Signal(0);
+counter.observe((previousValue, value) {
+  print("Counter changed from $previousValue to $value");
+});
+```
+
+By default the observer is called for the next value change, but you can also call it immediately with the current value by passing `fireImmediately: true`:
+```dart {3}
+counter.observe((previousValue, value) {
+  print("Counter changed from $previousValue to $value");
+}, fireImmediately: true);
+```
+
+Or use an `Effect` if you need to react to multiple signals:
 ```dart {3-5}
 final counter = Signal(0);
 final doubleCounter = Signal(0);
@@ -77,56 +92,46 @@ Effect(() {
 });
 ```
 
-The effect runs immediately once, and then again when any tracked signal changes.
+The effect will run immediately.
 
 ## Access the previous value
 
-`previousValue` is updated only after a tracked read. You can also access the
-untracked version via `untrackedPreviousValue`.
-
+A `Signal` contains the previous value in addition to the current value. You can access it using the `previousValue` property:
 ```dart
 final counter = Signal(0);
-print(counter.previousValue); // null (not read yet)
-
-final _ = counter.value; // tracked read
+print(counter.hasPreviousValue); // prints false (no previous value is present)
+print(counter.previousValue); // prints null (no previous value is present)
 counter.value = 1;
-
-print(counter.previousValue); // 0
-print(counter.untrackedPreviousValue); // 0
+print(counter.hasPreviousValue); // prints true (previous value is present)
+print(counter.previousValue); // prints 0
 ```
 
-By default previous values are tracked. You can disable it per-signal:
+As you can see the `previousValue` is `null` until the first time the value is changed.
+You can check if a previous value is present using the `hasPreviousValue` property.
+
+By default the previous value is tracked.
+If you want to disable it, you can pass `trackPreviousValue: false` to the `Signal` constructor:
 ```dart
 final counter = Signal(0, trackPreviousValue: false);
 ```
 
-or globally using `SolidartConfig`:
+or globally using the `SolidartConfig`:
 ```dart
 SolidartConfig.trackPreviousValue = false;
 // do it before runApp()
 ```
 
-## Wait for a condition (replacement for until)
+## Await until a condition is met
 
-`until` was removed in v3. Use a `Completer` plus an `Effect` instead:
-
+You can use the `until` method to wait for a signal to meet a specific condition:
 ```dart
-import 'dart:async';
-
-final completer = Completer<int>();
-late final Effect effect;
-
-effect = Effect(() {
-  final value = counter.value;
-  if (value >= 5 && !completer.isCompleted) {
-    completer.complete(value);
-    effect.dispose();
-  }
-});
-
-await completer.future;
+final counter = Signal(0);
+await counter.until((value) => value >= 5, timeout: Duration(seconds: 10));
 ```
 
+By default no timeout is set, so the `until` method will wait indefinitely until the condition is met.
+This is useful when you want to wait for a signal to reach a certain value before proceeding with your code.
+
 <Aside type="danger">
-If you set a timeout yourself, be sure to handle a potential `TimeoutException` with try/catch.
+Be aware, if the timeout is reached a `TimeoutException` will be thrown, so make sure to handle it properly with a try-catch.
 </Aside>

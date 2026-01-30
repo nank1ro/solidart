@@ -25,7 +25,7 @@ class _SampleState extends State<Sample> {
   Widget build(BuildContext context) {
     return SignalBuilder(
       builder: (context, child) {
-        if (loggedIn.value) return const Text('Logged in');
+        if (loggedIn()) return const Text('Logged in');
         return const Text('Logged out');
       },
     );
@@ -59,9 +59,7 @@ class _SampleState extends State<Sample> {
 The `Show` widget conditionally renders its `builder` or the `fallback` widget based on the `when` evaluation.
 The `fallback` widget builder is optional, by default nothing is rendered.
 
-The `Show` widget takes a function that returns a `bool`.
-Signals are callable, so you can pass them directly (for example, `when: loggedIn`)
-or use `.value` if you prefer.
+The `Show` widget takes a functions that returns a `bool`.
 You can easily convert any type to `bool`, for example:
 
 ```dart {9} {13-17}
@@ -78,7 +76,7 @@ class _SampleState extends State<Sample> {
   @override
   Widget build(BuildContext context) {
     return Show(
-      when: () => count.value > 5,
+      when: () => count() > 5,
       builder: (context) => const Text('Count is greater than 5'),
       fallback: (context) => const Text('Count is lower than 6'),
     );
