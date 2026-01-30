@@ -27,5 +27,5 @@ dependencies:
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.25.2
-  solidart: 3.0.0-dev.2
-  flutter_solidart: 3.0.0-dev.2
+  solidart: 3.0.0-dev.0
+  flutter_solidart: 3.0.0-dev.0

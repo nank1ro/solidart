@@ -5,16 +5,16 @@ version: 1.0.0+1
 
 environment:
   sdk: ^3.10.0
-  
+
 resolution: workspace
 
 dependencies:
   flutter:
     sdk: flutter
   flutter_hooks: ^0.21.3+1
-  solidart:
+  solidart: 3.0.0-dev.0
   solidart_hooks:
-    
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
