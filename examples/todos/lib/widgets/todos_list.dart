@@ -43,7 +43,7 @@ class _TodoListState extends State<TodoList> {
         final todos = mapFilterToTodosList(activeFilter).value;
         return ListView.builder(
           itemCount: todos.length,
-          itemBuilder: (BuildContext context, int index) {
+          itemBuilder: (context, index) {
             final todo = todos[index];
             return TodoItem(
               todo: todo,

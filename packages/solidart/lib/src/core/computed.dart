@@ -84,6 +84,7 @@ class Computed<T> extends ReadSignal<T> {
 
         try {
           _untrackedValue = selector();
+          _initialized = true;
 
           if (runnedOnce) {
             _notifySignalUpdate();
@@ -107,6 +108,8 @@ class Computed<T> extends ReadSignal<T> {
 
   bool _disposed = false;
 
+  bool _initialized = false;
+
   late T _untrackedValue;
 
   T? _previousValue;
@@ -120,9 +123,14 @@ class Computed<T> extends ReadSignal<T> {
   // Used later to fire each callback when this signal is disposed.
   final _onDisposeCallbacks = <VoidCallback>[];
 
-  // A computed signal is always initialized
+  // A computed always reports hasValue == true, but the underlying value is
+  // lazy: the selector runs on first access. Calling hasValue triggers that
+  // first computation.
   @override
-  bool get hasValue => true;
+  bool get hasValue {
+    if (!_disposed && !_initialized) value;
+    return true;
+  }
 
   final _deps = <alien.ReactiveNode>{};
 
@@ -149,7 +157,7 @@ class Computed<T> extends ReadSignal<T> {
   @override
   T get value {
     if (_disposed) {
-      return _untrackedValue;
+      return untrackedValue;
     }
 
     final value = reactiveSystem.getComputedValue(_internalComputed);
@@ -177,6 +185,11 @@ class Computed<T> extends ReadSignal<T> {
   /// Returns the untracked value of the computed.
   @override
   T get untrackedValue {
+    assert(
+      _initialized,
+      'Computed($name) has not been initialized yet. '
+      'Access "value" or "hasValue" first to trigger computation.',
+    );
     return _untrackedValue;
   }
 

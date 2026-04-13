@@ -1,3 +1,7 @@
+## 2.8.4
+
+- **FIX**: Prevent `LateInitializationError` when accessing `Computed.untrackedValue` before first `value` access. `hasValue` now triggers lazy computation, and `untrackedValue` asserts with a clear message if accessed before computation.
+
 ## 2.8.3
 
 - **FIX**: Handle race conditions in Resource that caused multiple calls to `resolve`.
