@@ -1,3 +1,9 @@
+## 3.1.3
+
+### Changes from solidart
+
+- **FIX**: Prevent `LateInitializationError` when accessing `Computed.untrackedValue` before first `value` access.
+
 ## 3.1.2
 
 ### Changes from solidart
