@@ -187,7 +187,7 @@ class Computed<T> extends ReadSignal<T> {
   T get untrackedValue {
     assert(
       _initialized,
-      'Computed "$name" has not been initialized yet. '
+      'Computed($name) has not been initialized yet. '
       'Access "value" or "hasValue" first to trigger computation.',
     );
     return _untrackedValue;
