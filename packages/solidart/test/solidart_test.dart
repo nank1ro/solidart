@@ -541,6 +541,17 @@ void main() {
         },
       );
 
+      test('hasValue triggers computation, enabling untrackedValue', () {
+        final counter = Signal(5);
+        final doubled = Computed(() => counter.value * 2);
+
+        // Before any .value access, hasValue should trigger computation
+        expect(doubled.hasValue, true);
+
+        // untrackedValue should now work without LateInitializationError
+        expect(doubled.untrackedValue, 10);
+      });
+
       test('Computed contains previous value', () async {
         final signal = Signal(0);
         final derived = Computed(() => signal.value * 2);
