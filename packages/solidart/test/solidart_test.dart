@@ -552,6 +552,12 @@ void main() {
         expect(doubled.untrackedValue, 10);
       });
 
+      test('untrackedValue asserts if accessed before computation', () {
+        final counter = Signal(5);
+        final doubled = Computed(() => counter.value * 2);
+        expect(() => doubled.untrackedValue, throwsA(isA<AssertionError>()));
+      });
+
       test('Computed contains previous value', () async {
         final signal = Signal(0);
         final derived = Computed(() => signal.value * 2);
