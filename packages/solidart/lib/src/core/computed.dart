@@ -156,11 +156,7 @@ class Computed<T> extends ReadSignal<T> {
   @override
   T get value {
     if (_disposed) {
-      assert(
-        _initialized,
-        'Computed "$name" was disposed before its value was ever computed.',
-      );
-      return _untrackedValue;
+      return untrackedValue;
     }
 
     final value = reactiveSystem.getComputedValue(_internalComputed);
