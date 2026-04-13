@@ -29,7 +29,7 @@ Widget wrapWithMockedTodosController({
 }
 
 void main() {
-  testWidgets('Todos with initial value', (WidgetTester tester) async {
+  testWidgets('Todos with initial value', (tester) async {
     // create controller with an initial value
     final initialTodos = List.generate(
       3,
@@ -56,7 +56,7 @@ void main() {
     expect(find.text('mock2'), findsOneWidget);
   });
 
-  testWidgets('Add a todo', (WidgetTester tester) async {
+  testWidgets('Add a todo', (tester) async {
     // Build our App and trigger a frame.
     await tester.pumpWidget(
       wrapWithMockedTodosController(
@@ -79,7 +79,7 @@ void main() {
     expect(find.text('test todo'), findsOneWidget);
   });
 
-  testWidgets('Remove a todo', (WidgetTester tester) async {
+  testWidgets('Remove a todo', (tester) async {
     // create controller with an initial value
     final initialTodos = List.generate(
       3,
@@ -111,7 +111,7 @@ void main() {
     expect(find.text('mock0'), findsNothing);
   });
 
-  testWidgets('Toggle a todo', (WidgetTester tester) async {
+  testWidgets('Toggle a todo', (tester) async {
     // create controller with an initial value
     final initialTodos = List.generate(
       2,
