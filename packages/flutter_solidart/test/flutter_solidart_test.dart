@@ -686,6 +686,7 @@ void main() {
   });
 
   testWidgets('(ArgProvider) Signal.updateValue method', (tester) async {
+    // ignore: avoid_types_on_closure_parameters
     final counterProvider = Provider.withArgument((_, int n) => Signal(n));
     await tester.pumpWidget(
       MaterialApp(
