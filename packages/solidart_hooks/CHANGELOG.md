@@ -2,7 +2,7 @@
 
 ### Changes from solidart
 
-- **REFACTOR**: Improve the Solidart DevTools extension by giving any signal an id and omit overriding the same signal by name.
+- **FIX**: Prevent `LateInitializationError` when accessing `Computed.untrackedValue` before first `value` access.
 
 ## 3.1.1
 
