@@ -123,8 +123,9 @@ class Computed<T> extends ReadSignal<T> {
   // Used later to fire each callback when this signal is disposed.
   final _onDisposeCallbacks = <VoidCallback>[];
 
-  // A computed signal is always initialized, but the value is lazy.
-  // Accessing hasValue triggers computation if not yet initialized.
+  // A computed always reports hasValue == true, but the underlying value is
+  // lazy: the selector runs on first access. Calling hasValue triggers that
+  // first computation so that untrackedValue is safe to read afterwards.
   @override
   bool get hasValue {
     if (!_disposed && !_initialized) value;
