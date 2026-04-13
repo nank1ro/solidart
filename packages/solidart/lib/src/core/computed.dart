@@ -125,7 +125,7 @@ class Computed<T> extends ReadSignal<T> {
 
   // A computed always reports hasValue == true, but the underlying value is
   // lazy: the selector runs on first access. Calling hasValue triggers that
-  // first computation so that untrackedValue is safe to read afterwards.
+  // first computation.
   @override
   bool get hasValue {
     if (!_disposed && !_initialized) value;
