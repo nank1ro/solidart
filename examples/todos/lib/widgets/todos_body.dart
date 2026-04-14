@@ -6,7 +6,9 @@ import 'package:solidart_example/domain/todo.dart';
 import 'package:solidart_example/widgets/todos_list.dart';
 import 'package:solidart_example/widgets/toolbar.dart';
 
-final todosFilterProvider = Provider((context) => Signal(TodosFilter.all));
+final todosFilterProvider = Provider(
+  (context) => Signal(TodosFilter.all, name: 'todosFilter'),
+);
 
 class TodosBody extends StatefulWidget {
   const TodosBody({super.key});
