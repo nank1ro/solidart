@@ -570,6 +570,23 @@ void main() {
         expect(() => doubled.untrackedValue, throwsA(isA<AssertionError>()));
       });
 
+      test('untrackedValue does not register as a dependency', () {
+        final counter = Signal(5);
+        final doubled = Computed(() => counter.value * 2);
+        doubled.hasValue;
+
+        final cb = MockCallbackFunction();
+        final unobserve = Effect(() {
+          doubled.untrackedValue;
+          cb();
+        });
+        addTearDown(unobserve);
+
+        counter.value = 20;
+
+        verify(cb()).called(1); // only the initial Effect run, no re-fire
+      });
+
       test('Computed contains previous value', () async {
         final signal = Signal(0);
         final derived = Computed(() => signal.value * 2);
