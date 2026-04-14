@@ -100,18 +100,21 @@ class SignalData {
 
 class _SignalsState extends State<Signals> {
   late final StreamSubscription<Object>? sub;
+  late final StreamSubscription<Object>? isolateEventSub;
   final selectedSignalId = Signal<String?>(null);
   final searchController = SearchController();
   final searchText = Signal<String>('');
   final filterType = Signal<SignalType?>(null);
   final showDisposed = Signal<bool>(true);
+  final showOnlyActiveDuplicates = Signal<bool>(false);
   final signals = MapSignal<String, SignalData>({});
 
   late final filteredSignals = Computed(() {
     final lowercasedSearch = searchText.value.toLowerCase();
     final type = filterType.value;
     final viewDisposed = showDisposed.value;
-    return signals.value.entries
+    final onlyActiveDuplicates = showOnlyActiveDuplicates.value;
+    final filtered = signals.value.entries
         .where(
           (entry) =>
               entry.value.name.toString().toLowerCase().contains(
@@ -121,7 +124,27 @@ class _SignalsState extends State<Signals> {
         )
         .where((entry) => type == null || entry.value.type == type)
         .where((entry) => viewDisposed || !entry.value.disposed)
+        .where((entry) {
+          if (!onlyActiveDuplicates) return true;
+          // Count signals with same name
+          final sameName = signals.value.values
+              .where((s) => s.name == entry.value.name);
+          // Show only if: has duplicates AND is active
+          return sameName.length > 1 && !entry.value.disposed;
+        })
         .toList();
+
+    // Sort by lastUpdate (newest first), then by disposed status (active first)
+    filtered.sort((a, b) {
+      final disposedCompare = a.value.disposed ? 1 : -1;
+      final disposedCompare2 = b.value.disposed ? 1 : -1;
+      if (disposedCompare != disposedCompare2) {
+        return disposedCompare.compareTo(disposedCompare2);
+      }
+      return b.value.lastUpdate.compareTo(a.value.lastUpdate);
+    });
+
+    return filtered;
   });
 
   @override
@@ -158,6 +181,14 @@ class _SignalsState extends State<Signals> {
               );
           }
         });
+
+    // Listen for hot restart events to clear signals
+    isolateEventSub = vmService.onIsolateEvent.listen((event) {
+      if (event.kind == 'IsolateReload' || event.kind == 'IsolateStart') {
+        signals.clear();
+      }
+    });
+
     searchController.addListener(
       () => searchText.value = searchController.text,
     );
@@ -166,7 +197,15 @@ class _SignalsState extends State<Signals> {
   @override
   void dispose() {
     sub?.cancel();
+    isolateEventSub?.cancel();
     searchController.dispose();
+    selectedSignalId.dispose();
+    searchText.dispose();
+    filterType.dispose();
+    showDisposed.dispose();
+    showOnlyActiveDuplicates.dispose();
+    signals.dispose();
+    filteredSignals.dispose();
     super.dispose();
   }
 
@@ -206,30 +245,33 @@ class _SignalsState extends State<Signals> {
                       spacing: 2,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ShadInput(
-                          placeholder: Text('Search signals'),
-                          controller: searchController,
-                          trailing: Show(
-                            when: () => searchText.value.isNotEmpty,
-                            builder: (context) {
-                              return ShadIconButton(
-                                onPressed: searchController.clear,
-                                width: 20,
-                                height: 20,
-                                padding: EdgeInsets.zero,
-                                decoration: const ShadDecoration(
-                                  secondaryBorder: ShadBorder.none,
-                                  secondaryFocusedBorder: ShadBorder.none,
-                                ),
-                                icon: const Icon(Icons.clear, size: 14),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 8),
                         Row(
+                          spacing: 8,
                           children: [
-                            Flexible(
+                            Expanded(
+                              flex: 2,
+                              child: ShadInput(
+                                placeholder: Text('Search signals'),
+                                controller: searchController,
+                                trailing: Show(
+                                  when: () => searchText.value.isNotEmpty,
+                                  builder: (context) {
+                                    return ShadIconButton(
+                                      onPressed: searchController.clear,
+                                      width: 20,
+                                      height: 20,
+                                      padding: EdgeInsets.zero,
+                                      decoration: const ShadDecoration(
+                                        secondaryBorder: ShadBorder.none,
+                                        secondaryFocusedBorder: ShadBorder.none,
+                                      ),
+                                      icon: const Icon(Icons.clear, size: 14),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            Expanded(
                               child: SignalBuilder(
                                 builder: (context, _) {
                                   return ShadSelect<SignalType>(
@@ -254,21 +296,38 @@ class _SignalsState extends State<Signals> {
                                 },
                               ),
                             ),
-                            SizedBox(
-                              height: 20,
-                              child: const ShadSeparator.vertical(),
-                            ),
-                            Flexible(
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          spacing: 8,
+                          children: [
+                            Expanded(
                               child: SignalBuilder(
                                 builder: (context, _) {
                                   return ShadCheckbox(
                                     value: showDisposed.value,
                                     label: const Text('Show disposed'),
-                                    padding: EdgeInsets.only(left: 4),
                                     onChanged: (v) => showDisposed.value = v,
                                   );
                                 },
                               ),
+                            ),
+                            Expanded(
+                              child: SignalBuilder(
+                                builder: (context, _) {
+                                  return ShadCheckbox(
+                                    value: showOnlyActiveDuplicates.value,
+                                    label: const Text('Active duplicates'),
+                                    onChanged: (v) => showOnlyActiveDuplicates.value = v,
+                                  );
+                                },
+                              ),
+                            ),
+                            ShadButton.outline(
+                              onPressed: () => signals.clear(),
+                              size: ShadButtonSize.sm,
+                              child: const Text('Clear All'),
                             ),
                           ],
                         ),
@@ -278,7 +337,7 @@ class _SignalsState extends State<Signals> {
                             return Padding(
                               padding: const EdgeInsets.only(left: 8),
                               child: Text(
-                                '${filteredSignals.value.length} visible of ${signals.value.length}',
+                                '${filteredSignals.value.length} visible of ${signals.value.length}${showOnlyActiveDuplicates.value ? ' (duplicates only)' : ''}',
                                 style: shadTheme.textTheme.muted,
                               ),
                             );
@@ -299,15 +358,7 @@ class _SignalsState extends State<Signals> {
                                 itemCount: filteredSignals.value.length,
                                 padding: EdgeInsets.symmetric(horizontal: 4),
                                 itemBuilder: (BuildContext context, int index) {
-                                  final sortedSignals = filteredSignals.value
-                                    ..sort(
-                                      (a, b) => b.value.lastUpdate.compareTo(
-                                        a.value.lastUpdate,
-                                      ),
-                                    )
-                                    ..sort((a, b) => a.value.disposed ? 1 : -1);
-
-                                  final entry = sortedSignals.elementAt(index);
+                                  final entry = filteredSignals.value[index];
                                   final name = entry.value.name;
                                   final signal = entry.value;
                                   return SignalBuilder(

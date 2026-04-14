@@ -18,7 +18,7 @@ final todosControllerProvider = Provider<TodosController>(
 class TodosController {
   TodosController({
     List<Todo> initialTodos = const [],
-  }) : todos = ListSignal(initialTodos);
+  }) : todos = ListSignal(initialTodos, name: 'todos');
 
   // The list of todos
   final ListSignal<Todo> todos;
@@ -26,11 +26,13 @@ class TodosController {
   /// The list of completed todos
   late final completedTodos = Computed(
     () => todos.where((todo) => todo.completed).toList(),
+    name: 'completedTodos',
   );
 
   /// The list of incomplete todos
   late final incompleteTodos = Computed(
     () => todos.where((todo) => !todo.completed).toList(),
+    name: 'incompleteTodos',
   );
 
   /// Add a todo
