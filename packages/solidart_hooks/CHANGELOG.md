@@ -1,8 +1,14 @@
+## 3.1.3
+
+### Changes from solidart
+
+- **FIX**: Return up-to-date value from `Computed.untrackedValue` after dependency changes.
+
 ## 3.1.2
 
 ### Changes from solidart
 
-- **REFACTOR**: Improve the Solidart DevTools extension by giving any signal an id and omit overriding the same signal by name.
+- **FIX**: Prevent `LateInitializationError` when accessing `Computed.untrackedValue` before first `value` access.
 
 ## 3.1.1
 

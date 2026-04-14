@@ -541,6 +541,52 @@ void main() {
         },
       );
 
+      test('hasValue triggers computation, enabling untrackedValue', () {
+        final counter = Signal(5);
+        final doubled = Computed(() => counter.value * 2);
+
+        // Before any .value access, hasValue should trigger computation
+        expect(doubled.hasValue, true);
+
+        // untrackedValue should now work without LateInitializationError
+        expect(doubled.untrackedValue, 10);
+      });
+
+      test('untrackedValue returns up-to-date value after dependency changes',
+          () {
+        final counter = Signal(5);
+        final doubled = Computed(() => counter.value * 2);
+
+        doubled.hasValue;
+        expect(doubled.untrackedValue, 10);
+
+        counter.value = 20;
+        expect(doubled.untrackedValue, 40);
+      });
+
+      test('untrackedValue asserts if accessed before computation', () {
+        final counter = Signal(5);
+        final doubled = Computed(() => counter.value * 2);
+        expect(() => doubled.untrackedValue, throwsA(isA<AssertionError>()));
+      });
+
+      test('untrackedValue does not register as a dependency', () {
+        final counter = Signal(5);
+        final doubled = Computed(() => counter.value * 2);
+        doubled.hasValue;
+
+        final cb = MockCallbackFunction();
+        final unobserve = Effect(() {
+          doubled.untrackedValue;
+          cb();
+        });
+        addTearDown(unobserve);
+
+        counter.value = 20;
+
+        verify(cb()).called(1); // only the initial Effect run, no re-fire
+      });
+
       test('Computed contains previous value', () async {
         final signal = Signal(0);
         final derived = Computed(() => signal.value * 2);
