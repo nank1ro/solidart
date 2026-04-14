@@ -1,3 +1,9 @@
+## 2.7.3
+
+### Changes from solidart
+
+- **FIX**: Return up-to-date value from `Computed.untrackedValue` after dependency changes.
+
 ## 2.7.2
 
 ### Changes from solidart

@@ -190,6 +190,10 @@ class Computed<T> extends ReadSignal<T> {
       'Computed($name) has not been initialized yet. '
       'Access "value" or "hasValue" first to trigger computation.',
     );
+    // Re-evaluate if stale, without registering as a dependency.
+    if (!_disposed) {
+      untracked(() => value);
+    }
     return _untrackedValue;
   }
 
