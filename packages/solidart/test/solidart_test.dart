@@ -552,6 +552,18 @@ void main() {
         expect(doubled.untrackedValue, 10);
       });
 
+      test('untrackedValue returns up-to-date value after dependency changes',
+          () {
+        final counter = Signal(5);
+        final doubled = Computed(() => counter.value * 2);
+
+        doubled.hasValue;
+        expect(doubled.untrackedValue, 10);
+
+        counter.value = 20;
+        expect(doubled.untrackedValue, 40);
+      });
+
       test('untrackedValue asserts if accessed before computation', () {
         final counter = Signal(5);
         final doubled = Computed(() => counter.value * 2);
