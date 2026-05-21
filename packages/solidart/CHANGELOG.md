@@ -1,3 +1,7 @@
+## 2.8.6
+
+- **FIX**: Prevent effect re-entrancy when a signal is written during the effect's first run. The write no longer re-enters the running effect mid-execution, which could throw `LateInitializationError`.
+
 ## 2.8.5
 
 - **FIX**: Return up-to-date value from `Computed.untrackedValue` after dependency changes.

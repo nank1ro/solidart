@@ -1,3 +1,9 @@
+## 3.1.4
+
+### Changes from solidart
+
+- **FIX**: Prevent effect re-entrancy when a signal is written during the effect's first run. The write no longer re-enters the running effect mid-execution, which could throw `LateInitializationError`.
+
 ## 3.1.3
 
 ### Changes from solidart

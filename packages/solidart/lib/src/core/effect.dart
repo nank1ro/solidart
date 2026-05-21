@@ -184,6 +184,7 @@ class Effect implements ReactionInterface {
     }
     final prevSub = reactiveSystem.setCurrentSub(_internalEffect);
 
+    reactiveSystem.startBatch();
     try {
       _internalEffect.run();
     } catch (e, s) {
@@ -193,6 +194,8 @@ class Effect implements ReactionInterface {
         rethrow;
       }
     } finally {
+      reactiveSystem.endBatch();
+      // ignore: cascade_invocations
       reactiveSystem.setCurrentSub(prevSub);
       if (SolidartConfig.autoDispose) {
         _mayDispose();
