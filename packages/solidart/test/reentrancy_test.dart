@@ -6,6 +6,8 @@ void main() {
     test(
       '''a signal write during the effect first run does not re-enter the effect callback while it is still on the stack''',
       () {
+        final previousAutoDispose = SolidartConfig.autoDispose;
+        addTearDown(() => SolidartConfig.autoDispose = previousAutoDispose);
         SolidartConfig.autoDispose = false;
         final source = Signal(0, name: 'source');
         var running = false;
@@ -43,6 +45,8 @@ void main() {
     test(
       '''a late-final read inside the effect survives a write triggered mid-construction''',
       () {
+        final previousAutoDispose = SolidartConfig.autoDispose;
+        addTearDown(() => SolidartConfig.autoDispose = previousAutoDispose);
         SolidartConfig.autoDispose = false;
         // `dep` mimics a controller built lazily during the effect run whose
         // constructor writes to a collection signal.
