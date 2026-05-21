@@ -195,6 +195,7 @@ class Effect implements ReactionInterface {
       }
     } finally {
       reactiveSystem.endBatch();
+      // ignore: cascade_invocations
       reactiveSystem.setCurrentSub(prevSub);
       if (SolidartConfig.autoDispose) {
         _mayDispose();
