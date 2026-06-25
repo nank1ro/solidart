@@ -1,4 +1,4 @@
-## 2.9.0
+## 3.0.0-dev.1
 
 - **CHORE**: Upgrade `alien_signals` to `^2.3.1` and adapt the internal reactive adapter to its preset/system APIs.
 - **FIX**: A lazy nullable `Signal` (e.g. `Signal<int?>.lazy()`) now notifies when it is first set to `null`; previously the `None` → `Some(null)` transition was treated as "no change".

@@ -1,3 +1,7 @@
+## 4.0.0-dev.1
+
+- **CHORE**: Require `flutter_solidart: ^3.0.0-dev.1` (the `alien_signals` 2.3.1 / solidart 3.0 line).
+
 ## 3.1.4
 
 ### Changes from solidart

@@ -31,7 +31,16 @@ dependencies:
   disco: ^1.0.3
   flutter:
     sdk: flutter
-  flutter_solidart: ^2.1.0
+  flutter_solidart: ^3.0.0-dev.1
+
+# Not a workspace member (its package name "example" collides with
+# flutter_solidart/example), so point its solidart packages at the latest local
+# versions via overrides.
+dependency_overrides:
+  solidart:
+    path: ../../solidart
+  flutter_solidart:
+    path: ../../flutter_solidart
 
 dev_dependencies:
   flutter_test:
