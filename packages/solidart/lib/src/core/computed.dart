@@ -230,10 +230,15 @@ class Computed<T> extends ReadSignal<T> {
     return _hasPreviousValue;
   }
 
-  // coverage:ignore-start
   @override
-  int get listenerCount => _deps.length;
-  // coverage:ignore-end
+  int get listenerCount {
+    // The number of subscribers observing this computed (not its dependencies).
+    var count = 0;
+    for (var link = _internalComputed.subs; link != null; link = link.nextSub) {
+      count++;
+    }
+    return count;
+  }
 
   @override
   void onDispose(VoidCallback cb) {

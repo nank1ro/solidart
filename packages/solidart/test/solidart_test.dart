@@ -792,6 +792,29 @@ void main() {
         },
       );
 
+      test('listenerCount counts subscribers, not dependencies', () {
+        final a = Signal(1);
+        final b = Signal(2);
+        // A computed of two signals has 0 listeners until something observes
+        // it — listenerCount must reflect subscribers, not its dependency
+        // count (it previously returned the number of dependencies).
+        final c = Computed(() => a.value + b.value, autoDispose: false);
+        addTearDown(() {
+          c.dispose();
+          a.dispose();
+          b.dispose();
+        });
+        c.value; // materialize (establish dependencies)
+
+        expect(c.listenerCount, 0);
+
+        final stop = Effect(() => c.value);
+        expect(c.listenerCount, 1);
+
+        stop();
+        expect(c.listenerCount, 0);
+      });
+
       test('Check Computed do not autoDisposes if no longer used', () {
         final count = Signal(0);
         final doubleCount = Computed(() => count.value * 2, autoDispose: false);

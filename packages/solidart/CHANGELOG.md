@@ -3,6 +3,7 @@
 - **CHORE**: Upgrade `alien_signals` to `^2.3.1` and adapt the internal reactive adapter to its preset/system APIs.
 - **FIX**: A lazy nullable `Signal` (e.g. `Signal<int?>.lazy()`) now notifies when it is first set to `null`; previously the `None` → `Some(null)` transition was treated as "no change".
 - **FIX**: Disposing a signal now fully unlinks its subscribers on both sides of each dependency link, so a later write to the disposed signal can no longer propagate into an already-detached computed.
+- **FIX**: `Computed.listenerCount` now reports the number of subscribers instead of the number of dependencies. This also corrects `Resource`'s source cleanup, which uses `listenerCount` to decide whether to dispose a `Computed` passed as its `source`.
 
 ## 2.8.6
 
