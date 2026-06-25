@@ -28,7 +28,7 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
       ++alien.cycle;
       final oldValue = currentValue;
       currentValue = getter(oldValue);
-      return oldValue != currentValue;
+      return !parent._compare(oldValue, currentValue);
     } finally {
       alien.activeSub = prevSub;
       flags &= -5 /* ~ReactiveFlags.recursedCheck */;
@@ -73,6 +73,10 @@ class _AlienSignal<T> extends alien.SignalNode<Option<T>> {
     if (forceDirty) {
       forceDirty = false;
       return true;
+    }
+
+    if (previousValue is None<T> || currentValue is None<T>) {
+      return previousValue is! None<T> || currentValue is! None<T>;
     }
 
     if (!parent._compare(

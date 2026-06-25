@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:alien_signals/system.dart' as alien_system;
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
@@ -318,6 +319,25 @@ void main() {
         expect(signal.hasValue, true);
       });
 
+      test('lazy nullable Signal notifies when initialized with null', () {
+        final signal = Signal<int?>.lazy();
+        var runs = 0;
+
+        final dispose = Effect(() {
+          signal.hasValue;
+          runs++;
+        });
+        addTearDown(dispose);
+
+        expect(runs, equals(1));
+        expect(signal.hasValue, false);
+
+        signal.value = null;
+
+        expect(signal.hasValue, true);
+        expect(runs, equals(2));
+      });
+
       test(
         '''lazy Signal trows StateError when accessing value before setting one''',
         () {
@@ -438,7 +458,7 @@ void main() {
 
         signal1.value = 1;
         await pumpEventQueue();
-        verify(cb(1)).called(1);
+        verify(cb.call(1)).called(1);
         signal1.value = 2;
         await pumpEventQueue();
         verify(cb(2)).called(1);
@@ -617,6 +637,30 @@ void main() {
         count.value = null;
         await pumpEventQueue();
         expect(doubleCount.value, null);
+      });
+
+      test('custom comparator suppresses equivalent computed updates', () {
+        final count = Signal(1);
+        final parity = Computed(
+          () => count.value,
+          equals: false,
+          comparator: (previous, next) => previous?.isEven == next?.isEven,
+        );
+        var runs = 0;
+
+        final dispose = Effect(() {
+          parity.value;
+          runs++;
+        });
+        addTearDown(dispose);
+
+        expect(runs, equals(1));
+
+        count.value = 3;
+        expect(runs, equals(1));
+
+        count.value = 4;
+        expect(runs, equals(2));
       });
 
       test('derived signal disposes', () async {
@@ -2150,14 +2194,27 @@ void main() {
           expect(reactiveSystem.activeSub, same(effect.subscriber));
           reactiveSystem.activeSub = null;
 
-          reactiveSystem.runEffect(effect.subscriber);
           effect.run();
-          expect(effectRuns, greaterThanOrEqualTo(1));
+          expect(effectRuns, equals(1));
+
+          effect.subscriber.flags |= alien_system.ReactiveFlags.dirty;
+          reactiveSystem.runEffect(effect.subscriber);
+          expect(effectRuns, equals(2));
 
           final subs = effect.subscriber.deps!.dep.subs;
           expect(subs, isNotNull);
-          reactiveSystem.propagate(subs!);
-          reactiveSystem.flush();
+
+          reactiveSystem.startBatch();
+          try {
+            signal.value++;
+            reactiveSystem.propagate(subs!);
+            expect(effectRuns, equals(2));
+
+            reactiveSystem.flush();
+          } finally {
+            reactiveSystem.endBatch();
+          }
+          expect(effectRuns, equals(3));
 
           final runsAfterFlush = effectRuns;
           reactiveSystem.stopEffect(effect.subscriber);
