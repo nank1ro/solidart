@@ -554,6 +554,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: ThemeData(splashFactory: NoSplash.splashFactory),
           home: Scaffold(
             body: ProviderScope(
               providers: [counterProvider],
@@ -614,6 +615,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: ThemeData(splashFactory: NoSplash.splashFactory),
           home: Scaffold(
             body: ProviderScope(
               providers: [
@@ -652,6 +654,7 @@ void main() {
     final counterProvider = Provider((_) => Signal(0));
     await tester.pumpWidget(
       MaterialApp(
+        theme: ThemeData(splashFactory: NoSplash.splashFactory),
         home: Scaffold(
           body: ProviderScope(
             providers: [
@@ -686,10 +689,10 @@ void main() {
   });
 
   testWidgets('(ArgProvider) Signal.updateValue method', (tester) async {
-    // ignore: avoid_types_on_closure_parameters
     final counterProvider = Provider.withArgument((_, int n) => Signal(n));
     await tester.pumpWidget(
       MaterialApp(
+        theme: ThemeData(splashFactory: NoSplash.splashFactory),
         home: Scaffold(
           body: ProviderScope(
             providers: [
