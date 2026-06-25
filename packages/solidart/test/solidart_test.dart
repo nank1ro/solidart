@@ -1,4 +1,5 @@
-// ignore_for_file: cascade_invocations, unreachable_from_main
+// ignore_for_file: cascade_invocations, invalid_use_of_protected_member
+// ignore_for_file: unreachable_from_main
 
 import 'dart:async';
 import 'dart:math';
@@ -2106,6 +2107,82 @@ void main() {
           b.value = 0;
         });
       });
+
+      test('should dispose computed child effects before recomputing', () {
+        final source = Signal(true);
+        final child = Signal(0);
+        var childRuns = 0;
+
+        final computed = Computed(() {
+          if (source.value) {
+            Effect(() {
+              child.value;
+              childRuns++;
+            });
+          }
+          return source.value;
+        });
+
+        addTearDown(() {
+          computed.dispose();
+          source.dispose();
+          child.dispose();
+        });
+
+        expect(computed.value, isTrue);
+        expect(childRuns, equals(1));
+
+        child.value++;
+        expect(childRuns, equals(2));
+
+        source.value = false;
+        expect(computed.value, isFalse);
+
+        child.value++;
+        expect(childRuns, equals(2));
+      });
+
+      test(
+        'reactive system compatibility helpers delegate to alien runtime',
+        () {
+          final signal = Signal(0);
+          var effectRuns = 0;
+          final effect = Effect(
+            () {
+              signal.value;
+              effectRuns++;
+            },
+            autorun: false,
+            autoDispose: false,
+          );
+
+          final previousSub = reactiveSystem.setCurrentSub(null);
+          addTearDown(() {
+            reactiveSystem.setCurrentSub(previousSub);
+            effect.dispose();
+            signal.dispose();
+          });
+
+          expect(reactiveSystem.batchDepth, equals(0));
+          reactiveSystem.activeSub = effect.subscriber;
+          expect(reactiveSystem.activeSub, same(effect.subscriber));
+          reactiveSystem.activeSub = null;
+
+          reactiveSystem.runEffect(effect.subscriber);
+          effect.run();
+          expect(effectRuns, greaterThanOrEqualTo(1));
+
+          final subs = effect.subscriber.deps!.dep.subs;
+          expect(subs, isNotNull);
+          reactiveSystem.propagate(subs!);
+          reactiveSystem.flush();
+
+          final runsAfterFlush = effectRuns;
+          reactiveSystem.stopEffect(effect.subscriber);
+          signal.value++;
+          expect(effectRuns, equals(runsAfterFlush));
+        },
+      );
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );

@@ -91,8 +91,8 @@ class ReactiveSystem {
     alien.stop(effect);
   }
 
-  void runEffect(_AlienEffect effect) {
-    alien.run(effect);
+  void runEffect(alien_system.ReactiveNode effect) {
+    alien.run(effect as _AlienEffect);
   }
 
   void propagate(alien_system.Link link) {
