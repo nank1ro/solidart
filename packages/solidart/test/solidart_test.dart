@@ -804,6 +804,32 @@ void main() {
         count.value = 5;
         expect(doubled.value, 0);
       });
+
+      test(
+        'manual auto-dispose: writing to a disposed source keeps the '
+        'getComputedValue invariant',
+        () {
+          // With SolidartConfig.autoDispose disabled, ReadableSignal.dispose
+          // skips its subscriber-unlink path, leaving the dependency graph
+          // intact (both sides linked) rather than half-unlinked. A later write
+          // to the disposed signal must not crash or trip the pending/deps
+          // invariant asserted in getComputedValue.
+          final previousAutoDispose = SolidartConfig.autoDispose;
+          addTearDown(() => SolidartConfig.autoDispose = previousAutoDispose);
+          SolidartConfig.autoDispose = false;
+
+          final count = Signal(1);
+          final doubled = Computed(() => count.value * 2);
+          addTearDown(doubled.dispose);
+
+          expect(doubled.value, 2);
+
+          count.dispose();
+          count.value = 5;
+          // Must resolve without throwing or asserting.
+          expect(doubled.value, 10);
+        },
+      );
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
