@@ -1,5 +1,4 @@
 // ignore_for_file: cascade_invocations, invalid_use_of_protected_member
-// ignore_for_file: unreachable_from_main
 
 import 'dart:async';
 import 'dart:math';
@@ -11,20 +10,6 @@ import 'package:solidart/src/core/core.dart';
 import 'package:solidart/src/extensions/until.dart';
 import 'package:solidart/src/utils.dart';
 import 'package:test/test.dart';
-
-sealed class MyEvent {}
-
-class MyEventA implements MyEvent {
-  MyEventA(this.value);
-
-  final int value;
-}
-
-class MyEventB implements MyEvent {
-  MyEventB(this.value);
-
-  final String value;
-}
 
 class MockCallbackFunction extends Mock {
   void call();
@@ -64,11 +49,6 @@ class User {
 
   @override
   String toString() => 'User(id: $id)';
-}
-
-class SampleList {
-  SampleList(this.numbers);
-  final List<int> numbers;
 }
 
 class MockSolidartObserver extends Mock implements SolidartObserver {}
@@ -553,17 +533,19 @@ void main() {
         expect(doubled.untrackedValue, 10);
       });
 
-      test('untrackedValue returns up-to-date value after dependency changes',
-          () {
-        final counter = Signal(5);
-        final doubled = Computed(() => counter.value * 2);
+      test(
+        'untrackedValue returns up-to-date value after dependency changes',
+        () {
+          final counter = Signal(5);
+          final doubled = Computed(() => counter.value * 2);
 
-        doubled.hasValue;
-        expect(doubled.untrackedValue, 10);
+          doubled.hasValue;
+          expect(doubled.untrackedValue, 10);
 
-        counter.value = 20;
-        expect(doubled.untrackedValue, 40);
-      });
+          counter.value = 20;
+          expect(doubled.untrackedValue, 40);
+        },
+      );
 
       test('untrackedValue asserts if accessed before computation', () {
         final counter = Signal(5);

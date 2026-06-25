@@ -1,4 +1,4 @@
-// ignore_for_file: document_ignores, unreachable_from_main, discarded_futures
+// ignore_for_file: document_ignores, discarded_futures
 
 import 'dart:async';
 
@@ -7,30 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-
-// Used in Solid providers tests
-abstract class NameContainer {
-  const NameContainer(this.name);
-
-  final String name;
-
-  void dispose();
-}
-
-class MockNameContainer extends Mock implements NameContainer {
-  MockNameContainer(this.name);
-
-  @override
-  final String name;
-}
-
-@immutable
-class NumberContainer {
-  const NumberContainer(this.number);
-
-  final int number;
-}
 
 void main() {
   testWidgets('(Provider) Not found signal throws an error', (tester) async {
@@ -689,7 +665,9 @@ void main() {
   });
 
   testWidgets('(ArgProvider) Signal.updateValue method', (tester) async {
-    final counterProvider = Provider.withArgument((_, int n) => Signal(n));
+    final counterProvider = Provider.withArgument<Signal<int>, int>(
+      (_, n) => Signal(n),
+    );
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(splashFactory: NoSplash.splashFactory),
