@@ -83,9 +83,9 @@ class _SignalBuilderElement extends StatelessElement {
 
   @override
   Widget build() {
-    final prevSub = reactiveSystem.activeSub;
     // ignore: invalid_use_of_protected_member
-    final node = reactiveSystem.activeSub = effect.subscriber;
+    final node = effect.subscriber;
+    final prevSub = reactiveSystem.setCurrentSub(node);
 
     try {
       final built = super.build();
@@ -101,7 +101,7 @@ You can disable this check by setting `SolidartConfig.assertSignalBuilderWithout
 
       return built;
     } finally {
-      reactiveSystem.activeSub = prevSub;
+      reactiveSystem.setCurrentSub(prevSub);
     }
   }
 }
