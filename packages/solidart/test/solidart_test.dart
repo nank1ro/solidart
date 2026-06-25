@@ -785,6 +785,25 @@ void main() {
         count.value = 2;
         expect(doubleCount.value, 2);
       });
+
+      test('disposing a source signal fully unlinks its subscribers', () {
+        // Regression: ReadableSignal.dispose must unlink subscribers on BOTH
+        // sides of each link, so a later write to the disposed signal cannot
+        // propagate into a computed whose dependency list was already cleared.
+        // Before the two-sided-unlink fix this left the computed `pending` with
+        // `deps == null` and crashed `getComputedValue` (it needed a guard).
+        final count = Signal(0);
+        final doubled = Computed(() => count.value * 2, autoDispose: false);
+        addTearDown(doubled.dispose);
+
+        expect(doubled.value, 0); // establishes the count <-> doubled link
+
+        count.dispose();
+        // A post-dispose write must not throw and must not corrupt the
+        // computed.
+        count.value = 5;
+        expect(doubled.value, 0);
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
@@ -2134,19 +2153,28 @@ void main() {
         });
       });
 
-      test('should dispose computed child effects before recomputing', () {
-        final source = Signal(true);
+      test('computed child effects do not accumulate across recomputes', () {
+        // `source > 0` creates a child Effect during the computation. Every
+        // recompute must leave exactly one live child (the freshly-created
+        // one); stale children from previous runs must not keep reacting.
+        // (Note: this asserts the observable end-state. The internal ordering
+        // guarantee — disposal BEFORE the selector re-runs, via the
+        // `_hasChildEffect` flag — is not observable through run counts because
+        // `purgeDeps` + the `unwatched` callback also dispose stale children
+        // after a recompute.)
+        final source = Signal(1);
         final child = Signal(0);
         var childRuns = 0;
 
         final computed = Computed(() {
-          if (source.value) {
+          final s = source.value;
+          if (s > 0) {
             Effect(() {
               child.value;
               childRuns++;
             });
           }
-          return source.value;
+          return s;
         });
 
         addTearDown(() {
@@ -2155,17 +2183,32 @@ void main() {
           child.dispose();
         });
 
-        expect(computed.value, isTrue);
+        expect(computed.value, 1);
         expect(childRuns, equals(1));
 
+        // The single live child reacts to its own dependency.
         child.value++;
         expect(childRuns, equals(2));
 
-        source.value = false;
-        expect(computed.value, isFalse);
+        // Recompute while still creating a child: the previous child must be
+        // disposed first, so only the freshly-created one survives.
+        source.value = 2;
+        expect(computed.value, 2);
+        expect(childRuns, equals(3));
+
+        // If the old child were NOT disposed before the recompute, both would
+        // react here and childRuns would be 5.
+        child.value++;
+        expect(childRuns, equals(4));
+
+        // Recompute into the branch that creates no child: the live child from
+        // the previous run is disposed before the selector runs again, so a
+        // later write reaches nobody.
+        source.value = 0;
+        expect(computed.value, 0);
 
         child.value++;
-        expect(childRuns, equals(2));
+        expect(childRuns, equals(4));
       });
 
       test(

@@ -74,19 +74,6 @@ class ReactiveSystem {
   }
 
   T getComputedValue<T>(_AlienComputed<T> computed) {
-    // After a dependency is disposed, `ReadableSignal.dispose` nulls this
-    // computed's `deps` but leaves the producer's `subs` link dangling, so a
-    // later write to the disposed signal can still mark an `autoDispose: false`
-    // computed `pending` while `deps == null`. Clear it here, otherwise
-    // upstream `ComputedNode.get()` takes the `checkDirty(deps!, …)` branch and
-    // null-asserts. (see test "Check Computed do not autoDisposes if no longer
-    // used")
-    if ((computed.flags & alien_system.ReactiveFlags.pending) !=
-            alien_system.ReactiveFlags.none &&
-        computed.deps == null) {
-      computed.flags &= ~alien_system.ReactiveFlags.pending;
-    }
-
     return computed.get();
   }
 
