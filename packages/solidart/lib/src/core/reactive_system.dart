@@ -74,6 +74,20 @@ class ReactiveSystem {
   }
 
   T getComputedValue<T>(_AlienComputed<T> computed) {
+    // Invariant: a computed is never `pending` while detached from the graph
+    // (`deps == null`). `pending` is only set by `propagate`, which reaches a
+    // node through the very dependency links that make `deps` non-null, and
+    // every teardown path (recompute / unwatch / stop / signal dispose) either
+    // clears `pending` or fully unlinks the node. If this ever fires, a code
+    // path is leaving a half-linked node (e.g. a one-sided unlink), which would
+    // otherwise crash in upstream `ComputedNode.get()` via `checkDirty(deps!)`.
+    assert(
+      computed.deps != null ||
+          (computed.flags & alien_system.ReactiveFlags.pending) ==
+              alien_system.ReactiveFlags.none,
+      'computed is pending while detached (deps == null) — a subscriber link '
+      'was not fully unlinked',
+    );
     return computed.get();
   }
 
