@@ -21,6 +21,15 @@ extension MayDisposeDependencies on alien_system.ReactiveNode {
     return foundDeps;
   }
 
+  /// The number of subscribers currently observing this node.
+  int get subscriberCount {
+    var count = 0;
+    for (var link = subs; link != null; link = link.nextSub) {
+      count++;
+    }
+    return count;
+  }
+
   void mayDisposeDependencies([Iterable<alien_system.ReactiveNode>? include]) {
     final dependencies = {...getDependencies(), ...?include};
     for (final dep in dependencies) {

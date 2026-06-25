@@ -815,6 +815,25 @@ void main() {
         expect(c.listenerCount, 0);
       });
 
+      test('disposing a computed unlinks all of its subscribers', () {
+        final s = Signal(0);
+        final c = Computed(() => s.value, autoDispose: false);
+        final e1 = Effect(() => c.value, autoDispose: false);
+        final e2 = Effect(() => c.value, autoDispose: false);
+        addTearDown(() {
+          e1.dispose();
+          e2.dispose();
+          s.dispose();
+        });
+
+        expect(c.listenerCount, 2);
+
+        c.dispose();
+        // Disposing must remove every subscriber link, not just the first one,
+        // so no subscriber is left holding a link to a disposed computed.
+        expect(c.listenerCount, 0);
+      });
+
       test('Check Computed do not autoDisposes if no longer used', () {
         final count = Signal(0);
         final doubleCount = Computed(() => count.value * 2, autoDispose: false);

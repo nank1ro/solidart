@@ -137,17 +137,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
       );
     }
     _reportObserved();
-    final value = reactiveSystem.getSignalValue(_internalSignal).unwrap();
-
-    if (autoDispose) {
-      _subs.clear();
-
-      var link = _internalSignal.subs;
-      for (; link != null; link = link.nextSub) {
-        _subs.add(link.sub);
-      }
-    }
-    return value;
+    return reactiveSystem.getSignalValue(_internalSignal).unwrap();
   }
 
   late T _untrackedValue;
@@ -258,9 +248,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   /// Returns the number of listeners listening to this signal.
   @override
-  int get listenerCount => _subs.length;
-
-  final _subs = <alien_system.ReactiveNode>{};
+  int get listenerCount => _internalSignal.subscriberCount;
 
   @override
   void dispose() {
@@ -289,7 +277,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
         if (sub is _AlienComputed) sub.parent._mayDispose();
         link = next;
       }
-      _subs.clear();
     }
 
     for (final cb in _onDisposeCallbacks) {

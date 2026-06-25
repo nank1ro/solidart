@@ -231,14 +231,7 @@ class Computed<T> extends ReadSignal<T> {
   }
 
   @override
-  int get listenerCount {
-    // The number of subscribers observing this computed (not its dependencies).
-    var count = 0;
-    for (var link = _internalComputed.subs; link != null; link = link.nextSub) {
-      count++;
-    }
-    return count;
-  }
+  int get listenerCount => _internalComputed.subscriberCount;
 
   @override
   void onDispose(VoidCallback cb) {
