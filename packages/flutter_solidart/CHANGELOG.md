@@ -1,3 +1,8 @@
+## 2.7.5
+
+- **CHORE**: Require `solidart: ^2.9.0` (the `alien_signals` 2.3.1 reactive adapter).
+- **REFACTOR**: Route `SignalBuilder` through the reactive sub helper (`setCurrentSub`) instead of assigning `activeSub` directly.
+
 ## 2.7.4
 
 ### Changes from solidart
