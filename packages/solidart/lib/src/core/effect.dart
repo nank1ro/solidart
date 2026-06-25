@@ -198,9 +198,7 @@ class Effect implements ReactionInterface {
       reactiveSystem.endBatch();
       // ignore: cascade_invocations
       reactiveSystem.setCurrentSub(prevSub);
-      if (SolidartConfig.autoDispose) {
-        _mayDispose();
-      }
+      _mayDispose();
     }
   }
 
@@ -232,13 +230,11 @@ class Effect implements ReactionInterface {
 
   @override
   void _mayDispose() {
-    if (_disposed) return;
-
-    if (SolidartConfig.autoDispose) {
-      if (!autoDispose || _disposed) return;
-      if (subscriber.deps?.dep == null) {
-        dispose();
-      }
+    // Gate on the per-instance `autoDispose` (defaulted from
+    // SolidartConfig.autoDispose at creation), consistent with Signal/Computed.
+    if (_disposed || !autoDispose) return;
+    if (subscriber.deps?.dep == null) {
+      dispose();
     }
   }
 }

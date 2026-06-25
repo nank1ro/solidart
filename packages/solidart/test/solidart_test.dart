@@ -393,7 +393,7 @@ void main() {
 
       test("Check signal disposed isn't tracked by Computed", () {
         final count = Signal(1);
-        final doubleCount = Computed(() => count.value * 2);
+        final doubleCount = Computed(() => count.value * 2, autoDispose: true);
 
         expect(doubleCount.value, 2);
         expect(count.disposed, false);
@@ -770,7 +770,7 @@ void main() {
         () {
           final a = Signal(1);
           final b = Signal(2);
-          final sum = Computed(() => a.value + b.value); // autoDispose: true
+          final sum = Computed(() => a.value + b.value, autoDispose: true);
 
           expect(sum.value, 3);
 
@@ -821,7 +821,7 @@ void main() {
         // same `_mayDispose` chance that disposing a Signal does.
         final s = Signal(0);
         final c = Computed(() => s.value, autoDispose: false);
-        final effect = Effect(() => c.value); // only depends on c
+        final effect = Effect(() => c.value, autoDispose: true); // only on c
         addTearDown(() {
           s.dispose();
           if (!effect.disposed) effect.dispose();

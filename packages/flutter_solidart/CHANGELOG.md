@@ -1,6 +1,7 @@
 ## 3.0.0-dev.1
 
-- **CHORE**: Require `solidart: ^2.9.0` (the `alien_signals` 2.3.1 reactive adapter).
+- **BREAKING**: Inherits solidart's auto-dispose change — auto-dispose is now opt-in (`SolidartConfig.autoDispose` defaults to `false`).
+- **CHORE**: Require `solidart: ^3.0.0-dev.1` (the `alien_signals` 2.3.1 reactive adapter).
 - **REFACTOR**: Route `SignalBuilder` through the reactive sub helper (`setCurrentSub`) instead of assigning `activeSub` directly.
 - **CHORE**: Consume solidart's `reactiveSystem` via `package:solidart/solidart_internal.dart` now that it is no longer part of solidart's public barrel.
 
