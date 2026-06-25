@@ -2190,9 +2190,14 @@ void main() {
           });
 
           expect(reactiveSystem.batchDepth, equals(0));
-          reactiveSystem.setCurrentSub(effect.subscriber);
+          // setCurrentSub returns the previously-active sub (save/restore).
+          final prevFromEffect = reactiveSystem.setCurrentSub(
+            effect.subscriber,
+          );
+          expect(prevFromEffect, isNull);
           expect(reactiveSystem.activeSub, same(effect.subscriber));
-          reactiveSystem.setCurrentSub(null);
+          final prevFromNull = reactiveSystem.setCurrentSub(null);
+          expect(prevFromNull, same(effect.subscriber));
 
           effect.run();
           expect(effectRuns, equals(1));
@@ -2205,15 +2210,22 @@ void main() {
           expect(subs, isNotNull);
 
           reactiveSystem.startBatch();
+          expect(reactiveSystem.batchDepth, equals(1));
           try {
             signal.value++;
+            // Inside a batch the queued effect must not flush yet.
+            expect(effectRuns, equals(2));
+            // propagate() is idempotent on an already-queued subscriber.
             reactiveSystem.propagate(subs!);
             expect(effectRuns, equals(2));
 
+            // flush() is what actually drains the queue and runs the effect.
             reactiveSystem.flush();
+            expect(effectRuns, equals(3));
           } finally {
             reactiveSystem.endBatch();
           }
+          expect(reactiveSystem.batchDepth, equals(0));
           expect(effectRuns, equals(3));
 
           final runsAfterFlush = effectRuns;
