@@ -261,22 +261,21 @@ class ReadableSignal<T> implements ReadSignal<T> {
       reactiveSystem.getSignalValue(_internalSignal);
     });
 
-    if (SolidartConfig.autoDispose) {
-      // Fully unlink every subscriber from this signal. `alien.unlink` removes
-      // each link from BOTH the subscriber's dependency list and this signal's
-      // subscriber list, so a later write to the disposed signal can no longer
-      // propagate into a subscriber whose deps were already torn down (which
-      // previously left a computed `pending` with `deps == null` and required a
-      // guard in `getComputedValue`).
-      var link = _internalSignal.subs;
-      while (link != null) {
-        final next = link.nextSub;
-        final sub = link.sub;
-        alien.unlink(link, sub);
-        if (sub is _AlienEffect) sub.parent._mayDispose();
-        if (sub is _AlienComputed) sub.parent._mayDispose();
-        link = next;
-      }
+    // Fully unlink every subscriber from this signal — dispose means destroy,
+    // so this runs regardless of `SolidartConfig.autoDispose` (matching
+    // Effect.dispose and Computed.dispose). `alien.unlink` removes each link
+    // from BOTH the subscriber's dependency list and this signal's subscriber
+    // list, so a later write to the disposed signal can no longer propagate
+    // into a subscriber whose deps were torn down. The per-subscriber
+    // `_mayDispose` self-guards on the subscriber's own autoDispose flag.
+    var link = _internalSignal.subs;
+    while (link != null) {
+      final next = link.nextSub;
+      final sub = link.sub;
+      alien.unlink(link, sub);
+      if (sub is _AlienEffect) sub.parent._mayDispose();
+      if (sub is _AlienComputed) sub.parent._mayDispose();
+      link = next;
     }
 
     for (final cb in _onDisposeCallbacks) {

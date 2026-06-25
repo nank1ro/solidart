@@ -876,14 +876,12 @@ void main() {
       });
 
       test(
-        'manual auto-dispose: writing to a disposed source keeps the '
-        'getComputedValue invariant',
+        'disposing a signal unlinks its subscribers even with auto-dispose off',
         () {
-          // With SolidartConfig.autoDispose disabled, ReadableSignal.dispose
-          // skips its subscriber-unlink path, leaving the dependency graph
-          // intact (both sides linked) rather than half-unlinked. A later write
-          // to the disposed signal must not crash or trip the pending/deps
-          // invariant asserted in getComputedValue.
+          // dispose() means destroy: it must unlink from every subscriber
+          // regardless of SolidartConfig.autoDispose (matching Effect.dispose
+          // and Computed.dispose, which never gate teardown on the global
+          // flag).
           final previousAutoDispose = SolidartConfig.autoDispose;
           addTearDown(() => SolidartConfig.autoDispose = previousAutoDispose);
           SolidartConfig.autoDispose = false;
@@ -893,11 +891,14 @@ void main() {
           addTearDown(doubled.dispose);
 
           expect(doubled.value, 2);
+          expect(count.listenerCount, 1); // doubled subscribes to count
 
           count.dispose();
+          // fully unlinked: nothing is left holding a link to the disposed
+          // signal, so a later write to it cannot reach the computed.
+          expect(count.listenerCount, 0);
           count.value = 5;
-          // Must resolve without throwing or asserting.
-          expect(doubled.value, 10);
+          expect(doubled.value, 2);
         },
       );
     },
