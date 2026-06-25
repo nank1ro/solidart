@@ -3,6 +3,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 import 'package:solidart/solidart.dart';
+// `reactiveSystem` is internal solidart API, not part of the public barrel.
+import 'package:solidart/solidart_internal.dart';
 
 /// {@template signalbuilder}
 /// Reacts to the signals automatically found in the [builder] function.
