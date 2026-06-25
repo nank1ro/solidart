@@ -11,8 +11,6 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
 
   void dispose() => alien.stop(this);
 
-  bool update() => didUpdate();
-
   @override
   bool didUpdate() {
     if ((flags & _hasChildEffect) != alien_system.ReactiveFlags.none) {
@@ -30,8 +28,8 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
       currentValue = getter(oldValue);
       return !parent._compare(oldValue, currentValue);
     } finally {
-      alien.activeSub = prevSub;
-      flags &= -5 /* ~ReactiveFlags.recursedCheck */;
+      alien.setActiveSub(prevSub);
+      flags &= ~alien_system.ReactiveFlags.recursedCheck;
       alien.purgeDeps(this);
     }
   }
@@ -61,8 +59,6 @@ class _AlienSignal<T> extends alien.SignalNode<Option<T>> {
   final SignalBase<dynamic> parent;
 
   bool forceDirty = false;
-
-  bool update() => didUpdate();
 
   @override
   bool didUpdate() {

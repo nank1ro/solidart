@@ -2190,9 +2190,9 @@ void main() {
           });
 
           expect(reactiveSystem.batchDepth, equals(0));
-          reactiveSystem.activeSub = effect.subscriber;
+          reactiveSystem.setCurrentSub(effect.subscriber);
           expect(reactiveSystem.activeSub, same(effect.subscriber));
-          reactiveSystem.activeSub = null;
+          reactiveSystem.setCurrentSub(null);
 
           effect.run();
           expect(effectRuns, equals(1));

@@ -352,7 +352,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   /// Indicates if the signal should update its value.
   bool shouldUpdate() {
-    return _internalSignal.update();
+    return _internalSignal.didUpdate();
   }
 
   @override
