@@ -1,74 +1,87 @@
 part of 'core.dart';
 
-class _AlienComputed<T> extends alien.ReactiveNode implements _AlienUpdatable {
-  _AlienComputed(this.parent, this.getter)
-    : super(flags: 17 /* Mutable | Dirty */);
+class _AlienComputed<T> extends alien.ComputedNode<T> {
+  _AlienComputed(this.parent, T Function(T? oldValue) getter)
+    : super(
+        flags: alien_system.ReactiveFlags.none,
+        getter: getter,
+      );
 
   final Computed<T> parent;
-  final T Function(T? oldValue) getter;
 
-  T? value;
+  void dispose() => alien.stop(this);
 
-  void dispose() => reactiveSystem.stopEffect(this);
+  bool update() => didUpdate();
 
   @override
-  bool update() {
-    final prevSub = reactiveSystem.setCurrentSub(this);
-    reactiveSystem.startTracking(this);
+  bool didUpdate() {
+    if ((flags & _hasChildEffect) != alien_system.ReactiveFlags.none) {
+      alien.disposeChildDepsInReverse(this);
+    }
+
+    depsTail = null;
+    flags =
+        alien_system.ReactiveFlags.mutable |
+        alien_system.ReactiveFlags.recursedCheck;
+    final prevSub = alien.setActiveSub(this);
     try {
-      final oldValue = value;
-      return oldValue != (value = getter(oldValue));
+      ++alien.cycle;
+      final oldValue = currentValue;
+      currentValue = getter(oldValue);
+      return oldValue != currentValue;
     } finally {
-      reactiveSystem
-        ..setCurrentSub(prevSub)
-        ..endTracking(this);
+      alien.activeSub = prevSub;
+      flags &= -5 /* ~ReactiveFlags.recursedCheck */;
+      alien.purgeDeps(this);
     }
   }
 }
 
-class _AlienEffect extends alien.ReactiveNode {
-  _AlienEffect(this.parent, this.run, {bool? detach})
+class _AlienEffect extends alien.EffectNode<void> {
+  _AlienEffect(this.parent, void Function() run, {bool? detach})
     : detach = detach ?? SolidartConfig.detachEffects,
-      super(flags: 2 /* Watching */);
-
-  _AlienEffect? nextEffect;
+      super(flags: alien_system.ReactiveFlags.watching, fn: run);
 
   final bool detach;
   final Effect parent;
-  final void Function() run;
 
-  void dispose() => reactiveSystem.stopEffect(this);
+  void run() => fn();
+
+  void dispose() => alien.stopEffect(this);
 }
 
-class _AlienSignal<T> extends alien.ReactiveNode implements _AlienUpdatable {
-  _AlienSignal(this.parent, this.value)
-    : previousValue = value,
-      super(flags: 1 /* Mutable */);
+class _AlienSignal<T> extends alien.SignalNode<Option<T>> {
+  _AlienSignal(this.parent, Option<T> value)
+    : super(
+        flags: alien_system.ReactiveFlags.mutable,
+        currentValue: value,
+        pendingValue: value,
+      );
 
   final SignalBase<dynamic> parent;
 
-  Option<T> previousValue;
-  Option<T> value;
-
   bool forceDirty = false;
 
+  bool update() => didUpdate();
+
   @override
-  bool update() {
-    flags = 1 /* Mutable */;
+  bool didUpdate() {
+    final previousValue = currentValue;
+    currentValue = pendingValue;
+    flags = alien_system.ReactiveFlags.mutable;
+
     if (forceDirty) {
       forceDirty = false;
       return true;
     }
-    if (!parent._compare(previousValue.safeUnwrap(), value.safeUnwrap())) {
-      previousValue = value;
+
+    if (!parent._compare(
+      previousValue.safeUnwrap(),
+      currentValue.safeUnwrap(),
+    )) {
       return true;
     }
 
     return false;
   }
-}
-
-// ignore: one_member_abstracts
-abstract interface class _AlienUpdatable {
-  bool update();
 }

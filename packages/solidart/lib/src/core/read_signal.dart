@@ -260,7 +260,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   @override
   int get listenerCount => _subs.length;
 
-  final _subs = <alien.ReactiveNode>{};
+  final _subs = <alien_system.ReactiveNode>{};
 
   @override
   void dispose() {
@@ -337,7 +337,8 @@ class ReadableSignal<T> implements ReadSignal<T> {
   /// use [reactiveSystem.setSignalValue] instead.
   void _reportChanged() {
     _internalSignal.forceDirty = true;
-    _internalSignal.flags = 17 /* Mutable | Dirty */;
+    _internalSignal.flags =
+        alien_system.ReactiveFlags.mutable | alien_system.ReactiveFlags.dirty;
     final subs = _internalSignal.subs;
     if (subs != null) {
       // coverage:ignore-start

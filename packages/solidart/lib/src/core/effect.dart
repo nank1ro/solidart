@@ -164,11 +164,11 @@ class Effect implements ReactionInterface {
 
   late final _AlienEffect _internalEffect;
 
-  final _deps = <alien.ReactiveNode>{};
+  final _deps = <alien_system.ReactiveNode>{};
 
   /// The subscriber of the effect, do not use it directly.
   @protected
-  alien.ReactiveNode get subscriber => _internalEffect;
+  alien_system.ReactiveNode get subscriber => _internalEffect;
 
   @override
   bool get disposed => _disposed;
@@ -180,10 +180,11 @@ class Effect implements ReactionInterface {
       if (currentSub is! _AlienEffect ||
           (!_internalEffect.detach && !currentSub.detach)) {
         reactiveSystem.link(_internalEffect, currentSub);
+        currentSub.flags |= _hasChildEffect;
       }
     }
-    final prevSub = reactiveSystem.setCurrentSub(_internalEffect);
 
+    final prevSub = reactiveSystem.setCurrentSub(_internalEffect);
     reactiveSystem.startBatch();
     try {
       _internalEffect.run();
@@ -205,7 +206,7 @@ class Effect implements ReactionInterface {
 
   /// Sets the dependencies of the effect, do not use it directly.
   @internal
-  void setDependencies(alien.ReactiveNode node) {
+  void setDependencies(alien_system.ReactiveNode node) {
     _deps
       ..clear()
       ..addAll(node.getDependencies());

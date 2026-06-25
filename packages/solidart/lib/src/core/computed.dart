@@ -132,7 +132,7 @@ class Computed<T> extends ReadSignal<T> {
     return true;
   }
 
-  final _deps = <alien.ReactiveNode>{};
+  final _deps = <alien_system.ReactiveNode>{};
 
   @override
   void dispose() {
