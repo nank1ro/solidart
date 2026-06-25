@@ -764,6 +764,34 @@ void main() {
         expect(doubleCount.value, 2);
       });
 
+      test(
+        'computed with multiple sources is not prematurely auto-disposed '
+        '(regression #162)',
+        () {
+          final a = Signal(1);
+          final b = Signal(2);
+          final sum = Computed(() => a.value + b.value); // autoDispose: true
+
+          expect(sum.value, 3);
+
+          // Disposing ONE source must not auto-dispose the computed — it still
+          // depends on `b`. Previously a one-sided unlink in the signal's
+          // dispose corrupted the computed's dependency list, so it was
+          // disposed prematurely (worked around in apps with autoDispose:
+          // false).
+          a.dispose();
+          expect(sum.disposed, false);
+
+          // ...and it must keep reacting to the still-live source.
+          b.value = 10;
+          expect(sum.value, 11);
+
+          // Once every source is disposed, it finally auto-disposes.
+          b.dispose();
+          expect(sum.disposed, true);
+        },
+      );
+
       test('Check Computed do not autoDisposes if no longer used', () {
         final count = Signal(0);
         final doubleCount = Computed(() => count.value * 2, autoDispose: false);
