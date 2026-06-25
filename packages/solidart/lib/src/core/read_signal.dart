@@ -263,20 +263,10 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
     // Fully unlink every subscriber from this signal — dispose means destroy,
     // so this runs regardless of `SolidartConfig.autoDispose` (matching
-    // Effect.dispose and Computed.dispose). `alien.unlink` removes each link
-    // from BOTH the subscriber's dependency list and this signal's subscriber
-    // list, so a later write to the disposed signal can no longer propagate
-    // into a subscriber whose deps were torn down. The per-subscriber
-    // `_mayDispose` self-guards on the subscriber's own autoDispose flag.
-    var link = _internalSignal.subs;
-    while (link != null) {
-      final next = link.nextSub;
-      final sub = link.sub;
-      alien.unlink(link, sub);
-      if (sub is _AlienEffect) sub.parent._mayDispose();
-      if (sub is _AlienComputed) sub.parent._mayDispose();
-      link = next;
-    }
+    // Effect.dispose and Computed.dispose). This removes each link from BOTH
+    // sides, so a later write to the disposed signal can no longer propagate
+    // into a subscriber whose deps were torn down.
+    _internalSignal.unlinkSubscribers();
 
     for (final cb in _onDisposeCallbacks) {
       cb();

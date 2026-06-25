@@ -30,6 +30,21 @@ extension MayDisposeDependencies on alien_system.ReactiveNode {
     return count;
   }
 
+  /// Unlinks every subscriber from this node, offering each the same
+  /// `_mayDispose` chance a disposed dependency triggers. Used when a signal or
+  /// computed is disposed — `alien.stop` only unlinks the first subscriber.
+  void unlinkSubscribers() {
+    var link = subs;
+    while (link != null) {
+      final next = link.nextSub;
+      final sub = link.sub;
+      alien.unlink(link, sub);
+      if (sub is _AlienEffect) sub.parent._mayDispose();
+      if (sub is _AlienComputed) sub.parent._mayDispose();
+      link = next;
+    }
+  }
+
   void mayDisposeDependencies([Iterable<alien_system.ReactiveNode>? include]) {
     final dependencies = {...getDependencies(), ...?include};
     for (final dep in dependencies) {

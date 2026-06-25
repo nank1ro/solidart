@@ -4,7 +4,7 @@
 - **FIX**: A lazy nullable `Signal` (e.g. `Signal<int?>.lazy()`) now notifies when it is first set to `null`; previously the `None` → `Some(null)` transition was treated as "no change".
 - **FIX**: Disposing a signal now fully unlinks its subscribers on both sides of each dependency link — and does so regardless of `SolidartConfig.autoDispose` (a disposed signal is destroyed, like `Effect`/`Computed` disposal) — so a later write to the disposed signal can no longer propagate into an already-detached computed.
 - **FIX**: `Computed.listenerCount` now reports the number of subscribers instead of the number of dependencies. This also corrects `Resource`'s source cleanup, which uses `listenerCount` to decide whether to dispose a `Computed` passed as its `source`.
-- **FIX**: Disposing a `Computed` now unlinks all of its subscribers instead of only the first, so a disposed computed leaves no dangling links back to it.
+- **FIX**: Disposing a `Computed` now unlinks all of its subscribers instead of only the first (leaving no dangling links back to it) and offers each subscriber the chance to auto-dispose, matching signal disposal.
 - **REFACTOR**: `ReactiveSystem`, `reactiveSystem`, and the `MayDisposeDependencies` extension are no longer exported from the public `solidart.dart` barrel — they expose internal `alien_signals` types and are implementation detail. Sibling packages consume them via `package:solidart/solidart_internal.dart`.
 
 ## 2.8.6

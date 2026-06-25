@@ -10,15 +10,11 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
   final Computed<T> parent;
 
   void dispose() {
+    // `alien.stop` only unlinks the first subscriber, so unlink (and maybe
+    // auto-dispose) all of them first — mirroring ReadableSignal.dispose — then
+    // let `alien.stop` clear this node's deps and flags.
+    unlinkSubscribers();
     alien.stop(this);
-    // `alien.stop` unlinks this node's deps but only the first subscriber link
-    // (`unlink(subs, subs.sub)` once). Detach the remaining subscribers too, so
-    // a disposed computed leaves no dangling links back to it.
-    for (var link = subs; link != null;) {
-      final next = link.nextSub;
-      alien.unlink(link, link.sub);
-      link = next;
-    }
   }
 
   @override

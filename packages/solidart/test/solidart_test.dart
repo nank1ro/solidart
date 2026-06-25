@@ -815,6 +815,24 @@ void main() {
         expect(c.listenerCount, 0);
       });
 
+      test('disposing a computed auto-disposes its subscriber effects', () {
+        // Mirrors signal disposal: a subscriber left with no dependencies must
+        // auto-dispose. Disposing a Computed should offer each subscriber the
+        // same `_mayDispose` chance that disposing a Signal does.
+        final s = Signal(0);
+        final c = Computed(() => s.value, autoDispose: false);
+        final effect = Effect(() => c.value); // only depends on c
+        addTearDown(() {
+          s.dispose();
+          if (!effect.disposed) effect.dispose();
+        });
+
+        expect(effect.disposed, isFalse);
+
+        c.dispose();
+        expect(effect.disposed, isTrue);
+      });
+
       test('disposing a computed unlinks all of its subscribers', () {
         final s = Signal(0);
         final c = Computed(() => s.value, autoDispose: false);
