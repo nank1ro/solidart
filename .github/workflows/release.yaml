@@ -1,0 +1,34 @@
+name: Release to pub.dev (orchestrated)
+
+# One-click release: publishes every package whose pubspec version is not yet on
+# pub.dev, in dependency order, waiting for each to become available before
+# releasing its dependents. Already-published versions are skipped.
+#
+# Requires the `RELEASE_PAT` repo secret (a fine-grained PAT with Contents: write,
+# or a GitHub App token). Tags pushed by the default GITHUB_TOKEN do NOT trigger
+# the publish_*.yaml workflows, so a separate identity is required.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Log the planned releases without creating tags/releases"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history + tags
+
+      - name: Orchestrate pub.dev releases
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: bash scripts/release.sh
