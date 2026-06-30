@@ -10,6 +10,7 @@ workspace:
   - packages/solidart
   - packages/solidart_devtools_extension
   - packages/solidart_lint
+  - packages/solidart_lint/example
   - packages/solidart_hooks
   - packages/solidart_hooks/example
   - examples/counter

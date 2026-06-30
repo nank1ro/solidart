@@ -1,4 +1,4 @@
-// ignore_for_file: document_ignores, unreachable_from_main, discarded_futures
+// ignore_for_file: document_ignores, discarded_futures
 
 import 'dart:async';
 
@@ -7,30 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-
-// Used in Solid providers tests
-abstract class NameContainer {
-  const NameContainer(this.name);
-
-  final String name;
-
-  void dispose();
-}
-
-class MockNameContainer extends Mock implements NameContainer {
-  MockNameContainer(this.name);
-
-  @override
-  final String name;
-}
-
-@immutable
-class NumberContainer {
-  const NumberContainer(this.number);
-
-  final int number;
-}
 
 void main() {
   testWidgets('(Provider) Not found signal throws an error', (tester) async {
@@ -554,6 +530,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: ThemeData(splashFactory: NoSplash.splashFactory),
           home: Scaffold(
             body: ProviderScope(
               providers: [counterProvider],
@@ -614,6 +591,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: ThemeData(splashFactory: NoSplash.splashFactory),
           home: Scaffold(
             body: ProviderScope(
               providers: [
@@ -652,6 +630,7 @@ void main() {
     final counterProvider = Provider((_) => Signal(0));
     await tester.pumpWidget(
       MaterialApp(
+        theme: ThemeData(splashFactory: NoSplash.splashFactory),
         home: Scaffold(
           body: ProviderScope(
             providers: [
@@ -686,10 +665,12 @@ void main() {
   });
 
   testWidgets('(ArgProvider) Signal.updateValue method', (tester) async {
-    // ignore: avoid_types_on_closure_parameters
-    final counterProvider = Provider.withArgument((_, int n) => Signal(n));
+    final counterProvider = Provider.withArgument<Signal<int>, int>(
+      (_, n) => Signal(n),
+    );
     await tester.pumpWidget(
       MaterialApp(
+        theme: ThemeData(splashFactory: NoSplash.splashFactory),
         home: Scaffold(
           body: ProviderScope(
             providers: [
@@ -749,62 +730,55 @@ void main() {
   );
 
   group('Automatic disposal', () {
-    testWidgets(
-      'Signal autoDispose',
-      (tester) async {
+    // Run every case with the auto-dispose default ON and OFF: each reactive
+    // entity must dispose iff auto-dispose is enabled.
+    for (final autoDispose in [true, false]) {
+      testWidgets('Signal autoDispose=$autoDispose', (tester) async {
+        SolidartConfig.autoDispose = autoDispose;
+        addTearDown(() => SolidartConfig.autoDispose = false);
         final counter = Signal(0);
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                builder: (_, _) {
-                  return Text(counter.value.toString());
-                },
+                builder: (_, _) => Text(counter.value.toString()),
               ),
             ),
           ),
         );
         expect(counter.disposed, isFalse);
         await tester.pumpWidget(const SizedBox());
-        expect(counter.disposed, isTrue);
-      },
-      timeout: const Timeout(Duration(seconds: 1)),
-    );
+        expect(counter.disposed, autoDispose);
+      }, timeout: const Timeout(Duration(seconds: 1)));
 
-    testWidgets(
-      'ReadSignal autoDispose',
-      (tester) async {
+      testWidgets('ReadSignal autoDispose=$autoDispose', (tester) async {
+        SolidartConfig.autoDispose = autoDispose;
+        addTearDown(() => SolidartConfig.autoDispose = false);
         final counter = Signal(0).toReadSignal();
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                builder: (_, _) {
-                  return Text(counter.value.toString());
-                },
+                builder: (_, _) => Text(counter.value.toString()),
               ),
             ),
           ),
         );
         expect(counter.disposed, isFalse);
         await tester.pumpWidget(const SizedBox());
-        expect(counter.disposed, isTrue);
-      },
-      timeout: const Timeout(Duration(seconds: 1)),
-    );
+        expect(counter.disposed, autoDispose);
+      }, timeout: const Timeout(Duration(seconds: 1)));
 
-    testWidgets(
-      'Computed autoDispose',
-      (tester) async {
+      testWidgets('Computed autoDispose=$autoDispose', (tester) async {
+        SolidartConfig.autoDispose = autoDispose;
+        addTearDown(() => SolidartConfig.autoDispose = false);
         final counter = Signal(0);
         final doubleCounter = Computed(() => counter.value * 2);
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                builder: (_, _) {
-                  return Text(doubleCounter.value.toString());
-                },
+                builder: (_, _) => Text(doubleCounter.value.toString()),
               ),
             ),
           ),
@@ -812,24 +786,20 @@ void main() {
         expect(counter.disposed, isFalse);
         expect(doubleCounter.disposed, isFalse);
         await tester.pumpWidget(const SizedBox());
-        expect(counter.disposed, isTrue);
-        expect(doubleCounter.disposed, isTrue);
-      },
-      timeout: const Timeout(Duration(seconds: 1)),
-    );
+        expect(counter.disposed, autoDispose);
+        expect(doubleCounter.disposed, autoDispose);
+      }, timeout: const Timeout(Duration(seconds: 1)));
 
-    testWidgets(
-      'Effect autoDispose',
-      (tester) async {
+      testWidgets('Effect autoDispose=$autoDispose', (tester) async {
+        SolidartConfig.autoDispose = autoDispose;
+        addTearDown(() => SolidartConfig.autoDispose = false);
         final counter = Signal(0);
         final effect = Effect(() => counter.value);
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                builder: (_, _) {
-                  return Text(counter.value.toString());
-                },
+                builder: (_, _) => Text(counter.value.toString()),
               ),
             ),
           ),
@@ -838,65 +808,60 @@ void main() {
         expect(effect.disposed, isFalse);
         await tester.pumpWidget(const SizedBox());
         counter.dispose();
-        expect(effect.disposed, isTrue);
-      },
-      timeout: const Timeout(Duration(seconds: 1)),
-    );
+        expect(effect.disposed, autoDispose);
+      }, timeout: const Timeout(Duration(seconds: 1)));
 
-    testWidgets(
-      'Resource autoDispose',
-      (tester) async {
+      testWidgets('Resource autoDispose=$autoDispose', (tester) async {
+        SolidartConfig.autoDispose = autoDispose;
+        addTearDown(() => SolidartConfig.autoDispose = false);
         final r = Resource(() => Future.value(0));
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: SignalBuilder(
-                builder: (_, _) {
-                  return Text(r.state.toString());
-                },
+                builder: (_, _) => Text(r.state.toString()),
               ),
             ),
           ),
         );
         expect(r.disposed, isFalse);
         await tester.pumpWidget(const SizedBox());
-        expect(r.disposed, isTrue);
-      },
-      timeout: const Timeout(Duration(seconds: 1)),
-    );
-  });
+        expect(r.disposed, autoDispose);
+      }, timeout: const Timeout(Duration(seconds: 1)));
 
-  testWidgets(
-    'Effect with multiple dependencies autoDispose',
-    (tester) async {
-      final counter = Signal(0);
-      final doubleCounter = Computed(() => counter.value * 2);
-      final effect = Effect(() {
-        counter.value;
-        doubleCounter.value;
-      });
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SignalBuilder(
-              builder: (_, _) {
-                return Text(counter.value.toString());
-              },
+      testWidgets(
+        'Effect with multiple dependencies autoDispose=$autoDispose',
+        (tester) async {
+          SolidartConfig.autoDispose = autoDispose;
+          addTearDown(() => SolidartConfig.autoDispose = false);
+          final counter = Signal(0);
+          final doubleCounter = Computed(() => counter.value * 2);
+          final effect = Effect(() {
+            counter.value;
+            doubleCounter.value;
+          });
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: SignalBuilder(
+                  builder: (_, _) => Text(counter.value.toString()),
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+          expect(counter.disposed, isFalse);
+          expect(doubleCounter.disposed, isFalse);
+          expect(effect.disposed, isFalse);
+          await tester.pumpWidget(const SizedBox());
+          effect(); // explicit dispose
+          expect(effect.disposed, isTrue);
+          expect(counter.disposed, autoDispose);
+          expect(doubleCounter.disposed, autoDispose);
+        },
+        timeout: const Timeout(Duration(seconds: 1)),
       );
-      expect(counter.disposed, isFalse);
-      expect(doubleCounter.disposed, isFalse);
-      expect(effect.disposed, isFalse);
-      await tester.pumpWidget(const SizedBox());
-      effect();
-      expect(effect.disposed, isTrue);
-      expect(counter.disposed, isTrue);
-      expect(doubleCounter.disposed, isTrue);
-    },
-    timeout: const Timeout(Duration(seconds: 1)),
-  );
+    }
+  });
 
   testWidgets('SignalBuilder without dependencies throws an error', (
     tester,

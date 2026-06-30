@@ -3,6 +3,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 import 'package:solidart/solidart.dart';
+// `reactiveSystem` is internal solidart API, not part of the public barrel.
+import 'package:solidart/solidart_internal.dart';
 
 /// {@template signalbuilder}
 /// Reacts to the signals automatically found in the [builder] function.
@@ -83,9 +85,9 @@ class _SignalBuilderElement extends StatelessElement {
 
   @override
   Widget build() {
-    final prevSub = reactiveSystem.activeSub;
     // ignore: invalid_use_of_protected_member
-    final node = reactiveSystem.activeSub = effect.subscriber;
+    final node = effect.subscriber;
+    final prevSub = reactiveSystem.setCurrentSub(node);
 
     try {
       final built = super.build();
@@ -101,7 +103,7 @@ You can disable this check by setting `SolidartConfig.assertSignalBuilderWithout
 
       return built;
     } finally {
-      reactiveSystem.activeSub = prevSub;
+      reactiveSystem.setCurrentSub(prevSub);
     }
   }
 }

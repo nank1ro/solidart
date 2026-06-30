@@ -1,8 +1,9 @@
-// ignore_for_file: cascade_invocations, unreachable_from_main
+// ignore_for_file: cascade_invocations, invalid_use_of_protected_member
 
 import 'dart:async';
 import 'dart:math';
 
+import 'package:alien_signals/system.dart' as alien_system;
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
@@ -10,20 +11,6 @@ import 'package:solidart/src/core/core.dart';
 import 'package:solidart/src/extensions/until.dart';
 import 'package:solidart/src/utils.dart';
 import 'package:test/test.dart';
-
-sealed class MyEvent {}
-
-class MyEventA implements MyEvent {
-  MyEventA(this.value);
-
-  final int value;
-}
-
-class MyEventB implements MyEvent {
-  MyEventB(this.value);
-
-  final String value;
-}
 
 class MockCallbackFunction extends Mock {
   void call();
@@ -63,11 +50,6 @@ class User {
 
   @override
   String toString() => 'User(id: $id)';
-}
-
-class SampleList {
-  SampleList(this.numbers);
-  final List<int> numbers;
 }
 
 class MockSolidartObserver extends Mock implements SolidartObserver {}
@@ -337,6 +319,25 @@ void main() {
         expect(signal.hasValue, true);
       });
 
+      test('lazy nullable Signal notifies when initialized with null', () {
+        final signal = Signal<int?>.lazy();
+        var runs = 0;
+
+        final dispose = Effect(() {
+          signal.hasValue;
+          runs++;
+        });
+        addTearDown(dispose);
+
+        expect(runs, equals(1));
+        expect(signal.hasValue, false);
+
+        signal.value = null;
+
+        expect(signal.hasValue, true);
+        expect(runs, equals(2));
+      });
+
       test(
         '''lazy Signal trows StateError when accessing value before setting one''',
         () {
@@ -392,7 +393,7 @@ void main() {
 
       test("Check signal disposed isn't tracked by Computed", () {
         final count = Signal(1);
-        final doubleCount = Computed(() => count.value * 2);
+        final doubleCount = Computed(() => count.value * 2, autoDispose: true);
 
         expect(doubleCount.value, 2);
         expect(count.disposed, false);
@@ -457,7 +458,7 @@ void main() {
 
         signal1.value = 1;
         await pumpEventQueue();
-        verify(cb(1)).called(1);
+        verify(cb.call(1)).called(1);
         signal1.value = 2;
         await pumpEventQueue();
         verify(cb(2)).called(1);
@@ -552,17 +553,19 @@ void main() {
         expect(doubled.untrackedValue, 10);
       });
 
-      test('untrackedValue returns up-to-date value after dependency changes',
-          () {
-        final counter = Signal(5);
-        final doubled = Computed(() => counter.value * 2);
+      test(
+        'untrackedValue returns up-to-date value after dependency changes',
+        () {
+          final counter = Signal(5);
+          final doubled = Computed(() => counter.value * 2);
 
-        doubled.hasValue;
-        expect(doubled.untrackedValue, 10);
+          doubled.hasValue;
+          expect(doubled.untrackedValue, 10);
 
-        counter.value = 20;
-        expect(doubled.untrackedValue, 40);
-      });
+          counter.value = 20;
+          expect(doubled.untrackedValue, 40);
+        },
+      );
 
       test('untrackedValue asserts if accessed before computation', () {
         final counter = Signal(5);
@@ -634,6 +637,30 @@ void main() {
         count.value = null;
         await pumpEventQueue();
         expect(doubleCount.value, null);
+      });
+
+      test('custom comparator suppresses equivalent computed updates', () {
+        final count = Signal(1);
+        final parity = Computed(
+          () => count.value,
+          equals: false,
+          comparator: (previous, next) => previous?.isEven == next?.isEven,
+        );
+        var runs = 0;
+
+        final dispose = Effect(() {
+          parity.value;
+          runs++;
+        });
+        addTearDown(dispose);
+
+        expect(runs, equals(1));
+
+        count.value = 3;
+        expect(runs, equals(1));
+
+        count.value = 4;
+        expect(runs, equals(2));
       });
 
       test('derived signal disposes', () async {
@@ -737,6 +764,94 @@ void main() {
         expect(doubleCount.value, 2);
       });
 
+      test(
+        'computed with multiple sources is not prematurely auto-disposed '
+        '(regression #162)',
+        () {
+          final a = Signal(1);
+          final b = Signal(2);
+          final sum = Computed(() => a.value + b.value, autoDispose: true);
+
+          expect(sum.value, 3);
+
+          // Disposing ONE source must not auto-dispose the computed — it still
+          // depends on `b`. Previously a one-sided unlink in the signal's
+          // dispose corrupted the computed's dependency list, so it was
+          // disposed prematurely (worked around in apps with autoDispose:
+          // false).
+          a.dispose();
+          expect(sum.disposed, false);
+
+          // ...and it must keep reacting to the still-live source.
+          b.value = 10;
+          expect(sum.value, 11);
+
+          // Once every source is disposed, it finally auto-disposes.
+          b.dispose();
+          expect(sum.disposed, true);
+        },
+      );
+
+      test('listenerCount counts subscribers, not dependencies', () {
+        final a = Signal(1);
+        final b = Signal(2);
+        // A computed of two signals has 0 listeners until something observes
+        // it — listenerCount must reflect subscribers, not its dependency
+        // count (it previously returned the number of dependencies).
+        final c = Computed(() => a.value + b.value, autoDispose: false);
+        addTearDown(() {
+          c.dispose();
+          a.dispose();
+          b.dispose();
+        });
+        c.value; // materialize (establish dependencies)
+
+        expect(c.listenerCount, 0);
+
+        final stop = Effect(() => c.value);
+        expect(c.listenerCount, 1);
+
+        stop();
+        expect(c.listenerCount, 0);
+      });
+
+      test('disposing a computed auto-disposes its subscriber effects', () {
+        // Mirrors signal disposal: a subscriber left with no dependencies must
+        // auto-dispose. Disposing a Computed should offer each subscriber the
+        // same `_mayDispose` chance that disposing a Signal does.
+        final s = Signal(0);
+        final c = Computed(() => s.value, autoDispose: false);
+        final effect = Effect(() => c.value, autoDispose: true); // only on c
+        addTearDown(() {
+          s.dispose();
+          if (!effect.disposed) effect.dispose();
+        });
+
+        expect(effect.disposed, isFalse);
+
+        c.dispose();
+        expect(effect.disposed, isTrue);
+      });
+
+      test('disposing a computed unlinks all of its subscribers', () {
+        final s = Signal(0);
+        final c = Computed(() => s.value, autoDispose: false);
+        final e1 = Effect(() => c.value, autoDispose: false);
+        final e2 = Effect(() => c.value, autoDispose: false);
+        addTearDown(() {
+          e1.dispose();
+          e2.dispose();
+          s.dispose();
+        });
+
+        expect(c.listenerCount, 2);
+
+        c.dispose();
+        // Disposing must remove every subscriber link, not just the first one,
+        // so no subscriber is left holding a link to a disposed computed.
+        expect(c.listenerCount, 0);
+      });
+
       test('Check Computed do not autoDisposes if no longer used', () {
         final count = Signal(0);
         final doubleCount = Computed(() => count.value * 2, autoDispose: false);
@@ -758,6 +873,52 @@ void main() {
         count.value = 2;
         expect(doubleCount.value, 2);
       });
+
+      test('disposing a source signal fully unlinks its subscribers', () {
+        // Regression: ReadableSignal.dispose must unlink subscribers on BOTH
+        // sides of each link, so a later write to the disposed signal cannot
+        // propagate into a computed whose dependency list was already cleared.
+        // Before the two-sided-unlink fix this left the computed `pending` with
+        // `deps == null` and crashed `getComputedValue` (it needed a guard).
+        final count = Signal(0);
+        final doubled = Computed(() => count.value * 2, autoDispose: false);
+        addTearDown(doubled.dispose);
+
+        expect(doubled.value, 0); // establishes the count <-> doubled link
+
+        count.dispose();
+        // A post-dispose write must not throw and must not corrupt the
+        // computed.
+        count.value = 5;
+        expect(doubled.value, 0);
+      });
+
+      test(
+        'disposing a signal unlinks its subscribers even with auto-dispose off',
+        () {
+          // dispose() means destroy: it must unlink from every subscriber
+          // regardless of SolidartConfig.autoDispose (matching Effect.dispose
+          // and Computed.dispose, which never gate teardown on the global
+          // flag).
+          final previousAutoDispose = SolidartConfig.autoDispose;
+          addTearDown(() => SolidartConfig.autoDispose = previousAutoDispose);
+          SolidartConfig.autoDispose = false;
+
+          final count = Signal(1);
+          final doubled = Computed(() => count.value * 2);
+          addTearDown(doubled.dispose);
+
+          expect(doubled.value, 2);
+          expect(count.listenerCount, 1); // doubled subscribes to count
+
+          count.dispose();
+          // fully unlinked: nothing is left holding a link to the disposed
+          // signal, so a later write to it cannot reach the computed.
+          expect(count.listenerCount, 0);
+          count.value = 5;
+          expect(doubled.value, 2);
+        },
+      );
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
@@ -793,6 +954,19 @@ void main() {
   group(
     'Resource tests',
     () {
+      test(
+        'disposing a Resource disposes an auto-dispose source with no '
+        'remaining listeners',
+        () {
+          // Covers the source-disposal branch of Resource.dispose: an
+          // `autoDispose` source left without listeners is disposed too.
+          final source = Signal(1, autoDispose: true);
+          final r = Resource(() async => 'x', source: source);
+          r.dispose();
+          expect(source.disposed, isTrue);
+        },
+      );
+
       test('check Resource with stream', () async {
         final streamController = StreamController<int>();
         addTearDown(streamController.close);
@@ -2106,6 +2280,131 @@ void main() {
           b.value = 0;
         });
       });
+
+      test('computed child effects do not accumulate across recomputes', () {
+        // `source > 0` creates a child Effect during the computation. Every
+        // recompute must leave exactly one live child (the freshly-created
+        // one); stale children from previous runs must not keep reacting.
+        // (Note: this asserts the observable end-state. The internal ordering
+        // guarantee — disposal BEFORE the selector re-runs, via the
+        // `_hasChildEffect` flag — is not observable through run counts because
+        // `purgeDeps` + the `unwatched` callback also dispose stale children
+        // after a recompute.)
+        final source = Signal(1);
+        final child = Signal(0);
+        var childRuns = 0;
+
+        final computed = Computed(() {
+          final s = source.value;
+          if (s > 0) {
+            Effect(() {
+              child.value;
+              childRuns++;
+            });
+          }
+          return s;
+        });
+
+        addTearDown(() {
+          computed.dispose();
+          source.dispose();
+          child.dispose();
+        });
+
+        expect(computed.value, 1);
+        expect(childRuns, equals(1));
+
+        // The single live child reacts to its own dependency.
+        child.value++;
+        expect(childRuns, equals(2));
+
+        // Recompute while still creating a child: the previous child must be
+        // disposed first, so only the freshly-created one survives.
+        source.value = 2;
+        expect(computed.value, 2);
+        expect(childRuns, equals(3));
+
+        // If the old child were NOT disposed before the recompute, both would
+        // react here and childRuns would be 5.
+        child.value++;
+        expect(childRuns, equals(4));
+
+        // Recompute into the branch that creates no child: the live child from
+        // the previous run is disposed before the selector runs again, so a
+        // later write reaches nobody.
+        source.value = 0;
+        expect(computed.value, 0);
+
+        child.value++;
+        expect(childRuns, equals(4));
+      });
+
+      test(
+        'reactive system compatibility helpers delegate to alien runtime',
+        () {
+          final signal = Signal(0);
+          var effectRuns = 0;
+          final effect = Effect(
+            () {
+              signal.value;
+              effectRuns++;
+            },
+            autorun: false,
+            autoDispose: false,
+          );
+
+          final previousSub = reactiveSystem.setCurrentSub(null);
+          addTearDown(() {
+            reactiveSystem.setCurrentSub(previousSub);
+            effect.dispose();
+            signal.dispose();
+          });
+
+          expect(reactiveSystem.batchDepth, equals(0));
+          // setCurrentSub returns the previously-active sub (save/restore).
+          final prevFromEffect = reactiveSystem.setCurrentSub(
+            effect.subscriber,
+          );
+          expect(prevFromEffect, isNull);
+          expect(reactiveSystem.activeSub, same(effect.subscriber));
+          final prevFromNull = reactiveSystem.setCurrentSub(null);
+          expect(prevFromNull, same(effect.subscriber));
+
+          effect.run();
+          expect(effectRuns, equals(1));
+
+          effect.subscriber.flags |= alien_system.ReactiveFlags.dirty;
+          reactiveSystem.runEffect(effect.subscriber);
+          expect(effectRuns, equals(2));
+
+          final subs = effect.subscriber.deps!.dep.subs;
+          expect(subs, isNotNull);
+
+          reactiveSystem.startBatch();
+          expect(reactiveSystem.batchDepth, equals(1));
+          try {
+            signal.value++;
+            // Inside a batch the queued effect must not flush yet.
+            expect(effectRuns, equals(2));
+            // propagate() is idempotent on an already-queued subscriber.
+            reactiveSystem.propagate(subs!);
+            expect(effectRuns, equals(2));
+
+            // flush() is what actually drains the queue and runs the effect.
+            reactiveSystem.flush();
+            expect(effectRuns, equals(3));
+          } finally {
+            reactiveSystem.endBatch();
+          }
+          expect(reactiveSystem.batchDepth, equals(0));
+          expect(effectRuns, equals(3));
+
+          final runsAfterFlush = effectRuns;
+          reactiveSystem.stopEffect(effect.subscriber);
+          signal.value++;
+          expect(effectRuns, equals(runsAfterFlush));
+        },
+      );
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );

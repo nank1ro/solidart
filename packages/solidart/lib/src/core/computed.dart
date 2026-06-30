@@ -132,7 +132,7 @@ class Computed<T> extends ReadSignal<T> {
     return true;
   }
 
-  final _deps = <alien.ReactiveNode>{};
+  final _deps = <alien_system.ReactiveNode>{};
 
   @override
   void dispose() {
@@ -230,10 +230,8 @@ class Computed<T> extends ReadSignal<T> {
     return _hasPreviousValue;
   }
 
-  // coverage:ignore-start
   @override
-  int get listenerCount => _deps.length;
-  // coverage:ignore-end
+  int get listenerCount => _internalComputed.subscriberCount;
 
   @override
   void onDispose(VoidCallback cb) {
@@ -260,7 +258,7 @@ class Computed<T> extends ReadSignal<T> {
   /// However, in some cases, you may want to force an update.
   void run() {
     if (_disposed) return;
-    _internalComputed.update();
+    _internalComputed.didUpdate();
   }
 
   @override

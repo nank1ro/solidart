@@ -3,17 +3,49 @@
 // Reactive flags map: https://github.com/medz/alien-signals-dart/blob/main/flags.md
 part of 'core.dart';
 
-extension MayDisposeDependencies on alien.ReactiveNode {
-  Iterable<alien.ReactiveNode> getDependencies() {
+// alien_signals' internal `hasChildEffect` flag (value 64) is deliberately
+// hidden from its public barrel exports (`preset.dart` hides it). We redeclare
+// it here so the reactive adapter can test and set this bit without reaching
+// into unpublished internals. If the upstream value ever changes, the adjacent
+// link in alien/src/preset.dart → `const hasChildEffect = 64` should be
+// cross-checked.
+const _hasChildEffect = 64 as alien_system.ReactiveFlags;
+
+extension MayDisposeDependencies on alien_system.ReactiveNode {
+  Iterable<alien_system.ReactiveNode> getDependencies() {
     var link = deps;
-    final foundDeps = <alien.ReactiveNode>{};
+    final foundDeps = <alien_system.ReactiveNode>{};
     for (; link != null; link = link.nextDep) {
       foundDeps.add(link.dep);
     }
     return foundDeps;
   }
 
-  void mayDisposeDependencies([Iterable<alien.ReactiveNode>? include]) {
+  /// The number of subscribers currently observing this node.
+  int get subscriberCount {
+    var count = 0;
+    for (var link = subs; link != null; link = link.nextSub) {
+      count++;
+    }
+    return count;
+  }
+
+  /// Unlinks every subscriber from this node, offering each the same
+  /// `_mayDispose` chance a disposed dependency triggers. Used when a signal or
+  /// computed is disposed — `alien.stop` only unlinks the first subscriber.
+  void unlinkSubscribers() {
+    var link = subs;
+    while (link != null) {
+      final next = link.nextSub;
+      final sub = link.sub;
+      alien.unlink(link, sub);
+      if (sub is _AlienEffect) sub.parent._mayDispose();
+      if (sub is _AlienComputed) sub.parent._mayDispose();
+      link = next;
+    }
+  }
+
+  void mayDisposeDependencies([Iterable<alien_system.ReactiveNode>? include]) {
     final dependencies = {...getDependencies(), ...?include};
     for (final dep in dependencies) {
       switch (dep) {
@@ -46,158 +78,71 @@ class ReactiveName {
 @protected
 final reactiveSystem = ReactiveSystem();
 
-class ReactiveSystem extends alien.ReactiveSystem {
-  int batchDepth = 0;
-  alien.ReactiveNode? activeSub;
-  _AlienEffect? queuedEffects;
-  _AlienEffect? queuedEffectsTail;
+class ReactiveSystem {
+  int get batchDepth => alien.getBatchDepth();
 
-  @override
-  void notify(alien.ReactiveNode node) {
-    final flags = node.flags;
-    if ((flags & 64 /* Queued */ ) == 0) {
-      node.flags = flags | 64 /* Queued */;
-      final subs = node.subs;
-      if (subs != null) {
-        notify(subs.sub);
-      } else if (queuedEffectsTail != null) {
-        queuedEffectsTail = queuedEffectsTail!.nextEffect =
-            node as _AlienEffect;
-      } else {
-        queuedEffectsTail = queuedEffects = node as _AlienEffect;
-      }
-    }
+  alien_system.ReactiveNode? get activeSub => alien.getActiveSub();
+
+  // Use setCurrentSub when you need save/restore (returns previous sub).
+  // The getter above is provided for read-only inspection.
+  alien_system.ReactiveNode? setCurrentSub(alien_system.ReactiveNode? sub) {
+    return alien.setActiveSub(sub);
   }
 
-  @override
-  void unwatched(alien.ReactiveNode node) {
-    if (node is _AlienComputed) {
-      var toRemove = node.deps;
-      if (toRemove != null) {
-        node.flags = 17 /* Mutable | Dirty */;
-        do {
-          toRemove = unlink(toRemove!, node);
-        } while (toRemove != null);
-      }
-    } else if (node is! _AlienSignal) {
-      stopEffect(node);
-    }
-  }
+  void startBatch() => alien.startBatch();
 
-  @override
-  bool update(alien.ReactiveNode node) {
-    assert(
-      node is _AlienUpdatable,
-      'Reactive node type must be signal or computed',
-    );
-    return (node as _AlienUpdatable).update();
-  }
+  void endBatch() => alien.endBatch();
 
-  void startBatch() => ++batchDepth;
-  void endBatch() {
-    if ((--batchDepth) == 0) flush();
-  }
-
-  alien.ReactiveNode? setCurrentSub(alien.ReactiveNode? sub) {
-    final prevSub = activeSub;
-    activeSub = sub;
-    return prevSub;
+  void link(alien_system.ReactiveNode dep, alien_system.ReactiveNode sub) {
+    alien.link(dep, sub, alien.cycle);
   }
 
   T getComputedValue<T>(_AlienComputed<T> computed) {
-    final flags = computed.flags;
-    if ((flags & 16 /* Dirty */ ) != 0 ||
-        ((flags & 32 /* Pending */ ) != 0 &&
-            computed.deps != null &&
-            checkDirty(computed.deps!, computed))) {
-      if (computed.update()) {
-        final subs = computed.subs;
-        if (subs != null) shallowPropagate(subs);
-      }
-    } else if ((flags & 32 /* Pending */ ) != 0) {
-      computed.flags = flags & -33 /* ~Pending */;
-    }
-    if (activeSub != null) {
-      link(computed, activeSub!);
-    }
-
-    return computed.value as T;
+    // Invariant: a computed is never `pending` while detached from the graph
+    // (`deps == null`). `pending` is only set by `propagate`, which reaches a
+    // node through the very dependency links that make `deps` non-null, and
+    // every teardown path (recompute / unwatch / stop / signal dispose) either
+    // clears `pending` or fully unlinks the node. If this ever fires, a code
+    // path is leaving a half-linked node (e.g. a one-sided unlink), which would
+    // otherwise crash in upstream `ComputedNode.get()` via `checkDirty(deps!)`.
+    assert(
+      computed.deps != null ||
+          (computed.flags & alien_system.ReactiveFlags.pending) ==
+              alien_system.ReactiveFlags.none,
+      'computed is pending while detached (deps == null) — a subscriber link '
+      'was not fully unlinked',
+    );
+    return computed.get();
   }
 
   Option<T> getSignalValue<T>(_AlienSignal<T> signal) {
-    final value = signal.value;
-    if ((signal.flags & 16 /* Dirty */ ) != 0) {
-      if (signal.update()) {
-        final subs = signal.subs;
-        if (subs != null) shallowPropagate(subs);
-      }
-    }
-
-    if (activeSub != null) link(signal, activeSub!);
-    return value;
+    return signal.get();
   }
 
   void setSignalValue<T>(_AlienSignal<T> signal, Option<T> value) {
-    if (signal.value != (signal.value = value)) {
-      signal.flags = 17 /* Mutable | Dirty */;
-      final subs = signal.subs;
-      if (subs != null) {
-        propagate(subs);
-        if (batchDepth == 0) flush();
-      }
-    }
+    signal.set(value);
   }
 
-  void stopEffect(alien.ReactiveNode effect) {
-    assert(effect is! _AlienSignal, 'Reactive node type not matched');
-    var dep = effect.deps;
-    while (dep != null) {
-      dep = unlink(dep, effect);
-    }
-
-    final sub = effect.subs;
-    if (sub != null) unlink(sub, effect);
-    effect.flags = 0 /* None */;
+  void stopEffect(alien_system.ReactiveNode effect) {
+    alien.stop(effect);
   }
 
-  void run(alien.ReactiveNode effect, int flags) {
-    if ((flags & 16 /* Dirty */ ) != 0 ||
-        ((flags & 32 /* Pending */ ) != 0 &&
-            effect.deps != null &&
-            checkDirty(effect.deps!, effect))) {
-      final prevSub = setCurrentSub(effect);
-      startTracking(effect);
-      try {
-        (effect as _AlienEffect).run();
-      } finally {
-        activeSub = prevSub;
-        endTracking(effect);
-      }
-      return;
-    } else if ((flags & 32 /* Pending */ ) != 0) {
-      effect.flags = flags & -33 /* ~Pending */;
-    }
-    var link = effect.deps;
-    while (link != null) {
-      final dep = link.dep;
-      final depFlags = dep.flags;
-      if ((depFlags & 64 /* Queued */ ) != 0) {
-        run(dep, dep.flags = depFlags & -65 /* ~Queued */);
-      }
-      link = link.nextDep;
-    }
+  // The parameter is `ReactiveNode` rather than `_AlienEffect` only because
+  // `_AlienEffect` is library-private and test callers receive it via the
+  // `Effect.subscriber` getter (typed as `ReactiveNode`). At runtime every
+  // legitimate caller passes an `_AlienEffect`; the assertion below catches
+  // misuse in debug mode.
+  void runEffect(alien_system.ReactiveNode effect) {
+    assert(
+      effect is _AlienEffect,
+      'runEffect must be called with an _AlienEffect',
+    );
+    alien.run(effect as _AlienEffect);
   }
 
-  void flush() {
-    while (queuedEffects != null) {
-      final effect = queuedEffects!;
-      if ((queuedEffects = effect.nextEffect) != null) {
-        effect.nextEffect = null;
-      } else {
-        queuedEffectsTail = null;
-      }
-
-      run(effect, effect.flags &= -65 /* ~Queued */);
-    }
+  void propagate(alien_system.Link link) {
+    alien.propagate(link, alien.runDepth > 0);
   }
+
+  void flush() => alien.flush();
 }

@@ -224,26 +224,35 @@ class Resource<T> extends Signal<ResourceState<T>> {
   set state(ResourceState<T> state) => super.value = state;
 
   // coverage:ignore-start
+  // These deprecated aliases are load-bearing (they route through `state`,
+  // which triggers the resolution `until`/`untilReady` rely on), so they can't
+  // be removed for the 3.0 breaking version yet.
+  // ignore: remove_deprecations_in_breaking_versions
   @Deprecated('Use state instead')
   @override
   ResourceState<T> get value => state;
 
+  // ignore: remove_deprecations_in_breaking_versions
   @Deprecated('Use state instead')
   @override
   set value(ResourceState<T> value) => state = value;
 
+  // ignore: remove_deprecations_in_breaking_versions
   @Deprecated('Use previousState instead')
   @override
   ResourceState<T>? get previousValue => previousState;
 
+  // ignore: remove_deprecations_in_breaking_versions
   @Deprecated('Use untrackedState instead')
   @override
   ResourceState<T> get untrackedValue => untrackedState;
 
+  // ignore: remove_deprecations_in_breaking_versions
   @Deprecated('Use untrackedPreviousState instead')
   @override
   ResourceState<T>? get untrackedPreviousValue => untrackedPreviousState;
 
+  // ignore: remove_deprecations_in_breaking_versions
   @Deprecated('Use update instead')
   @override
   ResourceState<T> updateValue(
@@ -748,6 +757,7 @@ extension ResourceExtensions<T> on ResourceState<T> {
   /// Performs an action based on the state of the [ResourceState].
   ///
   /// All cases are required.
+  // ignore: remove_deprecations_in_breaking_versions
   @Deprecated('Use when instead')
   R on<R>({
     required R Function(T data) ready,
@@ -774,6 +784,7 @@ extension ResourceExtensions<T> on ResourceState<T> {
 
   /// Performs an action based on the state of the [ResourceState], or call
   /// [orElse] if the current state is not considered.
+  // ignore: remove_deprecations_in_breaking_versions
   @Deprecated('Use maybeWhen instead')
   R maybeOn<R>({
     required R Function() orElse,

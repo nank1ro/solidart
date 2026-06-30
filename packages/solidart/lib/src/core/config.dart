@@ -8,9 +8,10 @@ abstract class SolidartConfig {
   /// false
   static bool equals = false;
 
-  /// Whether to enable the auto disposal of the reactive system, defaults to
-  /// true.
-  static bool autoDispose = true;
+  /// Whether to enable the auto disposal of the reactive system. Defaults to
+  /// `false` since v3 — auto-dispose is opt-in. Set it to `true` (globally, or
+  /// per signal/computed/effect via the `autoDispose` parameter) to enable it.
+  static bool autoDispose = false;
 
   /// Whether to enable the DevTools extension, defaults to false.
   static bool devToolsEnabled = false;

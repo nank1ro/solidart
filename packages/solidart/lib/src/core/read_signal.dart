@@ -137,17 +137,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
       );
     }
     _reportObserved();
-    final value = reactiveSystem.getSignalValue(_internalSignal).unwrap();
-
-    if (autoDispose) {
-      _subs.clear();
-
-      var link = _internalSignal.subs;
-      for (; link != null; link = link.nextSub) {
-        _subs.add(link.sub);
-      }
-    }
-    return value;
+    return reactiveSystem.getSignalValue(_internalSignal).unwrap();
   }
 
   late T _untrackedValue;
@@ -258,9 +248,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   /// Returns the number of listeners listening to this signal.
   @override
-  int get listenerCount => _subs.length;
-
-  final _subs = <alien.ReactiveNode>{};
+  int get listenerCount => _internalSignal.subscriberCount;
 
   @override
   void dispose() {
@@ -273,32 +261,12 @@ class ReadableSignal<T> implements ReadSignal<T> {
       reactiveSystem.getSignalValue(_internalSignal);
     });
 
-    if (SolidartConfig.autoDispose) {
-      for (final sub in _subs) {
-        if (sub is _AlienEffect) {
-          if (sub.deps?.dep == _internalSignal) {
-            sub.deps = null;
-          }
-          if (sub.depsTail?.dep == _internalSignal) {
-            sub.depsTail = null;
-          }
-
-          sub.parent._mayDispose();
-        }
-        if (sub is _AlienComputed) {
-          // coverage:ignore-start
-          if (sub.deps?.dep == _internalSignal) {
-            sub.deps = null;
-          }
-          if (sub.depsTail?.dep == _internalSignal) {
-            sub.depsTail = null;
-          }
-          // coverage:ignore-end
-          sub.parent._mayDispose();
-        }
-      }
-      _subs.clear();
-    }
+    // Fully unlink every subscriber from this signal — dispose means destroy,
+    // so this runs regardless of `SolidartConfig.autoDispose` (matching
+    // Effect.dispose and Computed.dispose). This removes each link from BOTH
+    // sides, so a later write to the disposed signal can no longer propagate
+    // into a subscriber whose deps were torn down.
+    _internalSignal.unlinkSubscribers();
 
     for (final cb in _onDisposeCallbacks) {
       cb();
@@ -337,7 +305,8 @@ class ReadableSignal<T> implements ReadSignal<T> {
   /// use [reactiveSystem.setSignalValue] instead.
   void _reportChanged() {
     _internalSignal.forceDirty = true;
-    _internalSignal.flags = 17 /* Mutable | Dirty */;
+    _internalSignal.flags =
+        alien_system.ReactiveFlags.mutable | alien_system.ReactiveFlags.dirty;
     final subs = _internalSignal.subs;
     if (subs != null) {
       // coverage:ignore-start
@@ -351,7 +320,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   /// Indicates if the signal should update its value.
   bool shouldUpdate() {
-    return _internalSignal.update();
+    return _internalSignal.didUpdate();
   }
 
   @override
