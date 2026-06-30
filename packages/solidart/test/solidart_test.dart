@@ -954,6 +954,19 @@ void main() {
   group(
     'Resource tests',
     () {
+      test(
+        'disposing a Resource disposes an auto-dispose source with no '
+        'remaining listeners',
+        () {
+          // Covers the source-disposal branch of Resource.dispose: an
+          // `autoDispose` source left without listeners is disposed too.
+          final source = Signal(1, autoDispose: true);
+          final r = Resource(() async => 'x', source: source);
+          r.dispose();
+          expect(source.disposed, isTrue);
+        },
+      );
+
       test('check Resource with stream', () async {
         final streamController = StreamController<int>();
         addTearDown(streamController.close);
