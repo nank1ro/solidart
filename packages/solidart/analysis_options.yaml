@@ -4,10 +4,6 @@ analyzer:
     discarded_futures: ignore
     document_ignores: ignore
     prefer_foreach: ignore
-    # Resource's deprecated value/previousState/on/maybeOn aliases are
-    # load-bearing (they route through `state`, which triggers resolution that
-    # `until`/`untilReady` depend on), so they can't be removed in 3.0 yet.
-    remove_deprecations_in_breaking_versions: ignore
 include: package:very_good_analysis/analysis_options.yaml
 
 linter:
