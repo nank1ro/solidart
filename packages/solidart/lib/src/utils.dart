@@ -1,3 +1,4 @@
+// coverage:ignore-file
 import 'dart:async';
 
 import 'package:listen/listen.dart';
@@ -176,5 +177,3 @@ abstract class Debouncer {
     return _operations.length;
   }
 }
-
-/// coverage:ignore-end
