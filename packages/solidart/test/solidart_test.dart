@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:alien_signals/system.dart' as alien_system;
 import 'package:collection/collection.dart';
+import 'package:listen/listen.dart';
 import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
 import 'package:solidart/src/core/core.dart';
@@ -2408,6 +2409,114 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
+
+  group('ValueListenable / ValueNotifier (listen)', () {
+    test('Signal is a ValueNotifier', () {
+      final signal = Signal(0);
+      expect(signal, isA<ValueNotifier<int>>());
+      expect(signal.value, 0);
+      var notifiedValue = -1;
+      void listener() => notifiedValue = signal.value;
+
+      signal.addListener(listener);
+      signal.value = 1;
+      expect(notifiedValue, 1);
+      signal.removeListener(listener);
+      signal.value = 2;
+      expect(notifiedValue, 1); // Not updated since listener was removed
+      signal.dispose();
+    });
+
+    test('notifyListeners tolerates a listener removing itself', () {
+      final signal = Signal(0, autoDispose: false);
+      var calls = 0;
+      late void Function() self;
+      self = () {
+        calls++;
+        signal.removeListener(self);
+      };
+
+      signal.addListener(self);
+      signal.notifyListeners(); // must not throw ConcurrentModificationError
+      expect(calls, 1);
+      expect(signal.hasListeners, isFalse);
+      signal.dispose();
+    });
+
+    test('Signal hasListeners and notifyListeners', () {
+      final signal = Signal(0);
+      expect(signal.hasListeners, isFalse);
+      var count = 0;
+      void listener() => count++;
+
+      signal.addListener(listener);
+      expect(signal.hasListeners, isTrue);
+      signal.notifyListeners();
+      expect(count, 1);
+      signal.removeListener(listener);
+      expect(signal.hasListeners, isFalse);
+      signal.dispose();
+    });
+
+    test('ReadableSignal is a ValueListenable', () {
+      final signal = Signal(0).toReadSignal();
+      expect(signal, isA<ValueListenable<int>>());
+      expect(signal.value, 0);
+      var notifiedValue = -1;
+      void listener() => notifiedValue = signal.value;
+
+      signal.addListener(listener);
+      signal.dispose(); // Dispose before changing value to test cleanup
+      expect(notifiedValue, -1); // Not updated since value didn't change
+      signal.removeListener(listener);
+    });
+
+    test('Computed is a ValueListenable', () {
+      final baseSignal = Signal(1);
+      final computed = Computed(() => baseSignal.value * 2);
+      expect(computed, isA<ValueListenable<int>>());
+      expect(computed.value, 2);
+      var notifiedValue = -1;
+      void listener() => notifiedValue = computed.value;
+
+      computed.addListener(listener);
+      baseSignal.value = 2;
+      expect(notifiedValue, 4);
+      computed.removeListener(listener);
+      baseSignal.value = 3;
+      expect(notifiedValue, 4); // Not updated since listener was removed
+      computed.dispose();
+      baseSignal.dispose();
+    });
+
+    test('Resource is a ValueNotifier', () {
+      final r = Resource(() => Future.value(0));
+      expect(r, isA<ValueNotifier<ResourceState<int>>>());
+      r.dispose();
+    });
+
+    test('addListener keeps an autoDispose signal alive; removeListener '
+        'disposes it once no listeners remain', () {
+      final signal = Signal(0, autoDispose: true);
+      void listener() {}
+
+      signal.addListener(listener);
+      expect(signal.disposed, isFalse);
+      signal.removeListener(listener);
+      expect(signal.disposed, isTrue);
+    });
+
+    test('a non-autoDispose signal stays active after listeners are removed',
+        () {
+      final signal = Signal(0);
+      void listener() {}
+
+      signal.addListener(listener);
+      signal.removeListener(listener);
+      expect(signal.disposed, isFalse);
+      signal.dispose();
+    });
+  });
 }
 
 class _AlwaysZeroRandom implements Random {

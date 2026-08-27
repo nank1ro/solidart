@@ -7,6 +7,9 @@ import 'dart:math';
 import 'package:alien_signals/preset.dart' as alien;
 import 'package:alien_signals/system.dart' as alien_system;
 import 'package:collection/collection.dart';
+// `ErrorCallback` is hidden because solidart declares its own (with a
+// different signature) in `src/utils.dart`.
+import 'package:listen/listen.dart' hide ErrorCallback;
 import 'package:meta/meta.dart';
 import 'package:solidart/src/extensions/until.dart';
 import 'package:solidart/src/utils.dart';
