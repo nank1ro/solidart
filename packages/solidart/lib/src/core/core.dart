@@ -28,5 +28,6 @@ part 'read_signal.dart';
 part 'resource.dart';
 part 'signal.dart';
 part 'signal_base.dart';
+part 'signal_listeners.dart';
 part 'extensions.dart';
 part 'untracked.dart';

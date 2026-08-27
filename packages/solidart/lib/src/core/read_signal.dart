@@ -250,23 +250,13 @@ class ReadableSignal<T> implements ReadSignal<T>, ValueListenable<T> {
   @override
   int get listenerCount => _internalSignal.subscriberCount;
 
-  // Maps each [ValueListenable] listener to the observation that drives it.
-  final _listeners = <VoidCallback, DisposeObservation>{};
-
-  /// Whether [addListener] callbacks fire immediately when added.
-  bool get fireImmediately => false;
+  late final _listeners = _SignalListeners<T>(this);
 
   @override
-  void addListener(VoidCallback listener) {
-    _listeners.putIfAbsent(listener, () {
-      return observe((_, _) => listener(), fireImmediately: fireImmediately);
-    });
-  }
+  void addListener(VoidCallback listener) => _listeners.add(listener);
 
   @override
-  void removeListener(VoidCallback listener) {
-    _listeners.remove(listener)?.call();
-  }
+  void removeListener(VoidCallback listener) => _listeners.remove(listener);
 
   @override
   void dispose() {
@@ -291,10 +281,7 @@ class ReadableSignal<T> implements ReadSignal<T>, ValueListenable<T> {
     }
     _onDisposeCallbacks.clear();
 
-    for (final cleanup in _listeners.values) {
-      cleanup();
-    }
-    _listeners.clear();
+    _listeners.dispose();
 
     _notifySignalDisposal();
   }

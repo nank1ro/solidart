@@ -155,16 +155,10 @@ class Signal<T> extends ReadableSignal<T> implements ValueNotifier<T> {
   set value(T newValue) => setValue(newValue);
 
   @override
-  bool get hasListeners => _listeners.isNotEmpty;
+  bool get hasListeners => _listeners.hasListeners;
 
   @override
-  void notifyListeners() {
-    // Snapshot the listeners so a listener that adds/removes a listener while
-    // being notified does not trigger a ConcurrentModificationError.
-    for (final listener in _listeners.keys.toList()) {
-      listener();
-    }
-  }
+  void notifyListeners() => _listeners.notify();
 
   /// Calls a function with the current value and assigns the result as the
   /// new value.
