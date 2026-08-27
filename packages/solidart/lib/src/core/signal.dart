@@ -101,7 +101,7 @@ part of 'core.dart';
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-class Signal<T> extends ReadableSignal<T> {
+class Signal<T> extends ReadableSignal<T> implements ValueNotifier<T> {
   /// {@macro signal}
   Signal(
     super.initialValue, {
@@ -151,7 +151,14 @@ class Signal<T> extends ReadableSignal<T> {
   }) : super.lazy();
 
   /// {@macro set-signal-value}
+  @override
   set value(T newValue) => setValue(newValue);
+
+  @override
+  bool get hasListeners => _listeners.hasListeners;
+
+  @override
+  void notifyListeners() => _listeners.notify();
 
   /// Calls a function with the current value and assigns the result as the
   /// new value.

@@ -1,10 +1,8 @@
+// coverage:ignore-file
 import 'dart:async';
 
+import 'package:listen/listen.dart';
 import 'package:meta/meta.dart';
-
-/// coverage:ignore-start
-/// Signature of callbacks that have no arguments and return no data.
-typedef VoidCallback = void Function();
 
 /// Error callback
 typedef ErrorCallback = void Function(Object error);
@@ -179,5 +177,3 @@ abstract class Debouncer {
     return _operations.length;
   }
 }
-
-/// coverage:ignore-end

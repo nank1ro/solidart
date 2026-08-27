@@ -23,7 +23,7 @@ abstract class ReadSignal<T> extends SignalBase<T> {
 /// All derived-signals are [ReadableSignal]s because they depend
 /// on the value of a [Signal].
 /// {@endtemplate}
-class ReadableSignal<T> implements ReadSignal<T> {
+class ReadableSignal<T> implements ReadSignal<T>, ValueListenable<T> {
   /// {@macro readsignal}
   ReadableSignal(
     T initialValue, {
@@ -250,6 +250,14 @@ class ReadableSignal<T> implements ReadSignal<T> {
   @override
   int get listenerCount => _internalSignal.subscriberCount;
 
+  late final _listeners = _SignalListeners<T>(this);
+
+  @override
+  void addListener(VoidCallback listener) => _listeners.add(listener);
+
+  @override
+  void removeListener(VoidCallback listener) => _listeners.remove(listener);
+
   @override
   void dispose() {
     // ignore if already disposed
@@ -272,6 +280,9 @@ class ReadableSignal<T> implements ReadSignal<T> {
       cb();
     }
     _onDisposeCallbacks.clear();
+
+    _listeners.dispose();
+
     _notifySignalDisposal();
   }
 

@@ -50,7 +50,7 @@ part of 'core.dart';
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-class Computed<T> extends ReadSignal<T> {
+class Computed<T> extends ReadSignal<T> implements ValueListenable<T> {
   /// {@macro computed}
   Computed(
     this.selector, {
@@ -151,6 +151,9 @@ class Computed<T> extends ReadSignal<T> {
       cb();
     }
     _onDisposeCallbacks.clear();
+
+    _listeners.dispose();
+
     _notifySignalDisposal();
   }
 
@@ -232,6 +235,14 @@ class Computed<T> extends ReadSignal<T> {
 
   @override
   int get listenerCount => _internalComputed.subscriberCount;
+
+  late final _listeners = _SignalListeners<T>(this);
+
+  @override
+  void addListener(VoidCallback listener) => _listeners.add(listener);
+
+  @override
+  void removeListener(VoidCallback listener) => _listeners.remove(listener);
 
   @override
   void onDispose(VoidCallback cb) {
