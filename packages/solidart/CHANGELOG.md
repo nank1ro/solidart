@@ -1,3 +1,8 @@
+## 3.0.0-dev.2
+
+- **FEAT**: `Signal`, `ReadableSignal`, `Computed`, `Resource`, and the collection signals now implement `package:listen`'s `ValueListenable`/`ValueNotifier` natively in pure Dart, exposing `addListener`/`removeListener` (plus `hasListeners`/`notifyListeners` on the mutable signals). Listeners participate in auto-disposal: adding one keeps the signal alive, and removing the last one lets an `autoDispose` signal dispose itself.
+- **CHORE**: Depend on `package:listen` for the `Listenable`/`ValueNotifier`/`ValueListenable` primitives. Note: these are distinct types from Flutter's `package:flutter/foundation.dart` equivalents until [flutter/flutter#189111](https://github.com/flutter/flutter/pull/189111) lands in a released Flutter, after which the two unify.
+
 ## 3.0.0-dev.1
 
 - **BREAKING**: `SolidartConfig.autoDispose` now defaults to `false` — auto-dispose is opt-in from v3. Enable it globally (`SolidartConfig.autoDispose = true`) or per `Signal`/`Computed`/`Effect` via the `autoDispose` parameter.
