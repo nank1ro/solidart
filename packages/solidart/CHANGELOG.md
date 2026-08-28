@@ -1,3 +1,7 @@
+## 3.0.0-dev.2
+
+- **FEAT**: `Resource` now exposes `previousReady` and `previousError` — the most recent ready / error state, retained across any number of intervening transitions (unlike `previousState`, which remembers only the single prior state). Handy to keep a UI populated across repeated refresh failures, e.g. `resource().asReady?.value ?? resource.previousReady?.value`. Gated by `trackPreviousValue`.
+
 ## 3.0.0-dev.1
 
 - **BREAKING**: `SolidartConfig.autoDispose` now defaults to `false` — auto-dispose is opt-in from v3. Enable it globally (`SolidartConfig.autoDispose = true`) or per `Signal`/`Computed`/`Effect` via the `autoDispose` parameter.

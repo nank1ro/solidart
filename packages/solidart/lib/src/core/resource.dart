@@ -221,7 +221,26 @@ class Resource<T> extends Signal<ResourceState<T>> {
   ResourceState<T> call() => state;
 
   /// Updates the current resource state
-  set state(ResourceState<T> state) => super.value = state;
+  set state(ResourceState<T> state) {
+    // Retain the last ready/error state before it's replaced, so `previousReady`
+    // / `previousError` survive across any number of intervening transitions —
+    // unlike `previousState`, which only remembers the single prior state.
+    // `isRefreshing` is cleared: a retained *previous* state is history, not
+    // the in-flight refresh, and a `refresh()` writes an `isRefreshing: true`
+    // intermediate that would otherwise leave the snapshot permanently flagged.
+    if (trackPreviousValue) {
+      final outgoing = super.untrackedValue;
+      if (outgoing is ResourceReady<T>) {
+        _previousReady = outgoing.copyWith(isRefreshing: false);
+      } else if (outgoing is ResourceError<T>) {
+        _previousError = outgoing.copyWith(isRefreshing: false);
+      }
+    }
+    super.value = state;
+  }
+
+  ResourceReady<T>? _previousReady;
+  ResourceError<T>? _previousError;
 
   // coverage:ignore-start
   // These deprecated aliases are load-bearing (they route through `state`,
@@ -265,6 +284,32 @@ class Resource<T> extends Signal<ResourceState<T>> {
     _resolveIfNeeded();
     if (!_resolved) return null;
     return super.previousValue;
+  }
+
+  /// The most recent [ResourceReady] state, retained across later loading/error
+  /// transitions — the last known-good value regardless of how many refreshes
+  /// or failures have intervened since (with `isRefreshing` cleared, as it's a
+  /// past state, not the in-flight one). `null` until a ready state has been
+  /// superseded by a later transition (or when `trackPreviousValue` is
+  /// disabled). Unlike [previousState] (the single prior state, which may be
+  /// loading/error), this keeps a UI populated across even repeated failures,
+  /// e.g. `resource().asReady?.value ?? resource.previousReady?.value`.
+  ResourceReady<T>? get previousReady {
+    if (!trackPreviousValue) return null;
+    // Read `state` so a reactive context re-runs when the state transitions;
+    // the retained value itself lives in `_previousReady`.
+    state;
+    return _previousReady;
+  }
+
+  /// The most recent [ResourceError] state, retained across later loading/ready
+  /// transitions — the counterpart of [previousReady] (also with `isRefreshing`
+  /// cleared). `null` until an error state has been superseded by a later
+  /// transition (or when `trackPreviousValue` is disabled).
+  ResourceError<T>? get previousError {
+    if (!trackPreviousValue) return null;
+    state;
+    return _previousError;
   }
 
   /// The previous resource state, without tracking
