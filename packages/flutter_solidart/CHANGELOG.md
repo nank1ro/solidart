@@ -1,3 +1,7 @@
+## 3.0.0-dev.2
+
+- **FEAT**: Inherits solidart's new `Resource.previousReady` / `previousError` (the retained last ready / error state, surviving repeated failures). Requires `solidart: ^3.0.0-dev.2`.
+
 ## 3.0.0-dev.1
 
 - **BREAKING**: Inherits solidart's auto-dispose change — auto-dispose is now opt-in (`SolidartConfig.autoDispose` defaults to `false`).

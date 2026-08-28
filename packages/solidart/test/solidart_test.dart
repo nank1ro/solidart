@@ -1004,6 +1004,96 @@ void main() {
         expect(resource.state.error, isUnimplementedError);
       });
 
+      test('previousReady/previousError retain across repeated failures',
+          () async {
+        final controller = StreamController<int>();
+        addTearDown(controller.close);
+        final resource = Resource.stream(() => controller.stream);
+
+        // Nothing retained until the resource has been ready/errored.
+        expect(resource.previousReady, isNull);
+        expect(resource.previousError, isNull);
+
+        controller.add(1);
+        await pumpEventQueue();
+        // ready(1) is the first ready state — no *previous* ready yet.
+        expect(resource.previousReady, isNull);
+
+        controller.add(2);
+        await pumpEventQueue();
+        // Now the prior ready(1) is retained.
+        expect(resource.previousReady?.value, 1);
+
+        controller.addError(StateError('boom-1'));
+        await pumpEventQueue();
+        expect(resource.state, isA<ResourceError<int>>());
+        // The last known-good value survives the failure.
+        expect(resource.previousReady?.value, 2);
+        // previousError is still null: the prior state was ready, not error.
+        expect(resource.previousError, isNull);
+
+        controller.addError(StateError('boom-2'));
+        await pumpEventQueue();
+        // A SECOND consecutive failure: previousReady still holds 2 (unlike
+        // previousState, which would now be an error state), and previousError
+        // now holds the first error.
+        expect(resource.previousReady?.value, 2);
+        expect(resource.previousError?.error, isA<StateError>());
+        expect(resource.previousState, isA<ResourceError<int>>());
+      });
+
+      test('previousReady clears isRefreshing across refresh() failures',
+          () async {
+        var shouldFail = false;
+        final resource = Resource<int>(
+          () async {
+            if (shouldFail) throw StateError('boom');
+            return 1;
+          },
+          lazy: false,
+        );
+        addTearDown(resource.dispose);
+
+        await pumpEventQueue();
+        expect(resource.state, isA<ResourceReady<int>>());
+
+        // A failed refresh retains the ready value; the refresh transition
+        // writes an `isRefreshing: true` intermediate, but the retained
+        // snapshot must be a clean past state (isRefreshing false).
+        shouldFail = true;
+        await resource.refresh();
+        expect(resource.state, isA<ResourceError<int>>());
+        expect(resource.previousReady?.value, 1);
+        expect(resource.previousReady?.isRefreshing, isFalse);
+
+        // Second consecutive failure keeps it, still not refreshing.
+        await resource.refresh();
+        expect(resource.previousReady?.value, 1);
+        expect(resource.previousReady?.isRefreshing, isFalse);
+        expect(resource.previousError?.isRefreshing, isFalse);
+      });
+
+      test('previousReady/previousError null when tracking is disabled',
+          () async {
+        var shouldFail = false;
+        final resource = Resource<int>(
+          () async {
+            if (shouldFail) throw StateError('x');
+            return 1;
+          },
+          lazy: false,
+          trackPreviousState: false,
+        );
+        addTearDown(resource.dispose);
+
+        await pumpEventQueue();
+        shouldFail = true;
+        await resource.refresh();
+        expect(resource.state, isA<ResourceError<int>>());
+        expect(resource.previousReady, isNull);
+        expect(resource.previousError, isNull);
+      });
+
       test('check Resource with stream and source', () async {
         final count = Signal(-1);
 
