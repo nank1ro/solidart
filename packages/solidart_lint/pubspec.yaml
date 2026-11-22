@@ -14,9 +14,9 @@ environment:
 resolution: workspace
 
 dependencies:
-  analyzer: ^8.0.0
-  analyzer_plugin: ^0.13.10
-  analysis_server_plugin: ^0.3.3
+  analyzer: ^14.7.0
+  analyzer_plugin: ^0.14.20
+  analysis_server_plugin: ^0.3.26
   collection: ^1.19.1
   meta: ^1.17.0
   path: ^1.9.1
