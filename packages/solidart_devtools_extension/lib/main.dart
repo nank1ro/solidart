@@ -98,8 +98,8 @@ class SignalData {
 }
 
 class _SignalsState extends State<Signals> {
-  late final StreamSubscription<Object>? sub;
-  late final StreamSubscription<Object>? isolateEventSub;
+  StreamSubscription<Object>? sub;
+  StreamSubscription<Object>? isolateEventSub;
   final selectedSignalId = Signal<String?>(null);
   final searchController = SearchController();
   final searchText = Signal<String>('');
@@ -157,6 +157,8 @@ class _SignalsState extends State<Signals> {
 
   Future<void> initialize() async {
     final vmService = await serviceManager.onServiceAvailable;
+    if (!mounted) return;
+
     sub = vmService.onExtensionEvent
         .where((e) {
           return e.extensionKind?.startsWith('ext.solidart.signal') ?? false;
@@ -198,6 +200,7 @@ class _SignalsState extends State<Signals> {
 
   @override
   void dispose() {
+    extensionManager.darkThemeEnabled.removeListener(_onThemeChanged);
     sub?.cancel();
     isolateEventSub?.cancel();
     searchController.dispose();
@@ -208,7 +211,6 @@ class _SignalsState extends State<Signals> {
     showOnlyActiveDuplicates.dispose();
     signals.dispose();
     filteredSignals.dispose();
-    extensionManager.darkThemeEnabled.removeListener(_onThemeChanged);
     super.dispose();
   }
 

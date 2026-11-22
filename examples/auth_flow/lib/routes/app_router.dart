@@ -3,6 +3,7 @@ import 'package:auth_flow/ui/home_page.dart';
 import 'package:auth_flow/ui/login_page.dart';
 import 'package:auth_flow/ui/profile_page.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 
 class AppRouter {
   AppRouter(this.authNotifier);
@@ -25,7 +26,21 @@ class AppRouter {
       GoRoute(
         path: '/',
         builder: (_, _) => const HomePage(title: 'Home'),
-        routes: [GoRoute(path: 'profile', builder: (_, _) => const ProfilePage())],
+        routes: [
+          GoRoute(
+            path: 'profile',
+            pageBuilder: (_, state) => MaterialPage<void>(
+              key: state.pageKey,
+              name: state.name ?? state.path,
+              arguments: {
+                ...state.pathParameters,
+                ...state.uri.queryParameters,
+              },
+              restorationId: state.pageKey.value,
+              child: const ProfilePage(),
+            ),
+          ),
+        ],
       ),
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
     ],

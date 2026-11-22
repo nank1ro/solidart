@@ -2513,12 +2513,29 @@ void main() {
       void listener() => notifiedValue = signal.value;
 
       signal.addListener(listener);
+      expect(notifiedValue, -1);
       signal.value = 1;
       expect(notifiedValue, 1);
       signal.removeListener(listener);
       signal.value = 2;
       expect(notifiedValue, 1); // Not updated since listener was removed
       signal.dispose();
+    });
+
+    test('a lazy signal listener is first notified on assignment', () {
+      final signal = Signal<int?>.lazy(autoDispose: true);
+      final values = <int?>[];
+      void listener() => values.add(signal.value);
+
+      signal.addListener(listener);
+      expect(signal.hasValue, isFalse);
+      expect(values, isEmpty);
+
+      signal.value = null;
+      signal.value = 1;
+      expect(values, [null, 1]);
+      signal.removeListener(listener);
+      expect(signal.disposed, isTrue);
     });
 
     test('notifyListeners tolerates a listener removing itself', () {

@@ -6,10 +6,10 @@ part of 'core.dart';
 /// [remove] call removes one registration. Listener errors are reported to
 /// [Listenable.onError] instead of being thrown.
 ///
-/// Each registration is bridged to its own solidart [ObserveSignal.observe]
-/// observation, so listeners participate in auto-disposal exactly like any
-/// other observer: adding one keeps the signal alive, and removing the last one
-/// lets the signal dispose itself when [SignalBase.autoDispose] is enabled.
+/// Each registration is backed by its own [Effect], so listeners participate
+/// in auto-disposal like other observers: adding one keeps the signal alive,
+/// and removing the last one lets the signal dispose itself when
+/// [SignalBase.autoDispose] is enabled.
 ///
 /// A listener that writes the signal it listens to is not notified of its own
 /// write, following solidart's effect re-entrancy rule.
@@ -29,16 +29,33 @@ class _SignalListeners<T> {
   /// running effect or computed does not become its child.
   void add(VoidCallback listener) {
     if (_signal.disposed) return;
-    final observation = untracked(
-      () => _signal.observe((_, _) {
-        try {
-          listener();
-        } catch (error, stack) {
-          Listenable.onError(error, stack, ErrorContext.listener);
-        }
+    var initialRun = true;
+    final disposeEffect = untracked(
+      () => Effect(() {
+        final shouldNotify = !initialRun;
+        initialRun = false;
+
+        // hasValue tracks a lazy signal even before its value can be read.
+        if (_signal case ReadableSignal<T>(hasValue: false)) return;
+        _signal.value;
+        if (!shouldNotify) return;
+
+        untracked(() {
+          try {
+            listener();
+          } catch (error, stack) {
+            Listenable.onError(error, stack, ErrorContext.listener);
+          }
+        });
       }),
     );
-    _observations.add((listener, observation));
+    _observations.add((
+      listener,
+      () {
+        disposeEffect();
+        _signal._mayDispose();
+      },
+    ));
   }
 
   /// Unregisters one registration of [listener], stopping its observation.
