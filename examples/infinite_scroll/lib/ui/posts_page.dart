@@ -1,8 +1,8 @@
 import 'package:disco/disco.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
-import 'package:infinite_scroll/notifiers/posts_notifier.dart';
 import 'package:infinite_scroll/domain/post.dart';
+import 'package:infinite_scroll/notifiers/posts_notifier.dart';
+import 'package:material_ui/material_ui.dart';
 
 class PostsPage extends StatelessWidget {
   const PostsPage({super.key});

@@ -24,5 +24,6 @@ dev_dependencies:
   disco: ^1.0.0
   flutter_test:
     sdk: flutter
+  material_ui: ^1.11.1
   mockito: ^5.5.1
   very_good_analysis: ^10.0.0

@@ -1,9 +1,9 @@
 import 'package:auth_flow/notifiers/auth_notifier.dart';
 import 'package:auth_flow/routes/app_router.dart';
 import 'package:disco/disco.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:localstorage/localstorage.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

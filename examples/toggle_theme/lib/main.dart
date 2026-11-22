@@ -1,6 +1,6 @@
 import 'package:disco/disco.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:material_ui/material_ui.dart';
 
 final themeModeProvider = Provider<Signal<ThemeMode>>(
   (_) => Signal(ThemeMode.dark),

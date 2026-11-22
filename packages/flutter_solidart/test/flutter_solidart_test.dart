@@ -3,9 +3,9 @@
 import 'dart:async';
 
 import 'package:disco/disco.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   testWidgets('(Provider) Not found signal throws an error', (tester) async {

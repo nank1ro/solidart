@@ -1400,6 +1400,8 @@ void main() {
         () async {
           final count = Resource<int>(() => Future.value(1), lazy: false);
           var fired = false;
+          // Not awaited on purpose: the callback must fire synchronously.
+          // ignore: unawaited_futures
           count.until((v) => true).then((value) => fired = true);
           expect(fired, true);
         },
@@ -1410,6 +1412,8 @@ void main() {
         () async {
           final count = Signal(0);
           var fired = false;
+          // Not awaited on purpose: the callback fires on the later write.
+          // ignore: unawaited_futures
           count.until((v) => v == 1).then((value) => fired = true);
           count.value = 1;
           await pumpEventQueue();
