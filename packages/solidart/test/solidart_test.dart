@@ -2529,6 +2529,7 @@ void main() {
       void listener() => notifiedValue = signal.value;
 
       signal.addListener(listener);
+      expect(notifiedValue, -1);
       signal.value = 1;
       expect(notifiedValue, 1);
       signal.removeListener(listener);
@@ -2537,20 +2538,20 @@ void main() {
       signal.dispose();
     });
 
-    test('a listener can be added to a lazy signal before it has a value', () {
-      final signal = Signal<int>.lazy(autoDispose: false);
-      var calls = 0;
-      void listener() => calls++;
+    test('a lazy signal listener is first notified on assignment', () {
+      final signal = Signal<int?>.lazy(autoDispose: true);
+      final values = <int?>[];
+      void listener() => values.add(signal.value);
 
       signal.addListener(listener);
-      expect(calls, 0);
+      expect(signal.hasValue, isFalse);
+      expect(values, isEmpty);
 
+      signal.value = null;
       signal.value = 1;
-      expect(calls, 1);
-
-      signal.value = 2;
-      expect(calls, 2);
-      signal.dispose();
+      expect(values, [null, 1]);
+      signal.removeListener(listener);
+      expect(signal.disposed, isTrue);
     });
 
     test('notifyListeners tolerates a listener removing itself', () {
