@@ -134,6 +134,22 @@ void main() {
         });
       });
 
+      test('observe on a lazy signal waits for the first value', () {
+        final s = Signal<int>.lazy(autoDispose: false);
+        final values = <int>[];
+        final unobserve = s.observe(
+          (_, value) => values.add(value),
+          fireImmediately: true,
+        );
+        expect(values, isEmpty);
+        s.value = 1;
+        expect(values, [1]);
+        addTearDown(() {
+          unobserve();
+          s.dispose();
+        });
+      });
+
       test('check previousValue stores the previous value', () {
         final s = Signal(0);
         expect(
@@ -2518,6 +2534,22 @@ void main() {
       signal.removeListener(listener);
       signal.value = 2;
       expect(notifiedValue, 1); // Not updated since listener was removed
+      signal.dispose();
+    });
+
+    test('a listener can be added to a lazy signal before it has a value', () {
+      final signal = Signal<int>.lazy(autoDispose: false);
+      var calls = 0;
+      void listener() => calls++;
+
+      signal.addListener(listener);
+      expect(calls, 0);
+
+      signal.value = 1;
+      expect(calls, 1);
+
+      signal.value = 2;
+      expect(calls, 2);
       signal.dispose();
     });
 
