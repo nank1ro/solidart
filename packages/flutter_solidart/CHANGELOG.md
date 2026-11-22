@@ -1,8 +1,12 @@
-## 3.0.0-dev.2
+## 3.0.0-dev.3
 
 - **BREAKING**: `flutter_solidart` no longer defines its own `Signal`/`ReadableSignal`/`Computed`/`Resource`/`ListSignal`/`MapSignal`/`SetSignal` wrappers, nor the `ValueNotifierSignalMixin`/`ValueListenableSignalMixin` mixins — these are removed. The `Listenable` support now lives in `solidart` (via `package:listen`), so `flutter_solidart` just re-exports `solidart` alongside the widgets (`SignalBuilder`, `Show`) and the `toValueNotifier`/`toSignal` bridge.
 - **BREAKING**: Signals now implement `package:listen`'s `ValueNotifier`/`ValueListenable`, which are distinct types from Flutter's until [flutter/flutter#189111](https://github.com/flutter/flutter/pull/189111) lands. Until then a `Signal` is not directly assignable to a Flutter `ValueListenableBuilder`/`AnimatedBuilder`; use `SignalBuilder` or `signal.toValueNotifier()`.
 - **CHORE**: Require `solidart: ^3.0.0-dev.2`.
+
+## 3.0.0-dev.2
+
+- **FEAT**: Inherits solidart's new `Resource.previousReady` / `previousError` (the retained last ready / error state, surviving repeated failures). Requires `solidart: ^3.0.0-dev.2`.
 
 ## 3.0.0-dev.1
 

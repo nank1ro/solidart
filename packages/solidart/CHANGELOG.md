@@ -1,7 +1,11 @@
-## 3.0.0-dev.2
+## 3.0.0-dev.3
 
 - **FEAT**: `Signal`, `ReadableSignal`, `Computed`, `Resource`, and the collection signals now implement `package:listen`'s `ValueListenable`/`ValueNotifier` natively in pure Dart, exposing `addListener`/`removeListener` (plus `hasListeners`/`notifyListeners` on the mutable signals). Listeners participate in auto-disposal: adding one keeps the signal alive, and removing the last one lets an `autoDispose` signal dispose itself.
 - **CHORE**: Depend on `package:listen` for the `Listenable`/`ValueNotifier`/`ValueListenable` primitives. Note: these are distinct types from Flutter's `package:flutter/foundation.dart` equivalents until [flutter/flutter#189111](https://github.com/flutter/flutter/pull/189111) lands in a released Flutter, after which the two unify.
+
+## 3.0.0-dev.2
+
+- **FEAT**: `Resource` now exposes `previousReady` and `previousError` — the most recent ready / error state, retained across any number of intervening transitions (unlike `previousState`, which remembers only the single prior state). Handy to keep a UI populated across repeated refresh failures, e.g. `resource().asReady?.value ?? resource.previousReady?.value`. Gated by `trackPreviousValue`.
 
 ## 3.0.0-dev.1
 
