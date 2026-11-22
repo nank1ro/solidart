@@ -3,7 +3,7 @@
 - **BREAKING**: `flutter_solidart` no longer defines its own `Signal`/`ReadableSignal`/`Computed`/`Resource`/`ListSignal`/`MapSignal`/`SetSignal` wrappers, nor the `ValueNotifierSignalMixin`/`ValueListenableSignalMixin` mixins. These are removed. The `Listenable` support now lives in `solidart` (via `package:listen`), so `flutter_solidart` just re-exports `solidart` alongside the widgets (`SignalBuilder`, `Show`) and the `toSignal` bridge.
 - **BREAKING**: Requires Flutter 3.50 or later (Dart 3.14). Flutter 3.50 re-exports `ValueNotifier`/`ValueListenable` from `package:listen` ([flutter/flutter#189111](https://github.com/flutter/flutter/pull/189111)), so signals are Flutter's own types: pass a `Signal` or `Computed` directly to `ValueListenableBuilder`, `AnimatedBuilder`, or any API that takes a `Listenable`.
 - **BREAKING**: Remove the `toValueNotifier()` extension. It is no longer needed, because every signal already is a `ValueListenable` and `Signal` is a `ValueNotifier`. `ValueNotifier.toSignal()` remains.
-- **CHORE**: Require `solidart: ^3.0.0-dev.2`.
+- **CHORE**: Require `solidart: ^3.0.0-dev.3`.
 
 ## 3.0.0-dev.2
 
