@@ -2583,9 +2583,41 @@ void main() {
       baseSignal.dispose();
     });
 
-    test('Resource is a ValueNotifier', () {
-      final r = Resource(() => Future.value(0));
+    test('ReadSignal is a ValueListenable', () {
+      ValueListenable<int> asListenable(ReadSignal<int> signal) => signal;
+      final base = Signal(1, autoDispose: false);
+      final ReadSignal<int> doubled = Computed(() => base.value * 2);
+      final listenable = asListenable(doubled);
+      var calls = 0;
+      void listener() => calls++;
+
+      listenable.addListener(listener);
+      base.value = 2;
+      expect(calls, 1);
+      expect(listenable.value, 4);
+
+      listenable.removeListener(listener);
+      doubled.dispose();
+      base.dispose();
+    });
+
+    test('Resource is a ValueNotifier', () async {
+      final completer = Completer<int>();
+      final r = Resource(() => completer.future, lazy: false);
       expect(r, isA<ValueNotifier<ResourceState<int>>>());
+      var calls = 0;
+      void listener() => calls++;
+
+      r.addListener(listener);
+      completer.complete(1);
+      await completer.future;
+      await Future<void>.delayed(Duration.zero);
+      expect(calls, 1);
+      expect(r.state, isA<ResourceReady<int>>());
+
+      r.removeListener(listener);
+      r.state = const ResourceState.ready(2);
+      expect(calls, 1);
       r.dispose();
     });
 
@@ -2609,6 +2641,121 @@ void main() {
       signal.removeListener(listener);
       expect(signal.disposed, isFalse);
       signal.dispose();
+    });
+
+    test('each addListener call is a separate registration', () {
+      final signal = Signal(0, autoDispose: true);
+      var calls = 0;
+      void listener() => calls++;
+
+      signal
+        ..addListener(listener)
+        ..addListener(listener);
+      signal.value = 1;
+      expect(calls, 2);
+
+      signal.removeListener(listener);
+      expect(signal.disposed, isFalse);
+      expect(signal.hasListeners, isTrue);
+      signal.value = 2;
+      expect(calls, 3);
+
+      signal.removeListener(listener);
+      expect(signal.disposed, isTrue);
+    });
+
+    test('notifyListeners reruns effects and notifies listeners', () {
+      final signal = Signal(0, autoDispose: false);
+      var effectRuns = 0;
+      var listenerCalls = 0;
+      final disposeEffect = Effect(() {
+        signal.value;
+        effectRuns++;
+      });
+      signal.addListener(() => listenerCalls++);
+      expect(effectRuns, 1);
+
+      signal.notifyListeners();
+      expect(effectRuns, 2);
+      expect(listenerCalls, 1);
+
+      disposeEffect();
+      signal.dispose();
+    });
+
+    test('notifyListeners does not call a listener removed by an earlier '
+        'listener', () {
+      final signal = Signal(0, autoDispose: false);
+      var bCalls = 0;
+      void b() => bCalls++;
+      void a() => signal.removeListener(b);
+
+      signal
+        ..addListener(a)
+        ..addListener(b);
+      signal.notifyListeners();
+      expect(bCalls, 0);
+      signal.dispose();
+    });
+
+    test('listener errors are reported to Listenable.onError and do not stop '
+        'other listeners', () {
+      final originalOnError = Listenable.onError;
+      addTearDown(() => Listenable.onError = originalOnError);
+      final errors = <Object>[];
+      final contexts = <ErrorContext>[];
+      Listenable.onError = (error, stackTrace, context) {
+        errors.add(error);
+        contexts.add(context);
+      };
+
+      final signal = Signal(0, autoDispose: false);
+      var calls = 0;
+      signal
+        ..addListener(() => throw StateError('boom'))
+        ..addListener(() => calls++);
+
+      expect(() => signal.value = 1, returnsNormally);
+      expect(calls, 1);
+      expect(signal.notifyListeners, returnsNormally);
+      expect(calls, 2);
+      expect(errors, hasLength(2));
+      expect(errors, everyElement(isStateError));
+      expect(contexts, everyElement(ErrorContext.listener));
+      signal.dispose();
+    });
+
+    test('a listener added inside an Effect survives the Effect rerunning', () {
+      final signal = Signal(0, autoDispose: false);
+      final other = Signal(0, autoDispose: false);
+      var calls = 0;
+      void listener() => calls++;
+      var added = false;
+      final disposeEffect = Effect(() {
+        other.value;
+        if (!added) {
+          added = true;
+          signal.addListener(listener);
+        }
+      });
+
+      signal.value = 1;
+      expect(calls, 1);
+      other.value = 1;
+      signal.value = 2;
+      expect(calls, 2);
+
+      disposeEffect();
+      signal
+        ..removeListener(listener)
+        ..dispose();
+      other.dispose();
+    });
+
+    test('addListener on a disposed signal is a no-op', () {
+      final signal = Signal(0)..dispose();
+      signal.addListener(() {});
+      expect(signal.hasListeners, isFalse);
     });
   });
 }

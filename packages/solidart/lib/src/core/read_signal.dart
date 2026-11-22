@@ -1,7 +1,8 @@
 part of 'core.dart';
 
 /// {@macro readsignal}
-abstract class ReadSignal<T> extends SignalBase<T> {
+abstract class ReadSignal<T> extends SignalBase<T>
+    implements ValueListenable<T> {
   /// {@macro readsignal}
   ReadSignal({
     required super.name,
@@ -23,7 +24,7 @@ abstract class ReadSignal<T> extends SignalBase<T> {
 /// All derived-signals are [ReadableSignal]s because they depend
 /// on the value of a [Signal].
 /// {@endtemplate}
-class ReadableSignal<T> implements ReadSignal<T>, ValueListenable<T> {
+class ReadableSignal<T> implements ReadSignal<T> {
   /// {@macro readsignal}
   ReadableSignal(
     T initialValue, {

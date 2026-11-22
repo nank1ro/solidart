@@ -50,7 +50,7 @@ part of 'core.dart';
 /// value, but still contains `false`.
 /// - If you update the value to `6`, `isGreaterThan5` emits a new `true` value.
 /// {@endtemplate}
-class Computed<T> extends ReadSignal<T> implements ValueListenable<T> {
+class Computed<T> extends ReadSignal<T> {
   /// {@macro computed}
   Computed(
     this.selector, {

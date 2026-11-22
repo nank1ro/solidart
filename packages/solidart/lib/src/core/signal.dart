@@ -158,7 +158,7 @@ class Signal<T> extends ReadableSignal<T> implements ValueNotifier<T> {
   bool get hasListeners => _listeners.hasListeners;
 
   @override
-  void notifyListeners() => _listeners.notify();
+  void notifyListeners() => _reportChanged();
 
   /// Calls a function with the current value and assigns the result as the
   /// new value.

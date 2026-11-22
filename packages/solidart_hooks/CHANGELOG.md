@@ -1,6 +1,7 @@
 ## 4.0.0-dev.2
 
 - **CHORE**: Require `flutter_solidart: ^3.0.0-dev.3` (the `package:listen` migration, which needs Flutter 3.50 or later).
+- **CHORE**: Require Flutter 3.50 or later (Dart 3.14).
 
 ## 4.0.0-dev.1
 
