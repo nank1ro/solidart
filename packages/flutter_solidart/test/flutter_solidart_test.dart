@@ -703,18 +703,48 @@ void main() {
     expect(find.text('1'), findsOneWidget);
   });
 
-  test(
-    'Convert Signal to ValueNotifier',
-    () {
-      final signal = Signal(0);
-      final notifier = signal.toValueNotifier();
-      expect(notifier, isA<ValueNotifier<int>>());
+  group('Flutter Listenable interop', () {
+    testWidgets('Signal works directly with ValueListenableBuilder', (
+      tester,
+    ) async {
+      final counter = Signal(0);
+      final ValueNotifier<int> notifier = counter;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ValueListenableBuilder<int>(
+            valueListenable: counter,
+            builder: (_, value, _) => Text('$value'),
+          ),
+        ),
+      );
+      expect(find.text('0'), findsOneWidget);
 
-      signal.value = 1;
-      expect(notifier.value, 1);
-    },
-    timeout: const Timeout(Duration(seconds: 1)),
-  );
+      notifier.value = 1;
+      await tester.pump();
+      expect(counter.value, 1);
+      expect(find.text('1'), findsOneWidget);
+    }, timeout: const Timeout(Duration(seconds: 1)));
+
+    testWidgets('Computed works directly with AnimatedBuilder', (
+      tester,
+    ) async {
+      final counter = Signal(1);
+      final doubled = Computed(() => counter.value * 2);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AnimatedBuilder(
+            animation: doubled,
+            builder: (_, _) => Text('${doubled.value}'),
+          ),
+        ),
+      );
+      expect(find.text('2'), findsOneWidget);
+
+      counter.value = 5;
+      await tester.pump();
+      expect(find.text('10'), findsOneWidget);
+    }, timeout: const Timeout(Duration(seconds: 1)));
+  });
 
   test(
     'Convert ValueNotifier to Signal',
