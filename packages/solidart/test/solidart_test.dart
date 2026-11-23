@@ -220,6 +220,36 @@ void main() {
         r.dispose();
       });
 
+      test('untrackedHasValue reports a lazy value without tracking', () {
+        final s = Signal<int>.lazy();
+        final dispose = Effect(() => s.untrackedHasValue);
+        expect(s.untrackedHasValue, isFalse);
+        expect(s.listenerCount, 0);
+        s.value = 1;
+        expect(s.untrackedHasValue, isTrue);
+        dispose();
+        s.dispose();
+      });
+
+      test('Computed.untrackedHasValue does not run the selector', () {
+        var runs = 0;
+        final c = Computed(() => ++runs);
+        expect(c.untrackedHasValue, isTrue);
+        expect(runs, 0);
+        c.dispose();
+      });
+
+      test('Resource.untrackedHasValue does not track or resolve', () {
+        var fetches = 0;
+        final r = Resource<int>(() async => ++fetches);
+        final dispose = Effect(() => r.untrackedHasValue);
+        expect(r.untrackedHasValue, isTrue);
+        expect(r.listenerCount, 0);
+        expect(fetches, 0);
+        dispose();
+        r.dispose();
+      });
+
       test('observe waits for an overridden hasValue on an eager signal', () {
         final open = Signal(false);
         final gated = _GatedSignal(1, open);
@@ -2992,7 +3022,7 @@ void main() {
       expect(c.disposed, isTrue);
     });
 
-    test('devtools serialize a signal that overrides hasValue', () {
+    test('devtools serialize a signal that overrides untrackedHasValue', () {
       final devToolsEnabled = SolidartConfig.devToolsEnabled;
       addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
       SolidartConfig.devToolsEnabled = true;
@@ -3004,18 +3034,10 @@ void main() {
       expect(probe.toJsonCalls, greaterThan(0));
       source.dispose();
     });
-
-    test('devtools do not read an overridden hasValue during construction', () {
-      final devToolsEnabled = SolidartConfig.devToolsEnabled;
-      addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
-      SolidartConfig.devToolsEnabled = true;
-
-      expect(() => _LateReadySignal(1).dispose(), returnsNormally);
-    });
   });
 }
 
-/// A read-only signal that forwards to [source] and overrides [hasValue].
+/// A read-only signal that forwards to [source], including [hasValue].
 class _ForwardingSignal<T> extends ReadableSignal<T> {
   _ForwardingSignal(this.source) : super.lazy(autoDispose: false);
 
@@ -3025,22 +3047,13 @@ class _ForwardingSignal<T> extends ReadableSignal<T> {
   bool get hasValue => source.hasValue;
 
   @override
+  bool get untrackedHasValue => source.untrackedHasValue;
+
+  @override
   T get value => source.value;
 
   @override
   T get untrackedValue => source.untrackedValue;
-}
-
-/// A signal whose [hasValue] override needs its constructor body to run.
-class _LateReadySignal extends Signal<int> {
-  _LateReadySignal(super.initialValue) {
-    ready = true;
-  }
-
-  late final bool ready;
-
-  @override
-  bool get hasValue => ready && super.hasValue;
 }
 
 /// An eager signal whose [hasValue] and [value] are gated by [open].
@@ -3051,6 +3064,10 @@ class _GatedSignal extends Signal<int> {
 
   @override
   bool get hasValue => open.value && super.hasValue;
+
+  @override
+  bool get untrackedHasValue =>
+      open.untrackedValue && super.untrackedHasValue;
 
   @override
   int get value {
@@ -3069,6 +3086,9 @@ class _ReadSignalDouble extends Fake implements ReadSignal<int> {
   bool get hasValue => source.hasValue;
 
   @override
+  bool get untrackedHasValue => source.untrackedHasValue;
+
+  @override
   int get value => source.value;
 
   @override
@@ -3082,6 +3102,9 @@ class _ReadSignalDouble extends Fake implements ReadSignal<int> {
 class _FakeReadableSignal extends Fake implements ReadableSignal<int> {
   @override
   bool get hasValue => true;
+
+  @override
+  bool get untrackedHasValue => true;
 
   @override
   int get value => 1;

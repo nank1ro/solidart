@@ -132,6 +132,9 @@ class Computed<T> extends ReadSignal<T> {
     return true;
   }
 
+  @override
+  bool get untrackedHasValue => true;
+
   final _deps = <alien_system.ReactiveNode>{};
 
   @override

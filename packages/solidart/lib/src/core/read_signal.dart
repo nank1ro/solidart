@@ -123,6 +123,9 @@ class ReadableSignal<T> implements ReadSignal<T> {
     return _hasValue;
   }
 
+  @override
+  bool get untrackedHasValue => _hasValue;
+
   bool _hasValue = false;
 
   // Tracks the internal previous value
