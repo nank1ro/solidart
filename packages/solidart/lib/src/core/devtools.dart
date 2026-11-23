@@ -65,6 +65,23 @@ void _notifyDevToolsAboutSignal(
   required DevToolsEventType eventType,
 }) {
   if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
+  // Inspecting a signal for DevTools must not change the app's behavior.
+  // Reading a Computed's value runs the auto-dispose check, which would dispose
+  // a freshly created, dependency-free Computed the moment DevTools reads it
+  // (see issue #185). Suppress auto-dispose for the duration of the read.
+  final computed = signal is Computed ? signal : null;
+  computed?._devToolsReading = true;
+  try {
+    _emitDevToolsEvent(signal, eventType: eventType);
+  } finally {
+    computed?._devToolsReading = false;
+  }
+}
+
+void _emitDevToolsEvent(
+  SignalBase<dynamic> signal, {
+  required DevToolsEventType eventType,
+}) {
   final eventName = 'ext.solidart.signal.${eventType.name}';
   var value = signal.value;
   var previousValue = signal.previousValue;
