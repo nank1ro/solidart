@@ -384,7 +384,13 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   /// Resolves the resource, if needed
   void _resolveIfNeeded() {
-    if (!_resolved) _resolve();
+    // Run the first resolve outside any tracking context. The first read of
+    // [state] often happens inside an effect (`Effect`, `observe`,
+    // `SignalBuilder`), and `_resolve` synchronously runs the fetcher and
+    // subscribes to the [source]. Without this, the fetcher's synchronous reads
+    // would be tracked by the caller's effect, and the source observation would
+    // be created as a child effect of the caller (disposed on its next run).
+    if (!_resolved) untracked(_resolve);
   }
 
   /// Runs the [fetcher] for the first time.
