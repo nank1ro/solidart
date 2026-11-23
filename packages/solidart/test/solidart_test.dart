@@ -194,6 +194,50 @@ void main() {
         r.dispose();
       });
 
+      test('observe accepts a signal implemented outside the library', () {
+        final fake = _FakeReadableSignal();
+        expect(() => fake.observe((_, _) {}), returnsNormally);
+      });
+
+      test('observe waits for an overridden hasValue on an eager signal', () {
+        final open = Signal(false);
+        final gated = _GatedSignal(1, open);
+        final values = <int>[];
+        late DisposeObservation unobserve;
+        expect(
+          () => unobserve = gated.observe((_, value) => values.add(value)),
+          returnsNormally,
+        );
+        expect(values, isEmpty);
+        open.value = true;
+        expect(values, [1]);
+        addTearDown(() {
+          unobserve();
+          gated.dispose();
+          open.dispose();
+        });
+      });
+
+      test('observe and addListener on a forwarding signal over a Resource '
+          'do not fire during registration', () {
+        final r = Resource<int>(() => throw StateError('bad'));
+        final forwarding = _ForwardingSignal(r);
+        var observeCalls = 0;
+        var listenerCalls = 0;
+        void listener() => listenerCalls++;
+
+        final unobserve = forwarding.observe((_, _) => observeCalls++);
+        forwarding.addListener(listener);
+        expect(observeCalls, 0);
+        expect(listenerCalls, 0);
+
+        unobserve();
+        forwarding
+          ..removeListener(listener)
+          ..dispose();
+        r.dispose();
+      });
+
       test('check previousValue stores the previous value', () {
         final s = Signal(0);
         expect(
@@ -2996,6 +3040,31 @@ class _LateReadySignal extends Signal<int> {
 
   @override
   bool get hasValue => ready && super.hasValue;
+}
+
+/// An eager signal whose [hasValue] and [value] are gated by [open].
+class _GatedSignal extends Signal<int> {
+  _GatedSignal(super.initialValue, this.open);
+
+  final Signal<bool> open;
+
+  @override
+  bool get hasValue => open.value && super.hasValue;
+
+  @override
+  int get value {
+    if (!open.value) throw StateError('closed');
+    return super.value;
+  }
+}
+
+/// A signal implemented outside the library, without its private members.
+class _FakeReadableSignal extends Fake implements ReadableSignal<int> {
+  @override
+  bool get hasValue => true;
+
+  @override
+  int get value => 1;
 }
 
 class _JsonProbe {
