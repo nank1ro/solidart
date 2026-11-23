@@ -1,8 +1,8 @@
 // ignore_for_file: unused_local_variable
 
 import 'package:disco/disco.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   runApp(MyApp());
