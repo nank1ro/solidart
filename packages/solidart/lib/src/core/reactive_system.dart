@@ -91,7 +91,10 @@ class ReactiveSystem {
 
   void startBatch() => alien.startBatch();
 
-  void endBatch() => alien.endBatch();
+  void endBatch() {
+    alien.endBatch();
+    _surfaceEffectErrors();
+  }
 
   void link(alien_system.ReactiveNode dep, alien_system.ReactiveNode sub) {
     alien.link(dep, sub, alien.cycle);
@@ -121,6 +124,9 @@ class ReactiveSystem {
 
   void setSignalValue<T>(_AlienSignal<T> signal, Option<T> value) {
     signal.set(value);
+    // `signal.set` flushes queued effects synchronously when not inside a
+    // batch, so surface any error an effect captured during that flush.
+    _surfaceEffectErrors();
   }
 
   void stopEffect(alien_system.ReactiveNode effect) {
@@ -144,5 +150,33 @@ class ReactiveSystem {
     alien.propagate(link, alien.runDepth > 0);
   }
 
-  void flush() => alien.flush();
+  void flush() {
+    alien.flush();
+    _surfaceEffectErrors();
+  }
+
+  /// Errors thrown by effect callbacks (without an `onError`) during a flush.
+  ///
+  /// alien_signals' flush loop aborts on the first throwing effect and drops
+  /// the effects still queued behind it (see issue #182). To avoid that, an
+  /// effect body never throws out of the loop: its error is captured here and
+  /// rethrown once the flush has finished running every queued effect.
+  final _capturedEffectErrors = <(Object, StackTrace)>[];
+
+  /// Captures an error thrown by an effect body so the flush loop can keep
+  /// running the remaining queued effects.
+  void captureEffectError(Object error, StackTrace stackTrace) {
+    _capturedEffectErrors.add((error, stackTrace));
+  }
+
+  /// Rethrows the first error captured during the current flush, once the
+  /// flush has fully unwound. Re-entrant writes performed by an effect (while
+  /// `runDepth > 0`) defer to the outermost boundary so the error surfaces
+  /// only after every queued effect has run.
+  void _surfaceEffectErrors() {
+    if (_capturedEffectErrors.isEmpty || alien.runDepth != 0) return;
+    final (error, stackTrace) = _capturedEffectErrors.first;
+    _capturedEffectErrors.clear();
+    Error.throwWithStackTrace(error, stackTrace);
+  }
 }
