@@ -2498,6 +2498,59 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
+
+  group(
+    'Collection signal value reassignment',
+    () {
+      test('ListSignal.value = notifies observers and effects once', () {
+        final list = ListSignal<int>([1]);
+        var observeCalls = 0;
+        var effectRuns = 0;
+        final unobserve = list.observe((_, _) => observeCalls++);
+        final effect = Effect(() {
+          list.value;
+          effectRuns++;
+        });
+        effectRuns = 0;
+
+        list.value = [2];
+
+        expect(observeCalls, 1);
+        expect(effectRuns, 1);
+
+        // control: an in-place mutation keeps notifying exactly once.
+        observeCalls = 0;
+        list.add(3);
+        expect(observeCalls, 1);
+
+        unobserve();
+        effect.dispose();
+      });
+
+      test('MapSignal.value = notifies observers once', () {
+        final map = MapSignal<String, int>({'a': 1});
+        var observeCalls = 0;
+        final unobserve = map.observe((_, _) => observeCalls++);
+
+        map.value = {'b': 2};
+
+        expect(observeCalls, 1);
+        unobserve();
+      });
+
+      test('SetSignal.value = notifies observers once', () {
+        final set = SetSignal<int>({1});
+        var observeCalls = 0;
+        final unobserve = set.observe((_, _) => observeCalls++);
+
+        set.value = {2};
+
+        expect(observeCalls, 1);
+        unobserve();
+      });
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
 }
 
 class _AlwaysZeroRandom implements Random {

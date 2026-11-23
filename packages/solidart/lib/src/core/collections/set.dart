@@ -43,8 +43,12 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
       return newValue;
     }
     _setPreviousValue(Set<E>.of(_value));
+    // Assigning `_value` already notifies the reactive subscribers through the
+    // underlying signal (as the base `Signal.setValue` does). Only the
+    // devtools/observer update event is left to emit; calling `_notifyChanged`
+    // here would propagate a second, duplicate notification.
     _untrackedValue = _value = newValue;
-    _notifyChanged();
+    _notifySignalUpdate();
     return newValue;
   }
 
