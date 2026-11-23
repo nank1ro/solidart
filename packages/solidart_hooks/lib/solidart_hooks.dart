@@ -220,7 +220,7 @@ Computed<T> useComputed<T>(
 /// {macro resource}
 Resource<T> useResource<T>(
   /// The asynchrounous function used to retrieve data.
-  final Future<T> Function()? fetcher, {
+  Future<T> Function()? fetcher, {
 
   /// {macro SignalBase.name}
   String? name,
@@ -235,10 +235,10 @@ Resource<T> useResource<T>(
   bool? trackInDevTools,
 
   /// Reactive signal values passed to the fetcher, optional.
-  final SignalBase<dynamic>? source,
+  SignalBase<dynamic>? source,
 
   /// Indicates whether the resource should be computed lazily, defaults to true
-  final bool lazy = true,
+  bool lazy = true,
 
   /// {@macro Resource.useRefreshing}
   bool? useRefreshing,
@@ -247,7 +247,7 @@ Resource<T> useResource<T>(
   bool? trackPreviousState,
 
   /// The debounce delay when the source changes, optional.
-  final Duration? debounceDelay,
+  Duration? debounceDelay,
 }) {
   final target = useMemoized(
     () => Resource<T>(
@@ -272,7 +272,7 @@ Resource<T> useResource<T>(
 /// {macro resource}
 Resource<T> useResourceStream<T>(
   /// The asynchrounous function used to retrieve data.
-  final Stream<T> Function()? stream, {
+  Stream<T> Function()? stream, {
 
   /// {macro SignalBase.name}
   String? name,
@@ -287,10 +287,10 @@ Resource<T> useResourceStream<T>(
   bool? trackInDevTools,
 
   /// Reactive signal values passed to the fetcher, optional.
-  final SignalBase<dynamic>? source,
+  SignalBase<dynamic>? source,
 
   /// Indicates whether the resource should be computed lazily, defaults to true
-  final bool lazy = true,
+  bool lazy = true,
 
   /// {@macro Resource.useRefreshing}
   bool? useRefreshing,
@@ -299,7 +299,7 @@ Resource<T> useResourceStream<T>(
   bool? trackPreviousState,
 
   /// The debounce delay when the source changes, optional.
-  final Duration? debounceDelay,
+  Duration? debounceDelay,
 }) {
   final target = useMemoized(
     () => Resource<T>.stream(

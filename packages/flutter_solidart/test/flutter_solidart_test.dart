@@ -3,10 +3,9 @@
 import 'dart:async';
 
 import 'package:disco/disco.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   testWidgets('(Provider) Not found signal throws an error', (tester) async {
@@ -704,18 +703,48 @@ void main() {
     expect(find.text('1'), findsOneWidget);
   });
 
-  test(
-    'Convert Signal to ValueNotifier',
-    () {
-      final signal = Signal(0);
-      final notifier = signal.toValueNotifier();
-      expect(notifier, isA<ValueNotifier<int>>());
+  group('Flutter Listenable interop', () {
+    testWidgets('Signal works directly with ValueListenableBuilder', (
+      tester,
+    ) async {
+      final counter = Signal(0);
+      final ValueNotifier<int> notifier = counter;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ValueListenableBuilder<int>(
+            valueListenable: counter,
+            builder: (_, value, _) => Text('$value'),
+          ),
+        ),
+      );
+      expect(find.text('0'), findsOneWidget);
 
-      signal.value = 1;
-      expect(notifier.value, 1);
-    },
-    timeout: const Timeout(Duration(seconds: 1)),
-  );
+      notifier.value = 1;
+      await tester.pump();
+      expect(counter.value, 1);
+      expect(find.text('1'), findsOneWidget);
+    }, timeout: const Timeout(Duration(seconds: 1)));
+
+    testWidgets('Computed works directly with AnimatedBuilder', (
+      tester,
+    ) async {
+      final counter = Signal(1);
+      final doubled = Computed(() => counter.value * 2);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AnimatedBuilder(
+            animation: doubled,
+            builder: (_, _) => Text('${doubled.value}'),
+          ),
+        ),
+      );
+      expect(find.text('2'), findsOneWidget);
+
+      counter.value = 5;
+      await tester.pump();
+      expect(find.text('10'), findsOneWidget);
+    }, timeout: const Timeout(Duration(seconds: 1)));
+  });
 
   test(
     'Convert ValueNotifier to Signal',
@@ -890,77 +919,5 @@ SignalBuilder must detect at least one Signal, Computed, or Resource during the 
         ),
       ),
     );
-  });
-
-  test('Signal is a ValueNotifier', () {
-    final signal = Signal(0);
-    expect(signal, isA<ValueNotifier<int>>());
-    expect(signal.value, 0);
-    var notifiedValue = -1;
-    void listener() {
-      notifiedValue = signal.value;
-    }
-
-    signal.addListener(listener);
-    signal.value = 1;
-    expect(notifiedValue, 1);
-    signal.removeListener(listener);
-    signal.value = 2;
-    expect(notifiedValue, 1); // Not updated since listener was removed
-  });
-
-  test('Resource is a ValueNotifier', () {
-    final r = Resource(() => Future.value(0));
-    expect(r, isA<ValueNotifier<ResourceState<int>>>());
-    expect(r.state, isA<ResourceLoading<int>>());
-    var notifiedState = r.state;
-    void listener() {
-      notifiedState = r.state;
-    }
-
-    r.addListener(listener);
-    // Wait for the resource to load
-    return Future.delayed(const Duration(milliseconds: 10), () {
-      expect(notifiedState, isA<ResourceReady<int>>());
-      r.removeListener(listener);
-      r.refresh();
-      expect(
-        notifiedState,
-        isA<ResourceReady<int>>(),
-      ); // Not updated since listener was removed
-    });
-  });
-
-  test('ReadableSignal is a ValueListenable', () {
-    final signal = Signal(0).toReadSignal();
-    expect(signal, isA<ValueListenable<int>>());
-    expect(signal.value, 0);
-    var notifiedValue = -1;
-    void listener() {
-      notifiedValue = signal.value;
-    }
-
-    signal.addListener(listener);
-    signal.dispose(); // Dispose before changing value to test cleanup
-    expect(notifiedValue, -1); // Not updated since value didn't change
-    signal.removeListener(listener);
-  });
-
-  test('Computed is a ValueListenable', () {
-    final baseSignal = Signal(1);
-    final computed = Computed(() => baseSignal.value * 2);
-    expect(computed, isA<ValueListenable<int>>());
-    expect(computed.value, 2);
-    var notifiedValue = -1;
-    void listener() {
-      notifiedValue = computed.value;
-    }
-
-    computed.addListener(listener);
-    baseSignal.value = 2;
-    expect(notifiedValue, 4);
-    computed.removeListener(listener);
-    baseSignal.value = 3;
-    expect(notifiedValue, 4); // Not updated since listener was removed
   });
 }

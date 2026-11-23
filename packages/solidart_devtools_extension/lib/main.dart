@@ -2,10 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:devtools_app_shared/ui.dart';
 import 'package:devtools_extensions/devtools_extensions.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 void main() {
@@ -99,8 +98,8 @@ class SignalData {
 }
 
 class _SignalsState extends State<Signals> {
-  late final StreamSubscription<Object>? sub;
-  late final StreamSubscription<Object>? isolateEventSub;
+  StreamSubscription<Object>? sub;
+  StreamSubscription<Object>? isolateEventSub;
   final selectedSignalId = Signal<String?>(null);
   final searchController = SearchController();
   final searchText = Signal<String>('');
@@ -150,11 +149,15 @@ class _SignalsState extends State<Signals> {
   @override
   void initState() {
     super.initState();
+    extensionManager.darkThemeEnabled.addListener(_onThemeChanged);
     initialize();
   }
 
+  void _onThemeChanged() => setState(() {});
+
   Future<void> initialize() async {
     final vmService = await serviceManager.onServiceAvailable;
+    if (!mounted) return;
     sub = vmService.onExtensionEvent
         .where((e) {
           return e.extensionKind?.startsWith('ext.solidart.signal') ?? false;
@@ -196,6 +199,7 @@ class _SignalsState extends State<Signals> {
 
   @override
   void dispose() {
+    extensionManager.darkThemeEnabled.removeListener(_onThemeChanged);
     sub?.cancel();
     isolateEventSub?.cancel();
     searchController.dispose();
@@ -211,8 +215,6 @@ class _SignalsState extends State<Signals> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     final lightTheme = ShadThemeData(
       brightness: Brightness.light,
       colorScheme: ShadSlateColorScheme.light(),
@@ -225,7 +227,7 @@ class _SignalsState extends State<Signals> {
     return ShadApp(
       theme: lightTheme,
       darkTheme: darkTheme,
-      themeMode: theme.brightness == Brightness.dark
+      themeMode: extensionManager.darkThemeEnabled.value
           ? ThemeMode.dark
           : ThemeMode.light,
       home: Scaffold(
@@ -672,7 +674,7 @@ class _ParameterViewState extends State<ParameterView> {
   }
 
   Widget getView() {
-    final isDark = Theme.of(context).isDarkTheme;
+    final isDark = ShadTheme.of(context).brightness == Brightness.dark;
     final textTheme = ShadTheme.of(context).textTheme;
 
     if (widget.value == null) {

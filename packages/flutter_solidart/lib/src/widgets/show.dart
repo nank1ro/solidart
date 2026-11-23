@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_solidart/src/widgets/signal_builder.dart';
 import 'package:solidart/solidart.dart';
 

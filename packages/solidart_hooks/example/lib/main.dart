@@ -1,15 +1,15 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:material_ui/material_ui.dart';
 
-import 'pages/use_signal.dart';
-import 'pages/use_list_signal.dart';
-import 'pages/use_set_signal.dart';
-import 'pages/use_map_signal.dart';
 import 'pages/use_computed.dart';
+import 'pages/use_existing_signal.dart';
+import 'pages/use_list_signal.dart';
+import 'pages/use_map_signal.dart';
 import 'pages/use_resource.dart';
 import 'pages/use_resource_stream.dart';
+import 'pages/use_set_signal.dart';
+import 'pages/use_signal.dart';
 import 'pages/use_solidart_effect.dart';
-import 'pages/use_existing_signal.dart';
 
 void main() {
   runApp(const MainApp());

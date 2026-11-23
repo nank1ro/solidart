@@ -15,6 +15,11 @@ extension ObserveSignal<T> on SignalBase<T> {
   }) {
     var skipped = false;
     final disposeEffect = Effect(() {
+      // A lazy signal has no value yet: wait for it.
+      if (!hasValue) {
+        skipped = true;
+        return;
+      }
       // Tracks the value
       value;
       if (!fireImmediately && !skipped) {
