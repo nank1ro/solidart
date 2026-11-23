@@ -244,6 +244,12 @@ class Computed<T> extends ReadSignal<T> {
 
   late final _listeners = _SignalListeners<T>(this);
 
+  /// Registers [listener].
+  ///
+  /// Registration computes the value if needed, like reading [value]. A
+  /// selector error is thrown to the caller, as it is to any code that
+  /// triggers the computation. [Listenable.onError] only receives errors
+  /// thrown by listeners.
   @override
   void addListener(VoidCallback listener) => _listeners.add(listener);
 

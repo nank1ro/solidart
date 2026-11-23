@@ -2955,6 +2955,19 @@ void main() {
       expect(signal.hasListeners, isFalse);
     });
 
+    test('addListener throws a Computed selector error to the caller', () {
+      final c = Computed<int>(() => throw StateError('bad'));
+      var calls = 0;
+      final onError = Listenable.onError;
+      addTearDown(() => Listenable.onError = onError);
+      var reported = 0;
+      Listenable.onError = (_, _, _) => reported++;
+
+      expect(() => c.addListener(() => calls++), throwsA(anything));
+      expect(calls, 0);
+      expect(reported, 0);
+    });
+
     test('a Resource listener is not called during addListener', () {
       final r = Resource<int>(() => throw StateError('bad'));
       var calls = 0;
