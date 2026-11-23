@@ -226,6 +226,9 @@ class ReadableSignal<T> implements ReadSignal<T> {
     return _hasPreviousValue;
   }
 
+  @override
+  bool get untrackedHasPreviousValue => trackPreviousValue && _hasPreviousValue;
+
   /// The previous value, if any.
   @override
   T? get previousValue {

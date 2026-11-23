@@ -88,6 +88,16 @@ abstract class SignalBase<T> {
   /// helpful if [T] is nullable.
   bool get hasPreviousValue;
 
+  /// Whether or not there is a previous value, without tracking.
+  ///
+  /// Unlike [hasPreviousValue], this never subscribes the running effect and
+  /// never runs a [Computed]'s selector. It is false when
+  /// [trackPreviousValue] is false.
+  ///
+  /// A subclass or test double that overrides [previousValue] should also
+  /// override [hasPreviousValue] and [untrackedHasPreviousValue].
+  bool get untrackedHasPreviousValue;
+
   /// The previous signal value
   ///
   /// Defaults to null when no previous value is present.

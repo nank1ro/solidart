@@ -237,6 +237,9 @@ class Computed<T> extends ReadSignal<T> {
   }
 
   @override
+  bool get untrackedHasPreviousValue => trackPreviousValue && _hasPreviousValue;
+
+  @override
   int get listenerCount => _internalComputed.subscriberCount;
 
   late final _listeners = _SignalListeners<T>(this);

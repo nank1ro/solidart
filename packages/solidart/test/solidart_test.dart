@@ -239,6 +239,43 @@ void main() {
         c.dispose();
       });
 
+      test('untrackedHasPreviousValue reports without tracking', () {
+        final s = Signal<int>.lazy();
+        final dispose = Effect(() => s.untrackedHasPreviousValue);
+        expect(s.untrackedHasPreviousValue, isFalse);
+        s.value = 1;
+        expect(s.untrackedHasPreviousValue, isFalse);
+        s.value = 2;
+        expect(s.untrackedHasPreviousValue, isTrue);
+        expect(s.listenerCount, 0);
+        dispose();
+        s.dispose();
+      });
+
+      test('untrackedHasPreviousValue is false without trackPreviousValue', () {
+        final s = Signal(1, trackPreviousValue: false);
+        s.value = 2;
+        expect(s.untrackedHasPreviousValue, isFalse);
+        s.dispose();
+      });
+
+      test('Computed.untrackedHasPreviousValue does not run the selector', () {
+        final s = Signal(1);
+        var runs = 0;
+        final c = Computed(() {
+          runs++;
+          return s.value * 2;
+        });
+        expect(c.untrackedHasPreviousValue, isFalse);
+        expect(runs, 0);
+        c.value;
+        s.value = 2;
+        c.value;
+        expect(c.untrackedHasPreviousValue, isTrue);
+        c.dispose();
+        s.dispose();
+      });
+
       test('Resource.untrackedHasValue does not track or resolve', () {
         var fetches = 0;
         final r = Resource<int>(() async => ++fetches);

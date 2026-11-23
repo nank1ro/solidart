@@ -69,7 +69,7 @@ void _notifyDevToolsAboutSignal(
   final hasValue = signal.untrackedHasValue;
   var value = hasValue ? signal.value : null;
   var previousValue = hasValue ? signal.previousValue : null;
-  final hasPreviousValue = hasValue && signal.hasPreviousValue;
+  final hasPreviousValue = signal.untrackedHasPreviousValue;
   if (signal is Resource) {
     value = signal._value.asReady?.value;
     previousValue = signal._previousValue?.asReady?.value;
