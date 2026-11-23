@@ -393,12 +393,8 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   /// Resolves the resource, if needed. A disposed resource never resolves.
   void _resolveIfNeeded() {
-    // Run the first resolve outside any tracking context. The first read of
-    // [state] often happens inside an effect (`Effect`, `observe`,
-    // `SignalBuilder`), and `_resolve` synchronously runs the fetcher and
-    // subscribes to the [source]. Without this, the fetcher's synchronous reads
-    // would be tracked by the caller's effect, and the source observation would
-    // be created as a child effect of the caller (disposed on its next run).
+    // Untracked: the first read often runs inside an effect, which must not
+    // track the fetcher's reads or own the source observation.
     if (!_resolved && !disposed) untracked(_resolve);
   }
 
