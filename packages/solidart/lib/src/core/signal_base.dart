@@ -72,16 +72,19 @@ abstract class SignalBase<T> {
   T call();
 
   /// Whether or not the signal has been initialized with a value.
+  ///
+  /// `observe()` and `addListener()` read it before [value]. A [Computed]
+  /// runs its selector and a [Resource] resolves, like reading [value].
   bool get hasValue;
 
   /// Whether or not the signal has a value, without tracking.
   ///
-  /// Unlike [hasValue], this never subscribes the running effect and never
-  /// runs a [Computed]'s selector: a [Computed] always returns true.
+  /// Unlike [hasValue], this never subscribes the running effect, never runs
+  /// a [Computed]'s selector (a [Computed] always returns true) and never
+  /// resolves a [Resource].
   ///
-  /// `observe()` and `addListener()` read it before [value]. A subclass or
-  /// test double that overrides [value] should also override [hasValue] and
-  /// [untrackedHasValue].
+  /// A subclass or test double that overrides [value] should also override
+  /// [hasValue] and [untrackedHasValue].
   bool get untrackedHasValue;
 
   /// Indicates if there is a previous value. It is especially

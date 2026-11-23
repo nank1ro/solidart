@@ -15,10 +15,8 @@ extension ObserveSignal<T> on SignalBase<T> {
   }) {
     var skipped = false;
     final disposeEffect = Effect(() {
-      // A lazy signal has no value yet: subscribe, so this effect reruns
-      // when it gets one.
-      if (!untrackedHasValue) {
-        hasValue;
+      // A lazy signal has no value yet: wait for it.
+      if (!hasValue) {
         skipped = true;
         return;
       }

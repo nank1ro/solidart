@@ -276,6 +276,14 @@ void main() {
         s.dispose();
       });
 
+      test('Resource.hasValue resolves a lazy resource', () {
+        var fetches = 0;
+        final r = Resource<int>(() async => ++fetches);
+        expect(r.hasValue, isTrue);
+        expect(fetches, 1);
+        r.dispose();
+      });
+
       test('Resource.untrackedHasValue does not track or resolve', () {
         var fetches = 0;
         final r = Resource<int>(() async => ++fetches);
