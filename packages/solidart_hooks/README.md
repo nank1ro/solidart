@@ -7,7 +7,7 @@ For a comprehensive and updated documentation go to [The Official Documentation]
 Helper library to make working with [solidart](https://pub.dev/packages/solidart) in [flutter_hooks](https://pub.dev/packages/flutter_hooks) easier.
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:solidart_hooks/solidart_hooks.dart';
 

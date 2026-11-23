@@ -4,7 +4,7 @@ This package is a developer tool for users of flutter_solidart, designed to help
 
 ## Getting started
 
-Be sure to have the Dart SDK version `>= 3.14.0` and the Flutter SDK `>= 3.50.0`.
+The plugin needs the Dart SDK `>= 3.13.0`. flutter_solidart itself needs the Flutter SDK `>= 3.50.0` (Dart `>= 3.14.0`).
 
 Then edit your `analysis_options.yaml` file and add these lines of code:
 

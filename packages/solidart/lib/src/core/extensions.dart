@@ -17,7 +17,8 @@ extension ObserveSignal<T> on SignalBase<T> {
     final disposeEffect = Effect(() {
       // A lazy signal without a value is tracked through hasValue, so its
       // first assignment notifies the listener.
-      if (!hasValue) {
+      if (!untracked(() => hasValue)) {
+        hasValue;
         skipped = true;
         return;
       }

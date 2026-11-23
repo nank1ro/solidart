@@ -136,18 +136,43 @@ void main() {
 
       test('observe on a lazy signal waits for the first value', () {
         final s = Signal<int>.lazy(autoDispose: false);
-        final values = <int>[];
+        final calls = <(int?, int)>[];
         final unobserve = s.observe(
-          (_, value) => values.add(value),
+          (previous, value) => calls.add((previous, value)),
           fireImmediately: true,
         );
-        expect(values, isEmpty);
+        expect(calls, isEmpty);
         s.value = 1;
-        expect(values, [1]);
+        expect(calls, [(null, 1)]);
+        expect(s.untrackedPreviousValue, isNull);
         addTearDown(() {
           unobserve();
           s.dispose();
         });
+      });
+
+      test('observe on a disposed signal does not subscribe', () {
+        final s = Signal(1)..dispose();
+        final lazy = Signal<int>.lazy()..dispose();
+        final values = <int>[];
+        final unobserve = s.observe((_, value) => values.add(value));
+        final unobserveLazy = lazy.observe((_, value) => values.add(value));
+        expect(s.listenerCount, 0);
+        expect(lazy.listenerCount, 0);
+        s.value = 2;
+        lazy.value = 3;
+        expect(values, isEmpty);
+        unobserve();
+        unobserveLazy();
+      });
+
+      test('observe on a Resource does not fire during registration', () {
+        final r = Resource<int>(() => throw StateError('bad'));
+        var calls = 0;
+        final unobserve = r.observe((_, _) => calls++);
+        expect(calls, 0);
+        unobserve();
+        r.dispose();
       });
 
       test('check previousValue stores the previous value', () {
@@ -2789,6 +2814,36 @@ void main() {
       final signal = Signal(0)..dispose();
       signal.addListener(() {});
       expect(signal.hasListeners, isFalse);
+    });
+
+    test('a Resource listener is not called during addListener', () {
+      final r = Resource<int>(() => throw StateError('bad'));
+      var calls = 0;
+      late void Function() self;
+      self = () {
+        calls++;
+        r.removeListener(self);
+      };
+
+      r.addListener(self);
+      expect(calls, 0);
+      expect(r.hasListeners, isTrue);
+      r
+        ..removeListener(self)
+        ..dispose();
+    });
+
+    test('disposing an uninitialized lazy signal with devtools enabled '
+        'does not throw', () {
+      final devToolsEnabled = SolidartConfig.devToolsEnabled;
+      addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
+      SolidartConfig.devToolsEnabled = true;
+      final signal = Signal<int>.lazy(autoDispose: true);
+      void listener() {}
+
+      signal.addListener(listener);
+      expect(() => signal.removeListener(listener), returnsNormally);
+      expect(signal.disposed, isTrue);
     });
   });
 }

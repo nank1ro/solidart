@@ -119,7 +119,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   @override
   bool get hasValue {
-    _reportObserved();
+    if (!_disposed) _reportObserved();
     return _hasValue;
   }
 
@@ -191,29 +191,27 @@ class ReadableSignal<T> implements ReadSignal<T> {
   /// {@endtemplate}
   @protected
   T setValue(T newValue) {
-    final firstValue = !_hasValue;
-
-    if (firstValue) {
+    // the first value of a lazy signal has no previous value
+    if (!_hasValue) {
       _untrackedValue = newValue;
       _hasValue = true;
+      reactiveSystem.setSignalValue(_internalSignal, Some(newValue));
+      _notifySignalCreation();
+      return newValue;
     }
 
     // skip if the values are equal
-    if (!firstValue && _compare(_untrackedValue, newValue)) {
+    if (_compare(_untrackedValue, newValue)) {
       return newValue;
     }
 
     // store the previous value
-    if (!firstValue) _setPreviousValue(_untrackedValue);
+    _setPreviousValue(_untrackedValue);
 
     // notify with the new value
     _value = newValue;
 
-    if (firstValue) {
-      _notifySignalCreation();
-    } else {
-      _notifySignalUpdate();
-    }
+    _notifySignalUpdate();
     return newValue;
   }
 

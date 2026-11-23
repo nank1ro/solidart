@@ -12,7 +12,10 @@ part of 'core.dart';
 /// lets the signal dispose itself when [SignalBase.autoDispose] is enabled.
 ///
 /// A listener that writes the signal it listens to is not notified of its own
-/// write, following solidart's effect re-entrancy rule.
+/// write, following solidart's effect re-entrancy rule. Writes inside a
+/// [batch] notify once, at the end of the batch. A [Signal.notifyListeners]
+/// call made from inside a listener is merged into the running notification
+/// instead of being delivered again.
 class _SignalListeners<T> {
   _SignalListeners(this._signal);
 
