@@ -15,13 +15,12 @@ extension ObserveSignal<T> on SignalBase<T> {
   }) {
     var skipped = false;
     final disposeEffect = Effect(() {
-      // Only a readable signal can lack a value (a lazy signal, or a subclass
-      // that reports no value). The tracked read makes this effect rerun when
-      // a value arrives. Never read hasValue on a Computed (it evaluates the
-      // selector) or untracked (it would evaluate sources before this effect
-      // subscribes).
-      final self = this;
-      if (self is ReadableSignal<T> && !self.hasValue) {
+      // Wait for a value (a lazy signal, or a subclass or test double that
+      // reports no value). The tracked read makes this effect rerun when a
+      // value arrives. Skip a Computed (hasValue evaluates the selector) and a
+      // Resource (it always has a state, and reading hasValue before value
+      // would subscribe before a lazy Resource resolves).
+      if (this is! Computed && this is! Resource && !hasValue) {
         skipped = true;
         return;
       }

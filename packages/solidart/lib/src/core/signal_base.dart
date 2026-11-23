@@ -72,6 +72,10 @@ abstract class SignalBase<T> {
   T call();
 
   /// Whether or not the signal has been initialized with a value.
+  ///
+  /// `observe()` and `addListener()` read [hasValue] (tracked) before [value].
+  /// A subclass or test double that overrides [value] should also override
+  /// [hasValue]. A test double must return true when it has a value.
   bool get hasValue;
 
   /// Indicates if there is a previous value. It is especially

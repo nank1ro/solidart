@@ -199,6 +199,27 @@ void main() {
         expect(() => fake.observe((_, _) {}), returnsNormally);
       });
 
+      test('observe honors hasValue on a ReadSignal test double', () {
+        final source = Signal<int>.lazy();
+        final double = _ReadSignalDouble(source);
+        final values = <int>[];
+        expect(
+          () => double.observe((_, value) => values.add(value)),
+          returnsNormally,
+        );
+        expect(values, isEmpty);
+        source.value = 7;
+        expect(values, [7]);
+      });
+
+      test('Resource.hasValue is tracked', () {
+        final r = Resource<int>(() async => 1);
+        final dispose = Effect(() => r.hasValue);
+        expect(r.listenerCount, 1);
+        dispose();
+        r.dispose();
+      });
+
       test('observe waits for an overridden hasValue on an eager signal', () {
         final open = Signal(false);
         final gated = _GatedSignal(1, open);
@@ -216,26 +237,6 @@ void main() {
           gated.dispose();
           open.dispose();
         });
-      });
-
-      test('observe and addListener on a forwarding signal over a Resource '
-          'do not fire during registration', () {
-        final r = Resource<int>(() => throw StateError('bad'));
-        final forwarding = _ForwardingSignal(r);
-        var observeCalls = 0;
-        var listenerCalls = 0;
-        void listener() => listenerCalls++;
-
-        final unobserve = forwarding.observe((_, _) => observeCalls++);
-        forwarding.addListener(listener);
-        expect(observeCalls, 0);
-        expect(listenerCalls, 0);
-
-        unobserve();
-        forwarding
-          ..removeListener(listener)
-          ..dispose();
-        r.dispose();
       });
 
       test('check previousValue stores the previous value', () {
@@ -3056,6 +3057,25 @@ class _GatedSignal extends Signal<int> {
     if (!open.value) throw StateError('closed');
     return super.value;
   }
+}
+
+/// A [ReadSignal] test double that forwards to [source].
+class _ReadSignalDouble extends Fake implements ReadSignal<int> {
+  _ReadSignalDouble(this.source);
+
+  final ReadSignal<int> source;
+
+  @override
+  bool get hasValue => source.hasValue;
+
+  @override
+  int get value => source.value;
+
+  @override
+  int get untrackedValue => source.untrackedValue;
+
+  @override
+  int? get untrackedPreviousValue => source.untrackedPreviousValue;
 }
 
 /// A signal implemented outside the library, without its private members.

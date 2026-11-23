@@ -220,11 +220,6 @@ class Resource<T> extends Signal<ResourceState<T>> {
   @override
   ResourceState<T> call() => state;
 
-  /// A resource always has a state, so this does not track. Reading it must
-  /// not subscribe before the fetcher runs.
-  @override
-  bool get hasValue => true;
-
   /// Updates the current resource state
   set state(ResourceState<T> state) {
     // Retain the last ready/error state before it's replaced, so `previousReady`
