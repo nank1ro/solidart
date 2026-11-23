@@ -210,8 +210,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
   // ignore: overridden_fields
   final _id = ReactiveName.nameFor('Resource');
 
-  /// Always true (a resource starts in the loading state). Like [state], it
-  /// resolves a lazy resource.
+  /// Always true: a resource starts in the loading state. Reading it resolves
+  /// a lazy resource, like [state]. To check that the data has loaded, use
+  /// `state.isReady`.
   @override
   bool get hasValue {
     _resolveIfNeeded();
