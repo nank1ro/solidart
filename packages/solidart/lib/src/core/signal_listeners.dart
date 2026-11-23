@@ -16,7 +16,8 @@ part of 'core.dart';
 /// [batch] notify at most once, at the end of the batch. A
 /// [Signal.notifyListeners] call made from inside a listener does not call
 /// that listener again. Listeners that have not run yet in the current
-/// notification run once, and listeners that already ran are called again.
+/// notification run once, and other listeners that already ran are called
+/// again.
 class _SignalListeners<T> {
   _SignalListeners(this._signal);
 

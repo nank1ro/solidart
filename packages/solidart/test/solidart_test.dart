@@ -166,6 +166,25 @@ void main() {
         unobserveLazy();
       });
 
+      test('observe uses an overridden hasValue', () {
+        final source = Signal(1);
+        final forwarding = _ForwardingSignal(source);
+        final values = <int>[];
+        final unobserve = forwarding.observe(
+          (_, value) => values.add(value),
+          fireImmediately: true,
+        );
+        expect(values, [1]);
+        expect(source.listenerCount, 1);
+        source.value = 2;
+        expect(values, [1, 2]);
+        addTearDown(() {
+          unobserve();
+          forwarding.dispose();
+          source.dispose();
+        });
+      });
+
       test('observe on a Resource does not fire during registration', () {
         final r = Resource<int>(() => throw StateError('bad'));
         var calls = 0;
@@ -2892,7 +2911,45 @@ void main() {
       dispose();
       expect(c.disposed, isTrue);
     });
+
+    test('devtools serialize a signal that overrides hasValue', () {
+      final devToolsEnabled = SolidartConfig.devToolsEnabled;
+      addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
+      SolidartConfig.devToolsEnabled = true;
+      final probe = _JsonProbe();
+      final source = Signal(probe, trackInDevTools: false);
+      final forwarding = _ForwardingSignal(source);
+
+      expect(forwarding.dispose, returnsNormally);
+      expect(probe.toJsonCalls, greaterThan(0));
+      source.dispose();
+    });
   });
+}
+
+/// A read-only signal that forwards to [source] and overrides [hasValue].
+class _ForwardingSignal<T> extends ReadableSignal<T> {
+  _ForwardingSignal(this.source) : super.lazy(autoDispose: false);
+
+  final ReadableSignal<T> source;
+
+  @override
+  bool get hasValue => source.hasValue;
+
+  @override
+  T get value => source.value;
+
+  @override
+  T get untrackedValue => source.untrackedValue;
+}
+
+class _JsonProbe {
+  int toJsonCalls = 0;
+
+  Object? toJson() {
+    toJsonCalls++;
+    return 'probe';
+  }
 }
 
 class _AlwaysZeroRandom implements Random {

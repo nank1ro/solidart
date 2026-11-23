@@ -66,8 +66,10 @@ void _notifyDevToolsAboutSignal(
 }) {
   if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
   final eventName = 'ext.solidart.signal.${eventType.name}';
-  // Never evaluate a Computed here: it could auto-dispose before use.
-  final hasValue = signal is! ReadableSignal || signal._hasValue;
+  // Do not call hasValue on a Computed: it evaluates untracked and can
+  // auto-dispose it.
+  final hasValue =
+      signal is! ReadableSignal || untracked(() => signal.hasValue);
   var value = hasValue ? signal.value : null;
   var previousValue = hasValue ? signal.previousValue : null;
   final hasPreviousValue = hasValue && signal.hasPreviousValue;

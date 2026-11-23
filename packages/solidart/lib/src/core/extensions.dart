@@ -18,7 +18,7 @@ extension ObserveSignal<T> on SignalBase<T> {
       // Only a lazy signal can lack a value. Reading a Computed here would
       // evaluate it before this effect subscribes, and could auto-dispose it.
       final self = this;
-      if (self is ReadableSignal<T> && !self._hasValue) {
+      if (self is ReadableSignal<T> && !untracked(() => self.hasValue)) {
         // Tracked, so the first assignment reruns this effect.
         self.hasValue;
         skipped = true;
