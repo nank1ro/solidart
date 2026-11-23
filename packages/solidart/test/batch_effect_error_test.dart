@@ -56,10 +56,104 @@ void main() {
       }
 
       // Both effects ran despite throwing...
-      expect(ran, containsAll(<String>['first', 'second']));
+      expect(ran, ['first', 'second']);
       // ...and only the first error surfaced.
       expect(thrown, isA<StateError>());
       expect((thrown! as StateError).message, 'first-error');
+    });
+
+    test('an effect reading a throwing Computed does not drop updates '
+        'queued for other effects', () {
+      final a = Signal(0);
+      final b = Signal(0);
+      final c = Computed(() {
+        if (a.value == 1) throw StateError('bad');
+        return a.value;
+      });
+      final seen = <int>[];
+
+      Effect(() => c.value);
+      Effect(() => seen.add(b.value));
+
+      addTearDown(a.dispose);
+      addTearDown(b.dispose);
+
+      expect(
+        () => batch(() {
+          a.value = 1;
+          b.value = 1;
+        }),
+        throwsA(isA<SolidartCaughtException>()),
+      );
+      expect(seen, [0, 1]);
+    });
+
+    test('a throwing onError does not drop updates queued for other '
+        'effects', () {
+      final a = Signal(0);
+      final b = Signal(0);
+      final seen = <int>[];
+
+      Effect(
+        () {
+          if (a.value == 1) throw StateError('bad');
+        },
+        onError: (_) => throw StateError('handler'),
+      );
+      Effect(() => seen.add(b.value));
+
+      addTearDown(a.dispose);
+      addTearDown(b.dispose);
+
+      expect(
+        () => batch(() {
+          a.value = 1;
+          b.value = 1;
+        }),
+        throwsA(
+          isA<StateError>().having((e) => e.message, 'message', 'handler'),
+        ),
+      );
+      expect(seen, [0, 1]);
+    });
+
+    test('an error is not thrown again by a later unrelated write', () {
+      final a = Signal(0);
+      final other = Signal(0);
+      final c = Computed(() {
+        if (a.value == 1) throw StateError('computed');
+        return a.value;
+      });
+
+      Effect(() {
+        if (a.value == 1) throw StateError('effect');
+      });
+      Effect(() => c.value);
+
+      addTearDown(a.dispose);
+      addTearDown(other.dispose);
+
+      expect(() => a.value = 1, throwsA(anything));
+      expect(() => other.value = 1, returnsNormally);
+    });
+
+    test('a child effect error reaches the parent onError on every run', () {
+      final s = Signal(0);
+      final errors = <Object>[];
+
+      Effect(
+        () {
+          final value = s.value;
+          Effect(() => throw StateError('child $value'));
+        },
+        onError: errors.add,
+      );
+
+      addTearDown(s.dispose);
+
+      expect(errors, hasLength(1));
+      expect(() => s.value = 1, returnsNormally);
+      expect(errors, hasLength(2));
     });
 
     test('a throwing effect with onError does not abort the batch flush', () {

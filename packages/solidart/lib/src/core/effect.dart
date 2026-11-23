@@ -149,29 +149,20 @@ class Effect implements ReactionInterface {
     bool? detach,
   }) : _onError = onError,
        _callback = callback {
-    _internalEffect = _AlienEffect(this, _runGuarded, detach: detach);
+    _internalEffect = _AlienEffect(this, _runCallback, detach: detach);
   }
 
-  /// The user callback. It is wrapped by [_runGuarded] so that a throwing
-  /// effect never escapes alien_signals' flush loop (see issue #182).
   final VoidCallback _callback;
 
-  /// Runs the user [_callback], never letting it throw out of the reactive
-  /// flush loop.
-  ///
-  /// An error is routed to [_onError] when provided, otherwise it is captured
-  /// on the reactive system and rethrown after the flush has run every other
-  /// queued effect. This keeps one failing effect from dropping the updates
-  /// queued behind it.
-  void _runGuarded() {
+  // Runs on every run, initial and reactive: routes an error to [_onError]
+  // when provided, otherwise rethrows it.
+  void _runCallback() {
     try {
       _callback();
     } catch (error, stackTrace) {
-      if (_onError != null) {
-        _onError.call(SolidartCaughtException(error, stackTrace: stackTrace));
-      } else {
-        reactiveSystem.captureEffectError(error, stackTrace);
-      }
+      final onError = _onError;
+      if (onError == null) rethrow;
+      onError(SolidartCaughtException(error, stackTrace: stackTrace));
     }
   }
 
@@ -211,9 +202,6 @@ class Effect implements ReactionInterface {
     final prevSub = reactiveSystem.setCurrentSub(_internalEffect);
     reactiveSystem.startBatch();
     try {
-      // `_internalEffect.run()` calls `_runGuarded`, which never throws; any
-      // error is surfaced by `endBatch` after the flush, so the cleanup below
-      // still runs. The nested `finally` keeps that cleanup running even then.
       _internalEffect.run();
     } finally {
       try {

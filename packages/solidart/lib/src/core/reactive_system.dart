@@ -92,8 +92,7 @@ class ReactiveSystem {
   void startBatch() => alien.startBatch();
 
   void endBatch() {
-    alien.endBatch();
-    _surfaceEffectErrors();
+    if (--alien.batchDepth == 0) flush();
   }
 
   void link(alien_system.ReactiveNode dep, alien_system.ReactiveNode sub) {
@@ -123,10 +122,14 @@ class ReactiveSystem {
   }
 
   void setSignalValue<T>(_AlienSignal<T> signal, Option<T> value) {
-    signal.set(value);
-    // `signal.set` flushes queued effects synchronously when not inside a
-    // batch, so surface any error an effect captured during that flush.
-    _surfaceEffectErrors();
+    // Batch the write so the queued effects run in [flush] below, not in
+    // alien_signals' own flush.
+    startBatch();
+    try {
+      signal.set(value);
+    } finally {
+      endBatch();
+    }
   }
 
   void stopEffect(alien_system.ReactiveNode effect) {
@@ -150,33 +153,27 @@ class ReactiveSystem {
     alien.propagate(link, alien.runDepth > 0);
   }
 
-  void flush() {
-    alien.flush();
-    _surfaceEffectErrors();
-  }
-
-  /// Errors thrown by effect callbacks (without an `onError`) during a flush.
+  /// Runs every queued effect, then rethrows the first error, if any.
   ///
-  /// alien_signals' flush loop aborts on the first throwing effect and drops
-  /// the effects still queued behind it (see issue #182). To avoid that, an
-  /// effect body never throws out of the loop: its error is captured here and
-  /// rethrown once the flush has finished running every queued effect.
-  final _capturedEffectErrors = <(Object, StackTrace)>[];
-
-  /// Captures an error thrown by an effect body so the flush loop can keep
-  /// running the remaining queued effects.
-  void captureEffectError(Object error, StackTrace stackTrace) {
-    _capturedEffectErrors.add((error, stackTrace));
-  }
-
-  /// Rethrows the first error captured during the current flush, once the
-  /// flush has fully unwound. Re-entrant writes performed by an effect (while
-  /// `runDepth > 0`) defer to the outermost boundary so the error surfaces
-  /// only after every queued effect has run.
-  void _surfaceEffectErrors() {
-    if (_capturedEffectErrors.isEmpty || alien.runDepth != 0) return;
-    final (error, stackTrace) = _capturedEffectErrors.first;
-    _capturedEffectErrors.clear();
-    Error.throwWithStackTrace(error, stackTrace);
+  /// Replaces alien_signals' `flush`, which stops at the first throwing effect
+  /// and drops the effects queued after it (see issue #182).
+  void flush() {
+    Object? error;
+    StackTrace? stackTrace;
+    while (alien.queuedEffects != null) {
+      final effect = alien.queuedEffects! as alien.EffectNode;
+      alien.queuedEffects = effect.nextEffect;
+      effect.nextEffect = null;
+      if (alien.queuedEffects == null) alien.queuedEffectsTail = null;
+      try {
+        alien.run(effect);
+      } catch (e, s) {
+        if (error == null) {
+          error = e;
+          stackTrace = s;
+        }
+      }
+    }
+    if (error != null) Error.throwWithStackTrace(error, stackTrace!);
   }
 }
