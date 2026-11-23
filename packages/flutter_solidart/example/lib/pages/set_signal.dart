@@ -2,8 +2,8 @@
 
 import 'dart:math';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:material_ui/material_ui.dart';
 
 class SetSignalPage extends StatefulWidget {
   const SetSignalPage({super.key});

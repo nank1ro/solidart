@@ -210,6 +210,15 @@ class Resource<T> extends Signal<ResourceState<T>> {
   // ignore: overridden_fields
   final _id = ReactiveName.nameFor('Resource');
 
+  /// Always true: a resource starts in the loading state. Reading it resolves
+  /// a lazy resource, like [state]. To check that the data has loaded, use
+  /// `state.isReady`.
+  @override
+  bool get hasValue {
+    _resolveIfNeeded();
+    return super.hasValue;
+  }
+
   /// The current resource state
   ResourceState<T> get state {
     _resolveIfNeeded();
@@ -382,7 +391,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     }
   }
 
-  /// Resolves the resource, if needed
+  /// Resolves the resource, if needed. A disposed resource never resolves.
   void _resolveIfNeeded() {
     // Run the first resolve outside any tracking context. The first read of
     // [state] often happens inside an effect (`Effect`, `observe`,
@@ -390,7 +399,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     // subscribes to the [source]. Without this, the fetcher's synchronous reads
     // would be tracked by the caller's effect, and the source observation would
     // be created as a child effect of the caller (disposed on its next run).
-    if (!_resolved) untracked(_resolve);
+    if (!_resolved && !disposed) untracked(_resolve);
   }
 
   /// Runs the [fetcher] for the first time.

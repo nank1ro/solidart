@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:alien_signals/system.dart' as alien_system;
 import 'package:collection/collection.dart';
+import 'package:listen/listen.dart';
 import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
 import 'package:solidart/src/core/core.dart';
@@ -130,6 +131,197 @@ void main() {
         addTearDown(() {
           s.dispose();
           unobserve();
+        });
+      });
+
+      test('observe on a lazy signal waits for the first value', () {
+        final s = Signal<int>.lazy(autoDispose: false);
+        final calls = <(int?, int)>[];
+        final unobserve = s.observe(
+          (previous, value) => calls.add((previous, value)),
+          fireImmediately: true,
+        );
+        expect(calls, isEmpty);
+        s.value = 1;
+        expect(calls, [(null, 1)]);
+        expect(s.untrackedPreviousValue, isNull);
+        addTearDown(() {
+          unobserve();
+          s.dispose();
+        });
+      });
+
+      test('observe on a disposed signal does not subscribe', () {
+        final s = Signal(1)..dispose();
+        final lazy = Signal<int>.lazy()..dispose();
+        final values = <int>[];
+        final unobserve = s.observe((_, value) => values.add(value));
+        final unobserveLazy = lazy.observe((_, value) => values.add(value));
+        expect(s.listenerCount, 0);
+        expect(lazy.listenerCount, 0);
+        s.value = 2;
+        lazy.value = 3;
+        expect(values, isEmpty);
+        unobserve();
+        unobserveLazy();
+      });
+
+      test('observe uses an overridden hasValue', () {
+        final source = Signal(1);
+        final forwarding = _ForwardingSignal(source);
+        final values = <int>[];
+        final unobserve = forwarding.observe(
+          (_, value) => values.add(value),
+          fireImmediately: true,
+        );
+        expect(values, [1]);
+        expect(source.listenerCount, 1);
+        source.value = 2;
+        expect(values, [1, 2]);
+        addTearDown(() {
+          unobserve();
+          forwarding.dispose();
+          source.dispose();
+        });
+      });
+
+      test('observe on a Resource does not fire during registration', () {
+        final r = Resource<int>(() => throw StateError('bad'));
+        var calls = 0;
+        final unobserve = r.observe((_, _) => calls++);
+        expect(calls, 0);
+        unobserve();
+        r.dispose();
+      });
+
+      test('observe accepts a signal implemented outside the library', () {
+        final fake = _FakeReadableSignal();
+        expect(() => fake.observe((_, _) {}), returnsNormally);
+      });
+
+      test('observe honors hasValue on a ReadSignal test double', () {
+        final source = Signal<int>.lazy();
+        final double = _ReadSignalDouble(source);
+        final values = <int>[];
+        expect(
+          () => double.observe((_, value) => values.add(value)),
+          returnsNormally,
+        );
+        expect(values, isEmpty);
+        source.value = 7;
+        expect(values, [7]);
+      });
+
+      test('Resource.hasValue is tracked', () {
+        final r = Resource<int>(() async => 1);
+        final dispose = Effect(() => r.hasValue);
+        expect(r.listenerCount, 1);
+        dispose();
+        r.dispose();
+      });
+
+      test('untrackedHasValue reports a lazy value without tracking', () {
+        final s = Signal<int>.lazy();
+        final dispose = Effect(() => s.untrackedHasValue);
+        expect(s.untrackedHasValue, isFalse);
+        expect(s.listenerCount, 0);
+        s.value = 1;
+        expect(s.untrackedHasValue, isTrue);
+        dispose();
+        s.dispose();
+      });
+
+      test('Computed.untrackedHasValue does not run the selector', () {
+        var runs = 0;
+        final c = Computed(() => ++runs);
+        expect(c.untrackedHasValue, isTrue);
+        expect(runs, 0);
+        c.dispose();
+      });
+
+      test('untrackedHasPreviousValue reports without tracking', () {
+        final s = Signal<int>.lazy();
+        final dispose = Effect(() => s.untrackedHasPreviousValue);
+        expect(s.untrackedHasPreviousValue, isFalse);
+        s.value = 1;
+        expect(s.untrackedHasPreviousValue, isFalse);
+        s.value = 2;
+        expect(s.untrackedHasPreviousValue, isTrue);
+        expect(s.listenerCount, 0);
+        dispose();
+        s.dispose();
+      });
+
+      test('untrackedHasPreviousValue is false without trackPreviousValue', () {
+        final s = Signal(1, trackPreviousValue: false);
+        s.value = 2;
+        expect(s.untrackedHasPreviousValue, isFalse);
+        s.dispose();
+      });
+
+      test('Computed.untrackedHasPreviousValue does not run the selector', () {
+        final s = Signal(1);
+        var runs = 0;
+        final c = Computed(() {
+          runs++;
+          return s.value * 2;
+        });
+        expect(c.untrackedHasPreviousValue, isFalse);
+        expect(runs, 0);
+        c.value;
+        s.value = 2;
+        c.value;
+        expect(c.untrackedHasPreviousValue, isTrue);
+        c.dispose();
+        s.dispose();
+      });
+
+      test('Resource.hasValue resolves a lazy resource', () {
+        var fetches = 0;
+        final r = Resource<int>(() async => ++fetches);
+        expect(r.hasValue, isTrue);
+        expect(fetches, 1);
+        r.dispose();
+      });
+
+      test('a disposed lazy Resource does not resolve when read', () {
+        var streams = 0;
+        final r = Resource<int>.stream(() {
+          streams++;
+          return const Stream.empty();
+        })..dispose();
+        r.hasValue;
+        r.state;
+        expect(streams, 0);
+      });
+
+      test('Resource.untrackedHasValue does not track or resolve', () {
+        var fetches = 0;
+        final r = Resource<int>(() async => ++fetches);
+        final dispose = Effect(() => r.untrackedHasValue);
+        expect(r.untrackedHasValue, isTrue);
+        expect(r.listenerCount, 0);
+        expect(fetches, 0);
+        dispose();
+        r.dispose();
+      });
+
+      test('observe waits for an overridden hasValue on an eager signal', () {
+        final open = Signal(false);
+        final gated = _GatedSignal(1, open);
+        final values = <int>[];
+        late DisposeObservation unobserve;
+        expect(
+          () => unobserve = gated.observe((_, value) => values.add(value)),
+          returnsNormally,
+        );
+        expect(values, isEmpty);
+        open.value = true;
+        expect(values, [1]);
+        addTearDown(() {
+          unobserve();
+          gated.dispose();
+          open.dispose();
         });
       });
 
@@ -1399,6 +1591,8 @@ void main() {
         () async {
           final count = Resource<int>(() => Future.value(1), lazy: false);
           var fired = false;
+          // Not awaited on purpose: the callback must fire synchronously.
+          // ignore: unawaited_futures
           count.until((v) => true).then((value) => fired = true);
           expect(fired, true);
         },
@@ -1409,6 +1603,8 @@ void main() {
         () async {
           final count = Signal(0);
           var fired = false;
+          // Not awaited on purpose: the callback fires on the later write.
+          // ignore: unawaited_futures
           count.until((v) => v == 1).then((value) => fired = true);
           count.value = 1;
           await pumpEventQueue();
@@ -2498,6 +2694,498 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
+
+  group('ValueListenable / ValueNotifier (listen)', () {
+    test('Signal is a ValueNotifier', () {
+      final signal = Signal(0);
+      expect(signal, isA<ValueNotifier<int>>());
+      expect(signal.value, 0);
+      var notifiedValue = -1;
+      void listener() => notifiedValue = signal.value;
+
+      signal.addListener(listener);
+      expect(notifiedValue, -1);
+      signal.value = 1;
+      expect(notifiedValue, 1);
+      signal.removeListener(listener);
+      signal.value = 2;
+      expect(notifiedValue, 1); // Not updated since listener was removed
+      signal.dispose();
+    });
+
+    test('a lazy signal listener is first notified on assignment', () {
+      final signal = Signal<int?>.lazy(autoDispose: true);
+      final values = <int?>[];
+      void listener() => values.add(signal.value);
+
+      signal.addListener(listener);
+      expect(signal.hasValue, isFalse);
+      expect(values, isEmpty);
+
+      signal.value = null;
+      signal.value = 1;
+      expect(values, [null, 1]);
+      signal.removeListener(listener);
+      expect(signal.disposed, isTrue);
+    });
+
+    test('notifyListeners tolerates a listener removing itself', () {
+      final signal = Signal(0, autoDispose: false);
+      var calls = 0;
+      late void Function() self;
+      self = () {
+        calls++;
+        signal.removeListener(self);
+      };
+
+      signal.addListener(self);
+      signal.notifyListeners(); // must not throw ConcurrentModificationError
+      expect(calls, 1);
+      expect(signal.hasListeners, isFalse);
+      signal.dispose();
+    });
+
+    test('Signal hasListeners and notifyListeners', () {
+      final signal = Signal(0);
+      expect(signal.hasListeners, isFalse);
+      var count = 0;
+      void listener() => count++;
+
+      signal.addListener(listener);
+      expect(signal.hasListeners, isTrue);
+      signal.notifyListeners();
+      expect(count, 1);
+      signal.removeListener(listener);
+      expect(signal.hasListeners, isFalse);
+      signal.dispose();
+    });
+
+    test('ReadableSignal is a ValueListenable', () {
+      final signal = Signal(0).toReadSignal();
+      expect(signal, isA<ValueListenable<int>>());
+      expect(signal.value, 0);
+      var notifiedValue = -1;
+      void listener() => notifiedValue = signal.value;
+
+      signal.addListener(listener);
+      signal.dispose(); // Dispose before changing value to test cleanup
+      expect(notifiedValue, -1); // Not updated since value didn't change
+      signal.removeListener(listener);
+    });
+
+    test('Computed is a ValueListenable', () {
+      final baseSignal = Signal(1);
+      final computed = Computed(() => baseSignal.value * 2);
+      expect(computed, isA<ValueListenable<int>>());
+      expect(computed.value, 2);
+      var notifiedValue = -1;
+      void listener() => notifiedValue = computed.value;
+
+      computed.addListener(listener);
+      baseSignal.value = 2;
+      expect(notifiedValue, 4);
+      computed.removeListener(listener);
+      baseSignal.value = 3;
+      expect(notifiedValue, 4); // Not updated since listener was removed
+      computed.dispose();
+      baseSignal.dispose();
+    });
+
+    test('ReadSignal is a ValueListenable', () {
+      ValueListenable<int> asListenable(ReadSignal<int> signal) => signal;
+      final base = Signal(1, autoDispose: false);
+      final ReadSignal<int> doubled = Computed(() => base.value * 2);
+      final listenable = asListenable(doubled);
+      var calls = 0;
+      void listener() => calls++;
+
+      listenable.addListener(listener);
+      base.value = 2;
+      expect(calls, 1);
+      expect(listenable.value, 4);
+
+      listenable.removeListener(listener);
+      doubled.dispose();
+      base.dispose();
+    });
+
+    test('Resource is a ValueNotifier', () async {
+      final completer = Completer<int>();
+      final r = Resource(() => completer.future, lazy: false);
+      expect(r, isA<ValueNotifier<ResourceState<int>>>());
+      var calls = 0;
+      void listener() => calls++;
+
+      r.addListener(listener);
+      completer.complete(1);
+      await completer.future;
+      await Future<void>.delayed(Duration.zero);
+      expect(calls, 1);
+      expect(r.state, isA<ResourceReady<int>>());
+
+      r.removeListener(listener);
+      r.state = const ResourceState.ready(2);
+      expect(calls, 1);
+      r.dispose();
+    });
+
+    test('addListener keeps an autoDispose signal alive; removeListener '
+        'disposes it once no listeners remain', () {
+      final signal = Signal(0, autoDispose: true);
+      void listener() {}
+
+      signal.addListener(listener);
+      expect(signal.disposed, isFalse);
+      signal.removeListener(listener);
+      expect(signal.disposed, isTrue);
+    });
+
+    test('a non-autoDispose signal stays active after listeners are removed',
+        () {
+      final signal = Signal(0);
+      void listener() {}
+
+      signal.addListener(listener);
+      signal.removeListener(listener);
+      expect(signal.disposed, isFalse);
+      signal.dispose();
+    });
+
+    test('each addListener call is a separate registration', () {
+      final signal = Signal(0, autoDispose: true);
+      var calls = 0;
+      void listener() => calls++;
+
+      signal
+        ..addListener(listener)
+        ..addListener(listener);
+      signal.value = 1;
+      expect(calls, 2);
+
+      signal.removeListener(listener);
+      expect(signal.disposed, isFalse);
+      expect(signal.hasListeners, isTrue);
+      signal.value = 2;
+      expect(calls, 3);
+
+      signal.removeListener(listener);
+      expect(signal.disposed, isTrue);
+    });
+
+    test('notifyListeners reruns effects and notifies listeners', () {
+      final signal = Signal(0, autoDispose: false);
+      var effectRuns = 0;
+      var listenerCalls = 0;
+      final disposeEffect = Effect(() {
+        signal.value;
+        effectRuns++;
+      });
+      signal.addListener(() => listenerCalls++);
+      expect(effectRuns, 1);
+
+      signal.notifyListeners();
+      expect(effectRuns, 2);
+      expect(listenerCalls, 1);
+
+      disposeEffect();
+      signal.dispose();
+    });
+
+    test('notifyListeners does not call a listener removed by an earlier '
+        'listener', () {
+      final signal = Signal(0, autoDispose: false);
+      var bCalls = 0;
+      void b() => bCalls++;
+      void a() => signal.removeListener(b);
+
+      signal
+        ..addListener(a)
+        ..addListener(b);
+      signal.notifyListeners();
+      expect(bCalls, 0);
+      signal.dispose();
+    });
+
+    test('listener errors are reported to Listenable.onError and do not stop '
+        'other listeners', () {
+      final originalOnError = Listenable.onError;
+      addTearDown(() => Listenable.onError = originalOnError);
+      final errors = <Object>[];
+      final contexts = <ErrorContext>[];
+      Listenable.onError = (error, stackTrace, context) {
+        errors.add(error);
+        contexts.add(context);
+      };
+
+      final signal = Signal(0, autoDispose: false);
+      var calls = 0;
+      signal
+        ..addListener(() => throw StateError('boom'))
+        ..addListener(() => calls++);
+
+      expect(() => signal.value = 1, returnsNormally);
+      expect(calls, 1);
+      expect(signal.notifyListeners, returnsNormally);
+      expect(calls, 2);
+      expect(errors, hasLength(2));
+      expect(errors, everyElement(isStateError));
+      expect(contexts, everyElement(ErrorContext.listener));
+      signal.dispose();
+    });
+
+    test('a listener added inside an Effect survives the Effect rerunning', () {
+      final signal = Signal(0, autoDispose: false);
+      final other = Signal(0, autoDispose: false);
+      var calls = 0;
+      void listener() => calls++;
+      var added = false;
+      final disposeEffect = Effect(() {
+        other.value;
+        if (!added) {
+          added = true;
+          signal.addListener(listener);
+        }
+      });
+
+      signal.value = 1;
+      expect(calls, 1);
+      other.value = 1;
+      signal.value = 2;
+      expect(calls, 2);
+
+      disposeEffect();
+      signal
+        ..removeListener(listener)
+        ..dispose();
+      other.dispose();
+    });
+
+    test('addListener on a disposed signal is a no-op', () {
+      final signal = Signal(0)..dispose();
+      signal.addListener(() {});
+      expect(signal.hasListeners, isFalse);
+    });
+
+    test('addListener throws a Computed selector error to the caller', () {
+      final c = Computed<int>(() => throw StateError('bad'));
+      var calls = 0;
+      final onError = Listenable.onError;
+      addTearDown(() => Listenable.onError = onError);
+      var reported = 0;
+      Listenable.onError = (_, _, _) => reported++;
+
+      expect(() => c.addListener(() => calls++), throwsA(anything));
+      expect(calls, 0);
+      expect(reported, 0);
+    });
+
+    test('a Resource listener is not called during addListener', () {
+      final r = Resource<int>(() => throw StateError('bad'));
+      var calls = 0;
+      late void Function() self;
+      self = () {
+        calls++;
+        r.removeListener(self);
+      };
+
+      r.addListener(self);
+      expect(calls, 0);
+      expect(r.hasListeners, isTrue);
+      r
+        ..removeListener(self)
+        ..dispose();
+    });
+
+    test('disposing an uninitialized lazy signal with devtools enabled '
+        'does not throw', () {
+      final devToolsEnabled = SolidartConfig.devToolsEnabled;
+      addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
+      SolidartConfig.devToolsEnabled = true;
+      final signal = Signal<int>.lazy(autoDispose: true);
+      void listener() {}
+
+      signal.addListener(listener);
+      expect(() => signal.removeListener(listener), returnsNormally);
+      expect(signal.disposed, isTrue);
+    });
+
+    test('observe keeps a fresh autoDispose Computed alive', () {
+      final c = Computed(() => 1, autoDispose: true);
+      var disposeCalls = 0;
+      c.onDispose(() => disposeCalls++);
+
+      final unobserve = c.observe((_, _) {});
+      expect(disposeCalls, 0);
+      expect(c.disposed, isFalse);
+      expect(c.listenerCount, 1);
+
+      unobserve();
+      expect(c.disposed, isTrue);
+    });
+
+    test('addListener keeps a fresh autoDispose Computed alive', () {
+      final c = Computed(() => 1, autoDispose: true);
+      var disposeCalls = 0;
+      c.onDispose(() => disposeCalls++);
+      void listener() {}
+
+      c.addListener(listener);
+      expect(disposeCalls, 0);
+      expect(c.disposed, isFalse);
+      expect(c.listenerCount, 1);
+
+      c.removeListener(listener);
+      expect(c.disposed, isTrue);
+    });
+
+    test('observe keeps an autoDispose Computed behind a forwarding signal '
+        'alive', () {
+      final c = Computed(() => 1, autoDispose: true);
+      final forwarding = _ForwardingSignal(c);
+      final values = <int>[];
+
+      final unobserve = forwarding.observe(
+        (_, value) => values.add(value),
+        fireImmediately: true,
+      );
+      expect(values, [1]);
+      expect(c.disposed, isFalse);
+      expect(c.listenerCount, 1);
+
+      unobserve();
+      forwarding.dispose();
+      c.dispose();
+    });
+
+    test('addListener keeps an autoDispose Computed behind a forwarding '
+        'signal alive', () {
+      final c = Computed(() => 1, autoDispose: true);
+      final forwarding = _ForwardingSignal(c);
+      void listener() {}
+
+      forwarding.addListener(listener);
+      expect(c.disposed, isFalse);
+      expect(c.listenerCount, 1);
+
+      forwarding
+        ..removeListener(listener)
+        ..dispose();
+      c.dispose();
+    });
+
+    test('an autoDispose Computed created and read in an Effect stays alive '
+        'with devtools enabled', () {
+      final devToolsEnabled = SolidartConfig.devToolsEnabled;
+      addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
+      SolidartConfig.devToolsEnabled = true;
+      late Computed<int> c;
+
+      final dispose = Effect(() {
+        c = Computed(() => 1, autoDispose: true);
+        c.value;
+      });
+      expect(c.disposed, isFalse);
+      expect(c.listenerCount, 1);
+
+      dispose();
+      expect(c.disposed, isTrue);
+    });
+
+    test('devtools serialize a signal that overrides untrackedHasValue', () {
+      final devToolsEnabled = SolidartConfig.devToolsEnabled;
+      addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
+      SolidartConfig.devToolsEnabled = true;
+      final probe = _JsonProbe();
+      final source = Signal(probe, trackInDevTools: false);
+      final forwarding = _ForwardingSignal(source);
+
+      expect(forwarding.dispose, returnsNormally);
+      expect(probe.toJsonCalls, greaterThan(0));
+      source.dispose();
+    });
+  });
+}
+
+/// A read-only signal that forwards to [source], including [hasValue].
+class _ForwardingSignal<T> extends ReadableSignal<T> {
+  _ForwardingSignal(this.source) : super.lazy(autoDispose: false);
+
+  final ReadSignal<T> source;
+
+  @override
+  bool get hasValue => source.hasValue;
+
+  @override
+  bool get untrackedHasValue => source.untrackedHasValue;
+
+  @override
+  T get value => source.value;
+
+  @override
+  T get untrackedValue => source.untrackedValue;
+}
+
+/// An eager signal whose [hasValue] and [value] are gated by [open].
+class _GatedSignal extends Signal<int> {
+  _GatedSignal(super.initialValue, this.open);
+
+  final Signal<bool> open;
+
+  @override
+  bool get hasValue => open.value && super.hasValue;
+
+  @override
+  bool get untrackedHasValue =>
+      open.untrackedValue && super.untrackedHasValue;
+
+  @override
+  int get value {
+    if (!open.value) throw StateError('closed');
+    return super.value;
+  }
+}
+
+/// A [ReadSignal] test double that forwards to [source].
+class _ReadSignalDouble extends Fake implements ReadSignal<int> {
+  _ReadSignalDouble(this.source);
+
+  final ReadSignal<int> source;
+
+  @override
+  bool get hasValue => source.hasValue;
+
+  @override
+  bool get untrackedHasValue => source.untrackedHasValue;
+
+  @override
+  int get value => source.value;
+
+  @override
+  int get untrackedValue => source.untrackedValue;
+
+  @override
+  int? get untrackedPreviousValue => source.untrackedPreviousValue;
+}
+
+/// A signal implemented outside the library, without its private members.
+class _FakeReadableSignal extends Fake implements ReadableSignal<int> {
+  @override
+  bool get hasValue => true;
+
+  @override
+  bool get untrackedHasValue => true;
+
+  @override
+  int get value => 1;
+}
+
+class _JsonProbe {
+  int toJsonCalls = 0;
+
+  Object? toJson() {
+    toJsonCalls++;
+    return 'probe';
+  }
 }
 
 class _AlwaysZeroRandom implements Random {

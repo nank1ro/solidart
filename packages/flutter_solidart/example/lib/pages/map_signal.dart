@@ -2,8 +2,8 @@
 
 import 'dart:math';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:material_ui/material_ui.dart';
 
 const _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
 
