@@ -2894,6 +2894,41 @@ void main() {
       expect(c.disposed, isTrue);
     });
 
+    test('observe keeps an autoDispose Computed behind a forwarding signal '
+        'alive', () {
+      final c = Computed(() => 1, autoDispose: true);
+      final forwarding = _ForwardingSignal(c);
+      final values = <int>[];
+
+      final unobserve = forwarding.observe(
+        (_, value) => values.add(value),
+        fireImmediately: true,
+      );
+      expect(values, [1]);
+      expect(c.disposed, isFalse);
+      expect(c.listenerCount, 1);
+
+      unobserve();
+      forwarding.dispose();
+      c.dispose();
+    });
+
+    test('addListener keeps an autoDispose Computed behind a forwarding '
+        'signal alive', () {
+      final c = Computed(() => 1, autoDispose: true);
+      final forwarding = _ForwardingSignal(c);
+      void listener() {}
+
+      forwarding.addListener(listener);
+      expect(c.disposed, isFalse);
+      expect(c.listenerCount, 1);
+
+      forwarding
+        ..removeListener(listener)
+        ..dispose();
+      c.dispose();
+    });
+
     test('an autoDispose Computed created and read in an Effect stays alive '
         'with devtools enabled', () {
       final devToolsEnabled = SolidartConfig.devToolsEnabled;
@@ -2924,6 +2959,14 @@ void main() {
       expect(probe.toJsonCalls, greaterThan(0));
       source.dispose();
     });
+
+    test('devtools do not read an overridden hasValue during construction', () {
+      final devToolsEnabled = SolidartConfig.devToolsEnabled;
+      addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
+      SolidartConfig.devToolsEnabled = true;
+
+      expect(() => _LateReadySignal(1).dispose(), returnsNormally);
+    });
   });
 }
 
@@ -2931,7 +2974,7 @@ void main() {
 class _ForwardingSignal<T> extends ReadableSignal<T> {
   _ForwardingSignal(this.source) : super.lazy(autoDispose: false);
 
-  final ReadableSignal<T> source;
+  final ReadSignal<T> source;
 
   @override
   bool get hasValue => source.hasValue;
@@ -2941,6 +2984,18 @@ class _ForwardingSignal<T> extends ReadableSignal<T> {
 
   @override
   T get untrackedValue => source.untrackedValue;
+}
+
+/// A signal whose [hasValue] override needs its constructor body to run.
+class _LateReadySignal extends Signal<int> {
+  _LateReadySignal(super.initialValue) {
+    ready = true;
+  }
+
+  late final bool ready;
+
+  @override
+  bool get hasValue => ready && super.hasValue;
 }
 
 class _JsonProbe {

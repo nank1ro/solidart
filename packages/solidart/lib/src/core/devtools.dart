@@ -67,9 +67,12 @@ void _notifyDevToolsAboutSignal(
   if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
   final eventName = 'ext.solidart.signal.${eventType.name}';
   // Do not call hasValue on a Computed: it evaluates untracked and can
-  // auto-dispose it.
+  // auto-dispose it. Only consult an overridden hasValue when the private
+  // flag says there is no value (it may run before a subclass constructor).
   final hasValue =
-      signal is! ReadableSignal || untracked(() => signal.hasValue);
+      signal is! ReadableSignal ||
+      signal._hasValue ||
+      untracked(() => signal.hasValue);
   var value = hasValue ? signal.value : null;
   var previousValue = hasValue ? signal.previousValue : null;
   final hasPreviousValue = hasValue && signal.hasPreviousValue;
