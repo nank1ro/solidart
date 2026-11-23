@@ -110,11 +110,6 @@ class Computed<T> extends ReadSignal<T> {
 
   bool _initialized = false;
 
-  // When true, reading [value] does not run the auto-dispose check. Set only
-  // while DevTools serializes this computed, so that inspecting it cannot
-  // dispose a freshly created, dependency-free computed.
-  bool _devToolsReading = false;
-
   late T _untrackedValue;
 
   T? _previousValue;
@@ -172,7 +167,7 @@ class Computed<T> extends ReadSignal<T> {
     }
 
     final value = reactiveSystem.getComputedValue(_internalComputed);
-    if (autoDispose && !_devToolsReading) {
+    if (autoDispose) {
       _mayDispose();
     }
 
