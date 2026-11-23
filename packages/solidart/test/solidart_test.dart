@@ -284,6 +284,17 @@ void main() {
         r.dispose();
       });
 
+      test('a disposed lazy Resource does not resolve when read', () {
+        var streams = 0;
+        final r = Resource<int>.stream(() {
+          streams++;
+          return const Stream.empty();
+        })..dispose();
+        r.hasValue;
+        r.state;
+        expect(streams, 0);
+      });
+
       test('Resource.untrackedHasValue does not track or resolve', () {
         var fetches = 0;
         final r = Resource<int>(() async => ++fetches);

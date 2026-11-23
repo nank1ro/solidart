@@ -390,9 +390,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
     }
   }
 
-  /// Resolves the resource, if needed
+  /// Resolves the resource, if needed. A disposed resource never resolves.
   void _resolveIfNeeded() {
-    if (!_resolved) _resolve();
+    if (!_resolved && !disposed) _resolve();
   }
 
   /// Runs the [fetcher] for the first time.
