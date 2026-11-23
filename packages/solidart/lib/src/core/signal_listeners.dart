@@ -13,9 +13,10 @@ part of 'core.dart';
 ///
 /// A listener that writes the signal it listens to is not notified of its own
 /// write, following solidart's effect re-entrancy rule. Writes inside a
-/// [batch] notify once, at the end of the batch. A [Signal.notifyListeners]
-/// call made from inside a listener is merged into the running notification
-/// instead of being delivered again.
+/// [batch] notify at most once, at the end of the batch. A
+/// [Signal.notifyListeners] call made from inside a listener does not call
+/// that listener again. Listeners that have not run yet in the current
+/// notification run once, and listeners that already ran are called again.
 class _SignalListeners<T> {
   _SignalListeners(this._signal);
 

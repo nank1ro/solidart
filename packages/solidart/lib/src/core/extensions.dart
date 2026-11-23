@@ -15,10 +15,12 @@ extension ObserveSignal<T> on SignalBase<T> {
   }) {
     var skipped = false;
     final disposeEffect = Effect(() {
-      // A lazy signal without a value is tracked through hasValue, so its
-      // first assignment notifies the listener.
-      if (!untracked(() => hasValue)) {
-        hasValue;
+      // Only a lazy signal can lack a value. Reading a Computed here would
+      // evaluate it before this effect subscribes, and could auto-dispose it.
+      final self = this;
+      if (self is ReadableSignal<T> && !self._hasValue) {
+        // Tracked, so the first assignment reruns this effect.
+        self.hasValue;
         skipped = true;
         return;
       }

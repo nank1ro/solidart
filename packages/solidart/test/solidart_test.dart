@@ -2845,6 +2845,53 @@ void main() {
       expect(() => signal.removeListener(listener), returnsNormally);
       expect(signal.disposed, isTrue);
     });
+
+    test('observe keeps a fresh autoDispose Computed alive', () {
+      final c = Computed(() => 1, autoDispose: true);
+      var disposeCalls = 0;
+      c.onDispose(() => disposeCalls++);
+
+      final unobserve = c.observe((_, _) {});
+      expect(disposeCalls, 0);
+      expect(c.disposed, isFalse);
+      expect(c.listenerCount, 1);
+
+      unobserve();
+      expect(c.disposed, isTrue);
+    });
+
+    test('addListener keeps a fresh autoDispose Computed alive', () {
+      final c = Computed(() => 1, autoDispose: true);
+      var disposeCalls = 0;
+      c.onDispose(() => disposeCalls++);
+      void listener() {}
+
+      c.addListener(listener);
+      expect(disposeCalls, 0);
+      expect(c.disposed, isFalse);
+      expect(c.listenerCount, 1);
+
+      c.removeListener(listener);
+      expect(c.disposed, isTrue);
+    });
+
+    test('an autoDispose Computed created and read in an Effect stays alive '
+        'with devtools enabled', () {
+      final devToolsEnabled = SolidartConfig.devToolsEnabled;
+      addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
+      SolidartConfig.devToolsEnabled = true;
+      late Computed<int> c;
+
+      final dispose = Effect(() {
+        c = Computed(() => 1, autoDispose: true);
+        c.value;
+      });
+      expect(c.disposed, isFalse);
+      expect(c.listenerCount, 1);
+
+      dispose();
+      expect(c.disposed, isTrue);
+    });
   });
 }
 
