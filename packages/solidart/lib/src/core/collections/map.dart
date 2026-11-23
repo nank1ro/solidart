@@ -39,15 +39,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
 
   @override
   Map<K, V> setValue(Map<K, V> newValue) {
-    if (_compare(_value, newValue)) {
+    if (_compare(_untrackedValue, newValue)) {
       return newValue;
     }
-    _setPreviousValue(Map<K, V>.of(_value));
-    // Assigning `_value` already notifies the reactive subscribers through the
-    // underlying signal (as the base `Signal.setValue` does). Only the
-    // devtools/observer update event is left to emit; calling `_notifyChanged`
-    // here would propagate a second, duplicate notification.
-    _untrackedValue = _value = newValue;
+    _setPreviousValue(Map<K, V>.of(_untrackedValue));
+    // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
+    _value = newValue;
     _notifySignalUpdate();
     return newValue;
   }

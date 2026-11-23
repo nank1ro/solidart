@@ -43,11 +43,8 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
       return newValue;
     }
     _setPreviousValue(List<E>.of(_untrackedValue));
-    // Assigning `_value` already notifies the reactive subscribers through the
-    // underlying signal (as the base `Signal.setValue` does). Only the
-    // devtools/observer update event is left to emit; calling `_notifyChanged`
-    // here would propagate a second, duplicate notification.
-    _untrackedValue = _value = newValue;
+    // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
+    _value = newValue;
     _notifySignalUpdate();
     return newValue;
   }

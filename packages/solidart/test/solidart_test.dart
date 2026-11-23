@@ -2744,6 +2744,56 @@ void main() {
         expect(observeCalls, 1);
         unobserve();
       });
+
+      test('a listener that reassigns the value keeps value and '
+          'untrackedValue in sync', () {
+        final list = ListSignal<int>([0]);
+        final map = MapSignal<String, int>({'a': 0});
+        final set = SetSignal<int>({0});
+        final unobserveList = list.observe((_, value) {
+          if (value.first == 1) list.value = [2];
+        });
+        final unobserveMap = map.observe((_, value) {
+          if (value['a'] == 1) map.value = {'a': 2};
+        });
+        final unobserveSet = set.observe((_, value) {
+          if (value.contains(1)) set.value = {2};
+        });
+
+        list.value = [1];
+        map.value = {'a': 1};
+        set.value = {1};
+
+        expect(list.value, [2]);
+        expect(list.untrackedValue, [2]);
+        expect(map.value, {'a': 2});
+        expect(map.untrackedValue, {'a': 2});
+        expect(set.value, {2});
+        expect(set.untrackedValue, {2});
+        unobserveList();
+        unobserveMap();
+        unobserveSet();
+      });
+
+      test('assigning a map or set inside an effect does not subscribe the '
+          'effect', () {
+        final map = MapSignal<String, int>({'a': 0});
+        final set = SetSignal<int>({0});
+        final nextMap = {'b': 1};
+        final nextSet = {1};
+        var runs = 0;
+        final effect = Effect(() {
+          runs++;
+          map.value = nextMap;
+          set.value = nextSet;
+        });
+
+        map['c'] = 2;
+        set.add(2);
+
+        expect(runs, 1);
+        effect.dispose();
+      });
     },
     timeout: const Timeout(Duration(seconds: 1)),
   );
