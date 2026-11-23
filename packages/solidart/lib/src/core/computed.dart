@@ -137,6 +137,9 @@ class Computed<T> extends ReadSignal<T> {
     return true;
   }
 
+  @override
+  bool get untrackedHasValue => true;
+
   final _deps = <alien_system.ReactiveNode>{};
 
   @override
@@ -156,6 +159,9 @@ class Computed<T> extends ReadSignal<T> {
       cb();
     }
     _onDisposeCallbacks.clear();
+
+    _listeners.dispose();
+
     _notifySignalDisposal();
   }
 
@@ -236,7 +242,24 @@ class Computed<T> extends ReadSignal<T> {
   }
 
   @override
+  bool get untrackedHasPreviousValue => trackPreviousValue && _hasPreviousValue;
+
+  @override
   int get listenerCount => _internalComputed.subscriberCount;
+
+  late final _listeners = _SignalListeners<T>(this);
+
+  /// Registers [listener].
+  ///
+  /// Registration computes the value if needed, like reading [value]. A
+  /// selector error is thrown to the caller, as it is to any code that
+  /// triggers the computation. [Listenable.onError] only receives errors
+  /// thrown by listeners.
+  @override
+  void addListener(VoidCallback listener) => _listeners.add(listener);
+
+  @override
+  void removeListener(VoidCallback listener) => _listeners.remove(listener);
 
   @override
   void onDispose(VoidCallback cb) {

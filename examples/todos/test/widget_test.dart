@@ -6,8 +6,8 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:disco/disco.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:solidart_example/controllers/todos.dart';
 import 'package:solidart_example/domain/todo.dart';
 import 'package:solidart_example/main.dart';

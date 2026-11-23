@@ -35,6 +35,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_solidart: ^3.0.0-dev.1
+  material_ui: ^1.11.1
 
 dev_dependencies:
   flutter_test:
