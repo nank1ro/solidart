@@ -75,7 +75,9 @@ abstract class SignalBase<T> {
   ///
   /// `observe()` and `addListener()` read [hasValue] (tracked) before [value].
   /// A subclass or test double that overrides [value] should also override
-  /// [hasValue]. A test double must return true when it has a value.
+  /// [hasValue]. A test double must return true when it has a value. This
+  /// does not apply to a [Computed] or a [Resource], whose [hasValue] these
+  /// methods do not read.
   bool get hasValue;
 
   /// Indicates if there is a previous value. It is especially
