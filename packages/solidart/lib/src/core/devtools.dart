@@ -66,8 +66,10 @@ void _notifyDevToolsAboutSignal(
 }) {
   if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
   final eventName = 'ext.solidart.signal.${eventType.name}';
-  var value = signal.value;
-  var previousValue = signal.previousValue;
+  final hasValue = signal.untrackedHasValue;
+  var value = hasValue ? signal.value : null;
+  var previousValue = hasValue ? signal.previousValue : null;
+  final hasPreviousValue = signal.untrackedHasPreviousValue;
   if (signal is Resource) {
     value = signal._value.asReady?.value;
     previousValue = signal._previousValue?.asReady?.value;
@@ -80,7 +82,7 @@ void _notifyDevToolsAboutSignal(
     'name': signal.name,
     'value': jsonValue,
     'previousValue': jsonPreviousValue,
-    'hasPreviousValue': signal.hasPreviousValue,
+    'hasPreviousValue': hasPreviousValue,
     'type': switch (signal) {
       Resource() => 'Resource',
       ListSignal() => 'ListSignal',
@@ -92,7 +94,7 @@ void _notifyDevToolsAboutSignal(
       _ => 'Unknown',
     },
     'valueType': value.runtimeType.toString(),
-    if (signal.hasPreviousValue)
+    if (hasPreviousValue)
       'previousValueType': previousValue.runtimeType.toString(),
     'disposed': signal.disposed,
     'autoDispose': signal.autoDispose,

@@ -5,6 +5,14 @@ analyzer:
     cascade_invocations: ignore
     inference_failure_on_instance_creation: error
     specify_nonobvious_property_types: ignore
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
 
 linter:
   rules:

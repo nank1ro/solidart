@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:http/http.dart' as http;
+import 'package:material_ui/material_ui.dart';
 
 class ResourcePage extends StatefulWidget {
   const ResourcePage({super.key});

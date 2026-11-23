@@ -1,17 +1,17 @@
 import 'dart:developer' as dev;
 
-import 'package:example/pages/counter.dart';
 import 'package:example/pages/computed.dart';
+import 'package:example/pages/counter.dart';
 import 'package:example/pages/effects.dart';
 import 'package:example/pages/lazy_counter.dart';
+import 'package:example/pages/list_signal.dart';
 import 'package:example/pages/map_signal.dart';
 import 'package:example/pages/resource.dart';
 import 'package:example/pages/set_signal.dart';
 import 'package:example/pages/show.dart';
 import 'package:example/pages/signal_builder.dart';
-import 'package:example/pages/list_signal.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Creating a logger that notifies when signals are created, disposed and updated.
 ///

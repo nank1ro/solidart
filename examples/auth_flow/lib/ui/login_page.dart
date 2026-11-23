@@ -1,6 +1,6 @@
 import 'package:auth_flow/domain/user.dart';
 import 'package:auth_flow/notifiers/auth_notifier.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});

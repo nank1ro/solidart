@@ -1,6 +1,6 @@
 name: solidart_lint
 description: solidart_lint is a developer tool for users of solidart, designed to help stop common issues and simplify repetitive tasks
-version: 3.1.0-dev.1
+version: 3.1.0-dev.2
 repository: https://github.com/nank1ro/solidart
 documentation: https://solidart.mariuti.com
 topics:
@@ -9,14 +9,14 @@ topics:
   - linter
 
 environment:
-  sdk: ^3.10.0
+  sdk: ^3.13.0
 
 resolution: workspace
 
 dependencies:
-  analyzer: ^8.0.0
-  analyzer_plugin: ^0.13.10
-  analysis_server_plugin: ^0.3.3
+  analyzer: ^14.7.0
+  analyzer_plugin: ^0.14.20
+  analysis_server_plugin: ^0.3.26
   collection: ^1.19.1
   meta: ^1.17.0
   path: ^1.9.1
@@ -27,5 +27,5 @@ dependencies:
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.25.2
-  solidart: ^3.0.0-dev.1
-  flutter_solidart: ^3.0.0-dev.1
+  solidart: ^3.0.0-dev.3
+  flutter_solidart: ^3.0.0-dev.3

@@ -1,6 +1,6 @@
 import 'package:auth_flow/notifiers/auth_notifier.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:material_ui/material_ui.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});

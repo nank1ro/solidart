@@ -1,3 +1,16 @@
+## 3.0.0-dev.3
+
+- **BREAKING**: `flutter_solidart` no longer defines its own `Signal`/`ReadableSignal`/`Computed`/`Resource`/`ListSignal`/`MapSignal`/`SetSignal` wrappers, nor the `ValueNotifierSignalMixin`/`ValueListenableSignalMixin` mixins. These are removed. The `Listenable` support now lives in `solidart` (via `package:listen`), so `flutter_solidart` just re-exports `solidart` alongside the widgets (`SignalBuilder`, `Show`) and the `toSignal` bridge.
+- **BREAKING**: Requires Flutter 3.50 or later (Dart 3.14). Signals implement `package:listen`'s `ValueListenable`/`ValueNotifier` (through `solidart`), and Flutter 3.50 re-exports these same types from `package:flutter/foundation.dart` ([flutter/flutter#189111](https://github.com/flutter/flutter/pull/189111)). So every signal is a Flutter `ValueListenable`, and a `Signal` is a Flutter `ValueNotifier`: pass it directly to `ValueListenableBuilder`, `AnimatedBuilder`, or any API that takes a `Listenable`. On older Flutter versions the two sets of types are different, so this version cannot support them.
+- **BREAKING**: Remove the `toValueNotifier()` extension. It is no longer needed, because every signal already is a `ValueListenable` and `Signal` is a `ValueNotifier`. `ValueNotifier.toSignal()` remains.
+- **BREAKING**: Adding the same listener twice now registers it twice, like `ChangeNotifier`. Before, the second `addListener` call was ignored. Each `removeListener` call removes one registration.
+- **BREAKING**: `notifyListeners()` now reaches every dependent of the signal, not only the registered listeners. Effects, listeners and `SignalBuilder` rerun. A computed that a listener or effect depends on recomputes when notifications run (at the end of the batch, if one is active), and notifies them only if its value changed. Any other computed recomputes on its next read.
+- **BREAKING**: A listener error now goes to `Listenable.onError`, which Flutter routes to `FlutterError.reportError`. Before, the error was thrown to the code that wrote the value.
+- **BREAKING**: A `notifyListeners()` call made from inside a listener no longer calls that listener again. Other listeners that already ran in the current notification are called again, and the others run once. Before, `notifyListeners()` called every listener directly, so the calling listener ran again.
+- **NOTE**: Listeners differ from `ChangeNotifier` in some ways, including: a listener is not notified of its own write; writes inside `batch()` notify at most once, at the end of the batch; and `addListener()` on a disposed signal is a no-op (`ChangeNotifier` throws in debug mode). See the `solidart` 3.0.0-dev.3 changelog.
+- **CHORE**: Require `solidart: ^3.0.0-dev.3`.
+- **CHORE**: Import `package:flutter/widgets.dart` instead of the deprecated `package:flutter/material.dart`. `flutter_solidart` does not depend on `material_ui`.
+
 ## 3.0.0-dev.2
 
 - **FEAT**: Inherits solidart's new `Resource.previousReady` / `previousError` (the retained last ready / error state, surviving repeated failures). Requires `solidart: ^3.0.0-dev.2`.

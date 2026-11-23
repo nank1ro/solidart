@@ -1,7 +1,8 @@
 part of 'core.dart';
 
 /// {@macro readsignal}
-abstract class ReadSignal<T> extends SignalBase<T> {
+abstract class ReadSignal<T> extends SignalBase<T>
+    implements ValueListenable<T> {
   /// {@macro readsignal}
   ReadSignal({
     required super.name,
@@ -118,9 +119,12 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   @override
   bool get hasValue {
-    _reportObserved();
+    if (!_disposed) _reportObserved();
     return _hasValue;
   }
+
+  @override
+  bool get untrackedHasValue => _hasValue;
 
   bool _hasValue = false;
 
@@ -190,29 +194,27 @@ class ReadableSignal<T> implements ReadSignal<T> {
   /// {@endtemplate}
   @protected
   T setValue(T newValue) {
-    final firstValue = !_hasValue;
-
-    if (firstValue) {
+    // the first value of a lazy signal has no previous value
+    if (!_hasValue) {
       _untrackedValue = newValue;
       _hasValue = true;
+      reactiveSystem.setSignalValue(_internalSignal, Some(newValue));
+      _notifySignalCreation();
+      return newValue;
     }
 
     // skip if the values are equal
-    if (!firstValue && _compare(_untrackedValue, newValue)) {
+    if (_compare(_untrackedValue, newValue)) {
       return newValue;
     }
 
     // store the previous value
-    if (!firstValue) _setPreviousValue(_untrackedValue);
+    _setPreviousValue(_untrackedValue);
 
     // notify with the new value
     _value = newValue;
 
-    if (firstValue) {
-      _notifySignalCreation();
-    } else {
-      _notifySignalUpdate();
-    }
+    _notifySignalUpdate();
     return newValue;
   }
 
@@ -223,6 +225,9 @@ class ReadableSignal<T> implements ReadSignal<T> {
     value;
     return _hasPreviousValue;
   }
+
+  @override
+  bool get untrackedHasPreviousValue => trackPreviousValue && _hasPreviousValue;
 
   /// The previous value, if any.
   @override
@@ -250,6 +255,14 @@ class ReadableSignal<T> implements ReadSignal<T> {
   @override
   int get listenerCount => _internalSignal.subscriberCount;
 
+  late final _listeners = _SignalListeners<T>(this);
+
+  @override
+  void addListener(VoidCallback listener) => _listeners.add(listener);
+
+  @override
+  void removeListener(VoidCallback listener) => _listeners.remove(listener);
+
   @override
   void dispose() {
     // ignore if already disposed
@@ -272,6 +285,9 @@ class ReadableSignal<T> implements ReadSignal<T> {
       cb();
     }
     _onDisposeCallbacks.clear();
+
+    _listeners.dispose();
+
     _notifySignalDisposal();
   }
 
