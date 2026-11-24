@@ -83,8 +83,12 @@ class Computed<T> extends ReadSignal<T> {
         }
 
         try {
-          _untrackedValue = selector();
-          _hasError = false;
+          final value = selector();
+          // Runs while this computed is the active subscriber, so signals
+          // read by the comparator become dependencies.
+          _equalsPrevious = _initialized && _compare(previousValue, value);
+          _untrackedValue = value;
+          _error = null;
           _initialized = true;
 
           if (runnedOnce) {
@@ -99,8 +103,7 @@ class Computed<T> extends ReadSignal<T> {
           }
           return _untrackedValue;
         } catch (e, s) {
-          _hasError = true;
-          throw SolidartCaughtException(e, stackTrace: s);
+          throw _error = SolidartCaughtException(e, stackTrace: s);
         }
       },
     );
@@ -117,7 +120,13 @@ class Computed<T> extends ReadSignal<T> {
 
   bool _initialized = false;
 
-  bool _hasError = false;
+  // The error of the latest evaluation, or null if it succeeded.
+  SolidartCaughtException? _error;
+
+  bool get _hasError => _error != null;
+
+  // Whether the latest successful value equals the one before it.
+  bool _equalsPrevious = false;
 
   late T _untrackedValue;
 
@@ -221,16 +230,18 @@ class Computed<T> extends ReadSignal<T> {
   @override
   void _mayDispose() {
     if (_disposed || !autoDispose) return;
-    if (_internalComputed.deps == null && _internalComputed.subs == null) {
+    // Skip internal nodes, such as the retry dependency that alien_signals
+    // links after a failed evaluation.
+    final inputs = [
+      for (var link = _internalComputed.deps; link != null; link = link.nextDep)
+        if (link.dep case alien.SignalNode() || alien.ComputedNode()) link.dep,
+    ];
+    if (inputs.isEmpty && _internalComputed.subs == null) {
       dispose();
     } else {
-      _deps.clear();
-
-      var link = _internalComputed.deps;
-      for (; link != null; link = link.nextDep) {
-        final dep = link.dep;
-        _deps.add(dep);
-      }
+      _deps
+        ..clear()
+        ..addAll(inputs);
     }
   }
 
@@ -291,6 +302,8 @@ class Computed<T> extends ReadSignal<T> {
   void run() {
     if (_disposed) return;
     _internalComputed.didUpdate();
+    final error = _error;
+    if (error != null) Error.throwWithStackTrace(error, error.stackTrace!);
   }
 
   @override

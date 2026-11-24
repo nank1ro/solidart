@@ -20,10 +20,9 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
   @override
   bool didUpdate() {
     final hadError = parent._hasError;
-    final oldValue = currentValue;
     final changed = super.didUpdate();
     if (hadError || parent._hasError) return changed;
-    return !parent._compare(oldValue, currentValue);
+    return !parent._equalsPrevious;
   }
 }
 

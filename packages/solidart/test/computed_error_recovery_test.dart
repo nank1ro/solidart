@@ -173,5 +173,50 @@ void main() {
       expect(c.value, 30);
       expect(c.previousValue, 20);
     });
+    test('a comparator that reads a signal tracks it as a dependency', () {
+      final source = Signal(0);
+      final suppress = Signal(true);
+      final c = Computed(
+        () => source.value,
+        comparator: (_, _) => suppress.value,
+      );
+      final seen = <int>[];
+
+      Effect(() => seen.add(c.value));
+
+      addTearDown(source.dispose);
+      addTearDown(suppress.dispose);
+
+      source.value = 1;
+      expect(seen, [0]);
+
+      suppress.value = false;
+      expect(seen, [0, 1]);
+    });
+
+    test('run() throws the selector error to its caller', () {
+      final c = Computed<int>(() => throw StateError('selector'));
+
+      expect(c.run, throwsA(isA<SolidartCaughtException>()));
+    });
+
+    test('an autoDispose Computed is disposed with its only source after its '
+        'last evaluation threw', () {
+      final source = Signal(1);
+      final c = Computed(() {
+        if (source.value == 0) throw StateError('zero');
+        return source.value;
+      }, autoDispose: true);
+      var cleanups = 0;
+      c.onDispose(() => cleanups++);
+
+      expect(c.value, 1);
+
+      source.value = 0;
+      expect(() => c.value, throwsA(isA<SolidartCaughtException>()));
+
+      source.dispose();
+      expect((c.disposed, cleanups), (true, 1));
+    });
   });
 }
