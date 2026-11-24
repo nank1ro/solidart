@@ -62,6 +62,9 @@ abstract class ReactionInterface {
 /// Any effect runs at least once immediately when is created with the current
 /// signals values.
 ///
+/// If the first run throws and there is no `onError`, the effect is disposed
+/// and the error is rethrown.
+///
 /// > An effect is useless after it is disposed, you must not use it anymore.
 /// {@endtemplate}
 class Effect implements ReactionInterface {
@@ -136,7 +139,14 @@ class Effect implements ReactionInterface {
       }
       return effect;
     } finally {
-      if (autorun ?? true) effect.run();
+      if (autorun ?? true) {
+        try {
+          effect.run();
+        } catch (_) {
+          effect.dispose();
+          rethrow;
+        }
+      }
     }
   }
 
