@@ -184,6 +184,57 @@ void main() {
       expect(seen, [0, 1]);
     });
 
+    test('a write inside an effect does not run other queued effects '
+        'before the writing effect ends', () {
+      final trigger = Signal(0);
+      final unobserved = Signal(0);
+      final log = <String>[];
+      final writerErrors = <Object>[];
+
+      Effect(
+        () {
+          if (trigger.value == 0) return;
+          log.add('writer start');
+          unobserved.value = 1;
+          log.add('writer end');
+        },
+        onError: writerErrors.add,
+      );
+      Effect(() {
+        if (trigger.value == 0) return;
+        log.add('other');
+        throw StateError('bad');
+      });
+
+      addTearDown(trigger.dispose);
+      addTearDown(unobserved.dispose);
+
+      expect(() => trigger.value = 1, throwsA(isA<StateError>()));
+      expect(log, ['writer start', 'writer end', 'other']);
+      expect(writerErrors, isEmpty);
+    });
+
+    test('effects triggered by a write inside an effect run after it ends', () {
+      final trigger = Signal(0);
+      final x = Signal(0);
+      final log = <String>[];
+
+      Effect(() {
+        if (trigger.value == 0) return;
+        log.add('writer start');
+        x.value = 1;
+        log.add('writer end');
+      });
+      Effect(() => log.add('x=${x.value}'));
+
+      addTearDown(trigger.dispose);
+      addTearDown(x.dispose);
+
+      log.clear();
+      trigger.value = 1;
+      expect(log, ['writer start', 'writer end', 'x=1']);
+    });
+
     test('surfaces the error for a throwing effect outside a batch', () {
       final s = Signal(0);
 

@@ -155,26 +155,37 @@ class ReactiveSystem {
     alien.propagate(link, alien.runDepth > 0);
   }
 
+  bool _flushing = false;
+
   /// Runs every queued effect, then rethrows the first error, if any.
   ///
   /// Replaces alien_signals' `flush`, which stops at the first throwing effect
   /// and drops the effects queued after it (see issue #182).
+  ///
+  /// Only one flush runs at a time. A write inside an effect only queues
+  /// effects, and the running flush runs them after that effect ends.
   void flush() {
+    if (_flushing) return;
+    _flushing = true;
     Object? error;
     StackTrace? stackTrace;
-    while (alien.queuedEffects != null) {
-      final effect = alien.queuedEffects! as alien.EffectNode;
-      alien.queuedEffects = effect.nextEffect;
-      effect.nextEffect = null;
-      if (alien.queuedEffects == null) alien.queuedEffectsTail = null;
-      try {
-        alien.run(effect);
-      } catch (e, s) {
-        if (error == null) {
-          error = e;
-          stackTrace = s;
+    try {
+      while (alien.queuedEffects != null) {
+        final effect = alien.queuedEffects! as alien.EffectNode;
+        alien.queuedEffects = effect.nextEffect;
+        effect.nextEffect = null;
+        if (alien.queuedEffects == null) alien.queuedEffectsTail = null;
+        try {
+          alien.run(effect);
+        } catch (e, s) {
+          if (error == null) {
+            error = e;
+            stackTrace = s;
+          }
         }
       }
+    } finally {
+      _flushing = false;
     }
     if (error != null) Error.throwWithStackTrace(error, stackTrace!);
   }
