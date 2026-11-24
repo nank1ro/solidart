@@ -56,7 +56,15 @@ class _AlienEffect extends alien.EffectNode<void> {
   // effect, for example because its parent effect is disposed or reruns. Only
   // a stop clears the flags, and then the solidart effect is disposed too.
   void _cleanup() {
-    if (flags == alien_system.ReactiveFlags.none) parent.dispose();
+    if (flags != alien_system.ReactiveFlags.none) return;
+    try {
+      parent.dispose();
+    } catch (error, stackTrace) {
+      // A throw here would stop alien_signals halfway through the stop. It
+      // happens when the stop runs outside a batch, so the disposal of the
+      // dependencies runs at once, for example for an effect in a Computed.
+      Zone.current.handleUncaughtError(error, stackTrace);
+    }
   }
 
   @override

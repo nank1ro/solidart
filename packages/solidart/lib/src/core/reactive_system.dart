@@ -46,20 +46,6 @@ extension MayDisposeDependencies on alien_system.ReactiveNode {
     }
     errors.rethrowIfAny();
   }
-
-  void mayDisposeDependencies([Iterable<alien_system.ReactiveNode>? include]) {
-    final errors = _FirstError();
-    final dependencies = {...getDependencies(), ...?include};
-    for (final dep in dependencies) {
-      switch (dep) {
-        case _AlienSignal():
-          errors.run(dep.parent._mayDispose);
-        case _AlienComputed():
-          errors.run(dep.parent._mayDispose);
-      }
-    }
-    errors.rethrowIfAny();
-  }
 }
 
 /// Lets a disposal finish when a step throws: [run] keeps the first error,
@@ -190,6 +176,9 @@ class ReactiveSystem {
 
   bool _flushing = false;
 
+  // The dependencies of the effects disposed since the last drain.
+  final _pendingDisposals = <alien_system.ReactiveNode>{};
+
   /// Runs every queued effect, then rethrows the first error, if any.
   ///
   /// Replaces alien_signals' `flush`, which stops at the first throwing effect
@@ -197,29 +186,65 @@ class ReactiveSystem {
   ///
   /// Only one flush runs at a time. A write inside an effect only queues
   /// effects, and the running flush runs them after that effect ends.
+  ///
+  /// When the queue is empty, the pending dependencies of disposed effects get
+  /// auto-disposal. A parent that reruns has then subscribed its new children,
+  /// so the dependencies they read again stay alive (see issue #202).
   void flush() {
     if (_flushing) return;
     _flushing = true;
     Object? error;
     StackTrace? stackTrace;
     try {
-      while (alien.queuedEffects != null) {
-        final effect = alien.queuedEffects! as alien.EffectNode;
-        alien.queuedEffects = effect.nextEffect;
-        effect.nextEffect = null;
-        if (alien.queuedEffects == null) alien.queuedEffectsTail = null;
+      do {
+        while (alien.queuedEffects != null) {
+          final effect = alien.queuedEffects! as alien.EffectNode;
+          alien.queuedEffects = effect.nextEffect;
+          effect.nextEffect = null;
+          if (alien.queuedEffects == null) alien.queuedEffectsTail = null;
+          try {
+            alien.run(effect);
+          } catch (e, s) {
+            if (error == null) {
+              error = e;
+              stackTrace = s;
+            }
+          }
+        }
         try {
-          alien.run(effect);
+          _disposePending();
         } catch (e, s) {
           if (error == null) {
             error = e;
             stackTrace = s;
+          } else {
+            Zone.current.handleUncaughtError(e, s);
           }
         }
-      }
+        // An onDispose callback can write a signal and queue effects.
+      } while (alien.queuedEffects != null);
     } finally {
       _flushing = false;
     }
     if (error != null) Error.throwWithStackTrace(error, stackTrace!);
+  }
+
+  // Offers auto-disposal to the pending dependencies, untracked. Rethrows the
+  // first error; later ones go to the zone.
+  void _disposePending() {
+    final errors = _FirstError();
+    untracked(() {
+      while (_pendingDisposals.isNotEmpty) {
+        final dep = _pendingDisposals.first;
+        _pendingDisposals.remove(dep);
+        switch (dep) {
+          case _AlienSignal():
+            errors.run(dep.parent._mayDispose);
+          case _AlienComputed():
+            errors.run(dep.parent._mayDispose);
+        }
+      }
+    });
+    errors.rethrowIfAny();
   }
 }

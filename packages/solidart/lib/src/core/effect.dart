@@ -171,6 +171,21 @@ class Effect implements ReactionInterface {
     } catch (error, stackTrace) {
       if (_onError == null) rethrow;
       _onError(SolidartCaughtException(error, stackTrace: stackTrace));
+    } finally {
+      _recordRunDependencies();
+    }
+  }
+
+  // alien_signals unlinks the dependencies of a nested effect before its
+  // cleanup disposes this effect, so dispose() uses this copy. Links after
+  // `depsTail` were not read in this run and are about to be purged.
+  void _recordRunDependencies() {
+    _runDeps.clear();
+    final tail = _internalEffect.depsTail;
+    if (tail == null) return;
+    for (var link = _internalEffect.deps; link != null; link = link.nextDep) {
+      _runDeps.add(link.dep);
+      if (identical(link, tail)) break;
     }
   }
 
@@ -191,6 +206,9 @@ class Effect implements ReactionInterface {
   late final _AlienEffect _internalEffect;
 
   final _deps = <alien_system.ReactiveNode>{};
+
+  // The dependencies read by the latest run.
+  final _runDeps = <alien_system.ReactiveNode>{};
 
   /// The subscriber of the effect, do not use it directly.
   @protected
@@ -248,9 +266,20 @@ class Effect implements ReactionInterface {
 
     // Keep the reads of onDispose callbacks out of the running effect.
     untracked(() {
-      final dependencies = {...subscriber.getDependencies(), ..._deps};
-      _internalEffect.dispose();
-      subscriber.mayDisposeDependencies(dependencies);
+      final dependencies = {
+        ...subscriber.getDependencies(),
+        ..._deps,
+        ..._runDeps,
+      };
+      // The batch defers the auto-disposal until the work that disposed this
+      // effect ends, for example the rerun of its parent effect.
+      reactiveSystem.startBatch();
+      try {
+        _internalEffect.dispose();
+        reactiveSystem._pendingDisposals.addAll(dependencies);
+      } finally {
+        reactiveSystem.endBatch();
+      }
     });
   }
 
