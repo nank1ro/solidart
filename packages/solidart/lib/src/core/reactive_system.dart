@@ -229,12 +229,13 @@ class ReactiveSystem {
     if (error != null) Error.throwWithStackTrace(error, stackTrace!);
   }
 
-  // Offers auto-disposal to the pending dependencies, untracked. Rethrows the
-  // first error; later ones go to the zone.
+  // Offers auto-disposal to the pending dependencies, untracked. Stops when an
+  // onDispose callback queues an effect: [flush] runs it, then resumes.
+  // Rethrows the first error; later ones go to the zone.
   void _disposePending() {
     final errors = _FirstError();
     untracked(() {
-      while (_pendingDisposals.isNotEmpty) {
+      while (_pendingDisposals.isNotEmpty && alien.queuedEffects == null) {
         final dep = _pendingDisposals.first;
         _pendingDisposals.remove(dep);
         switch (dep) {

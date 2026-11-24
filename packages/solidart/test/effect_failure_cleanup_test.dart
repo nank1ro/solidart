@@ -351,6 +351,31 @@ void main() {
       expect((shared.disposed, shared.listenerCount), (false, 1));
     });
 
+    test('an effect queued by onDispose runs before the next dependency is '
+        'offered for disposal', () {
+      final poke = Signal(0);
+      addTearDown(poke.dispose);
+      final a = Signal(0, autoDispose: true);
+      final b = Signal(0, autoDispose: true);
+      addTearDown(b.dispose);
+      a.onDispose(() => poke.value = 1);
+      final seen = <int>[];
+      final watcher = Effect(() {
+        if (poke.value > 0) seen.add(b.value);
+      });
+      addTearDown(watcher.dispose);
+      Effect(() {
+        Effect(() {
+          a.value;
+          b.value;
+        });
+      }).dispose();
+
+      b.value = 7;
+
+      expect((b.disposed, seen.join(',')), (false, '0,7'));
+    });
+
     test('disposes every dependency when onDispose throws, then rethrows', () {
       final own = Signal(0, autoDispose: true);
       final first = Signal(0, autoDispose: true)
