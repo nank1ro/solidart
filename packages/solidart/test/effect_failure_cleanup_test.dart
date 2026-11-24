@@ -247,6 +247,195 @@ void main() {
     });
   });
 
+  group('#202 a nested effect stopped by its parent', () {
+    test('disposing the parent disposes the child dependency', () {
+      final own = Signal(0, autoDispose: true);
+      final childDep = Signal(0, autoDispose: true);
+      Effect(() {
+        own.value;
+        Effect(() => childDep.value);
+      }).dispose();
+
+      expect((own.disposed, childDep.disposed), (true, true));
+    });
+
+    test('a parent rerun disposes the dependency of the old child', () {
+      final trigger = Signal(0);
+      addTearDown(trigger.dispose);
+      final childDep = Signal(0, autoDispose: true);
+      var created = 0;
+      final parent = Effect(() {
+        trigger.value;
+        if (created++ == 0) Effect(() => childDep.value);
+      });
+      addTearDown(parent.dispose);
+
+      trigger.value = 1;
+
+      expect((childDep.disposed, childDep.listenerCount), (true, 0));
+    });
+
+    test('a parent rerun keeps the dependency of a recreated child', () {
+      final trigger = Signal(0);
+      addTearDown(trigger.dispose);
+      final childDep = Signal(0, autoDispose: true);
+      addTearDown(childDep.dispose);
+      var childRuns = 0;
+      final parent = Effect(() {
+        trigger.value;
+        Effect(() {
+          childDep.value;
+          childRuns++;
+        });
+      });
+      addTearDown(parent.dispose);
+
+      trigger.value = 1;
+      childDep.value = 5;
+
+      expect((childDep.disposed, childRuns), (false, 3));
+    });
+
+    test('a parent rerun in a batch keeps the dependency of a recreated '
+        'child', () {
+      final trigger = Signal(0);
+      addTearDown(trigger.dispose);
+      final childDep = Signal(0, autoDispose: true);
+      addTearDown(childDep.dispose);
+      var childRuns = 0;
+      final parent = Effect(() {
+        trigger.value;
+        Effect(() {
+          childDep.value;
+          childRuns++;
+        });
+      });
+      addTearDown(parent.dispose);
+
+      batch(() {
+        trigger.value = 1;
+      });
+      childDep.value = 5;
+
+      expect((childDep.disposed, childRuns), (false, 3));
+    });
+
+    test('a parent rerun in a batch disposes the dependency of the old '
+        'child', () {
+      final trigger = Signal(0);
+      addTearDown(trigger.dispose);
+      final childDep = Signal(0, autoDispose: true);
+      var created = 0;
+      final parent = Effect(() {
+        trigger.value;
+        if (created++ == 0) Effect(() => childDep.value);
+      });
+      addTearDown(parent.dispose);
+
+      batch(() {
+        trigger.value = 1;
+      });
+
+      expect((childDep.disposed, childDep.listenerCount), (true, 0));
+    });
+
+    test('keeps a dependency that another effect still reads', () {
+      final shared = Signal(0, autoDispose: true);
+      addTearDown(shared.dispose);
+      final other = Effect(() => shared.value);
+      addTearDown(other.dispose);
+      Effect(() {
+        Effect(() => shared.value);
+      }).dispose();
+
+      expect((shared.disposed, shared.listenerCount), (false, 1));
+    });
+
+    test('disposes every dependency when onDispose throws, then rethrows', () {
+      final own = Signal(0, autoDispose: true);
+      final first = Signal(0, autoDispose: true)
+        ..onDispose(() => throw StateError('first'));
+      final second = Signal(0, autoDispose: true)
+        ..onDispose(() => throw StateError('second'));
+      final parent = Effect(() {
+        own.value;
+        Effect(() {
+          first.value;
+          second.value;
+        });
+      });
+
+      Object? thrown;
+      final zone = _runInZone(() {
+        try {
+          parent.dispose();
+        } catch (e) {
+          thrown = e;
+        }
+      });
+
+      expect(_messageOf(thrown), 'first');
+      expect(zone.reported.map(_messageOf), ['second']);
+      expect(
+        (own.disposed, first.disposed, second.disposed),
+        (
+          true,
+          true,
+          true,
+        ),
+      );
+    });
+
+    test('a parent rerun still runs when onDispose throws, then rethrows', () {
+      final trigger = Signal(0);
+      addTearDown(trigger.dispose);
+      final childDep = Signal(0, autoDispose: true)
+        ..onDispose(() => throw StateError('cleanup'));
+      var runs = 0;
+      final parent = Effect(() {
+        trigger.value;
+        if (runs++ == 0) Effect(() => childDep.value);
+      });
+      addTearDown(parent.dispose);
+
+      Object? thrown;
+      try {
+        trigger.value = 1;
+      } catch (e) {
+        thrown = e;
+      }
+
+      expect(_messageOf(thrown), 'cleanup');
+      expect((runs, childDep.disposed), (2, true));
+      trigger.value = 2;
+      expect(runs, 3);
+    });
+
+    test('a child of a Computed reports a disposal error to the zone', () {
+      final childDep = Signal(0, autoDispose: true)
+        ..onDispose(() => throw StateError('cleanup'));
+      final own = Signal(0, autoDispose: true);
+      final computed = Computed(() {
+        Effect(() => childDep.value);
+        return own.value;
+      });
+      expect(computed.value, 0);
+
+      Object? thrown;
+      final zone = _runInZone(() {
+        try {
+          computed.dispose();
+        } catch (e) {
+          thrown = e;
+        }
+      });
+
+      expect(thrown, isNull);
+      expect(zone.reported.map(_messageOf), ['cleanup']);
+      expect((childDep.disposed, own.listenerCount), (true, 0));
+    });
+  });
+
   group('cleanup inside a running effect', () {
     // Each case disposes a node whose cleanup reads `audit`. The read must not
     // subscribe the running effect.
