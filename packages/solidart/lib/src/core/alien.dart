@@ -17,12 +17,23 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
     alien.stop(this);
   }
 
+  // Whether the getter runs from didUpdate(), not from the first get().
+  bool updating = false;
+
   @override
   bool didUpdate() {
     final hadError = parent._hasError;
-    final changed = super.didUpdate();
-    if (hadError || parent._hasError) return changed;
-    return !parent._equalsPrevious;
+    final bool changed;
+    updating = true;
+    try {
+      changed = super.didUpdate();
+    } finally {
+      updating = false;
+    }
+    if (parent._hasError) return changed;
+    // Committed: observers now read the new value, not the old error.
+    parent._notifyEvaluated();
+    return hadError ? changed : !parent._equalsPrevious;
   }
 }
 
