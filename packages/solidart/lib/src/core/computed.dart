@@ -187,21 +187,18 @@ class Computed<T> extends ReadSignal<T> {
     // Like Effect.dispose: the auto-disposal of the dependencies waits for the
     // running batch, flush or evaluation, and yields to queued effects. The
     // batch also holds back the dependencies of the child effects, so the
-    // onDispose callbacks can subscribe to them first.
+    // onDispose callbacks and the observers can subscribe to them first.
+    // Every step runs in [errors], so the batch always ends.
     reactiveSystem.startBatch();
     final errors = _FirstError()..run(_internalComputed.dispose);
     reactiveSystem._pendingDisposals.addAll(dependencies);
-
-    for (final cb in _onDisposeCallbacks) {
-      errors.run(cb);
-    }
-    _onDisposeCallbacks.clear();
-    errors.run(reactiveSystem.endBatch);
-
-    _listeners.dispose();
-
-    _notifySignalDisposal(errors);
-    errors.rethrowIfAny();
+    errors
+      ..runAll(_onDisposeCallbacks)
+      ..run(_listeners.dispose)
+      ..run(() => _notifySignalDisposal(errors))
+      ..runAll(_onDisposeCallbacks)
+      ..run(reactiveSystem.endBatch)
+      ..rethrowIfAny();
   }
 
   @override
@@ -385,6 +382,9 @@ class Computed<T> extends ReadSignal<T> {
     // [_error].
     SolidartCaughtException? error;
     var changed = false;
+    // A cleanup error after a committed change, rethrown after the
+    // subscribers are notified of the change.
+    final errors = _FirstError();
     try {
       reactiveSystem._evaluate(() {
         changed = _internalComputed.didUpdate();
@@ -393,13 +393,32 @@ class Computed<T> extends ReadSignal<T> {
     } catch (e, s) {
       // The selector error has priority over an error from the cleanup that
       // ends the evaluation.
-      if (error == null) rethrow;
-      Zone.current.handleUncaughtError(e, s);
+      if (error != null) {
+        Zone.current.handleUncaughtError(e, s);
+      } else if (changed) {
+        errors.run(() => Error.throwWithStackTrace(e, s));
+      } else {
+        rethrow;
+      }
     } finally {
       // Like a read: record the inputs so dispose() reaches them.
       _recordInputs(merge: error != null);
     }
-    if (changed) reactiveSystem.notifySubscribers(_internalComputed);
+    if (changed) {
+      if (error != null) {
+        // The caller must still get the selector error: a notification
+        // error goes to the zone.
+        try {
+          reactiveSystem.notifySubscribers(_internalComputed);
+        } catch (notifyError, notifyStackTrace) {
+          Zone.current.handleUncaughtError(notifyError, notifyStackTrace);
+        }
+      } else {
+        errors
+          ..run(() => reactiveSystem.notifySubscribers(_internalComputed))
+          ..rethrowIfAny();
+      }
+    }
     final runError = error;
     if (runError != null) {
       Error.throwWithStackTrace(runError, runError.stackTrace!);

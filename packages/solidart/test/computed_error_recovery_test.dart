@@ -260,6 +260,41 @@ void main() {
       expect(observedFailures, 1);
     });
 
+    test('run() keeps its selector error when a subscriber throws while '
+        'being notified', () {
+      var fail = false;
+      final c = Computed<int>(() {
+        if (fail) throw StateError('selector');
+        return 1;
+      });
+      final effect = Effect(
+        () => c.value,
+        onError: (_) => throw StateError('subscriber'),
+      );
+      addTearDown(effect.dispose);
+      fail = true;
+
+      Object? thrown;
+      final zoneErrors = <Object>[];
+      runZonedGuarded(() {
+        try {
+          c.run();
+        } catch (e) {
+          thrown = e;
+        }
+      }, (error, _) => zoneErrors.add(error));
+
+      expect(
+        thrown,
+        isA<SolidartCaughtException>().having(
+          (e) => e.exception.toString(),
+          'cause',
+          'Bad state: selector',
+        ),
+      );
+      expect(zoneErrors, [isA<StateError>()]);
+    });
+
     test('an autoDispose Computed is disposed with its only source after its '
         'last evaluation threw', () {
       final source = Signal(1);

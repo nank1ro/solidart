@@ -69,7 +69,9 @@ abstract class ReactionInterface {
 ///
 /// An effect created with `autorun: false` (and run later by hand) or with a
 /// `delay` stays alive after a failed run. You already have the effect, so
-/// you can dispose it yourself.
+/// you can dispose it yourself. With `autoDispose`, such an effect is still
+/// disposed after a run that leaves it with no dependencies, for example a
+/// run that throws before it reads a signal.
 ///
 /// Disposing an effect also disposes the effects created inside it.
 ///
@@ -187,13 +189,17 @@ class Effect implements ReactionInterface {
 
   // alien_signals unlinks the dependencies of a nested effect before its
   // cleanup disposes this effect, so dispose() uses this copy. Links after
-  // `depsTail` were not read in this run and are about to be purged.
+  // `depsTail` were not read in this run and are about to be purged. Only
+  // signals and computeds are kept: a child effect is also a dependency, and
+  // must not stay alive after it is disposed.
   void _recordRunDependencies() {
     _runDeps.clear();
     final tail = _internalEffect.depsTail;
     if (tail == null) return;
     for (var link = _internalEffect.deps; link != null; link = link.nextDep) {
-      _runDeps.add(link.dep);
+      if (link.dep case alien.SignalNode() || alien.ComputedNode()) {
+        _runDeps.add(link.dep);
+      }
       if (identical(link, tail)) break;
     }
   }
