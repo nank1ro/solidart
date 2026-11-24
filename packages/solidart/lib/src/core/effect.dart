@@ -160,9 +160,8 @@ class Effect implements ReactionInterface {
     try {
       _callback();
     } catch (error, stackTrace) {
-      final onError = _onError;
-      if (onError == null) rethrow;
-      onError(SolidartCaughtException(error, stackTrace: stackTrace));
+      if (_onError == null) rethrow;
+      _onError(SolidartCaughtException(error, stackTrace: stackTrace));
     }
   }
 

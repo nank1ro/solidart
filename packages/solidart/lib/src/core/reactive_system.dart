@@ -91,6 +91,8 @@ class ReactiveSystem {
 
   void startBatch() => alien.startBatch();
 
+  // Not `alien.endBatch()`: it calls alien_signals' own `flush`, which drops
+  // the effects queued after a throwing one. See [flush].
   void endBatch() {
     if (--alien.batchDepth == 0) flush();
   }
