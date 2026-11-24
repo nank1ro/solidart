@@ -170,7 +170,7 @@ class Computed<T> extends ReadSignal<T> {
   @override
   bool get untrackedHasValue => true;
 
-  final _deps = <alien_system.ReactiveNode>{};
+  final _deps = <_SavedInput>{};
 
   @override
   void dispose() {
@@ -184,8 +184,9 @@ class Computed<T> extends ReadSignal<T> {
   void _dispose() {
     // Like Effect.dispose, offer the inputs whatever this computed's own
     // autoDispose is. Only an autoDispose computed records [_deps].
-    final dependencies = {..._inputs, ..._deps};
+    final dependencies = {..._inputs, for (final input in _deps) ?input.node};
     _deps.clear();
+    _internalComputed.saved.node = null;
     // Like Effect.dispose: the auto-disposal of the dependencies waits for the
     // running batch, flush or evaluation, and yields to queued effects. The
     // batch also holds back the dependencies of the child effects, so the
@@ -310,7 +311,9 @@ class Computed<T> extends ReadSignal<T> {
     if (!merge) _deps.clear();
     _deps.addAll([
       for (final input in inputs ?? _inputs)
-        if (input case alien.SignalNode() || alien.ComputedNode()) input,
+        if (input
+            case _AlienSignal(:final saved) || _AlienComputed(:final saved))
+          saved,
     ]);
   }
 

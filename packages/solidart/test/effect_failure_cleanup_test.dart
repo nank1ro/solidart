@@ -139,6 +139,19 @@ Signal<int>? _retained;
   return (effect, WeakReference(signal));
 }
 
+// A Computed run by hand, then left by its last observer, so alien_signals
+// unlinks its inputs. Its input is disposed afterwards.
+@pragma('vm:never-inline')
+(Computed<int>, WeakReference<Signal<int>>) _disposeTheInputOfALeftComputed() {
+  final signal = _retained = Signal(0);
+  final computed = Computed(() => _retained!.value)..run();
+  Effect(() => computed.value).dispose();
+  expect(signal.listenerCount, 0);
+  signal.dispose();
+  _retained = null;
+  return (computed, WeakReference(signal));
+}
+
 /// Runs the garbage collector. Returns false when no VM service is available,
 /// for example under `flutter test` without `--coverage`.
 Effect? _child;
@@ -610,11 +623,125 @@ void main() {
     });
   });
 
+  group('a Resource disposed while it works', () {
+    test(
+      '#205 during its first fetch does not subscribe to its source',
+      () async {
+        final request = Completer<int>();
+        final source = Signal(0);
+        addTearDown(source.dispose);
+        var requests = 0;
+        Future<int> fetch() {
+          requests++;
+          return request.future;
+        }
+
+        final resource = Resource<int>(fetch, source: source)
+          ..state
+          ..dispose();
+        request.complete(1);
+        await Future<void>.delayed(Duration.zero);
+        source.value = 1;
+
+        expect((source.listenerCount, requests), (0, 1));
+        expect(resource.untrackedState, isA<ResourceLoading<int>>());
+      },
+    );
+
+    test('during a refetch does not write the result', () async {
+      var request = Completer<int>();
+      final resource = Resource<int>(() => request.future)..state;
+      request.complete(1);
+      await Future<void>.delayed(Duration.zero);
+      request = Completer<int>();
+      unawaited(resource.refresh());
+      resource.dispose();
+      request.complete(2);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(resource.untrackedState.asReady?.value, 1);
+    });
+
+    test(
+      '#206 with a pending debounced refresh does not subscribe again',
+      () async {
+        final source = Signal(0);
+        addTearDown(source.dispose);
+        final controller = StreamController<int>.broadcast();
+        addTearDown(controller.close);
+        var subscriptions = 0;
+        final resource = Resource<int>.stream(
+          () {
+            subscriptions++;
+            return controller.stream;
+          },
+          source: source,
+          debounceDelay: Duration.zero,
+        )..state;
+        source.value = 1;
+        resource.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect((subscriptions, controller.hasListener), (1, false));
+      },
+    );
+
+    test('a refresh after disposal does not subscribe again', () async {
+      final controller = StreamController<int>.broadcast();
+      addTearDown(controller.close);
+      var subscriptions = 0;
+      Stream<int> subscribe() {
+        subscriptions++;
+        return controller.stream;
+      }
+
+      final resource = Resource<int>.stream(subscribe)
+        ..state
+        ..dispose();
+      await resource.refresh();
+
+      expect((subscriptions, controller.hasListener), (1, false));
+    });
+
+    test('keeps the debounced refresh of another Resource of its '
+        'source', () async {
+      final source = Signal(0);
+      addTearDown(source.dispose);
+      var fetches = 0;
+      Resource<int> create() => Resource<int>(
+        () async => ++fetches,
+        source: source,
+        debounceDelay: Duration.zero,
+      )..state;
+      final kept = create();
+      addTearDown(kept.dispose);
+      final disposed = create();
+      await Future<void>.delayed(Duration.zero);
+      source.value = 1;
+      disposed.dispose();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(fetches, 3);
+      expect(kept.untrackedState.asReady?.value, 3);
+    });
+  });
+
   group('a Computed without autoDispose', () {
     test('disposes its dependencies when disposed', () {
       final source = Signal(0, autoDispose: true);
       final computed = Computed(() => source.value);
       expect(computed.value, 0);
+
+      computed.dispose();
+
+      expect(source.disposed, isTrue);
+    });
+
+    test('run by hand disposes an input that its last observer unlinked', () {
+      final source = Signal(0, autoDispose: true);
+      final computed = Computed(() => source.value)..run();
+      Effect(() => computed.value).dispose();
+      expect((source.listenerCount, source.disposed), (0, false));
 
       computed.dispose();
 
@@ -995,6 +1122,13 @@ void main() {
       final (effect, signal) = _switchAnObservedComputedAway();
       await expectReleased(signal);
       expect(effect.disposed, isFalse);
+    });
+
+    test('#207 a Computed left by its observers releases a disposed '
+        'input', () async {
+      final (computed, signal) = _disposeTheInputOfALeftComputed();
+      await expectReleased(signal);
+      expect(computed.disposed, isFalse);
     });
   });
 
