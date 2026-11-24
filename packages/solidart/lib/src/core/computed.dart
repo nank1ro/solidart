@@ -211,9 +211,17 @@ class Computed<T> extends ReadSignal<T> {
     if (_disposed) {
       return untrackedValue;
     }
-    // A read from the selector or comparator: return the stored value or
-    // candidate without evaluating again.
-    if (_evaluating && _initialized) return _untrackedValue;
+    // A read while the selector or comparator runs: return the stored value
+    // or candidate without evaluating again.
+    if (_evaluating && _initialized) {
+      // Link another reader, such as an effect created by the selector, so it
+      // reruns on later changes. The computed's own reads stay unlinked.
+      final sub = reactiveSystem.activeSub;
+      if (sub != null && !identical(sub, _internalComputed)) {
+        reactiveSystem.link(_internalComputed, sub);
+      }
+      return _untrackedValue;
+    }
 
     final T value;
     try {
@@ -376,12 +384,14 @@ class Computed<T> extends ReadSignal<T> {
   /// However, in some cases, you may want to force an update.
   void run() {
     if (_disposed) return;
-    // The error of this run. The cleanup that ends the evaluation can run
-    // this computed again and replace [_error].
+    // The error of this run. The cleanup that ends the evaluation, or a
+    // subscriber notified below, can run this computed again and replace
+    // [_error].
     SolidartCaughtException? error;
+    var changed = false;
     try {
       reactiveSystem._evaluate(() {
-        _internalComputed.didUpdate();
+        changed = _internalComputed.didUpdate();
         error = _error;
       });
     } catch (e, s) {
@@ -393,6 +403,7 @@ class Computed<T> extends ReadSignal<T> {
       // Like a read: record the inputs so dispose() reaches them.
       _recordInputs(merge: error != null);
     }
+    if (changed) reactiveSystem.notifySubscribers(_internalComputed);
     final runError = error;
     if (runError != null) {
       Error.throwWithStackTrace(runError, runError.stackTrace!);

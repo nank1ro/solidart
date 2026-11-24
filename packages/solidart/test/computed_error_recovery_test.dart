@@ -232,6 +232,34 @@ void main() {
       expect(c.run, throwsA(isA<SolidartCaughtException>()));
     });
 
+    test('run() still throws its own selector error when a subscriber '
+        're-runs the computed successfully while being notified', () {
+      final input = Signal(0);
+      final c = Computed<int>(() {
+        // Untracked: only run() re-evaluates, so the effect cannot fire early.
+        if (input.untrackedValue == 1) throw StateError('one');
+        return input.untrackedValue;
+      });
+      var observedFailures = 0;
+      final effect = Effect(() {
+        try {
+          c.value;
+          // ignore: avoid_catching_errors
+        } on SolidartCaughtException {
+          if (++observedFailures == 1) {
+            input.value = 2;
+            c.run();
+          }
+        }
+      });
+      addTearDown(effect.dispose);
+      addTearDown(input.dispose);
+
+      input.value = 1;
+      expect(c.run, throwsA(isA<SolidartCaughtException>()));
+      expect(observedFailures, 1);
+    });
+
     test('an autoDispose Computed is disposed with its only source after its '
         'last evaluation threw', () {
       final source = Signal(1);
@@ -564,6 +592,80 @@ void main() {
       s.value = 2;
       expect(c.value, 2);
       expect(seen, [2]);
+    });
+
+    test('an effect created while the selector runs tracks the Computed', () {
+      final source = Signal(0);
+      final gate = Signal(false);
+      final c = Computed(() {
+        final value = source.value;
+        if (value == 1) gate.value = true;
+        return value;
+      });
+      final seen = <int>[];
+      final effect = Effect(() {
+        if (gate.value) seen.add(c.value);
+      });
+      addTearDown(effect.dispose);
+
+      expect(c.value, 0);
+      source.value = 1;
+      expect(c.value, 1);
+      source.value = 2;
+      expect(seen.last, 2);
+    });
+
+    test(
+      'a listener added while the comparator runs receives later changes',
+      () {
+        final source = Signal(0);
+        late final Computed<int> c;
+        final seen = <int>[];
+        void listener() => seen.add(c.value);
+        c = Computed(
+          () => source.value,
+          comparator: (a, b) {
+            if (b == 1) c.addListener(listener);
+            return a == b;
+          },
+        );
+        addTearDown(() => c.removeListener(listener));
+
+        expect(c.value, 0);
+        source.value = 1;
+        expect(c.value, 1);
+        source.value = 2;
+        expect(seen, [2]);
+      },
+    );
+
+    test('run() that changes the value notifies the subscribers', () {
+      var next = 0;
+      final c = Computed(() => next);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(c.value));
+      addTearDown(effect.dispose);
+
+      next = 1;
+      c.run();
+      expect(seen, [0, 1]);
+      c.run();
+      expect(seen, [0, 1]);
+    });
+
+    test('run() with a throwing comparator notifies the subscribers', () {
+      var next = 0;
+      final error = ArgumentError('invalid comparison');
+      final c = Computed(() => next, comparator: (_, _) => throw error);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(c.value));
+      addTearDown(effect.dispose);
+
+      next = 1;
+      final reported = _reportedErrors(c.run);
+      expect(reported.map((r) => r.$1), [same(error)]);
+      expect(c.value, 1);
+      expect(seen, [0, 1]);
     });
   });
 }

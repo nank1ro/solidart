@@ -217,6 +217,17 @@ class ReactiveSystem {
     alien.propagate(link, alien.runDepth > 0);
   }
 
+  /// Notifies the subscribers of [node] that its value changed outside a
+  /// propagation, as `trigger` does, and runs the queued effects.
+  void notifySubscribers(alien_system.ReactiveNode node) {
+    final subs = node.subs;
+    if (subs == null) return;
+    propagate(subs);
+    // The subscribers must update: [node] itself is no longer dirty.
+    alien.shallowPropagate(subs);
+    if (batchDepth == 0) flush();
+  }
+
   bool _flushing = false;
 
   // The dependencies of the effects and computeds disposed since the last
