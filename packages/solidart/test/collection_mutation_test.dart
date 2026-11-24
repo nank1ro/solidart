@@ -524,6 +524,44 @@ void main() {
         },
       );
     }
+
+    // Without history, these mutations do not read the elements, so they
+    // work on a cast list that throws a TypeError when it reads 'unread'.
+    final resizes = <String, void Function(ListSignal<int>)>{
+      'add': (s) => s.add(3),
+      'insert': (s) => s.insert(0, 3),
+      'removeAt': (s) => s.removeAt(0),
+      'removeLast': (s) => s.removeLast(),
+      'clear': (s) => s.clear(),
+      'shrinking length': (s) => s.length = 1,
+    };
+    for (final MapEntry(key: name, value: mutate) in resizes.entries) {
+      test('$name of a cast list without history notifies once', () {
+        final s = ListSignal<int>([], trackPreviousValue: false)
+          ..value = <Object>[1, 'unread', 2].cast<int>();
+        addTearDown(s.dispose);
+        var runs = 0;
+        final effect = Effect(() {
+          s.value;
+          runs++;
+        });
+        addTearDown(effect.dispose);
+
+        mutate(s);
+
+        expect(runs, 2);
+      });
+    }
+
+    test('a resize that keeps the length without history does not notify', () {
+      final s = ListSignal([1], trackPreviousValue: false);
+      final w = watch(s);
+
+      s.length = 1;
+
+      expect(w.calls, isEmpty);
+      expect(w.effectReruns, 0);
+    });
   });
 
   group('MapSignal', () {
@@ -737,6 +775,7 @@ void main() {
       'putIfAbsent': (s) => s.putIfAbsent('b', () => 2),
       'updateAll': (s) => s.updateAll((k, v) => v + 1),
       '[]=': (s) => s['b'] = 2,
+      '[]= of the same value': (s) => s['a'] = 1,
       'remove': (s) => s.remove('a'),
     };
     for (final MapEntry(key: name, value: mutate)
@@ -885,6 +924,64 @@ void main() {
 
       expect(runs, 1);
     });
+
+    test('[]= of the same value returns without reading other values', () {
+      final s = MapSignal(castMap());
+      final w = watch(s);
+
+      s['a'] = 'x';
+
+      expect(w.calls, isEmpty);
+      expect(w.effectReruns, 0);
+    });
+
+    test('clear of a cast map without history notifies once', () {
+      final s = MapSignal(castMap(), trackPreviousValue: false);
+      addTearDown(s.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        s.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+
+      s.clear();
+
+      expect(s.untrackedValue, isEmpty);
+      expect(runs, 2);
+    });
+
+    // Each one removes 'a' and adds it again, so 'a' moves after 'b'.
+    final reorders = <String, void Function(MapSignal<String, int>)>{
+      'addEntries': (s) {
+        Iterable<MapEntry<String, int>> moveA() sync* {
+          s.remove('a');
+          yield const MapEntry('a', 1);
+        }
+
+        s.addEntries(moveA());
+      },
+      'update': (s) => s.update('b', (v) {
+        s
+          ..remove('a')
+          ..['a'] = 1;
+        return v;
+      }),
+    };
+    for (final MapEntry(key: name, value: mutate) in reorders.entries) {
+      test('$name with a nested reorder notifies once', () {
+        final s = MapSignal({'a': 1, 'b': 2});
+        addTearDown(s.dispose);
+        final seen = <String>[];
+        final effect = Effect(() => seen.add(s.keys.join()));
+        addTearDown(effect.dispose);
+
+        mutate(s);
+
+        expect(seen, ['ab', 'ba']);
+        expect(s.untrackedPreviousValue!.keys.join(), 'ab');
+      });
+    }
   });
 
   group('SetSignal', () {
@@ -1142,6 +1239,62 @@ void main() {
       s.add(2);
 
       expect(runs, 1);
+    });
+
+    for (final history in [true, false]) {
+      test('a nested replacement with an equal element notifies once '
+          '(history: $history)', () {
+        final old = DateTime.utc(2026);
+        final replacement = DateTime.utc(2026);
+        final s = SetSignal({old}, trackPreviousValue: history);
+        addTearDown(s.dispose);
+        final seen = <DateTime>[];
+        final effect = Effect(() => seen.add(s.first));
+        addTearDown(effect.dispose);
+        Iterable<DateTime> replace() sync* {
+          s.remove(old);
+          yield replacement;
+        }
+
+        s.addAll(replace());
+
+        expect(seen, [same(old), same(replacement)]);
+        if (history) expect(s.untrackedPreviousValue!.single, same(old));
+      });
+    }
+
+    test('a nested reorder notifies once', () {
+      final s = SetSignal({1, 2});
+      addTearDown(s.dispose);
+      final seen = <String>[];
+      final effect = Effect(() => seen.add(s.join()));
+      addTearDown(effect.dispose);
+      Iterable<int> moveFirst() sync* {
+        s.remove(1);
+        yield 1;
+      }
+
+      s.addAll(moveFirst());
+
+      expect(seen, ['12', '21']);
+      expect(s.untrackedPreviousValue!.join(), '12');
+    });
+
+    test('clear of a cast set without history notifies once', () {
+      final s = SetSignal<int>({}, trackPreviousValue: false)
+        ..value = castSet();
+      addTearDown(s.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        s.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+
+      s.clear();
+
+      expect(s.untrackedValue, isEmpty);
+      expect(runs, 2);
     });
   });
 }

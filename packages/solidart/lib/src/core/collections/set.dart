@@ -274,7 +274,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   void clear() {
-    _mutate((set) => set.clear());
+    _mutate((set) => set.clear(), resizes: true);
   }
 
   /// Removes all elements of this set that are not elements in [elements].
@@ -447,18 +447,28 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// Runs [mutation] on the set that holds the value.
   ///
   /// If the set changed, even when [mutation] throws, records the set as it
-  /// was before as the previous value and notifies once. `toSet` keeps the
-  /// equality of the set. A [_mutate] inside [mutation] on the same set does
-  /// not notify: this one notifies once for both. If [mutation] assigns a new
-  /// set, the assignment notifies, so this one does not.
+  /// was before as the previous value and notifies once. The elements are
+  /// compared in iteration order with `identical`. `toSet` keeps the
+  /// equality of the set for the previous value. A [_mutate] inside
+  /// [mutation] on the same set does not notify: this one notifies once for
+  /// both. If [mutation] assigns a new set, the assignment notifies, so this
+  /// one does not.
+  ///
+  /// Set [resizes] when [mutation] runs no code of the caller and changes
+  /// the set only when it changes its length. Then, without history, the
+  /// length tells whether the set changed, so the set is not copied.
   ///
   /// The error of [mutation] wins over an error of the notification, which
   /// goes to the current [Zone].
-  R _mutate<R>(R Function(Set<E> set) mutation) {
+  R _mutate<R>(R Function(Set<E> set) mutation, {bool resizes = false}) {
     final set = _untrackedValue;
     if (identical(set, _mutating)) return mutation(set);
     final outer = _mutating;
-    final before = set.toSet();
+    final length = set.length;
+    final elements = resizes && !trackPreviousValue
+        ? null
+        : set.toList(growable: false);
+    final before = trackPreviousValue ? set.toSet() : null;
     late final R result;
     _mutating = set;
     final errors = _FirstError()..run(() => result = mutation(set));
@@ -466,10 +476,14 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
     errors
       ..run(() {
         if (!identical(_untrackedValue, set)) return;
-        if (before.length != set.length || !before.every(set.contains)) {
-          _setPreviousValue(before);
-          _notifyChanged();
+        var changed = length != set.length;
+        if (elements != null && !changed) {
+          var i = 0;
+          changed = set.any((element) => !identical(element, elements[i++]));
         }
+        if (!changed) return;
+        if (before != null) _setPreviousValue(before);
+        _notifyChanged();
       })
       ..rethrowIfAny();
     return result;

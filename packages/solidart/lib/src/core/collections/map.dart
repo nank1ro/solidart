@@ -90,7 +90,11 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// Otherwise the key/value pair is added to the map.
   @override
   void operator []=(K key, V value) {
-    _mutate((map) => map[key] = value);
+    _mutateUnless(
+      _untrackedValue.containsKey(key) &&
+          identical(_untrackedValue[key], value),
+      (map) => map[key] = value,
+    );
   }
 
   /// Removes all entries from the map.
@@ -102,7 +106,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   void clear() {
-    _mutate((map) => map.clear());
+    _mutate((map) => map.clear(), resizes: true);
   }
 
   /// The keys of the Map.
@@ -381,19 +385,27 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// Runs [mutation] on the map that holds the value.
   ///
   /// If the map changed, even when [mutation] throws, records the map as it
-  /// was before as the previous value and notifies once. Values are compared
-  /// with `identical`. The previous value is a plain [Map], so it does not
+  /// was before as the previous value and notifies once. The entries are
+  /// compared in iteration order, and their keys and values with
+  /// `identical`. The previous value is a plain [Map], so it does not
   /// keep a custom key equality. A [_mutate] inside [mutation] on the same
   /// map does not notify: this one notifies once for both. If [mutation]
   /// assigns a new map, the assignment notifies, so this one does not.
   ///
+  /// Set [resizes] when [mutation] runs no code of the caller and changes
+  /// the map only when it changes its length. Then, without history, the
+  /// length tells whether the map changed, so the map is not copied.
+  ///
   /// The error of [mutation] wins over an error of the notification, which
   /// goes to the current [Zone].
-  R _mutate<R>(R Function(Map<K, V> map) mutation) {
+  R _mutate<R>(R Function(Map<K, V> map) mutation, {bool resizes = false}) {
     final map = _untrackedValue;
     if (identical(map, _mutating)) return mutation(map);
     final outer = _mutating;
-    final before = map.entries.toList();
+    final length = map.length;
+    final before = resizes && !trackPreviousValue
+        ? null
+        : map.entries.toList(growable: false);
     late final R result;
     _mutating = map;
     final errors = _FirstError()..run(() => result = mutation(map));
@@ -401,17 +413,19 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
     errors
       ..run(() {
         if (!identical(_untrackedValue, map)) return;
-        final changed =
-            before.length != map.length ||
-            before.any(
-              (entry) =>
-                  !map.containsKey(entry.key) ||
-                  !identical(map[entry.key], entry.value),
-            );
-        if (changed) {
-          _setPreviousValue(Map<K, V>.fromEntries(before));
-          _notifyChanged();
+        var changed = length != map.length;
+        if (before != null) {
+          var i = 0;
+          changed =
+              changed ||
+              map.entries.any((entry) {
+                final old = before[i++];
+                return !identical(entry.key, old.key) ||
+                    !identical(entry.value, old.value);
+              });
+          if (changed) _setPreviousValue(Map<K, V>.fromEntries(before));
         }
+        if (changed) _notifyChanged();
       })
       ..rethrowIfAny();
     return result;

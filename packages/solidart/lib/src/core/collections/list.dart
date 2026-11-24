@@ -104,7 +104,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   set length(int newLength) {
-    _mutate((list) => list.length = newLength);
+    _mutate((list) => list.length = newLength, resizes: true);
   }
 
   /// Returns the [index]th element.
@@ -172,7 +172,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   void add(E element) {
-    _mutate((list) => list.add(element));
+    _mutate((list) => list.add(element), resizes: true);
   }
 
   /// Appends all objects of [iterable] to the end of this list.
@@ -474,7 +474,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   void clear() {
-    _mutate((list) => list.clear());
+    _mutate((list) => list.clear(), resizes: true);
   }
 
   /// Overwrites a range of elements with [fillValue].
@@ -520,7 +520,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   void insert(int index, E element) {
-    _mutate((list) => list.insert(index, element));
+    _mutate((list) => list.insert(index, element), resizes: true);
   }
 
   /// Inserts all objects of [iterable] at position [index] in this list.
@@ -579,7 +579,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   E removeAt(int index) {
-    return _mutate((list) => list.removeAt(index));
+    return _mutate((list) => list.removeAt(index), resizes: true);
   }
 
   /// Removes and returns the last object in this list.
@@ -592,7 +592,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   E removeLast() {
-    return _mutate((list) => list.removeLast());
+    return _mutate((list) => list.removeLast(), resizes: true);
   }
 
   /// Removes a range of elements from the list.
@@ -800,13 +800,18 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// notify: this one notifies once for both. If [mutation] assigns a new
   /// list, the assignment notifies, so this one does not.
   ///
+  /// Set [resizes] when [mutation] runs no code of the caller and changes
+  /// the list only when it changes its length. Then, without history, the
+  /// length tells whether the list changed, so the list is not copied.
+  ///
   /// The error of [mutation] wins over an error of the notification, which
   /// goes to the current [Zone].
-  R _mutate<R>(R Function(List<E> list) mutation) {
+  R _mutate<R>(R Function(List<E> list) mutation, {bool resizes = false}) {
     final list = _untrackedValue;
     if (identical(list, _mutating)) return mutation(list);
     final outer = _mutating;
-    final before = List<E>.of(list);
+    final length = list.length;
+    final before = resizes && !trackPreviousValue ? null : List<E>.of(list);
     late final R result;
     _mutating = list;
     final errors = _FirstError()..run(() => result = mutation(list));
@@ -814,14 +819,14 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
     errors
       ..run(() {
         if (!identical(_untrackedValue, list)) return;
-        var changed = before.length != list.length;
-        for (var i = 0; !changed && i < before.length; i++) {
-          changed = !identical(before[i], list[i]);
+        var changed = length != list.length;
+        if (before != null) {
+          for (var i = 0; !changed && i < length; i++) {
+            changed = !identical(before[i], list[i]);
+          }
+          if (changed) _setPreviousValue(before);
         }
-        if (changed) {
-          _setPreviousValue(before);
-          _notifyChanged();
-        }
+        if (changed) _notifyChanged();
       })
       ..rethrowIfAny();
     return result;
