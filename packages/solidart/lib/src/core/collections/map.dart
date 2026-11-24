@@ -369,9 +369,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
       // Computes every new value first, so a throwing [update] changes nothing.
       final updated = [
         for (final MapEntry(:key, :value) in map.entries)
-          MapEntry(key, update(key, value)),
+          (key: key, read: value, next: update(key, value)),
       ];
-      map.addEntries(updated);
+      // A key that [update] wrote keeps that write, as in a plain map.
+      for (final (:key, :read, :next) in updated) {
+        if (map.containsKey(key) && identical(map[key], read)) map[key] = next;
+      }
     });
   }
 

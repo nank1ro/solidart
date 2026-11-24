@@ -702,6 +702,34 @@ void main() {
       expect(s.untrackedHasPreviousValue, isFalse);
     });
 
+    test('updateAll keeps a callback write to a key it already visited', () {
+      final s = MapSignal({'a': 1, 'b': 2});
+      final reference = {'a': 1, 'b': 2};
+      for (final map in [reference, s]) {
+        map.updateAll((k, v) {
+          if (k == 'b') map['a'] = 7;
+          return v;
+        });
+      }
+
+      expect(s.untrackedValue, reference);
+      expect(s.untrackedValue['a'], 7);
+    });
+
+    test('updateAll keeps a callback write over a changed visited key', () {
+      final s = MapSignal({'a': 1, 'b': 2});
+      final reference = {'a': 1, 'b': 2};
+      for (final map in [reference, s]) {
+        map.updateAll((k, v) {
+          if (k == 'b') map['a'] = 7;
+          return k == 'a' ? 5 : v;
+        });
+      }
+
+      expect(s.untrackedValue, reference);
+      expect(s.untrackedValue['a'], 7);
+    });
+
     test('putIfAbsent with an ifAbsent that throws does not touch history', () {
       final s = MapSignal({'a': 1});
       final w = watch(s);
