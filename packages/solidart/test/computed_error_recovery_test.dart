@@ -1,0 +1,500 @@
+// ignore_for_file: cascade_invocations
+
+import 'dart:async';
+
+import 'package:solidart/solidart.dart';
+import 'package:test/test.dart';
+
+class _ReadingObserver extends SolidartObserver {
+  _ReadingObserver(this.read);
+
+  final void Function(Computed<int> computed) read;
+
+  @override
+  void didCreateSignal(SignalBase<Object?> signal) {}
+
+  @override
+  void didUpdateSignal(SignalBase<Object?> signal) {
+    if (signal is Computed<int>) read(signal);
+  }
+
+  @override
+  void didDisposeSignal(SignalBase<Object?> signal) {}
+}
+
+// Runs [body] and returns the errors it reports to the current zone.
+// Fails if [body] itself throws.
+List<(Object, StackTrace)> _reportedErrors(void Function() body) {
+  final reported = <(Object, StackTrace)>[];
+  var completed = false;
+  runZonedGuarded(() {
+    body();
+    completed = true;
+  }, (e, s) => reported.add((e, s)));
+  expect(completed, isTrue, reason: 'body threw: $reported');
+  return reported;
+}
+
+void main() {
+  group('Computed error recovery', () {
+    test('a Computed whose first evaluation throws recovers after its '
+        'dependency changes', () {
+      final s = Signal(0);
+      final c = Computed(() {
+        if (s.value == 0) throw StateError('zero');
+        return s.value;
+      });
+
+      addTearDown(s.dispose);
+
+      expect(() => c.value, throwsA(isA<SolidartCaughtException>()));
+
+      s.value = 1;
+      expect(c.value, 1);
+    });
+
+    test('an effect that reads a Computed whose first evaluation throws '
+        'reruns after the Computed recovers', () {
+      final s = Signal(0);
+      final c = Computed(() {
+        if (s.value == 0) throw StateError('zero');
+        return s.value;
+      });
+      final seen = <int>[];
+      final errors = <Object>[];
+
+      Effect(() => seen.add(c.value), onError: errors.add);
+
+      addTearDown(s.dispose);
+
+      expect(errors.single, isA<SolidartCaughtException>());
+
+      s.value = 1;
+      s.value = 2;
+      expect(seen, [1, 2]);
+    });
+
+    test('an effect that reads a Computed keeps running after the Computed '
+        'throws and recovers (#192)', () {
+      final s = Signal(1);
+      final c = Computed(() {
+        if (s.value == 0) throw StateError('zero');
+        return s.value;
+      });
+      final seen = <int>[];
+
+      Effect(() => seen.add(c.value));
+
+      addTearDown(s.dispose);
+
+      Object? thrown;
+      try {
+        s.value = 0;
+      } catch (e) {
+        thrown = e;
+      }
+      s.value = 2;
+      s.value = 3;
+
+      expect(thrown, isA<SolidartCaughtException>());
+      expect(seen, [1, 2, 3]);
+    });
+
+    test('a custom comparator still suppresses notifications for equal '
+        'values, and value returns the newest object', () {
+      final s = Signal(1);
+      final c = Computed(
+        () => [s.value ~/ 10, s.value],
+        comparator: (a, b) => a?[0] == b?[0],
+      );
+      var runs = 0;
+
+      Effect(() {
+        c.value;
+        runs++;
+      });
+
+      addTearDown(s.dispose);
+
+      expect(runs, 1);
+
+      s.value = 2;
+      expect(runs, 1);
+      expect(c.value, [0, 2]);
+
+      s.value = 12;
+      expect(runs, 2);
+      expect(c.value, [1, 12]);
+    });
+
+    test('a comparator that never matches still notifies when the selector '
+        'returns the same object', () {
+      final s = Signal(0);
+      final shared = <int>[];
+      final c = Computed(() {
+        s.value;
+        return shared;
+      }, comparator: (a, b) => false);
+      var runs = 0;
+
+      Effect(() {
+        c.value;
+        runs++;
+      });
+
+      addTearDown(s.dispose);
+
+      expect(runs, 1);
+
+      s.value = 1;
+      expect(runs, 2);
+    });
+
+    test('a throwing Computed keeps throwing the same error on repeated reads '
+        'while no dependency changes', () {
+      final s = Signal(0);
+      var selectorRuns = 0;
+      final c = Computed(() {
+        selectorRuns++;
+        if (s.value == 0) throw StateError('zero');
+        return s.value;
+      });
+
+      addTearDown(s.dispose);
+
+      Object? first;
+      Object? second;
+      try {
+        c.value;
+      } catch (e) {
+        first = e;
+      }
+      try {
+        c.value;
+      } catch (e) {
+        second = e;
+      }
+
+      expect(first, isA<SolidartCaughtException>());
+      expect(second, same(first));
+      expect(selectorRuns, 1);
+    });
+
+    test('a Computed that succeeds, throws and recovers keeps previousValue '
+        'correct', () {
+      final s = Signal(1);
+      final c = Computed(() {
+        if (s.value == 0) throw StateError('zero');
+        return s.value * 10;
+      });
+
+      addTearDown(s.dispose);
+
+      expect(c.trackPreviousValue, isTrue);
+      expect(c.value, 10);
+      expect(c.previousValue, isNull);
+
+      s.value = 0;
+      expect(() => c.value, throwsA(isA<SolidartCaughtException>()));
+
+      s.value = 2;
+      expect(c.value, 20);
+      expect(c.previousValue, 10);
+
+      s.value = 3;
+      expect(c.value, 30);
+      expect(c.previousValue, 20);
+    });
+    test('a comparator that reads a signal tracks it as a dependency', () {
+      final source = Signal(0);
+      final suppress = Signal(true);
+      final c = Computed(
+        () => source.value,
+        comparator: (_, _) => suppress.value,
+      );
+      final seen = <int>[];
+
+      Effect(() => seen.add(c.value));
+
+      addTearDown(source.dispose);
+      addTearDown(suppress.dispose);
+
+      source.value = 1;
+      expect(seen, [0]);
+
+      suppress.value = false;
+      expect(seen, [0, 1]);
+    });
+
+    test('run() throws the selector error to its caller', () {
+      final c = Computed<int>(() => throw StateError('selector'));
+
+      expect(c.run, throwsA(isA<SolidartCaughtException>()));
+    });
+
+    test('an autoDispose Computed is disposed with its only source after its '
+        'last evaluation threw', () {
+      final source = Signal(1);
+      final c = Computed(() {
+        if (source.value == 0) throw StateError('zero');
+        return source.value;
+      }, autoDispose: true);
+      var cleanups = 0;
+      c.onDispose(() => cleanups++);
+
+      expect(c.value, 1);
+
+      source.value = 0;
+      expect(() => c.value, throwsA(isA<SolidartCaughtException>()));
+
+      source.dispose();
+      expect((c.disposed, cleanups), (true, 1));
+    });
+
+    test('an observer that reads untrackedValue sees the recovered value', () {
+      final seen = <int>[];
+      final observer = _ReadingObserver((c) => seen.add(c.untrackedValue));
+      SolidartConfig.observers.add(observer);
+      addTearDown(() => SolidartConfig.observers.remove(observer));
+      final s = Signal(1);
+      final c = Computed(() {
+        if (s.value == 0) throw StateError('zero');
+        return s.value;
+      });
+
+      addTearDown(s.dispose);
+
+      expect(c.value, 1);
+      s.value = 0;
+      expect(() => c.value, throwsA(isA<SolidartCaughtException>()));
+      s.value = 2;
+      expect(c.value, 2);
+      expect(seen, [2]);
+    });
+
+    test('an observer that reads previousValue lets the Computed recover', () {
+      final seen = <int?>[];
+      final observer = _ReadingObserver((c) => seen.add(c.previousValue));
+      SolidartConfig.observers.add(observer);
+      addTearDown(() => SolidartConfig.observers.remove(observer));
+      final s = Signal(1);
+      final c = Computed(() {
+        if (s.value == 0) throw StateError('zero');
+        return s.value;
+      });
+
+      addTearDown(s.dispose);
+
+      expect(c.value, 1);
+      s.value = 0;
+      expect(() => c.value, throwsA(isA<SolidartCaughtException>()));
+      s.value = 2;
+      expect(c.value, 2);
+      expect(seen, [1]);
+    });
+
+    test('a comparator that reads untrackedValue sees the new value', () {
+      final s = Signal(1);
+      final seen = <int>[];
+      late final Computed<int> c;
+      c = Computed(
+        () => s.value,
+        comparator: (a, b) {
+          seen.add(c.untrackedValue);
+          return a == b;
+        },
+      );
+
+      addTearDown(s.dispose);
+
+      expect(c.value, 1);
+      s.value = 2;
+      expect(c.value, 2);
+      expect(seen, [2]);
+    });
+
+    test('a selector can read its own previous value', () {
+      final s = Signal(1);
+      final seen = <(int?, bool)>[];
+      late final Computed<int> c;
+      c = Computed(() {
+        seen.add((c.previousValue, c.hasPreviousValue));
+        return s.value;
+      });
+
+      addTearDown(s.dispose);
+
+      expect(c.value, 1);
+      s.value = 2;
+      expect(c.value, 2);
+      expect(seen, [(null, false), (1, true)]);
+    });
+
+    test('an autoDispose Computed keeps the child effect it created', () {
+      final source = Signal(0);
+      final seen = <int>[];
+      final owner = Computed(() {
+        Effect(() => seen.add(source.value));
+        return 1;
+      }, autoDispose: true);
+
+      addTearDown(source.dispose);
+
+      expect(owner.value, 1);
+      source.value = 1;
+      expect(seen, [0, 1]);
+
+      owner.dispose();
+      source.value = 2;
+      expect(seen, [0, 1]);
+    });
+
+    test('a first run() tracks a signal read only by the comparator', () {
+      var sampled = 1;
+      final gate = Signal(true);
+      final c = Computed(() => sampled, comparator: (_, _) => gate.value);
+
+      addTearDown(gate.dispose);
+
+      c.run();
+      sampled = 2;
+      gate.value = false;
+      expect(c.value, 2);
+    });
+
+    test('a comparator error is reported to the zone, and the new value is '
+        'kept as a change', () {
+      final source = Signal(0);
+      final error = ArgumentError('invalid comparison');
+      final trace = StackTrace.current;
+      final c = Computed(
+        () => source.value,
+        comparator: (_, _) => Error.throwWithStackTrace(error, trace),
+      );
+      var runs = 0;
+
+      addTearDown(source.dispose);
+
+      final reported = _reportedErrors(() {
+        final effect = Effect(() {
+          c.value;
+          runs++;
+        });
+        addTearDown(effect.dispose);
+
+        expect(c.value, 0);
+        expect(runs, 1);
+        source.value = 1;
+        expect(c.value, 1);
+        expect(runs, 2);
+      });
+
+      expect(reported, hasLength(1));
+      expect(reported.single.$1, same(error));
+      expect(reported.single.$2.toString(), trace.toString());
+    });
+
+    test('run() with a throwing comparator reports the error to the zone', () {
+      final source = Signal(0);
+      final error = ArgumentError('invalid comparison');
+      final c = Computed(
+        () => source.value,
+        comparator: (_, _) => throw error,
+      );
+
+      addTearDown(source.dispose);
+
+      final reported = _reportedErrors(() {
+        expect(c.value, 0);
+        source.value = 1;
+        c.run();
+        expect(c.value, 1);
+      });
+
+      expect(reported.map((r) => r.$1), [same(error)]);
+    });
+
+    test('the read that auto-disposes the computed returns the value when the '
+        'comparator throws', () {
+      final source = Signal(0);
+      final error = ArgumentError('invalid comparison');
+      var useSource = true;
+      final c = Computed(
+        () => useSource ? source.value : 1,
+        autoDispose: true,
+        comparator: (_, _) => throw error,
+      );
+
+      addTearDown(source.dispose);
+
+      final reported = _reportedErrors(() {
+        expect(c.value, 0);
+        expect(c.disposed, isFalse);
+        // The next evaluation reads no signal, so the read disposes the
+        // computed.
+        useSource = false;
+        source.value = 1;
+        expect(c.value, 1);
+        expect(c.disposed, isTrue);
+      });
+
+      expect(reported.map((r) => r.$1), [same(error)]);
+    });
+
+    test('an observer that reads value during the update notification does '
+        'not get the comparator error', () {
+      final seen = <int>[];
+      final observer = _ReadingObserver((c) => seen.add(c.value));
+      final source = Signal(0);
+      final error = ArgumentError('invalid comparison');
+      final c = Computed(
+        () => source.value,
+        comparator: (_, _) => throw error,
+      );
+
+      addTearDown(source.dispose);
+
+      final reported = _reportedErrors(() {
+        expect(c.value, 0);
+        SolidartConfig.observers.add(observer);
+        addTearDown(() => SolidartConfig.observers.remove(observer));
+        source.value = 1;
+        expect(c.value, 1);
+      });
+
+      expect(seen, [1]);
+      expect(reported.map((r) => r.$1), [same(error)]);
+    });
+
+    test('a selector error after a comparator error is still thrown', () {
+      final source = Signal(0);
+      final error = ArgumentError('invalid comparison');
+      final c = Computed(() {
+        if (source.value == 2) throw StateError('selector');
+        return source.value;
+      }, comparator: (_, _) => throw error);
+
+      addTearDown(source.dispose);
+
+      final reported = _reportedErrors(() {
+        expect(c.value, 0);
+        source.value = 1;
+        expect(c.value, 1);
+        source.value = 2;
+        expect(
+          () => c.value,
+          throwsA(
+            isA<SolidartCaughtException>().having(
+              (e) => e.exception,
+              'exception',
+              isA<StateError>(),
+            ),
+          ),
+        );
+        expect(c.run, throwsA(isA<SolidartCaughtException>()));
+      });
+
+      expect(reported.map((r) => r.$1), [same(error)]);
+    });
+  });
+}

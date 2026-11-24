@@ -73,32 +73,44 @@ class Computed<T> extends ReadSignal<T> {
     /// {@macro SignalBase.trackPreviousValue}
     super.trackPreviousValue,
   }) {
-    var runnedOnce = false;
     _internalComputed = _AlienComputed(
       this,
       (previousValue) {
-        if (trackPreviousValue && previousValue is T) {
+        // Only an earlier successful evaluation is a previous value. For a
+        // nullable T, the null passed before the first one is not.
+        if (trackPreviousValue && _initialized) {
           _hasPreviousValue = true;
-          _untrackedPreviousValue = _previousValue = previousValue;
+          _previousValue = previousValue as T;
         }
 
+        _evaluating = true;
         try {
-          _untrackedValue = selector();
-          _initialized = true;
-
-          if (runnedOnce) {
-            _notifySignalUpdate();
-          } else {
-            runnedOnce = true;
-            // The creation event had no value yet: send the first one.
-            _notifyDevToolsAboutSignal(
-              this,
-              eventType: DevToolsEventType.updated,
-            );
+          final T value;
+          try {
+            value = selector();
+          } catch (e, s) {
+            throw _error = SolidartCaughtException(e, stackTrace: s);
           }
-          return _untrackedValue;
-        } catch (e, s) {
-          throw SolidartCaughtException(e, stackTrace: s);
+          _untrackedValue = value;
+          _error = null;
+          _initialized = true;
+          _equalsPrevious = false;
+          // The first evaluation from get() has nothing to compare with.
+          if (_internalComputed.updating) {
+            try {
+              // Runs while this computed is the active subscriber, so
+              // signals read by the comparator become dependencies.
+              _equalsPrevious = _compare(previousValue, value);
+            } catch (e, s) {
+              // Not a selector error: keep the value as a change and report
+              // the error to the zone, untracked, instead of throwing it.
+              untracked(() => Zone.current.handleUncaughtError(e, s));
+            }
+          }
+          _notifyPending = true;
+          return value;
+        } finally {
+          _evaluating = false;
         }
       },
     );
@@ -115,11 +127,27 @@ class Computed<T> extends ReadSignal<T> {
 
   bool _initialized = false;
 
+  // The error of the latest evaluation, or null if it succeeded.
+  SolidartCaughtException? _error;
+
+  bool get _hasError => _error != null;
+
+  // Whether the latest successful value equals the one before it.
+  bool _equalsPrevious = false;
+
+  // Whether the selector or the comparator is running. Reads of the stored
+  // state then return it without evaluating again.
+  bool _evaluating = false;
+
+  // Whether a successful evaluation still has to notify, after it is
+  // committed.
+  bool _notifyPending = false;
+
+  bool _notifiedOnce = false;
+
   late T _untrackedValue;
 
   T? _previousValue;
-
-  T? _untrackedPreviousValue;
 
   // Whether or not there is a previous value
   bool _hasPreviousValue = false;
@@ -145,24 +173,29 @@ class Computed<T> extends ReadSignal<T> {
   @override
   void dispose() {
     if (_disposed) return;
+    // Keep the reads of onDispose callbacks out of the running effect.
+    untracked(_dispose);
+  }
 
-    _internalComputed.dispose();
+  void _dispose() {
+    final errors = _FirstError()..run(_internalComputed.dispose);
     _disposed = true;
     for (final dep in _deps) {
-      if (dep is _AlienSignal) dep.parent._mayDispose();
-      if (dep is _AlienComputed) dep.parent._mayDispose();
+      if (dep is _AlienSignal) errors.run(dep.parent._mayDispose);
+      if (dep is _AlienComputed) errors.run(dep.parent._mayDispose);
     }
 
     _deps.clear();
 
     for (final cb in _onDisposeCallbacks) {
-      cb();
+      errors.run(cb);
     }
     _onDisposeCallbacks.clear();
 
     _listeners.dispose();
 
     _notifySignalDisposal();
+    errors.rethrowIfAny();
   }
 
   @override
@@ -171,12 +204,35 @@ class Computed<T> extends ReadSignal<T> {
       return untrackedValue;
     }
 
-    final value = reactiveSystem.getComputedValue(_internalComputed);
+    final T value;
+    try {
+      value = reactiveSystem.getComputedValue(_internalComputed);
+    } on Object {
+      // A failed evaluation also reads inputs: record them so dispose()
+      // reaches them. Do not dispose here, so later reads rethrow the error.
+      if (autoDispose) _recordInputs();
+      rethrow;
+    }
+    // The first evaluation runs from get(), without didUpdate().
+    _notifyEvaluated();
     if (autoDispose) {
       _mayDispose();
     }
 
     return value;
+  }
+
+  // Notifies about a successful evaluation once alien_signals committed it.
+  void _notifyEvaluated() {
+    if (!_notifyPending) return;
+    _notifyPending = false;
+    if (_notifiedOnce) {
+      _notifySignalUpdate();
+    } else {
+      _notifiedOnce = true;
+      // The creation event had no value yet: send the first one.
+      _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
+    }
   }
 
   @override
@@ -189,7 +245,7 @@ class Computed<T> extends ReadSignal<T> {
   T? get previousValue {
     if (!trackPreviousValue) return null;
     // cause observation
-    if (!disposed) value;
+    if (!disposed && !_evaluating) value;
     return _previousValue;
   }
 
@@ -202,7 +258,7 @@ class Computed<T> extends ReadSignal<T> {
       'Access "value" or "hasValue" first to trigger computation.',
     );
     // Re-evaluate if stale, without registering as a dependency.
-    if (!_disposed) {
+    if (!_disposed && !_evaluating) {
       untracked(() => value);
     }
     return _untrackedValue;
@@ -212,19 +268,36 @@ class Computed<T> extends ReadSignal<T> {
   @override
   T? get untrackedPreviousValue => untracked(() => previousValue);
 
+  // The real inputs, including child effects and scopes. Skips internal
+  // nodes, such as the retry dependency that alien_signals links after a
+  // failed evaluation.
+  List<alien_system.ReactiveNode> get _inputs => [
+    for (var link = _internalComputed.deps; link != null; link = link.nextDep)
+      if (link.dep
+          case alien.SignalNode() ||
+              alien.ComputedNode() ||
+              alien.LinkedEffect() ||
+              alien.EffectScopeNode())
+        link.dep,
+  ];
+
+  void _recordInputs([List<alien_system.ReactiveNode>? inputs]) {
+    _deps
+      ..clear()
+      ..addAll([
+        for (final input in inputs ?? _inputs)
+          if (input case alien.SignalNode() || alien.ComputedNode()) input,
+      ]);
+  }
+
   @override
   void _mayDispose() {
     if (_disposed || !autoDispose) return;
-    if (_internalComputed.deps == null && _internalComputed.subs == null) {
+    final inputs = _inputs;
+    if (inputs.isEmpty && _internalComputed.subs == null) {
       dispose();
     } else {
-      _deps.clear();
-
-      var link = _internalComputed.deps;
-      for (; link != null; link = link.nextDep) {
-        final dep = link.dep;
-        _deps.add(dep);
-      }
+      _recordInputs(inputs);
     }
   }
 
@@ -235,7 +308,7 @@ class Computed<T> extends ReadSignal<T> {
   bool get hasPreviousValue {
     if (!trackPreviousValue) return false;
     // cause observation
-    value;
+    if (!_evaluating) value;
     return _hasPreviousValue;
   }
 
@@ -285,6 +358,8 @@ class Computed<T> extends ReadSignal<T> {
   void run() {
     if (_disposed) return;
     _internalComputed.didUpdate();
+    final error = _error;
+    if (error != null) Error.throwWithStackTrace(error, error.stackTrace!);
   }
 
   @override

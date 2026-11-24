@@ -62,6 +62,17 @@ abstract class ReactionInterface {
 /// Any effect runs at least once immediately when is created with the current
 /// signals values.
 ///
+/// If the first run (the one that happens when the effect is created, unless
+/// `autorun` is false) throws and there is no `onError`, the effect is disposed
+/// and the error is rethrown. If `onError` itself throws during that first run,
+/// the effect is also disposed and the error from `onError` is rethrown.
+///
+/// An effect created with `autorun: false` (and run later by hand) or with a
+/// `delay` stays alive after a failed run. You already have the effect, so
+/// you can dispose it yourself.
+///
+/// Disposing an effect also disposes the effects created inside it.
+///
 /// > An effect is useless after it is disposed, you must not use it anymore.
 /// {@endtemplate}
 class Effect implements ReactionInterface {
@@ -104,27 +115,15 @@ class Effect implements ReactionInterface {
       } else {
         final scheduler = createDelayedScheduler(delay);
         var isScheduled = false;
-        Timer? timer;
 
         effect = Effect._internal(
           callback: () {
             if (!isScheduled) {
               isScheduled = true;
-
-              // coverage:ignore-start
-              timer?.cancel();
-              // coverage:ignore-end
-              timer = null;
-
-              timer = scheduler(() {
+              // dispose() cancels this timer.
+              effect._timer = scheduler(() {
                 isScheduled = false;
-                if (!effect.disposed) {
-                  callback();
-                } else {
-                  // coverage:ignore-start
-                  timer?.cancel();
-                  // coverage:ignore-end
-                }
+                callback();
               });
             }
           },
@@ -136,19 +135,29 @@ class Effect implements ReactionInterface {
       }
       return effect;
     } finally {
-      if (autorun ?? true) effect.run();
+      if (autorun ?? true) {
+        // The batch holds back the effects queued by the first run. A failed
+        // effect is disposed before they run, so it cannot run again. The
+        // caller gets the first error; later errors go to the zone.
+        reactiveSystem.startBatch();
+        final errors = _FirstError()..run(effect.run);
+        if (errors.hasError) errors.run(effect.dispose);
+        errors.run(reactiveSystem.endBatch);
+        // The caller gets no handle when this factory throws.
+        if (errors.hasError) errors.run(effect.dispose);
+        errors.rethrowIfAny();
+      }
     }
   }
 
   /// {@macro effect}
   Effect._internal({
-    required VoidCallback callback,
+    required this._callback,
     required this.name,
     required this.autoDispose,
-    ErrorCallback? onError,
+    this._onError,
     bool? detach,
-  }) : _onError = onError,
-       _callback = callback {
+  }) {
     _internalEffect = _AlienEffect(this, _runCallback, detach: detach);
   }
 
@@ -175,6 +184,9 @@ class Effect implements ReactionInterface {
   final ErrorCallback? _onError;
 
   bool _disposed = false;
+
+  // The pending run of an effect created with a delay.
+  Timer? _timer;
 
   late final _AlienEffect _internalEffect;
 
@@ -232,10 +244,14 @@ class Effect implements ReactionInterface {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    _timer?.cancel();
 
-    final dependencies = {...subscriber.getDependencies(), ..._deps};
-    _internalEffect.dispose();
-    subscriber.mayDisposeDependencies(dependencies);
+    // Keep the reads of onDispose callbacks out of the running effect.
+    untracked(() {
+      final dependencies = {...subscriber.getDependencies(), ..._deps};
+      _internalEffect.dispose();
+      subscriber.mayDisposeDependencies(dependencies);
+    });
   }
 
   @override
