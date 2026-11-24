@@ -78,6 +78,15 @@ class _FirstError {
     }
   }
 
+  /// Runs every step of [steps], including the ones added while they run,
+  /// then clears [steps].
+  void runAll(List<void Function()> steps) {
+    for (var i = 0; i < steps.length; i++) {
+      run(steps[i]);
+    }
+    steps.clear();
+  }
+
   void rethrowIfAny() {
     final error = _error;
     if (error != null) Error.throwWithStackTrace(error, _stackTrace!);

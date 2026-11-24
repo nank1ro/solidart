@@ -141,6 +141,17 @@ Signal<int>? _retained;
 
 /// Runs the garbage collector. Returns false when no VM service is available,
 /// for example under `flutter test` without `--coverage`.
+Effect? _child;
+
+@pragma('vm:never-inline')
+(Effect, WeakReference<Effect>) _disposeTheChildOfALiveEffect() {
+  final parent = Effect(() => _child = Effect(() {}));
+  final child = WeakReference(_child!);
+  _child!.dispose();
+  _child = null;
+  return (parent, child);
+}
+
 Future<bool> _collectGarbage() async {
   final info = await developer.Service.controlWebServer(enable: true);
   final uri = info.serverWebSocketUri;
@@ -269,6 +280,28 @@ void main() {
 
       expect(_messageOf(thrown), 'setup');
       expect(zone.reported.map(_messageOf), ['queued']);
+    });
+
+    test('run by hand stays alive, unless autoDispose finds no '
+        'dependency', () {
+      final source = Signal(0);
+      addTearDown(source.dispose);
+      Effect build({required bool autoDispose}) => Effect(
+        () {
+          if (source.untrackedValue == 0) throw StateError('not ready');
+          source.value;
+        },
+        autorun: false,
+        autoDispose: autoDispose,
+      );
+      final kept = build(autoDispose: false);
+      addTearDown(kept.dispose);
+      final disposed = build(autoDispose: true);
+
+      expect(kept.run, throwsStateError);
+      expect(disposed.run, throwsStateError);
+
+      expect((kept.disposed, disposed.disposed), (false, true));
     });
   });
 
@@ -427,6 +460,46 @@ void main() {
 
       expect(_messageOf(thrown), 'cleanup');
       expect(ran, isTrue);
+    });
+
+    test('runs an onDispose callback registered while disposing, after the '
+        'others', () {
+      final source = Signal(0);
+      addTearDown(source.dispose);
+      final seen = <int>[];
+      final watcher = Effect(() => seen.add(source.value));
+      addTearDown(watcher.dispose);
+      for (final signal in <SignalBase<int>>[Signal(0), Computed(() => 0)]) {
+        final calls = <String>[];
+        signal
+          ..onDispose(() {
+            calls.add('first');
+            signal.onDispose(() => calls.add('late'));
+          })
+          ..onDispose(() => calls.add('second'))
+          ..dispose();
+
+        expect(calls, ['first', 'second', 'late']);
+      }
+
+      source.value = 1;
+
+      expect(seen, [0, 1]);
+    });
+
+    test('runs an onDispose callback registered by a disposal observer', () {
+      for (final owner in <SignalBase<int>>[Signal(0), Computed(() => 0)]) {
+        var cleaned = false;
+        _addObserver(
+          _DisposalObserver((signal) {
+            if (identical(signal, owner)) owner.onDispose(() => cleaned = true);
+          }),
+        );
+
+        owner.dispose();
+
+        expect(cleaned, isTrue, reason: owner.runtimeType.toString());
+      }
     });
 
     test('a disposal observer does not replace the first error', () {
@@ -827,6 +900,47 @@ void main() {
       expect((childDep.disposed, seen.join(',')), (false, '1,2'));
     });
 
+    test('a later Signal onDispose callback can subscribe to the dependency '
+        'of a child that an earlier one stops', () {
+      final owner = Signal(0);
+      final childDep = Signal(1, autoDispose: true);
+      addTearDown(childDep.dispose);
+      final parent = Effect(() => Effect(() => childDep.value));
+      final seen = <int>[];
+      owner
+        ..onDispose(parent.dispose)
+        ..onDispose(() => Effect(() => seen.add(childDep.value)))
+        ..dispose();
+
+      childDep.value = 2;
+
+      expect((childDep.disposed, seen.join(',')), (false, '1,2'));
+    });
+
+    test('a disposal observer can subscribe to the dependency of a child that '
+        'an onDispose callback stops', () {
+      for (final owner in <SignalBase<int>>[Signal(0), Computed(() => 0)]) {
+        final childDep = Signal(1, autoDispose: true);
+        addTearDown(childDep.dispose);
+        final parent = Effect(() => Effect(() => childDep.value));
+        final seen = <int>[];
+        final observer = _DisposalObserver((signal) {
+          if (identical(signal, owner)) {
+            Effect(() => seen.add(childDep.value));
+          }
+        });
+        _addObserver(observer);
+        owner
+          ..onDispose(parent.dispose)
+          ..dispose();
+        SolidartConfig.observers.remove(observer);
+
+        childDep.value = 2;
+
+        expect((childDep.disposed, seen.join(',')), (false, '1,2'));
+      }
+    });
+
     test('a disposed effect releases the dependencies it read', () async {
       final (effect, signal) = _disposeEffectThatReadsASignal();
 
@@ -841,18 +955,25 @@ void main() {
   });
 
   group('released dependencies', () {
-    Future<void> expectReleased(WeakReference<Signal<int>> signal) async {
+    Future<void> expectReleased(WeakReference<Object> reference) async {
       if (!await _collectGarbage()) {
         markTestSkipped('No VM service to run the garbage collector.');
         return;
       }
-      expect(signal.target, isNull);
+      expect(reference.target, isNull);
     }
 
     test('a live effect releases a disposed signal', () async {
       final (effect, signal) = _disposeTheSignalOfALiveEffect();
       await expectReleased(signal);
       expect(effect.disposed, isFalse);
+    });
+
+    test('a live effect releases a disposed child effect', () async {
+      final (parent, child) = _disposeTheChildOfALiveEffect();
+      addTearDown(parent.dispose);
+      await expectReleased(child);
+      expect(parent.disposed, isFalse);
     });
 
     test('a Computed releases an input it stopped reading', () async {
@@ -1208,6 +1329,60 @@ void main() {
         'selector',
       );
       expect(zone.reported.map(_messageOf), ['cleanup']);
+    });
+
+    // A Computed whose next run commits [next] and stops its child effect.
+    // The disposal of the child dependency, at the end of the run, throws.
+    Computed<int> buildCommittingComputed(int Function() next) {
+      final childDep = Signal(0, autoDispose: true)
+        ..onDispose(() => throw StateError('cleanup'));
+      var runs = 0;
+      return Computed(() {
+        if (runs++ == 0) {
+          Effect(() => childDep.value);
+          return 0;
+        }
+        return next();
+      });
+    }
+
+    test('Computed.run notifies a committed change before it rethrows a '
+        'cleanup error', () {
+      final computed = buildCommittingComputed(() => 1);
+      final seen = <int>[];
+      final subscriber = Effect(() => seen.add(computed.value));
+      addTearDown(subscriber.dispose);
+
+      Object? thrown;
+      try {
+        computed.run();
+      } catch (e) {
+        thrown = e;
+      }
+
+      expect(_messageOf(thrown), 'cleanup');
+      expect(computed.value, 1);
+      expect(seen, [0, 1]);
+    });
+
+    test('Computed.run rethrows a cleanup error over a subscriber error', () {
+      final computed = buildCommittingComputed(() => 1);
+      final subscriber = Effect(() {
+        if (computed.value == 1) throw StateError('subscriber');
+      });
+      addTearDown(subscriber.dispose);
+
+      Object? thrown;
+      final zone = _runInZone(() {
+        try {
+          computed.run();
+        } catch (e) {
+          thrown = e;
+        }
+      });
+
+      expect(_messageOf(thrown), 'cleanup');
+      expect(zone.reported.map(_messageOf), ['subscriber']);
     });
 
     // A Computed whose failed run stops its child effect. The disposal of the

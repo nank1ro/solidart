@@ -281,17 +281,20 @@ class ReadableSignal<T> implements ReadSignal<T> {
     // Effect.dispose and Computed.dispose). This removes each link from BOTH
     // sides, so a later write to the disposed signal can no longer propagate
     // into a subscriber whose deps were torn down.
-    final errors = _FirstError()..run(_internalSignal.unlinkSubscribers);
-
-    for (final cb in _onDisposeCallbacks) {
-      errors.run(cb);
-    }
-    _onDisposeCallbacks.clear();
-
-    _listeners.dispose();
-
-    _notifySignalDisposal(errors);
-    errors.rethrowIfAny();
+    // The batch defers the auto-disposal of the dependencies that the steps
+    // below release, so the onDispose callbacks and the observers can
+    // subscribe to them first. Every step runs in [errors], so the batch
+    // always ends.
+    final errors = _FirstError();
+    reactiveSystem.startBatch();
+    errors
+      ..run(_internalSignal.unlinkSubscribers)
+      ..runAll(_onDisposeCallbacks)
+      ..run(_listeners.dispose)
+      ..run(() => _notifySignalDisposal(errors))
+      ..runAll(_onDisposeCallbacks)
+      ..run(reactiveSystem.endBatch)
+      ..rethrowIfAny();
   }
 
   @override
