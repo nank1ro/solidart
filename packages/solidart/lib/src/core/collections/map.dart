@@ -42,7 +42,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
     if (_compare(_untrackedValue, newValue)) {
       return newValue;
     }
-    _setPreviousValue(Map<K, V>.of(_untrackedValue));
+    _setPreviousValue(_untrackedValue);
     // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
     _value = newValue;
     _notifySignalUpdate();

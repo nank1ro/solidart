@@ -42,7 +42,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
     if (_compare(_untrackedValue, newValue)) {
       return newValue;
     }
-    _setPreviousValue(Set<E>.of(_untrackedValue));
+    _setPreviousValue(_untrackedValue);
     // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
     _value = newValue;
     _notifySignalUpdate();
@@ -91,9 +91,12 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   bool add(E value) {
-    _setPreviousValue(Set<E>.of(_value));
+    final previous = _untrackedValue.toSet();
     final result = _value.add(value);
-    if (result) _notifyChanged();
+    if (result) {
+      _setPreviousValue(previous);
+      _notifyChanged();
+    }
     return result;
   }
 
@@ -190,7 +193,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
     var didRemove = false;
     final index = _value.toList(growable: false).indexOf(value as E);
     if (index >= 0) {
-      _setPreviousValue(Set<E>.of(_value));
+      _setPreviousValue(_untrackedValue.toSet());
       _value.remove(value);
       _notifyChanged();
       didRemove = true;
@@ -207,7 +210,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   void removeAll(Iterable<Object?> elements) {
-    _setPreviousValue(Set<E>.of(_value));
+    final previous = _untrackedValue.toSet();
     var hasChanges = false;
     for (final element in elements) {
       final removed = _value.remove(element);
@@ -216,7 +219,10 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
       }
     }
 
-    if (hasChanges) _notifyChanged();
+    if (hasChanges) {
+      _setPreviousValue(previous);
+      _notifyChanged();
+    }
   }
 
   /// Removes all elements of this set that satisfy [test].
@@ -277,7 +283,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   @override
   void clear() {
     if (_value.isNotEmpty) {
-      _setPreviousValue(Set<E>.of(_value));
+      _setPreviousValue(_untrackedValue.toSet());
       _value.clear();
       _notifyChanged();
     }
@@ -322,7 +328,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
       }
     }
     if (removed.isNotEmpty) {
-      _setPreviousValue(Set<E>.of(_value));
+      _setPreviousValue(_untrackedValue.toSet());
       for (final item in removed) {
         _value.remove(item);
       }

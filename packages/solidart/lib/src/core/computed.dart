@@ -210,9 +210,7 @@ class Computed<T> extends ReadSignal<T> {
 
   /// Returns the untracked previous value of the computed.
   @override
-  T? get untrackedPreviousValue {
-    return _untrackedPreviousValue;
-  }
+  T? get untrackedPreviousValue => untracked(() => previousValue);
 
   @override
   void _mayDispose() {

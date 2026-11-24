@@ -42,7 +42,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
     if (_compare(_untrackedValue, newValue)) {
       return newValue;
     }
-    _setPreviousValue(List<E>.of(_untrackedValue));
+    _setPreviousValue(_untrackedValue);
     // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
     _value = newValue;
     _notifySignalUpdate();
