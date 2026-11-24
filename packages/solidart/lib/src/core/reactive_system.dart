@@ -34,27 +34,58 @@ extension MayDisposeDependencies on alien_system.ReactiveNode {
   /// `_mayDispose` chance a disposed dependency triggers. Used when a signal or
   /// computed is disposed — `alien.stop` only unlinks the first subscriber.
   void unlinkSubscribers() {
+    final errors = _FirstError();
     var link = subs;
     while (link != null) {
       final next = link.nextSub;
       final sub = link.sub;
       alien.unlink(link, sub);
-      if (sub is _AlienEffect) sub.parent._mayDispose();
-      if (sub is _AlienComputed) sub.parent._mayDispose();
+      if (sub is _AlienEffect) errors.run(sub.parent._mayDispose);
+      if (sub is _AlienComputed) errors.run(sub.parent._mayDispose);
       link = next;
     }
+    errors.rethrowIfAny();
   }
 
   void mayDisposeDependencies([Iterable<alien_system.ReactiveNode>? include]) {
+    final errors = _FirstError();
     final dependencies = {...getDependencies(), ...?include};
     for (final dep in dependencies) {
       switch (dep) {
         case _AlienSignal():
-          dep.parent._mayDispose();
+          errors.run(dep.parent._mayDispose);
         case _AlienComputed():
-          dep.parent._mayDispose();
+          errors.run(dep.parent._mayDispose);
       }
     }
+    errors.rethrowIfAny();
+  }
+}
+
+/// Lets a disposal finish when a step throws: [run] keeps the first error,
+/// reports later ones to [Zone.current], and [rethrowIfAny] rethrows the first.
+class _FirstError {
+  Object? _error;
+  StackTrace? _stackTrace;
+
+  bool get hasError => _error != null;
+
+  void run(void Function() step) {
+    try {
+      step();
+    } catch (error, stackTrace) {
+      if (_error == null) {
+        _error = error;
+        _stackTrace = stackTrace;
+      } else {
+        Zone.current.handleUncaughtError(error, stackTrace);
+      }
+    }
+  }
+
+  void rethrowIfAny() {
+    final error = _error;
+    if (error != null) Error.throwWithStackTrace(error, _stackTrace!);
   }
 }
 

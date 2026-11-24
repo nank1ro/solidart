@@ -146,23 +146,24 @@ class Computed<T> extends ReadSignal<T> {
   void dispose() {
     if (_disposed) return;
 
-    _internalComputed.dispose();
+    final errors = _FirstError()..run(_internalComputed.dispose);
     _disposed = true;
     for (final dep in _deps) {
-      if (dep is _AlienSignal) dep.parent._mayDispose();
-      if (dep is _AlienComputed) dep.parent._mayDispose();
+      if (dep is _AlienSignal) errors.run(dep.parent._mayDispose);
+      if (dep is _AlienComputed) errors.run(dep.parent._mayDispose);
     }
 
     _deps.clear();
 
     for (final cb in _onDisposeCallbacks) {
-      cb();
+      errors.run(cb);
     }
     _onDisposeCallbacks.clear();
 
     _listeners.dispose();
 
     _notifySignalDisposal();
+    errors.rethrowIfAny();
   }
 
   @override

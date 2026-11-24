@@ -279,16 +279,17 @@ class ReadableSignal<T> implements ReadSignal<T> {
     // Effect.dispose and Computed.dispose). This removes each link from BOTH
     // sides, so a later write to the disposed signal can no longer propagate
     // into a subscriber whose deps were torn down.
-    _internalSignal.unlinkSubscribers();
+    final errors = _FirstError()..run(_internalSignal.unlinkSubscribers);
 
     for (final cb in _onDisposeCallbacks) {
-      cb();
+      errors.run(cb);
     }
     _onDisposeCallbacks.clear();
 
     _listeners.dispose();
 
     _notifySignalDisposal();
+    errors.rethrowIfAny();
   }
 
   @override
