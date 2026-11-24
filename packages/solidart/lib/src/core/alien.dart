@@ -19,25 +19,11 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
 
   @override
   bool didUpdate() {
-    if ((flags & _hasChildEffect) != alien_system.ReactiveFlags.none) {
-      alien.disposeChildDepsInReverse(this);
-    }
-
-    depsTail = null;
-    flags =
-        alien_system.ReactiveFlags.mutable |
-        alien_system.ReactiveFlags.recursedCheck;
-    final prevSub = alien.setActiveSub(this);
-    try {
-      ++alien.cycle;
-      final oldValue = currentValue;
-      currentValue = getter(oldValue);
-      return !parent._compare(oldValue, currentValue);
-    } finally {
-      alien.setActiveSub(prevSub);
-      flags &= ~alien_system.ReactiveFlags.recursedCheck;
-      alien.purgeDeps(this);
-    }
+    final hadError = parent._hasError;
+    final oldValue = currentValue;
+    final changed = super.didUpdate();
+    if (hadError || parent._hasError) return changed;
+    return !parent._compare(oldValue, currentValue);
   }
 }
 

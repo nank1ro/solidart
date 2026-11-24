@@ -84,6 +84,7 @@ class Computed<T> extends ReadSignal<T> {
 
         try {
           _untrackedValue = selector();
+          _hasError = false;
           _initialized = true;
 
           if (runnedOnce) {
@@ -98,6 +99,7 @@ class Computed<T> extends ReadSignal<T> {
           }
           return _untrackedValue;
         } catch (e, s) {
+          _hasError = true;
           throw SolidartCaughtException(e, stackTrace: s);
         }
       },
@@ -114,6 +116,8 @@ class Computed<T> extends ReadSignal<T> {
   bool _disposed = false;
 
   bool _initialized = false;
+
+  bool _hasError = false;
 
   late T _untrackedValue;
 

@@ -39,9 +39,8 @@ class SolidartReactionException extends SolidartException {
 /// {@endtemplate}
 class SolidartCaughtException extends SolidartException {
   /// {@macro solidartcaughtexception}
-  SolidartCaughtException(Object exception, {required StackTrace stackTrace})
+  SolidartCaughtException(Object exception, {required this._stackTrace})
     : _exception = exception,
-      _stackTrace = stackTrace,
       super('SolidartException: $exception');
 
   final Object _exception;

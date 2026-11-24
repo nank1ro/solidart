@@ -58,8 +58,10 @@ extension MayDisposeDependencies on alien_system.ReactiveNode {
   }
 }
 
-typedef ReactionErrorHandler =
-    void Function(Object error, ReactionInterface reaction);
+typedef ReactionErrorHandler = void Function(
+  Object error,
+  ReactionInterface reaction,
+);
 
 class ReactiveName {
   ReactiveName._internal();
