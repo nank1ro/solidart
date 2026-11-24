@@ -85,12 +85,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// Otherwise the key/value pair is added to the map.
   @override
   void operator []=(K key, V value) {
-    final oldValue = _value[key];
-    if (!_value.containsKey(key) || value != oldValue) {
-      _setPreviousValue(Map<K, V>.of(_value));
-      _value[key] = value;
-      _notifyChanged();
-    }
+    _mutate((map) => map[key] = value);
   }
 
   /// Removes all entries from the map.
@@ -102,11 +97,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   void clear() {
-    if (_value.isNotEmpty) {
-      _setPreviousValue(Map<K, V>.of(_value));
-      _value.clear();
-      _notifyChanged();
-    }
+    _mutate((map) => map.clear());
   }
 
   /// The keys of the Map.
@@ -155,13 +146,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   V? remove(Object? key) {
-    V? value;
-    if (_value.containsKey(key)) {
-      _setPreviousValue(Map<K, V>.of(_value));
-      value = _value.remove(key);
-      _notifyChanged();
-    }
-    return value;
+    return _mutate((map) => map.remove(key));
   }
 
   /// Provides a view of this map as having [RK] keys and [RV] instances,
@@ -266,11 +251,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   void addEntries(Iterable<MapEntry<K, V>> newEntries) {
-    if (newEntries.isNotEmpty) {
-      _setPreviousValue(Map<K, V>.of(_value));
-      _value.addEntries(newEntries);
-      _notifyChanged();
-    }
+    _mutate((map) => map.addEntries(newEntries));
   }
 
   /// Adds all key/value pairs of [other] to this map.
@@ -287,11 +268,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   void addAll(Map<K, V> other) {
-    if (other.isNotEmpty) {
-      _setPreviousValue(Map<K, V>.of(_value));
-      _value.addAll(other);
-      _notifyChanged();
-    }
+    _mutate((map) => map.addAll(other));
   }
 
   /// Look up the value of [key], or add a new entry if it isn't there.
@@ -316,14 +293,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// Calling [ifAbsent] must not add or remove keys from the map.
   @override
   V putIfAbsent(K key, V Function() ifAbsent) {
-    if (_value.containsKey(key)) {
-      value;
-      return _value[key] as V;
-    }
-    _setPreviousValue(Map<K, V>.of(_value));
-    _value[key] = ifAbsent();
-    _notifyChanged();
-    return _value[key] as V;
+    return _mutate((map) => map.putIfAbsent(key, ifAbsent));
   }
 
   /// Removes all entries of this map that satisfy the given [test].
@@ -334,19 +304,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   void removeWhere(bool Function(K key, V value) test) {
-    final keysToRemove = <K>[];
-    for (final key in keys) {
-      if (test(key, this[key] as V)) keysToRemove.add(key);
-    }
-    if (keysToRemove.isNotEmpty) {
-      _setPreviousValue(Map<K, V>.of(_value));
-    }
-    for (final key in keysToRemove) {
-      _value.remove(key);
-    }
-    if (keysToRemove.isNotEmpty) {
-      _notifyChanged();
-    }
+    _mutate((map) => map.removeWhere(test));
   }
 
   /// Updates the value for the provided [key].
@@ -375,20 +333,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   V update(K key, V Function(V value) update, {V Function()? ifAbsent}) {
-    if (_value.containsKey(key)) {
-      final oldValue = _value[key];
-      final newValue = update(_value[key] as V);
-      if (oldValue != newValue) {
-        _setPreviousValue(Map<K, V>.of(_value));
-        _value[key] = newValue;
-      }
-      return _value[key] as V;
-    }
-    if (ifAbsent != null) {
-      _setPreviousValue(Map<K, V>.of(_value));
-      return _value[key] = ifAbsent();
-    }
-    throw ArgumentError.value(key, 'key', 'Key not in map.');
+    return _mutate((map) => map.update(key, update, ifAbsent: ifAbsent));
   }
 
   /// Updates all values.
@@ -402,26 +347,45 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   void updateAll(V Function(K key, V value) update) {
-    final changes = <K, V>{};
-    for (final key in keys) {
-      final oldValue = _value[key];
-      final newValue = update(key, _value[key] as V);
-      if (oldValue != newValue) {
-        changes[key] = newValue;
-      }
-    }
-    if (changes.isNotEmpty) {
-      _setPreviousValue(Map<K, V>.of(_value));
-      for (final key in keys) {
-        _value[key] = changes[key] as V;
-      }
-      _notifyChanged();
-    }
+    _mutate((map) {
+      // Computes every new value first, so a throwing [update] changes nothing.
+      final updated = [
+        for (final MapEntry(:key, :value) in map.entries)
+          MapEntry(key, update(key, value)),
+      ];
+      map.addEntries(updated);
+    });
   }
 
   @override
   String toString() =>
       '''MapSignal<$K, $V>(value: $_value, previousValue: $_previousValue)''';
+
+  /// Runs [mutation] on the map that holds the value.
+  ///
+  /// If the map changed, even when [mutation] throws, records the map as it
+  /// was before as the previous value and notifies once. Values are compared
+  /// with `identical`. The previous value is a plain [Map], so it does not
+  /// keep a custom key equality.
+  R _mutate<R>(R Function(Map<K, V> map) mutation) {
+    final before = _untrackedValue.entries.toList();
+    try {
+      return mutation(_untrackedValue);
+    } finally {
+      final after = _untrackedValue;
+      final changed =
+          before.length != after.length ||
+          before.any(
+            (entry) =>
+                !after.containsKey(entry.key) ||
+                !identical(after[entry.key], entry.value),
+          );
+      if (changed) {
+        _setPreviousValue(Map<K, V>.fromEntries(before));
+        _notifyChanged();
+      }
+    }
+  }
 
   void _notifyChanged() {
     _reportChanged();
