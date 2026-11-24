@@ -15,6 +15,8 @@ void main() {
         final constant = Computed(() => 1, autoDispose: true);
         expect(constant.disposed, isFalse);
         expect(constant.value, 1);
+        // A read by the user still runs the auto-dispose check.
+        expect(constant.disposed, isTrue);
       },
     );
 
