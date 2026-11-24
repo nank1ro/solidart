@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:developer' as developer;
+import 'dart:isolate';
 
 import 'package:solidart/solidart.dart';
 import 'package:test/test.dart';
+import 'package:vm_service/vm_service_io.dart';
 
 /// Runs [body] in a zone that records the errors reported to it and the
 /// timers created in it.
@@ -23,6 +26,56 @@ import 'package:test/test.dart';
 }
 
 String? _messageOf(Object? error) => (error as StateError?)?.message;
+
+/// Calls [onDispose] when a signal is disposed.
+class _DisposalObserver extends SolidartObserver {
+  _DisposalObserver(this.onDispose);
+
+  final void Function(SignalBase<Object?> signal) onDispose;
+
+  @override
+  void didCreateSignal(SignalBase<Object?> signal) {}
+
+  @override
+  void didUpdateSignal(SignalBase<Object?> signal) {}
+
+  @override
+  void didDisposeSignal(SignalBase<Object?> signal) => onDispose(signal);
+}
+
+void _addObserver(SolidartObserver observer) {
+  SolidartConfig.observers.add(observer);
+  addTearDown(() => SolidartConfig.observers.remove(observer));
+}
+
+Signal<int>? _retained;
+
+// Not inlined, so no local variable keeps the signal alive.
+@pragma('vm:never-inline')
+(Effect, WeakReference<Signal<int>>) _disposeEffectThatReadsASignal() {
+  final signal = _retained = Signal(0);
+  final effect = Effect(() => _retained!.value)..dispose();
+  _retained = null;
+  return (effect, WeakReference(signal));
+}
+
+/// Runs the garbage collector. Returns false when no VM service is available,
+/// for example under `flutter test` without `--coverage`.
+Future<bool> _collectGarbage() async {
+  final info = await developer.Service.controlWebServer(enable: true);
+  final uri = info.serverWebSocketUri;
+  if (uri == null) return false;
+  final service = await vmServiceConnectUri(uri.toString());
+  try {
+    await service.getAllocationProfile(
+      developer.Service.getIsolateId(Isolate.current)!,
+      gc: true,
+    );
+  } finally {
+    await service.dispose();
+  }
+  return true;
+}
 
 void main() {
   group('#197 a failed first run', () {
@@ -85,6 +138,56 @@ void main() {
 
       expect(_messageOf(thrown), 'first');
       expect(thrownStack.toString(), firstStack.toString());
+      expect(zone.reported.map(_messageOf), ['queued']);
+    });
+
+    test('in a batch keeps its error when the deferred disposal throws', () {
+      final setup = StateError('setup');
+      final source = Signal(0, autoDispose: true)
+        ..onDispose(() => throw StateError('cleanup'));
+
+      Object? thrown;
+      final zone = _runInZone(() {
+        try {
+          batch(
+            () => Effect(() {
+              source.value;
+              throw setup;
+            }),
+          );
+        } catch (e) {
+          thrown = e;
+        }
+      });
+
+      expect(thrown, same(setup));
+      expect(zone.reported.map(_messageOf), ['cleanup']);
+      expect(source.disposed, isTrue);
+    });
+
+    test('run by hand keeps its error when a queued effect also throws', () {
+      final trigger = Signal(false);
+      addTearDown(trigger.dispose);
+      final queued = Effect(() {
+        if (trigger.value) throw StateError('queued');
+      });
+      addTearDown(queued.dispose);
+      final effect = Effect(() {
+        trigger.value = true;
+        throw StateError('setup');
+      }, autorun: false);
+      addTearDown(effect.dispose);
+
+      Object? thrown;
+      final zone = _runInZone(() {
+        try {
+          effect.run();
+        } catch (e) {
+          thrown = e;
+        }
+      });
+
+      expect(_messageOf(thrown), 'setup');
       expect(zone.reported.map(_messageOf), ['queued']);
     });
   });
@@ -244,6 +347,88 @@ void main() {
 
       expect(_messageOf(thrown), 'cleanup');
       expect(ran, isTrue);
+    });
+
+    test('a disposal observer does not replace the first error', () {
+      final signal = Signal(0)..onDispose(() => throw StateError('signal'));
+      final computed = Computed(() => 0)
+        ..onDispose(() => throw StateError('computed'));
+      _addObserver(_DisposalObserver((_) => throw StateError('observer')));
+
+      final thrown = <Object?>[];
+      final zone = _runInZone(() {
+        for (final dispose in [signal.dispose, computed.dispose]) {
+          try {
+            dispose();
+          } catch (e) {
+            thrown.add(e);
+          }
+        }
+      });
+
+      expect(thrown.map(_messageOf), ['signal', 'computed']);
+      expect(zone.reported.map(_messageOf), ['observer', 'observer']);
+    });
+
+    test('disposing a Computed notifies its disposal once', () {
+      final source = Signal(0);
+      addTearDown(source.dispose);
+      final computed = Computed(() => source.value, autoDispose: true);
+      Effect(() => computed.value, autoDispose: true);
+      var disposals = 0;
+      _addObserver(
+        _DisposalObserver((signal) {
+          if (identical(signal, computed)) disposals++;
+        }),
+      );
+
+      computed.dispose();
+
+      expect(disposals, 1);
+    });
+
+    test('every disposal observer runs when one throws', () {
+      final seen = <String>[];
+      _addObserver(
+        _DisposalObserver((_) {
+          seen.add('first');
+          throw StateError('first');
+        }),
+      );
+      _addObserver(
+        _DisposalObserver((_) {
+          seen.add('second');
+          throw StateError('second');
+        }),
+      );
+      _addObserver(_DisposalObserver((_) => seen.add('third')));
+
+      final thrown = <Object?>[];
+      final zone = _runInZone(() {
+        for (final dispose in [Signal(0).dispose, Computed(() => 0).dispose]) {
+          try {
+            dispose();
+          } catch (e) {
+            thrown.add(e);
+          }
+        }
+      });
+
+      expect(seen, ['first', 'second', 'third', 'first', 'second', 'third']);
+      expect(thrown.map(_messageOf), ['first', 'first']);
+      expect(zone.reported.map(_messageOf), ['second', 'second']);
+    });
+  });
+
+  group('a Computed without autoDispose', () {
+    test('disposes its dependencies when disposed', () {
+      final source = Signal(0, autoDispose: true);
+      final computed = Computed(() => source.value);
+      expect(computed.value, 0);
+
+      computed.dispose();
+
+      expect(source.disposed, isTrue);
     });
   });
 
@@ -459,6 +644,240 @@ void main() {
       expect(zone.reported.map(_messageOf), ['cleanup']);
       expect((childDep.disposed, own.listenerCount), (true, 0));
     });
+
+    test('a standalone Computed rerun keeps the dependency of a recreated '
+        'child', () {
+      final trigger = Signal(0);
+      addTearDown(trigger.dispose);
+      final childDep = Signal(0, autoDispose: true);
+      addTearDown(childDep.dispose);
+      final seen = <int>[];
+      final owner = Computed(() {
+        Effect(() => seen.add(childDep.value));
+        return trigger.value;
+      });
+      addTearDown(owner.dispose);
+      expect(owner.value, 0);
+
+      trigger.value = 1;
+      expect(owner.value, 1);
+      childDep.value = 2;
+
+      expect((childDep.disposed, seen.join(',')), (false, '0,0,2'));
+    });
+
+    test('a Computed disposal yields to an effect queued by onDispose', () {
+      final gate = Signal(false);
+      addTearDown(gate.dispose);
+      final first = Signal(0, autoDispose: true)
+        ..onDispose(() => gate.value = true);
+      final second = Signal(1, autoDispose: true);
+      addTearDown(second.dispose);
+      final seen = <int>[];
+      final watcher = Effect(() {
+        if (gate.value) seen.add(second.value);
+      });
+      addTearDown(watcher.dispose);
+      final pair = Computed(
+        () => first.value + second.value,
+        autoDispose: true,
+      );
+      Effect(() => pair.value).dispose();
+
+      second.value = 2;
+
+      expect((pair.disposed, first.disposed), (true, true));
+      expect((second.disposed, seen.join(',')), (false, '1,2'));
+    });
+
+    test('a disposed effect releases the dependencies it read', () async {
+      final (effect, signal) = _disposeEffectThatReadsASignal();
+
+      if (!await _collectGarbage()) {
+        markTestSkipped('No VM service to run the garbage collector.');
+        return;
+      }
+
+      expect(effect.disposed, isTrue);
+      expect(signal.target, isNull);
+    });
+  });
+
+  group('#203 a delayed autoDispose effect', () {
+    test('runs its first callback', () async {
+      final input = Signal(1);
+      addTearDown(input.dispose);
+      final seen = <int>[];
+      final effect = Effect(
+        () => seen.add(input.value),
+        delay: Duration.zero,
+        autoDispose: true,
+      );
+      addTearDown(effect.dispose);
+
+      expect(effect.disposed, isFalse);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(seen, [1]);
+    });
+
+    test(
+      'reruns when its dependency changes after the first callback',
+      () async {
+        final input = Signal(1);
+        addTearDown(input.dispose);
+        final seen = <int>[];
+        final effect = Effect(
+          () => seen.add(input.value),
+          delay: Duration.zero,
+          autoDispose: true,
+        );
+        addTearDown(effect.dispose);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        input.value = 2;
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        expect(seen, [1, 2]);
+        expect(effect.disposed, isFalse);
+      },
+    );
+
+    test('disposes itself when its dependency is disposed', () async {
+      final input = Signal(1);
+      final effect = Effect(
+        () => input.value,
+        delay: Duration.zero,
+        autoDispose: true,
+      );
+      addTearDown(effect.dispose);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(effect.disposed, isFalse);
+
+      input.dispose();
+
+      expect(effect.disposed, isTrue);
+    });
+  });
+
+  group('#204 a delayed effect', () {
+    const delay = Duration(milliseconds: 5);
+    Future<void> afterDelay() =>
+        Future<void>.delayed(const Duration(milliseconds: 30));
+
+    test('reruns when its dependencies change', () async {
+      final input = Signal(1);
+      addTearDown(input.dispose);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(input.value), delay: delay);
+      addTearDown(effect.dispose);
+
+      await afterDelay();
+      input.value = 2;
+      await afterDelay();
+      input.value = 3;
+      await afterDelay();
+
+      expect(seen, [1, 2, 3]);
+    });
+
+    test('coalesces the changes made while a rerun is pending', () async {
+      final input = Signal(1);
+      addTearDown(input.dispose);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(input.value), delay: delay);
+      addTearDown(effect.dispose);
+      await afterDelay();
+
+      input
+        ..value = 2
+        ..value = 3;
+      await afterDelay();
+
+      expect(seen, [1, 3]);
+    });
+
+    test('dispose cancels a pending rerun', () async {
+      final input = Signal(1);
+      addTearDown(input.dispose);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(input.value), delay: delay);
+      await afterDelay();
+      final zone = _runInZone(() => input.value = 2);
+
+      effect.dispose();
+
+      expect(zone.timers.single.isActive, isFalse);
+      await afterDelay();
+      expect(seen, [1]);
+    });
+
+    test(
+      'disposed while a rerun is pending disposes its dependencies',
+      () async {
+        final input = Signal(1, autoDispose: true);
+        final effect = Effect(() => input.value, delay: delay);
+        await afterDelay();
+        input.value = 2;
+
+        effect.dispose();
+
+        expect(input.disposed, isTrue);
+      },
+    );
+
+    test('without onError reports a callback error to the zone and keeps '
+        'running', () async {
+      final input = Signal(1);
+      addTearDown(input.dispose);
+      final seen = <int>[];
+      final effect = Effect(() {
+        seen.add(input.value);
+        if (input.untrackedValue == 2) throw StateError('delayed');
+      }, delay: delay);
+      addTearDown(effect.dispose);
+      await afterDelay();
+
+      final zone = _runInZone(() => input.value = 2);
+      await afterDelay();
+      input.value = 3;
+      await afterDelay();
+
+      expect(zone.reported.map(_messageOf), ['delayed']);
+      expect(seen, [1, 2, 3]);
+      expect(effect.disposed, isFalse);
+    });
+
+    test('schedules a new run when its own callback changes a dependency '
+        'through another effect', () async {
+      const slowDelay = Duration(milliseconds: 50);
+      final input = Signal(1);
+      final trigger = Signal(0);
+      addTearDown(input.dispose);
+      addTearDown(trigger.dispose);
+      var runs = 0;
+      var echoed = false;
+      final delayed = Effect(() {
+        input.value;
+        runs++;
+        trigger.value = runs;
+      }, delay: slowDelay);
+      addTearDown(delayed.dispose);
+      final echo = Effect(() {
+        if (trigger.value > 0 && !echoed) {
+          echoed = true;
+          input.value = 2;
+        }
+      });
+      addTearDown(echo.dispose);
+
+      await Future<void>.delayed(const Duration(milliseconds: 70));
+      await Future<void>.value();
+      expect(runs, 1);
+
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      expect(runs, 2);
+    });
   });
 
   group('cleanup inside a running effect', () {
@@ -532,6 +951,99 @@ void main() {
 
       expectOneRun();
       expect(signal.disposed, isTrue);
+    });
+  });
+
+  group('error priority', () {
+    test('Computed.run rethrows the selector error over a cleanup error', () {
+      final source = Signal(0, autoDispose: true)
+        ..onDispose(() => throw StateError('cleanup'));
+      final effect = Effect(() => source.value);
+      final computed = Computed<int>(() {
+        effect.dispose();
+        throw StateError('selector');
+      });
+
+      Object? thrown;
+      final zone = _runInZone(() {
+        try {
+          computed.run();
+        } catch (e) {
+          thrown = e;
+        }
+      });
+
+      expect(thrown, isA<SolidartCaughtException>());
+      expect(
+        _messageOf((thrown! as SolidartCaughtException).exception),
+        'selector',
+      );
+      expect(zone.reported.map(_messageOf), ['cleanup']);
+    });
+
+    // An effect with no dependency but a remembered `source`: its run
+    // auto-disposes it, and the disposal of `source` throws.
+    Effect buildEffect({required bool bodyThrows}) {
+      final trigger = Signal(0);
+      final source = Signal(0, autoDispose: true)
+        ..onDispose(() => throw StateError('disposal'));
+      final release = Signal(false);
+      final holder = Effect(() {
+        release.value;
+        if (!release.untrackedValue) source.value;
+      });
+      final queuedEffect = Effect(() {
+        if (trigger.value > 0) throw StateError('queued');
+      });
+      addTearDown(queuedEffect.dispose);
+      final effect =
+          Effect(
+              () {
+                trigger.value = 1;
+                if (bodyThrows) throw StateError('body');
+              },
+              autorun: false,
+              autoDispose: true,
+            )
+            // ignore: invalid_use_of_protected_member
+            ..setDependencies(holder.subscriber);
+      release.value = true;
+      return effect;
+    }
+
+    test('Effect.run keeps the batch-end and disposal errors for the zone', () {
+      final effect = buildEffect(bodyThrows: true);
+
+      Object? thrown;
+      final zone = _runInZone(() {
+        try {
+          effect.run();
+        } catch (e) {
+          thrown = e;
+        }
+      });
+
+      expect(_messageOf(thrown), 'body');
+      expect(
+        zone.reported.map(_messageOf),
+        unorderedEquals(['queued', 'disposal']),
+      );
+    });
+
+    test('Effect.run rethrows the batch-end error over a disposal error', () {
+      final effect = buildEffect(bodyThrows: false);
+
+      Object? thrown;
+      final zone = _runInZone(() {
+        try {
+          effect.run();
+        } catch (e) {
+          thrown = e;
+        }
+      });
+
+      expect(_messageOf(thrown), 'queued');
+      expect(zone.reported.map(_messageOf), ['disposal']);
     });
   });
 }

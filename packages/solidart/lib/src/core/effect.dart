@@ -114,18 +114,27 @@ class Effect implements ReactionInterface {
         );
       } else {
         final scheduler = createDelayedScheduler(delay);
-        var isScheduled = false;
+        var timerFired = false;
 
+        // A run caused by a change only starts the timer. When it fires, the
+        // effect runs again and tracks the reads of the callback.
         effect = Effect._internal(
           callback: () {
-            if (!isScheduled) {
-              isScheduled = true;
+            if (timerFired) {
+              // Consume the flag so a rerun queued by this callback's own
+              // writes starts a new timer instead of running at once.
+              timerFired = false;
+              return callback();
+            }
+            // A change while the timer is pending joins the pending run.
+            if (!(effect._timer?.isActive ?? false)) {
               // dispose() cancels this timer.
               effect._timer = scheduler(() {
-                isScheduled = false;
-                callback();
+                timerFired = true;
+                effect._run(effect._rerun);
               });
             }
+            effect._keepDependencies();
           },
           onError: onError,
           name: effectiveName,
@@ -218,7 +227,9 @@ class Effect implements ReactionInterface {
   bool get disposed => _disposed;
 
   /// Runs the effect, tracking any signal read during the execution.
-  void run() {
+  void run() => _run(_internalEffect.run);
+
+  void _run(void Function() body) {
     final currentSub = reactiveSystem.activeSub;
     if (!SolidartConfig.detachEffects && currentSub != null) {
       if (currentSub is! _AlienEffect ||
@@ -230,16 +241,31 @@ class Effect implements ReactionInterface {
 
     final prevSub = reactiveSystem.setCurrentSub(_internalEffect);
     reactiveSystem.startBatch();
-    try {
-      _internalEffect.run();
-    } finally {
-      try {
-        reactiveSystem.endBatch();
-      } finally {
-        reactiveSystem.setCurrentSub(prevSub);
-        _mayDispose();
-      }
+    // An error from the run wins over one from the end of its batch.
+    reactiveSystem._runThen(body, () {
+      final errors = _FirstError()..run(reactiveSystem.endBatch);
+      reactiveSystem.setCurrentSub(prevSub);
+      errors
+        ..run(_mayDispose)
+        ..rethrowIfAny();
+    });
+  }
+
+  // Runs the effect as a change does: alien_signals tracks the reads again
+  // and unlinks the dependencies the run did not read.
+  void _rerun() {
+    _internalEffect.flags |= alien_system.ReactiveFlags.dirty;
+    reactiveSystem.runEffect(_internalEffect);
+  }
+
+  // Keeps every dependency linked after a run that reads none of them, so a
+  // delayed effect still hears changes while its timer is pending.
+  void _keepDependencies() {
+    var link = _internalEffect.deps;
+    while (link?.nextDep != null) {
+      link = link!.nextDep;
     }
+    _internalEffect.depsTail = link;
   }
 
   /// Sets the dependencies of the effect, do not use it directly.
@@ -271,6 +297,9 @@ class Effect implements ReactionInterface {
         ..._deps,
         ..._runDeps,
       };
+      // A disposed effect must not keep its dependencies alive.
+      _deps.clear();
+      _runDeps.clear();
       // The batch defers the auto-disposal until the work that disposed this
       // effect ends, for example the rerun of its parent effect.
       reactiveSystem.startBatch();
@@ -288,6 +317,8 @@ class Effect implements ReactionInterface {
     // Gate on the per-instance `autoDispose` (defaulted from
     // SolidartConfig.autoDispose at creation), consistent with Signal/Computed.
     if (_disposed || !autoDispose) return;
+    // A delayed effect waits until its pending callback has run (see #203).
+    if (_timer?.isActive ?? false) return;
     if (subscriber.deps?.dep == null) {
       dispose();
     }

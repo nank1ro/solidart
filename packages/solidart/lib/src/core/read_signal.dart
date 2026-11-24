@@ -290,7 +290,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
     _listeners.dispose();
 
-    _notifySignalDisposal();
+    _notifySignalDisposal(errors);
     errors.rethrowIfAny();
   }
 

@@ -175,19 +175,24 @@ class Computed<T> extends ReadSignal<T> {
   @override
   void dispose() {
     if (_disposed) return;
+    // Set first: unlinking a subscriber can offer this computed disposal.
+    _disposed = true;
     // Keep the reads of onDispose callbacks out of the running effect.
     untracked(_dispose);
   }
 
   void _dispose() {
+    // Like Effect.dispose, offer the inputs whatever this computed's own
+    // autoDispose is. Only an autoDispose computed records [_deps].
+    final dependencies = {..._inputs, ..._deps};
     final errors = _FirstError()..run(_internalComputed.dispose);
-    _disposed = true;
-    for (final dep in _deps) {
-      if (dep is _AlienSignal) errors.run(dep.parent._mayDispose);
-      if (dep is _AlienComputed) errors.run(dep.parent._mayDispose);
-    }
-
+    // Like Effect.dispose: the auto-disposal of the dependencies waits for the
+    // running batch, flush or evaluation, and yields to queued effects.
+    reactiveSystem
+      ..startBatch()
+      .._pendingDisposals.addAll(dependencies);
     _deps.clear();
+    errors.run(reactiveSystem.endBatch);
 
     for (final cb in _onDisposeCallbacks) {
       errors.run(cb);
@@ -196,7 +201,7 @@ class Computed<T> extends ReadSignal<T> {
 
     _listeners.dispose();
 
-    _notifySignalDisposal();
+    _notifySignalDisposal(errors);
     errors.rethrowIfAny();
   }
 
@@ -361,7 +366,14 @@ class Computed<T> extends ReadSignal<T> {
   /// However, in some cases, you may want to force an update.
   void run() {
     if (_disposed) return;
-    _internalComputed.didUpdate();
+    try {
+      reactiveSystem._evaluate(_internalComputed.didUpdate);
+    } catch (e, s) {
+      // The selector error has priority over an error from the cleanup that
+      // ends the evaluation.
+      if (!_hasError) rethrow;
+      Zone.current.handleUncaughtError(e, s);
+    }
     final error = _error;
     if (error != null) Error.throwWithStackTrace(error, error.stackTrace!);
   }

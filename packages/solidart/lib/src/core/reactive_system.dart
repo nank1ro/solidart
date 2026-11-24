@@ -135,7 +135,41 @@ class ReactiveSystem {
       'computed is pending while detached (deps == null) — a subscriber link '
       'was not fully unlinked',
     );
-    return computed.get();
+    return _evaluate(computed.get);
+  }
+
+  // The number of Computed evaluations running. Until the outermost one ends,
+  // the dependencies of the child effects it stops stay pending, so a
+  // recreated child subscribes to them first (see issue #202).
+  int _evaluationDepth = 0;
+
+  T _evaluate<T>(T Function() evaluation) {
+    _evaluationDepth++;
+    return _runThen(evaluation, () {
+      if (--_evaluationDepth == 0 &&
+          batchDepth == 0 &&
+          _pendingDisposals.isNotEmpty) {
+        flush();
+      }
+    });
+  }
+
+  /// Runs [body], then [after]. When [body] throws, its error reaches the
+  /// caller with its stack trace, and an error from [after] goes to the zone.
+  T _runThen<T>(T Function() body, void Function() after) {
+    final T result;
+    try {
+      result = body();
+    } catch (_) {
+      try {
+        after();
+      } catch (error, stackTrace) {
+        Zone.current.handleUncaughtError(error, stackTrace);
+      }
+      rethrow;
+    }
+    after();
+    return result;
   }
 
   Option<T> getSignalValue<T>(_AlienSignal<T> signal) {
@@ -176,7 +210,8 @@ class ReactiveSystem {
 
   bool _flushing = false;
 
-  // The dependencies of the effects disposed since the last drain.
+  // The dependencies of the effects and computeds disposed since the last
+  // drain.
   final _pendingDisposals = <alien_system.ReactiveNode>{};
 
   /// Runs every queued effect, then rethrows the first error, if any.
@@ -187,9 +222,10 @@ class ReactiveSystem {
   /// Only one flush runs at a time. A write inside an effect only queues
   /// effects, and the running flush runs them after that effect ends.
   ///
-  /// When the queue is empty, the pending dependencies of disposed effects get
-  /// auto-disposal. A parent that reruns has then subscribed its new children,
-  /// so the dependencies they read again stay alive (see issue #202).
+  /// When the queue is empty and no Computed evaluation runs, the pending
+  /// dependencies of disposed effects and computeds get auto-disposal. A
+  /// parent that reruns has then subscribed its new children, so the
+  /// dependencies they read again stay alive (see issue #202).
   void flush() {
     if (_flushing) return;
     _flushing = true;
@@ -212,7 +248,7 @@ class ReactiveSystem {
           }
         }
         try {
-          _disposePending();
+          if (_evaluationDepth == 0) _disposePending();
         } catch (e, s) {
           if (error == null) {
             error = e;
