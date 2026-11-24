@@ -421,7 +421,9 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
                 return !identical(entry.key, old.key) ||
                     !identical(entry.value, old.value);
               });
-          if (changed) _setPreviousValue(Map<K, V>.fromEntries(before));
+          if (changed && trackPreviousValue) {
+            _setPreviousValue(Map<K, V>.fromEntries(before));
+          }
         }
         if (changed) _notifyChanged();
       })

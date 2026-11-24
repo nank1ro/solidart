@@ -620,6 +620,27 @@ void main() {
       expect(w.calls.single[0], {'a': 1});
     });
 
+    test('history off: keys with a throwing hashCode do not block the '
+        'notification', () {
+      final s = MapSignal<Object, int>(
+        Map<Object, int>.identity()
+          ..[_ThrowingHash()] = 0
+          ..['a'] = 1,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        s.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+
+      final result = s.update('a', (_) => 2);
+
+      expect([result, s.untrackedValue['a'], runs - 1], [2, 2, 1]);
+    });
+
     test('update of an existing key notifies once with the old map', () {
       final s = MapSignal({'a': 1, 'b': 2});
       final w = watch(s);
@@ -1520,6 +1541,12 @@ void main() {
       expect(runs, 2);
     });
   });
+}
+
+class _ThrowingHash {
+  @override
+  // ignore: hash_and_equals, avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => throw UnsupportedError('hashCode');
 }
 
 class _WriteThenThrowMap extends MapBase<String, int> {
