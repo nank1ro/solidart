@@ -43,8 +43,9 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
       return newValue;
     }
     _setPreviousValue(List<E>.of(_untrackedValue));
-    _untrackedValue = _value = newValue;
-    _notifyChanged();
+    // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
+    _value = newValue;
+    _notifySignalUpdate();
     return newValue;
   }
 

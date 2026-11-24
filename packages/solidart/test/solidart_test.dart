@@ -2695,6 +2695,109 @@ void main() {
     timeout: const Timeout(Duration(seconds: 1)),
   );
 
+  group(
+    'Collection signal value reassignment',
+    () {
+      test('ListSignal.value = notifies observers and effects once', () {
+        final list = ListSignal<int>([1]);
+        var observeCalls = 0;
+        var effectRuns = 0;
+        final unobserve = list.observe((_, _) => observeCalls++);
+        final effect = Effect(() {
+          list.value;
+          effectRuns++;
+        });
+        effectRuns = 0;
+
+        list.value = [2];
+
+        expect(observeCalls, 1);
+        expect(effectRuns, 1);
+
+        // control: an in-place mutation keeps notifying exactly once.
+        observeCalls = 0;
+        list.add(3);
+        expect(observeCalls, 1);
+
+        unobserve();
+        effect.dispose();
+      });
+
+      test('MapSignal.value = notifies observers once', () {
+        final map = MapSignal<String, int>({'a': 1});
+        var observeCalls = 0;
+        final unobserve = map.observe((_, _) => observeCalls++);
+
+        map.value = {'b': 2};
+
+        expect(observeCalls, 1);
+        unobserve();
+      });
+
+      test('SetSignal.value = notifies observers once', () {
+        final set = SetSignal<int>({1});
+        var observeCalls = 0;
+        final unobserve = set.observe((_, _) => observeCalls++);
+
+        set.value = {2};
+
+        expect(observeCalls, 1);
+        unobserve();
+      });
+
+      test('a listener that reassigns the value keeps value and '
+          'untrackedValue in sync', () {
+        final list = ListSignal<int>([0]);
+        final map = MapSignal<String, int>({'a': 0});
+        final set = SetSignal<int>({0});
+        final unobserveList = list.observe((_, value) {
+          if (value.first == 1) list.value = [2];
+        });
+        final unobserveMap = map.observe((_, value) {
+          if (value['a'] == 1) map.value = {'a': 2};
+        });
+        final unobserveSet = set.observe((_, value) {
+          if (value.contains(1)) set.value = {2};
+        });
+
+        list.value = [1];
+        map.value = {'a': 1};
+        set.value = {1};
+
+        expect(list.value, [2]);
+        expect(list.untrackedValue, [2]);
+        expect(map.value, {'a': 2});
+        expect(map.untrackedValue, {'a': 2});
+        expect(set.value, {2});
+        expect(set.untrackedValue, {2});
+        unobserveList();
+        unobserveMap();
+        unobserveSet();
+      });
+
+      test('assigning a map or set inside an effect does not subscribe the '
+          'effect', () {
+        final map = MapSignal<String, int>({'a': 0});
+        final set = SetSignal<int>({0});
+        final nextMap = {'b': 1};
+        final nextSet = {1};
+        var runs = 0;
+        final effect = Effect(() {
+          runs++;
+          map.value = nextMap;
+          set.value = nextSet;
+        });
+
+        map['c'] = 2;
+        set.add(2);
+
+        expect(runs, 1);
+        effect.dispose();
+      });
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
+
   group('ValueListenable / ValueNotifier (listen)', () {
     test('Signal is a ValueNotifier', () {
       final signal = Signal(0);
