@@ -90,6 +90,11 @@ class Computed<T> extends ReadSignal<T> {
             _notifySignalUpdate();
           } else {
             runnedOnce = true;
+            // The creation event had no value yet: send the first one.
+            _notifyDevToolsAboutSignal(
+              this,
+              eventType: DevToolsEventType.updated,
+            );
           }
           return _untrackedValue;
         } catch (e, s) {
