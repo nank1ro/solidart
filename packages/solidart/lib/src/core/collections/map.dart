@@ -42,7 +42,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
     if (_compare(_untrackedValue, newValue)) {
       return newValue;
     }
-    _setPreviousValue(_untrackedValue);
+    // An outer [_mutate] may still change the outgoing collection.
+    _setPreviousValue(
+      identical(_untrackedValue, _mutating)
+          ? Map<K, V>.of(_untrackedValue)
+          : _untrackedValue,
+    );
     // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
     _value = newValue;
     _notifySignalUpdate();
@@ -51,7 +56,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
 
   @override
   Map<K, V> updateValue(Map<K, V> Function(Map<K, V> value) callback) =>
-      value = callback(Map<K, V>.of(_value));
+      value = callback(Map<K, V>.of(_untrackedValue));
 
   @override
   bool _compare(Map<K, V>? oldValue, Map<K, V>? newValue) {
@@ -146,7 +151,10 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   V? remove(Object? key) {
-    return _mutate((map) => map.remove(key));
+    return _mutateUnless(
+      !_untrackedValue.containsKey(key),
+      (map) => map.remove(key),
+    );
   }
 
   /// Provides a view of this map as having [RK] keys and [RV] instances,
@@ -293,7 +301,10 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// Calling [ifAbsent] must not add or remove keys from the map.
   @override
   V putIfAbsent(K key, V Function() ifAbsent) {
-    return _mutate((map) => map.putIfAbsent(key, ifAbsent));
+    return _mutateUnless(
+      _untrackedValue.containsKey(key),
+      (map) => map.putIfAbsent(key, ifAbsent),
+    );
   }
 
   /// Removes all entries of this map that satisfy the given [test].
@@ -333,7 +344,10 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   V update(K key, V Function(V value) update, {V Function()? ifAbsent}) {
-    return _mutate((map) => map.update(key, update, ifAbsent: ifAbsent));
+    return _mutateUnless(
+      ifAbsent == null && !_untrackedValue.containsKey(key),
+      (map) => map.update(key, update, ifAbsent: ifAbsent),
+    );
   }
 
   /// Updates all values.
@@ -361,31 +375,53 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   String toString() =>
       '''MapSignal<$K, $V>(value: $_value, previousValue: $_previousValue)''';
 
+  /// The map that the outermost running [_mutate] copied.
+  Map<K, V>? _mutating;
+
   /// Runs [mutation] on the map that holds the value.
   ///
   /// If the map changed, even when [mutation] throws, records the map as it
   /// was before as the previous value and notifies once. Values are compared
   /// with `identical`. The previous value is a plain [Map], so it does not
-  /// keep a custom key equality.
+  /// keep a custom key equality. A [_mutate] inside [mutation] on the same
+  /// map does not notify: this one notifies once for both. If [mutation]
+  /// assigns a new map, the assignment notifies, so this one does not.
+  ///
+  /// The error of [mutation] wins over an error of the notification, which
+  /// goes to the current [Zone].
   R _mutate<R>(R Function(Map<K, V> map) mutation) {
-    final before = _untrackedValue.entries.toList();
-    try {
-      return mutation(_untrackedValue);
-    } finally {
-      final after = _untrackedValue;
-      final changed =
-          before.length != after.length ||
-          before.any(
-            (entry) =>
-                !after.containsKey(entry.key) ||
-                !identical(after[entry.key], entry.value),
-          );
-      if (changed) {
-        _setPreviousValue(Map<K, V>.fromEntries(before));
-        _notifyChanged();
-      }
-    }
+    final map = _untrackedValue;
+    if (identical(map, _mutating)) return mutation(map);
+    final outer = _mutating;
+    final before = map.entries.toList();
+    late final R result;
+    _mutating = map;
+    final errors = _FirstError()..run(() => result = mutation(map));
+    _mutating = outer;
+    errors
+      ..run(() {
+        if (!identical(_untrackedValue, map)) return;
+        final changed =
+            before.length != map.length ||
+            before.any(
+              (entry) =>
+                  !map.containsKey(entry.key) ||
+                  !identical(map[entry.key], entry.value),
+            );
+        if (changed) {
+          _setPreviousValue(Map<K, V>.fromEntries(before));
+          _notifyChanged();
+        }
+      })
+      ..rethrowIfAny();
+    return result;
   }
+
+  /// Runs [mutation] like [_mutate], or directly on the map when [unchanged]
+  /// is true, so the map is not copied or compared. The map still runs
+  /// [mutation], so it throws like a plain map.
+  R _mutateUnless<R>(bool unchanged, R Function(Map<K, V> map) mutation) =>
+      unchanged ? mutation(_untrackedValue) : _mutate(mutation);
 
   void _notifyChanged() {
     _reportChanged();

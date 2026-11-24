@@ -42,7 +42,12 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
     if (_compare(_untrackedValue, newValue)) {
       return newValue;
     }
-    _setPreviousValue(_untrackedValue);
+    // An outer [_mutate] may still change the outgoing collection.
+    _setPreviousValue(
+      identical(_untrackedValue, _mutating)
+          ? List<E>.of(_untrackedValue)
+          : _untrackedValue,
+    );
     // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
     _value = newValue;
     _notifySignalUpdate();
@@ -152,7 +157,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// less than [length].
   @override
   void operator []=(int index, E value) {
-    _mutate((list) => list[index] = value);
+    _mutateUnless(_holds(index, value), (list) => list[index] = value);
   }
 
   /// Adds [value] to the end of this list,
@@ -430,7 +435,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   set first(E value) {
-    _mutate((list) => list.first = value);
+    _mutateUnless(_holds(0, value), (list) => list.first = value);
   }
 
   /// The last element of the list.
@@ -451,7 +456,10 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   set last(E value) {
-    _mutate((list) => list.last = value);
+    _mutateUnless(
+      _holds(_untrackedValue.length - 1, value),
+      (list) => list.last = value,
+    );
   }
 
   /// Removes all objects from this list; the length of the list becomes zero.
@@ -490,7 +498,10 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   void fillRange(int start, int end, [E? fillValue]) {
-    _mutate((list) => list.fillRange(start, end, fillValue));
+    _mutateUnless(
+      start == end,
+      (list) => list.fillRange(start, end, fillValue),
+    );
   }
 
   /// Inserts [element] at position [index] in this list.
@@ -602,7 +613,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   void removeRange(int start, int end) {
-    _mutate((list) => list.removeRange(start, end));
+    _mutateUnless(start == end, (list) => list.removeRange(start, end));
   }
 
   /// Removes all objects from this list that satisfy [test].
@@ -650,7 +661,10 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// [setRange] instead.
   @override
   void replaceRange(int start, int end, Iterable<E> replacements) {
-    _mutate((list) => list.replaceRange(start, end, replacements));
+    _mutateUnless(
+      start == end && _isEmpty(replacements),
+      (list) => list.replaceRange(start, end, replacements),
+    );
   }
 
   /// Removes all objects from this list that fail to satisfy [test].
@@ -687,7 +701,10 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// ```
   @override
   void setAll(int index, Iterable<E> iterable) {
-    _mutate((list) => list.setAll(index, iterable));
+    _mutateUnless(
+      _isEmpty(iterable),
+      (list) => list.setAll(index, iterable),
+    );
   }
 
   /// Writes some elements of [iterable] into a range of this list.
@@ -718,7 +735,10 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// made.
   @override
   void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) {
-    _mutate((list) => list.setRange(start, end, iterable, skipCount));
+    _mutateUnless(
+      start == end,
+      (list) => list.setRange(start, end, iterable, skipCount),
+    );
   }
 
   /// Shuffles the elements of this list randomly.
@@ -769,27 +789,60 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   String toString() =>
       '''ListSignal<$E>(value: $_value, previousValue: $_previousValue)''';
 
+  /// The list that the outermost running [_mutate] copied.
+  List<E>? _mutating;
+
   /// Runs [mutation] on the list that holds the value.
   ///
   /// If the list changed, even when [mutation] throws, records the list as it
   /// was before as the previous value and notifies once. Elements are compared
-  /// with `identical`.
+  /// with `identical`. A [_mutate] inside [mutation] on the same list does not
+  /// notify: this one notifies once for both. If [mutation] assigns a new
+  /// list, the assignment notifies, so this one does not.
+  ///
+  /// The error of [mutation] wins over an error of the notification, which
+  /// goes to the current [Zone].
   R _mutate<R>(R Function(List<E> list) mutation) {
-    final before = List<E>.of(_untrackedValue);
-    try {
-      return mutation(_untrackedValue);
-    } finally {
-      final after = _untrackedValue;
-      var changed = before.length != after.length;
-      for (var i = 0; !changed && i < before.length; i++) {
-        changed = !identical(before[i], after[i]);
-      }
-      if (changed) {
-        _setPreviousValue(before);
-        _notifyChanged();
-      }
-    }
+    final list = _untrackedValue;
+    if (identical(list, _mutating)) return mutation(list);
+    final outer = _mutating;
+    final before = List<E>.of(list);
+    late final R result;
+    _mutating = list;
+    final errors = _FirstError()..run(() => result = mutation(list));
+    _mutating = outer;
+    errors
+      ..run(() {
+        if (!identical(_untrackedValue, list)) return;
+        var changed = before.length != list.length;
+        for (var i = 0; !changed && i < before.length; i++) {
+          changed = !identical(before[i], list[i]);
+        }
+        if (changed) {
+          _setPreviousValue(before);
+          _notifyChanged();
+        }
+      })
+      ..rethrowIfAny();
+    return result;
   }
+
+  /// Runs [mutation] like [_mutate], or directly on the list when
+  /// [unchanged] is true, so the list is not copied or compared. The list
+  /// still runs [mutation], so it throws like a plain list.
+  R _mutateUnless<R>(bool unchanged, R Function(List<E> list) mutation) =>
+      unchanged ? mutation(_untrackedValue) : _mutate(mutation);
+
+  /// Whether the list has [element] at [index], compared with `identical`.
+  bool _holds(int index, E element) {
+    final list = _untrackedValue;
+    return index >= 0 && index < list.length && identical(list[index], element);
+  }
+
+  /// Whether [elements] is an empty list. Only a list is checked, because
+  /// other iterables can run code each time they are iterated.
+  static bool _isEmpty(Iterable<Object?> elements) =>
+      elements is List && elements.isEmpty;
 
   void _notifyChanged() {
     _reportChanged();

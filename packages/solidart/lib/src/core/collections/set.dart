@@ -42,7 +42,12 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
     if (_compare(_untrackedValue, newValue)) {
       return newValue;
     }
-    _setPreviousValue(_untrackedValue);
+    // An outer [_mutate] may still change the outgoing collection.
+    _setPreviousValue(
+      identical(_untrackedValue, _mutating)
+          ? _untrackedValue.toSet()
+          : _untrackedValue,
+    );
     // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
     _value = newValue;
     _notifySignalUpdate();
@@ -51,7 +56,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
 
   @override
   Set<E> updateValue(Set<E> Function(Set<E> value) callback) =>
-      value = callback(Set<E>.of(_value));
+      value = callback(Set<E>.of(_untrackedValue));
 
   @override
   bool _compare(Set<E>? oldValue, Set<E>? newValue) {
@@ -91,7 +96,10 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   bool add(E value) {
-    return _mutate((set) => set.add(value));
+    return _mutateUnless(
+      _untrackedValue.contains(value),
+      (set) => set.add(value),
+    );
   }
 
   /// Adds all [elements] to this set.
@@ -198,7 +206,10 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   bool remove(Object? value) {
-    return _mutate((set) => set.remove(value));
+    return _mutateUnless(
+      !_untrackedValue.contains(value),
+      (set) => set.remove(value),
+    );
   }
 
   /// Removes each element of [elements] from this set.
@@ -430,23 +441,45 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   String toString() =>
       '''SetSignal<$E>(value: $_value, previousValue: $_previousValue)''';
 
+  /// The set that the outermost running [_mutate] copied.
+  Set<E>? _mutating;
+
   /// Runs [mutation] on the set that holds the value.
   ///
   /// If the set changed, even when [mutation] throws, records the set as it
   /// was before as the previous value and notifies once. `toSet` keeps the
-  /// equality of the set.
+  /// equality of the set. A [_mutate] inside [mutation] on the same set does
+  /// not notify: this one notifies once for both. If [mutation] assigns a new
+  /// set, the assignment notifies, so this one does not.
+  ///
+  /// The error of [mutation] wins over an error of the notification, which
+  /// goes to the current [Zone].
   R _mutate<R>(R Function(Set<E> set) mutation) {
-    final before = _untrackedValue.toSet();
-    try {
-      return mutation(_untrackedValue);
-    } finally {
-      final after = _untrackedValue;
-      if (before.length != after.length || !before.every(after.contains)) {
-        _setPreviousValue(before);
-        _notifyChanged();
-      }
-    }
+    final set = _untrackedValue;
+    if (identical(set, _mutating)) return mutation(set);
+    final outer = _mutating;
+    final before = set.toSet();
+    late final R result;
+    _mutating = set;
+    final errors = _FirstError()..run(() => result = mutation(set));
+    _mutating = outer;
+    errors
+      ..run(() {
+        if (!identical(_untrackedValue, set)) return;
+        if (before.length != set.length || !before.every(set.contains)) {
+          _setPreviousValue(before);
+          _notifyChanged();
+        }
+      })
+      ..rethrowIfAny();
+    return result;
   }
+
+  /// Runs [mutation] like [_mutate], or directly on the set when [unchanged]
+  /// is true, so the set is not copied or compared. The set still runs
+  /// [mutation], so it throws like a plain set.
+  R _mutateUnless<R>(bool unchanged, R Function(Set<E> set) mutation) =>
+      unchanged ? mutation(_untrackedValue) : _mutate(mutation);
 
   void _notifyChanged() {
     _reportChanged();

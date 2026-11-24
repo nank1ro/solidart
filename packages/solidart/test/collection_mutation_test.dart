@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:solidart/solidart.dart';
 import 'package:test/test.dart';
@@ -53,12 +55,87 @@ Iterable<T> _throwAfter<T>(List<T> elements) sync* {
   throw StateError('interrupted');
 }
 
+/// Runs [body] in a zone. Returns the error that [body] throws, with its
+/// stack trace, and the errors that are reported to the zone.
+({Object? error, StackTrace? stackTrace, List<Object> reported}) _guarded(
+  void Function() body,
+) {
+  Object? error;
+  StackTrace? stackTrace;
+  final reported = <Object>[];
+  runZonedGuarded(() {
+    try {
+      body();
+    } catch (e, s) {
+      error = e;
+      stackTrace = s;
+    }
+  }, (e, _) => reported.add(e));
+  return (error: error, stackTrace: stackTrace, reported: reported);
+}
+
+/// Expects that [mutate] throws the `interrupted` error of [_throwAfter],
+/// with its stack trace, and that the error of the effect that reacts to
+/// the partial change goes to the zone.
+void _expectMutationErrorWins(void Function() mutate) {
+  final result = _guarded(mutate);
+
+  expect(
+    result.error,
+    isA<StateError>().having((e) => e.message, 'message', 'interrupted'),
+  );
+  expect(result.stackTrace.toString(), contains('_throwAfter'));
+  expect(result.reported, [
+    isA<StateError>().having((e) => e.message, 'message', 'effect'),
+  ]);
+}
+
+/// A list of zeros that counts how many times an element is read.
+class _CountingList extends ListBase<int> {
+  _CountingList(int length) : _elements = List.filled(length, 0);
+
+  final List<int> _elements;
+
+  int reads = 0;
+
+  @override
+  int get length => _elements.length;
+
+  @override
+  set length(int newLength) => _elements.length = newLength;
+
+  @override
+  int operator [](int index) {
+    reads++;
+    return _elements[index];
+  }
+
+  @override
+  void operator []=(int index, int value) => _elements[index] = value;
+}
+
 void main() {
   group('ListSignal', () {
     _Watch<List<T>> watch<T>(ListSignal<T> s) {
       addTearDown(s.dispose);
       return _Watch<List<T>>(s, List<T>.of);
     }
+
+    test('a callback that assigns a value keeps the old list as previous', () {
+      final s = ListSignal([1, 2]);
+      final w = watch(s);
+
+      var assigned = false;
+      s.removeWhere((e) {
+        if (!assigned) s.value = [9];
+        assigned = true;
+        return e == 1;
+      });
+
+      expect(s.untrackedValue, [9]);
+      expect(s.previousValue, [1, 2]);
+      expect(w.calls.single[0], [1, 2]);
+    });
 
     test('retainWhere notifies once with the old list', () {
       final s = ListSignal([1, 2, 3]);
@@ -202,6 +279,11 @@ void main() {
       'replaceRange': (s) => s.replaceRange(0, 5, [0]),
       'setAll': (s) => s.setAll(5, [0]),
       'setRange': (s) => s.setRange(0, 5, [0]),
+      'empty removeRange': (s) => s.removeRange(5, 5),
+      'empty fillRange': (s) => s.fillRange(5, 5, 0),
+      'empty replaceRange': (s) => s.replaceRange(5, 5, []),
+      'empty setAll': (s) => s.setAll(5, []),
+      'empty setRange': (s) => s.setRange(5, 5, []),
     };
     for (final MapEntry(key: name, value: mutate) in failingMutations.entries) {
       test('$name that throws does not touch history', () {
@@ -317,6 +399,9 @@ void main() {
       'add': (s) => s.add(4),
       'sort': (s) => s.sort(),
       'shuffle': (s) => s.shuffle(Random(2)),
+      '[]= of the same element': (s) => s[0] = 3,
+      'first= of the same element': (s) => s.first = 3,
+      'last= of the same element': (s) => s.last = 2,
     };
     for (final MapEntry(key: name, value: mutate)
         in rejectedMutations.entries) {
@@ -364,6 +449,81 @@ void main() {
 
       expect(runs, 1);
     });
+    test('a partial change keeps its error when an effect also throws', () {
+      final s = ListSignal([1]);
+      addTearDown(s.dispose);
+      final effect = Effect(() {
+        if (s.length == 2) throw StateError('effect');
+      });
+      addTearDown(effect.dispose);
+
+      _expectMutationErrorWins(() => s.addAll(_throwAfter([2])));
+
+      expect(s.untrackedValue, [1, 2]);
+    });
+
+    final oneIndexWrites = <String, void Function(ListSignal<int>)>{
+      '[]=': (s) => s[1] = 0,
+      'first=': (s) => s.first = 0,
+      'last=': (s) => s.last = 0,
+    };
+    for (final MapEntry(key: name, value: write) in oneIndexWrites.entries) {
+      test('$name of the same element reads only that element', () {
+        int readsFor(int length) {
+          final backing = _CountingList(length);
+          final s = ListSignal<int>([])..value = backing;
+          addTearDown(s.dispose);
+          backing.reads = 0;
+          write(s);
+          return backing.reads;
+        }
+
+        expect(readsFor(100), readsFor(2));
+      });
+    }
+
+    // Each read of a `Float32x4List` element creates a new object, so a
+    // comparison by identity sees every element as changed.
+    final emptyRanges = <String, void Function(ListSignal<Float32x4>)>{
+      'fillRange': (s) => s.fillRange(0, 0, Float32x4.zero()),
+      'setAll': (s) => s.setAll(0, const []),
+      'setRange': (s) => s.setRange(0, 0, const []),
+    };
+    for (final MapEntry(key: name, value: write) in emptyRanges.entries) {
+      test('$name of an empty range does not notify', () {
+        final s = ListSignal<Float32x4>([])..value = Float32x4List(1);
+        final previous = s.untrackedPreviousValue;
+        final w = watch(s);
+
+        write(s);
+
+        expect(w.calls, isEmpty);
+        expect(w.effectReruns, 0);
+        expect(s.untrackedPreviousValue, same(previous));
+      });
+    }
+
+    final rejectedEmptyRanges = <String, void Function(ListSignal<Float32x4>)>{
+      'removeRange': (s) => s.removeRange(0, 0),
+      'replaceRange': (s) => s.replaceRange(0, 0, const []),
+    };
+    for (final MapEntry(key: name, value: mutate)
+        in rejectedEmptyRanges.entries) {
+      test(
+        '$name of an empty range on a fixed-length list does not notify',
+        () {
+          final s = ListSignal<Float32x4>([])..value = Float32x4List(1);
+          final previous = s.untrackedPreviousValue;
+          final w = watch(s);
+
+          expect(() => mutate(s), throwsUnsupportedError);
+
+          expect(w.calls, isEmpty);
+          expect(w.effectReruns, 0);
+          expect(s.untrackedPreviousValue, same(previous));
+        },
+      );
+    }
   });
 
   group('MapSignal', () {
@@ -371,6 +531,20 @@ void main() {
       addTearDown(s.dispose);
       return _Watch<Map<K, V>>(s, Map<K, V>.of);
     }
+
+    test('a callback that assigns a value keeps the old map as previous', () {
+      final s = MapSignal({'a': 1});
+      final w = watch(s);
+
+      s.update('a', (v) {
+        s.value = {'x': 9};
+        return 2;
+      });
+
+      expect(s.untrackedValue, {'x': 9});
+      expect(s.previousValue, {'a': 1});
+      expect(w.calls.single[0], {'a': 1});
+    });
 
     test('update of an existing key notifies once with the old map', () {
       final s = MapSignal({'a': 1, 'b': 2});
@@ -594,6 +768,123 @@ void main() {
 
       expect(runs, 1);
     });
+    test('update whose callback assigns a new map notifies once', () {
+      final s = MapSignal({'a': 1});
+      final w = watch(s);
+
+      s.update('a', (v) {
+        s.value = {'a': 2};
+        return v;
+      });
+
+      expect(s.untrackedValue, {'a': 2});
+      expect(w.calls, [
+        [
+          {'a': 1},
+          {'a': 2},
+        ],
+      ]);
+      expect(w.effectReruns, 1);
+    });
+
+    test('update whose callback changes another key notifies once', () {
+      final s = MapSignal({'a': 1, 'b': 2});
+      final w = watch(s);
+
+      s.update('a', (v) {
+        s['b'] = 3;
+        return v;
+      });
+
+      expect(s.untrackedValue, {'a': 1, 'b': 3});
+      expect(w.calls, [
+        [
+          {'a': 1, 'b': 2},
+          {'a': 1, 'b': 3},
+        ],
+      ]);
+      expect(w.effectReruns, 1);
+    });
+
+    test('update whose callback changes a new map notifies for each', () {
+      final s = MapSignal({'a': 1});
+      final w = watch(s);
+
+      s.update('a', (v) {
+        s
+          ..value = {'a': 2}
+          ..['b'] = 3;
+        return v;
+      });
+
+      expect(s.untrackedValue, {'a': 2, 'b': 3});
+      expect(w.calls, [
+        [
+          {'a': 1},
+          {'a': 2},
+        ],
+        [
+          {'a': 2},
+          {'a': 2, 'b': 3},
+        ],
+      ]);
+      expect(w.effectReruns, 2);
+    });
+
+    test('a partial change keeps its error when an effect also throws', () {
+      final s = MapSignal({'a': 1});
+      addTearDown(s.dispose);
+      final effect = Effect(() {
+        if (s.length == 2) throw StateError('effect');
+      });
+      addTearDown(effect.dispose);
+
+      _expectMutationErrorWins(
+        () => s.addEntries(_throwAfter([const MapEntry('b', 2)])),
+      );
+
+      expect(s.untrackedValue, {'a': 1, 'b': 2});
+    });
+
+    // A cast map throws a TypeError when it reads the value of 'unread'.
+    Map<String, String> castMap() =>
+        <String, Object>{'a': 'x', 'unread': 42}.cast<String, String>();
+
+    test('remove of an absent key returns null without reading values', () {
+      final s = MapSignal(castMap());
+      addTearDown(s.dispose);
+
+      expect(s.remove('absent'), isNull);
+    });
+
+    test('putIfAbsent of a present key returns it without reading values', () {
+      final s = MapSignal(castMap());
+      addTearDown(s.dispose);
+
+      expect(s.putIfAbsent('a', () => 'y'), 'x');
+    });
+
+    test('update of an absent key without ifAbsent throws like the map', () {
+      final s = MapSignal(castMap());
+      addTearDown(s.dispose);
+
+      expect(() => s.update('absent', (v) => v), throwsArgumentError);
+    });
+
+    test('updateValue inside an effect does not subscribe the effect', () {
+      final s = MapSignal({'a': 1}, equals: true);
+      addTearDown(s.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        runs++;
+        s.updateValue((map) => map);
+      });
+      addTearDown(effect.dispose);
+
+      s['b'] = 2;
+
+      expect(runs, 1);
+    });
   });
 
   group('SetSignal', () {
@@ -601,6 +892,22 @@ void main() {
       addTearDown(s.dispose);
       return _Watch<Set<E>>(s, (value) => value.toSet());
     }
+
+    test('a callback that assigns a value keeps the old set as previous', () {
+      final s = SetSignal({1, 2});
+      final w = watch(s);
+
+      var assigned = false;
+      s.removeWhere((e) {
+        if (!assigned) s.value = {9};
+        assigned = true;
+        return e == 1;
+      });
+
+      expect(s.untrackedValue, {9});
+      expect(s.previousValue, {1, 2});
+      expect(w.calls.single[0], {1, 2});
+    });
 
     test('retainWhere notifies once with the old set', () {
       final s = SetSignal({1, 2, 3});
@@ -784,6 +1091,51 @@ void main() {
       final effect = Effect(() {
         runs++;
         s.remove(0);
+      });
+      addTearDown(effect.dispose);
+
+      s.add(2);
+
+      expect(runs, 1);
+    });
+
+    test('a partial change keeps its error when an effect also throws', () {
+      final s = SetSignal({1});
+      addTearDown(s.dispose);
+      final effect = Effect(() {
+        if (s.length == 2) throw StateError('effect');
+      });
+      addTearDown(effect.dispose);
+
+      _expectMutationErrorWins(() => s.addAll(_throwAfter([2])));
+
+      expect(s.untrackedValue, {1, 2});
+    });
+
+    // A cast set throws a TypeError when it reads 'unread'.
+    Set<int> castSet() => <Object>{1, 'unread'}.cast<int>();
+
+    test('add of a present element returns false without reading others', () {
+      final s = SetSignal<int>({})..value = castSet();
+      addTearDown(s.dispose);
+
+      expect(s.add(1), isFalse);
+    });
+
+    test('remove of an absent element returns false without reading', () {
+      final s = SetSignal<int>({})..value = castSet();
+      addTearDown(s.dispose);
+
+      expect(s.remove(2), isFalse);
+    });
+
+    test('updateValue inside an effect does not subscribe the effect', () {
+      final s = SetSignal({1}, equals: true);
+      addTearDown(s.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        runs++;
+        s.updateValue((set) => set);
       });
       addTearDown(effect.dispose);
 
