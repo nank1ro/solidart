@@ -268,11 +268,13 @@ class ReadableSignal<T> implements ReadSignal<T> {
     // ignore if already disposed
     if (_disposed) return;
     _disposed = true;
+    // Keep the reads of onDispose callbacks out of the running effect.
+    untracked(_dispose);
+  }
 
+  void _dispose() {
     // This will dispose the signal
-    untracked(() {
-      reactiveSystem.getSignalValue(_internalSignal);
-    });
+    reactiveSystem.getSignalValue(_internalSignal);
 
     // Fully unlink every subscriber from this signal — dispose means destroy,
     // so this runs regardless of `SolidartConfig.autoDispose` (matching

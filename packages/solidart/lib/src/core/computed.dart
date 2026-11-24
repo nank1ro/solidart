@@ -175,7 +175,11 @@ class Computed<T> extends ReadSignal<T> {
   @override
   void dispose() {
     if (_disposed) return;
+    // Keep the reads of onDispose callbacks out of the running effect.
+    untracked(_dispose);
+  }
 
+  void _dispose() {
     final errors = _FirstError()..run(_internalComputed.dispose);
     _disposed = true;
     for (final dep in _deps) {

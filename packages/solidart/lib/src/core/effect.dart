@@ -246,9 +246,12 @@ class Effect implements ReactionInterface {
     _disposed = true;
     _timer?.cancel();
 
-    final dependencies = {...subscriber.getDependencies(), ..._deps};
-    _internalEffect.dispose();
-    subscriber.mayDisposeDependencies(dependencies);
+    // Keep the reads of onDispose callbacks out of the running effect.
+    untracked(() {
+      final dependencies = {...subscriber.getDependencies(), ..._deps};
+      _internalEffect.dispose();
+      subscriber.mayDisposeDependencies(dependencies);
+    });
   }
 
   @override

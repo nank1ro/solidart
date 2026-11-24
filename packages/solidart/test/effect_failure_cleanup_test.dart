@@ -246,4 +246,78 @@ void main() {
       expect(ran, isTrue);
     });
   });
+
+  group('cleanup inside a running effect', () {
+    // Each case disposes a node whose cleanup reads `audit`. The read must not
+    // subscribe the running effect.
+    late Signal<int> audit;
+    var runs = 0;
+
+    setUp(() {
+      audit = Signal(0);
+      runs = 0;
+    });
+    tearDown(() => audit.dispose());
+
+    void expectOneRun() {
+      audit.value = 1;
+      expect(runs, 1);
+    }
+
+    test('a failed first run does not subscribe the running effect', () {
+      final source = Signal(0, autoDispose: true)..onDispose(() => audit.value);
+      final parent = Effect(() {
+        runs++;
+        try {
+          Effect(() {
+            source.value;
+            throw const FormatException('child');
+          });
+        } on FormatException {
+          // The parent handles the failed child.
+        }
+      });
+      addTearDown(parent.dispose);
+
+      expectOneRun();
+      expect(source.disposed, isTrue);
+    });
+
+    test('Effect.dispose does not subscribe the running effect', () {
+      final source = Signal(0, autoDispose: true)..onDispose(() => audit.value);
+      final child = Effect(() => source.value);
+      final parent = Effect(() {
+        runs++;
+        child.dispose();
+      });
+      addTearDown(parent.dispose);
+
+      expectOneRun();
+      expect(source.disposed, isTrue);
+    });
+
+    test('Computed.dispose does not subscribe the running effect', () {
+      final computed = Computed(() => 0)..onDispose(() => audit.value);
+      final parent = Effect(() {
+        runs++;
+        computed.dispose();
+      });
+      addTearDown(parent.dispose);
+
+      expectOneRun();
+      expect(computed.disposed, isTrue);
+    });
+
+    test('Signal.dispose does not subscribe the running effect', () {
+      final signal = Signal(0)..onDispose(() => audit.value);
+      final parent = Effect(() {
+        runs++;
+        signal.dispose();
+      });
+      addTearDown(parent.dispose);
+
+      expectOneRun();
+      expect(signal.disposed, isTrue);
+    });
+  });
 }
