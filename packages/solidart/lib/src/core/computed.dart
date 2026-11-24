@@ -77,9 +77,11 @@ class Computed<T> extends ReadSignal<T> {
     _internalComputed = _AlienComputed(
       this,
       (previousValue) {
-        if (trackPreviousValue && previousValue is T) {
+        // Only an earlier successful evaluation is a previous value. For a
+        // nullable T, the null passed before the first one is not.
+        if (trackPreviousValue && _initialized) {
           _hasPreviousValue = true;
-          _untrackedPreviousValue = _previousValue = previousValue;
+          _untrackedPreviousValue = _previousValue = previousValue as T;
         }
 
         try {
@@ -184,7 +186,15 @@ class Computed<T> extends ReadSignal<T> {
       return untrackedValue;
     }
 
-    final value = reactiveSystem.getComputedValue(_internalComputed);
+    final T value;
+    try {
+      value = reactiveSystem.getComputedValue(_internalComputed);
+    } on Object {
+      // A failed evaluation also reads inputs: record them so dispose()
+      // reaches them. Do not dispose here, so later reads rethrow the error.
+      if (autoDispose) _recordInputs();
+      rethrow;
+    }
     if (autoDispose) {
       _mayDispose();
     }
@@ -227,21 +237,27 @@ class Computed<T> extends ReadSignal<T> {
     return _untrackedPreviousValue;
   }
 
+  // The real inputs. Skips internal nodes, such as the retry dependency
+  // that alien_signals links after a failed evaluation.
+  List<alien_system.ReactiveNode> get _inputs => [
+    for (var link = _internalComputed.deps; link != null; link = link.nextDep)
+      if (link.dep case alien.SignalNode() || alien.ComputedNode()) link.dep,
+  ];
+
+  void _recordInputs([List<alien_system.ReactiveNode>? inputs]) {
+    _deps
+      ..clear()
+      ..addAll(inputs ?? _inputs);
+  }
+
   @override
   void _mayDispose() {
     if (_disposed || !autoDispose) return;
-    // Skip internal nodes, such as the retry dependency that alien_signals
-    // links after a failed evaluation.
-    final inputs = [
-      for (var link = _internalComputed.deps; link != null; link = link.nextDep)
-        if (link.dep case alien.SignalNode() || alien.ComputedNode()) link.dep,
-    ];
+    final inputs = _inputs;
     if (inputs.isEmpty && _internalComputed.subs == null) {
       dispose();
     } else {
-      _deps
-        ..clear()
-        ..addAll(inputs);
+      _recordInputs(inputs);
     }
   }
 
