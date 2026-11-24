@@ -200,9 +200,17 @@ class Computed<T> extends ReadSignal<T> {
     if (_disposed) {
       return untrackedValue;
     }
-    // A read from the selector or comparator: return the stored value or
-    // candidate without evaluating again.
-    if (_evaluating && _initialized) return _untrackedValue;
+    // A read while the selector or comparator runs: return the stored value
+    // or candidate without evaluating again.
+    if (_evaluating && _initialized) {
+      // Link another reader, such as an effect created by the selector, so it
+      // reruns on later changes. The computed's own reads stay unlinked.
+      final sub = reactiveSystem.activeSub;
+      if (sub != null && !identical(sub, _internalComputed)) {
+        reactiveSystem.link(_internalComputed, sub);
+      }
+      return _untrackedValue;
+    }
 
     final T value;
     try {
@@ -365,10 +373,13 @@ class Computed<T> extends ReadSignal<T> {
   /// However, in some cases, you may want to force an update.
   void run() {
     if (_disposed) return;
-    _internalComputed.didUpdate();
-    // Like a read: record the inputs so dispose() reaches them.
-    if (autoDispose) _recordInputs(merge: _error != null);
+    final changed = _internalComputed.didUpdate();
+    // Capture this run's error: a subscriber may run the computed again while
+    // being notified, and that inner run would overwrite `_error`.
     final error = _error;
+    // Like a read: record the inputs so dispose() reaches them.
+    if (autoDispose) _recordInputs(merge: error != null);
+    if (changed) reactiveSystem.notifySubscribers(_internalComputed);
     if (error != null) Error.throwWithStackTrace(error, error.stackTrace!);
   }
 
