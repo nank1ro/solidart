@@ -650,6 +650,80 @@ void main() {
       expect(seen.last, 2);
     });
 
+    test('an effect that first reads previousValue while the selector runs '
+        'tracks the Computed', () {
+      final source = Signal(0);
+      final gate = Signal(false);
+      final c = Computed(() {
+        final value = source.value;
+        if (value == 1) gate.value = true;
+        return value;
+      });
+      final seen = <int?>[];
+      final effect = Effect(() {
+        if (gate.value) seen.add(c.previousValue);
+      });
+      addTearDown(effect.dispose);
+
+      c.value;
+      source.value = 1;
+      c.value;
+      source.value = 2;
+      c.value;
+      expect(seen.last, 1);
+    });
+
+    test('an effect that first reads hasPreviousValue while the selector '
+        'runs tracks the Computed', () {
+      final source = Signal(0);
+      final gate = Signal(false);
+      final c = Computed(() {
+        final value = source.value;
+        if (value == 1) gate.value = true;
+        return value;
+      });
+      var calls = 0;
+      final effect = Effect(() {
+        if (gate.value) {
+          c.hasPreviousValue;
+          calls++;
+        }
+      });
+      addTearDown(effect.dispose);
+
+      c.value;
+      source.value = 1;
+      c.value;
+      final afterFirst = calls;
+      source.value = 2;
+      c.value;
+      expect(calls, greaterThan(afterFirst));
+    });
+
+    test('an effect that disposes the Computed and reads previousValue while '
+        'the selector runs does not subscribe to it', () {
+      final source = Signal(0);
+      final gate = Signal(false);
+      late final Computed<int> c;
+      c = Computed(() {
+        final value = source.value;
+        if (value == 1) gate.value = true;
+        return value;
+      });
+      final effect = Effect(() {
+        if (gate.value) {
+          c.dispose();
+          c.previousValue;
+        }
+      });
+      addTearDown(effect.dispose);
+
+      c.value;
+      source.value = 1;
+      c.value;
+      expect(c.listenerCount, 0);
+    });
+
     test(
       'a listener added while the comparator runs receives later changes',
       () {

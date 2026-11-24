@@ -203,12 +203,7 @@ class Computed<T> extends ReadSignal<T> {
     // A read while the selector or comparator runs: return the stored value
     // or candidate without evaluating again.
     if (_evaluating && _initialized) {
-      // Link another reader, such as an effect created by the selector, so it
-      // reruns on later changes. The computed's own reads stay unlinked.
-      final sub = reactiveSystem.activeSub;
-      if (sub != null && !identical(sub, _internalComputed)) {
-        reactiveSystem.link(_internalComputed, sub);
-      }
+      _linkActiveSubscriber();
       return _untrackedValue;
     }
 
@@ -228,6 +223,16 @@ class Computed<T> extends ReadSignal<T> {
     }
 
     return value;
+  }
+
+  // Links another reader, such as an effect created by the selector, so it
+  // reruns on later changes. The computed's own reads stay unlinked.
+  void _linkActiveSubscriber() {
+    if (disposed) return;
+    final sub = reactiveSystem.activeSub;
+    if (sub != null && !identical(sub, _internalComputed)) {
+      reactiveSystem.link(_internalComputed, sub);
+    }
   }
 
   // Notifies about a successful evaluation once alien_signals committed it.
@@ -254,7 +259,11 @@ class Computed<T> extends ReadSignal<T> {
   T? get previousValue {
     if (!trackPreviousValue) return null;
     // cause observation
-    if (!disposed && !_evaluating) value;
+    if (_evaluating) {
+      _linkActiveSubscriber();
+    } else if (!disposed) {
+      value;
+    }
     return _previousValue;
   }
 
@@ -324,7 +333,11 @@ class Computed<T> extends ReadSignal<T> {
   bool get hasPreviousValue {
     if (!trackPreviousValue) return false;
     // cause observation
-    if (!_evaluating) value;
+    if (_evaluating) {
+      _linkActiveSubscriber();
+    } else {
+      value;
+    }
     return _hasPreviousValue;
   }
 
