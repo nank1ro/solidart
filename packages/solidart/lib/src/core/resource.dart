@@ -393,7 +393,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   /// Resolves the resource, if needed. A disposed resource never resolves.
   void _resolveIfNeeded() {
-    if (!_resolved && !disposed) _resolve();
+    // Untracked: the first read often runs inside an effect, which must not
+    // track the fetcher's reads or own the source observation.
+    if (!_resolved && !disposed) untracked(_resolve);
   }
 
   /// Runs the [fetcher] for the first time.

@@ -65,15 +65,30 @@ void _notifyDevToolsAboutSignal(
   required DevToolsEventType eventType,
 }) {
   if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
+  // Peek: inspecting must not track, resolve a lazy signal, or auto-dispose.
+  untracked(() => _postSignalEvent(signal, eventType: eventType));
+}
+
+void _postSignalEvent(
+  SignalBase<dynamic> signal, {
+  required DevToolsEventType eventType,
+}) {
   final eventName = 'ext.solidart.signal.${eventType.name}';
-  final hasValue = signal.untrackedHasValue;
-  var value = hasValue ? signal.value : null;
-  var previousValue = hasValue ? signal.previousValue : null;
-  final hasPreviousValue = signal.untrackedHasPreviousValue;
+  Object? value;
+  Object? previousValue;
   if (signal is Resource) {
-    value = signal._value.asReady?.value;
+    value = signal._untrackedValue.asReady?.value;
     previousValue = signal._previousValue?.asReady?.value;
+  } else if (signal is Computed) {
+    if (signal._initialized) {
+      value = signal._untrackedValue;
+      previousValue = signal._untrackedPreviousValue;
+    }
+  } else if (signal.untrackedHasValue) {
+    value = signal.value;
+    previousValue = signal.previousValue;
   }
+  final hasPreviousValue = signal.untrackedHasPreviousValue;
   final jsonValue = _toJson(value);
   final jsonPreviousValue = _toJson(previousValue);
 
