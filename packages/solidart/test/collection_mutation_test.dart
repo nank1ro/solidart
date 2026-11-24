@@ -687,19 +687,83 @@ void main() {
       expect(s.untrackedHasPreviousValue, isFalse);
     });
 
-    test('updateAll whose callback throws leaves the map unchanged', () {
+    test('update without history whose callback writes another key '
+        'and returns a new value notifies once', () {
+      final s = MapSignal({'a': 1, 'b': 2}, trackPreviousValue: false);
+      addTearDown(s.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        s.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+
+      s.update('a', (v) {
+        s['b'] = 3;
+        return v + 1;
+      });
+
+      expect(s.untrackedValue, {'a': 2, 'b': 3});
+      expect(runs, 2);
+    });
+
+    test('updateAll whose callback throws behaves like a plain map', () {
       final s = MapSignal({'a': 1, 'b': 2});
       final w = watch(s);
+      final reference = {'a': 1, 'b': 2};
+      int callback(String k, int v) => k == 'b' ? throw StateError('x') : v + 1;
+
+      expect(() => reference.updateAll(callback), throwsStateError);
+      expect(() => s.updateAll(callback), throwsStateError);
+
+      expect(s.untrackedValue, reference);
+      expect(w.calls, [
+        [
+          {'a': 1, 'b': 2},
+          reference,
+        ],
+      ]);
+      expect(w.effectReruns, 1);
+    });
+
+    test('updateAll lets a later callback restore an earlier key', () {
+      final s = MapSignal({'a': 1, 'b': 1});
+      final reference = {'a': 1, 'b': 1};
+      for (final map in [reference, s]) {
+        map.updateAll((k, v) {
+          if (k == 'b') map['a'] = 1;
+          return k == 'a' ? 5 : v;
+        });
+      }
+
+      expect(s.untrackedValue, reference);
+    });
+
+    test('updateAll lets the return value win over a write to its key', () {
+      final s = MapSignal({'a': 1, 'b': 1});
+      final reference = {'a': 1, 'b': 1};
+      for (final map in [reference, s]) {
+        map.updateAll((k, v) {
+          if (k == 'a') map['a'] = 7;
+          return k == 'a' ? 2 : v;
+        });
+      }
+
+      expect(s.untrackedValue, reference);
+      expect(s.untrackedValue['a'], 2);
+    });
+
+    test('updateAll of an empty unmodifiable map throws like a plain map', () {
+      final s = MapSignal<String, int>(Map.unmodifiable(<String, int>{}));
+      addTearDown(s.dispose);
 
       expect(
-        () => s.updateAll((k, v) => k == 'b' ? throw StateError('x') : v + 1),
-        throwsStateError,
+        () => Map<String, int>.unmodifiable(<String, int>{}).updateAll(
+          (k, v) => v,
+        ),
+        throwsUnsupportedError,
       );
-
-      expect(s.untrackedValue, {'a': 1, 'b': 2});
-      expect(w.calls, isEmpty);
-      expect(w.effectReruns, 0);
-      expect(s.untrackedHasPreviousValue, isFalse);
+      expect(() => s.updateAll((k, v) => v), throwsUnsupportedError);
     });
 
     test('updateAll keeps a callback write to a key it already visited', () {
@@ -1325,4 +1389,121 @@ void main() {
       expect(runs, 2);
     });
   });
+
+  group('edge cases of typed lists and cast maps (#208)', () {
+    test('a rejected add to a fixed-length typed list does not rerun', () {
+      for (final history in [true, false]) {
+        final list = ListSignal<Float32x4>([], trackPreviousValue: history)
+          ..value = Float32x4List(1);
+        addTearDown(list.dispose);
+        var runs = 0;
+        final effect = Effect(() {
+          list.value;
+          runs++;
+        });
+        addTearDown(effect.dispose);
+
+        expect(() => list.add(Float32x4.zero()), throwsUnsupportedError);
+
+        expect(runs, 1, reason: 'history: $history');
+      }
+    });
+
+    test('addAll of an empty map to a cast map is a no-op', () {
+      final backing = <String, Object>{'unread': 42}.cast<String, String>();
+      final map = MapSignal<String, String>(backing);
+      addTearDown(map.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        map.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+
+      map
+        ..addAll({})
+        ..addEntries(<MapEntry<String, String>>[]);
+
+      expect(runs, 1);
+    });
+
+    test('a no-op update of a cast map without history is a no-op', () {
+      final values = <String, Object>{'active': 42, 'label': 'items'};
+      final map = MapSignal<String, int>(
+        values.cast<String, int>(),
+        trackPreviousValue: false,
+      );
+      addTearDown(map.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        map.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+
+      expect(map.update('active', (v) => v), 42);
+
+      expect(runs, 1);
+    });
+
+    test('an update of an unmodifiable map without history throws first', () {
+      final map = MapSignal<String, int>(
+        Map.unmodifiable({'a': 1}),
+        trackPreviousValue: false,
+      );
+      addTearDown(map.dispose);
+      var calls = 0;
+
+      expect(
+        () => map.update('a', (_) {
+          calls++;
+          throw StateError('x');
+        }),
+        throwsUnsupportedError,
+      );
+
+      expect(calls, 0);
+    });
+
+    test('an update notifies when the backing write changes then throws', () {
+      final backing = _WriteThenThrowMap({'a': 1});
+      final map = MapSignal<String, int>(backing, trackPreviousValue: false);
+      addTearDown(map.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        map.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+
+      expect(() => map.update('a', (v) => v + 1), throwsStateError);
+
+      expect(backing['a'], 2);
+      expect(runs, 2);
+    });
+  });
+}
+
+class _WriteThenThrowMap extends MapBase<String, int> {
+  _WriteThenThrowMap(this._delegate);
+
+  final Map<String, int> _delegate;
+
+  @override
+  int? operator [](Object? key) => _delegate[key];
+
+  @override
+  void operator []=(String key, int value) {
+    _delegate[key] = value;
+    throw StateError('after write');
+  }
+
+  @override
+  void clear() => _delegate.clear();
+
+  @override
+  Iterable<String> get keys => _delegate.keys;
+
+  @override
+  int? remove(Object? key) => _delegate.remove(key);
 }

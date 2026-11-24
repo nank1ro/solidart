@@ -263,6 +263,10 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   void addEntries(Iterable<MapEntry<K, V>> newEntries) {
+    // Only a collection is checked: other iterables can run code each time.
+    if ((newEntries is List || newEntries is Set) && newEntries.isEmpty) {
+      return _untrackedValue.addEntries(newEntries);
+    }
     _mutate((map) => map.addEntries(newEntries));
   }
 
@@ -280,6 +284,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   void addAll(Map<K, V> other) {
+    if (other.isEmpty) return _untrackedValue.addAll(other);
     _mutate((map) => map.addAll(other));
   }
 
@@ -348,6 +353,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   V update(K key, V Function(V value) update, {V Function()? ifAbsent}) {
+    final map = _untrackedValue;
+    if (!trackPreviousValue &&
+        !identical(map, _mutating) &&
+        map.containsKey(key)) {
+      return _updateTouched(map, key, update);
+    }
     return _mutateUnless(
       ifAbsent == null && !_untrackedValue.containsKey(key),
       (map) => map.update(key, update, ifAbsent: ifAbsent),
@@ -365,17 +376,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// ```
   @override
   void updateAll(V Function(K key, V value) update) {
-    _mutate((map) {
-      // Computes every new value first, so a throwing [update] changes nothing.
-      final updated = [
-        for (final MapEntry(:key, :value) in map.entries)
-          (key: key, read: value, next: update(key, value)),
-      ];
-      // A key that [update] wrote keeps that write, as in a plain map.
-      for (final (:key, :read, :next) in updated) {
-        if (map.containsKey(key) && identical(map[key], read)) map[key] = next;
-      }
-    });
+    _mutate((map) => map.updateAll(update));
   }
 
   @override
@@ -396,14 +397,17 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   /// assigns a new map, the assignment notifies, so this one does not.
   ///
   /// Set [resizes] when [mutation] runs no code of the caller and changes
-  /// the map only when it changes its length. Then, without history, the
-  /// length tells whether the map changed, so the map is not copied.
+  /// the map only when it changes its length. Then the length tells whether
+  /// the map changed, and the map is copied only for the history.
   ///
   /// The error of [mutation] wins over an error of the notification, which
   /// goes to the current [Zone].
   R _mutate<R>(R Function(Map<K, V> map) mutation, {bool resizes = false}) {
     final map = _untrackedValue;
-    if (identical(map, _mutating)) return mutation(map);
+    if (identical(map, _mutating)) {
+      _nestedMutations++;
+      return mutation(map);
+    }
     final outer = _mutating;
     final length = map.length;
     final before = resizes && !trackPreviousValue
@@ -421,11 +425,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
           var i = 0;
           changed =
               changed ||
-              map.entries.any((entry) {
-                final old = before[i++];
-                return !identical(entry.key, old.key) ||
-                    !identical(entry.value, old.value);
-              });
+              (!resizes &&
+                  map.entries.any((entry) {
+                    final old = before[i++];
+                    return !identical(entry.key, old.key) ||
+                        !identical(entry.value, old.value);
+                  }));
           if (changed) _setPreviousValue(Map<K, V>.fromEntries(before));
         }
         if (changed) _notifyChanged();
@@ -433,6 +438,33 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
       ..rethrowIfAny();
     return result;
   }
+
+  /// Updates the existing [key] of [map] like [_mutate], without history and
+  /// without a snapshot: only the touched entry is read, so a no-op update
+  /// does not read the rest of the map. The map runs its own `update`, so it
+  /// throws like a plain map. It notifies once if the entry changed, even
+  /// when `update` throws, or if a [_mutate] inside [update] ran on the same
+  /// map.
+  V _updateTouched(Map<K, V> map, K key, V Function(V value) update) {
+    final nestedBefore = _nestedMutations;
+    final before = map[key];
+    late final V result;
+    final outer = _mutating;
+    _mutating = map;
+    final errors = _FirstError()..run(() => result = map.update(key, update));
+    _mutating = outer;
+    errors
+      ..run(() {
+        if (!identical(_untrackedValue, map)) return;
+        final changed = !map.containsKey(key) || !identical(map[key], before);
+        if (changed || _nestedMutations != nestedBefore) _notifyChanged();
+      })
+      ..rethrowIfAny();
+    return result;
+  }
+
+  /// How many times a [_mutate] ran inside another one on the same map.
+  int _nestedMutations = 0;
 
   /// Runs [mutation] like [_mutate], or directly on the map when [unchanged]
   /// is true, so the map is not copied or compared. The map still runs
