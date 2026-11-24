@@ -147,8 +147,22 @@ class Effect implements ReactionInterface {
     required this.autoDispose,
     ErrorCallback? onError,
     bool? detach,
-  }) : _onError = onError {
-    _internalEffect = _AlienEffect(this, callback, detach: detach);
+  }) : _onError = onError,
+       _callback = callback {
+    _internalEffect = _AlienEffect(this, _runCallback, detach: detach);
+  }
+
+  final VoidCallback _callback;
+
+  // Runs on every run, initial and reactive: routes an error to [_onError]
+  // when provided, otherwise rethrows it.
+  void _runCallback() {
+    try {
+      _callback();
+    } catch (error, stackTrace) {
+      if (_onError == null) rethrow;
+      _onError(SolidartCaughtException(error, stackTrace: stackTrace));
+    }
   }
 
   /// The name of the effect, useful for logging purposes.
@@ -188,17 +202,13 @@ class Effect implements ReactionInterface {
     reactiveSystem.startBatch();
     try {
       _internalEffect.run();
-    } catch (e, s) {
-      if (_onError != null) {
-        _onError.call(SolidartCaughtException(e, stackTrace: s));
-      } else {
-        rethrow;
-      }
     } finally {
-      reactiveSystem.endBatch();
-      // ignore: cascade_invocations
-      reactiveSystem.setCurrentSub(prevSub);
-      _mayDispose();
+      try {
+        reactiveSystem.endBatch();
+      } finally {
+        reactiveSystem.setCurrentSub(prevSub);
+        _mayDispose();
+      }
     }
   }
 
