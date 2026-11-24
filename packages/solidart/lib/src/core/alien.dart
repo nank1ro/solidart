@@ -1,5 +1,14 @@
 part of 'core.dart';
 
+// A computed's saved reference to one of its inputs. Disposing the input
+// clears [node]: alien_signals may have unlinked the computed from it already,
+// and the saved reference must not keep a disposed input alive.
+class _SavedInput {
+  _SavedInput(this.node);
+
+  alien_system.ReactiveNode? node;
+}
+
 class _AlienComputed<T> extends alien.ComputedNode<T> {
   _AlienComputed(this.parent, T Function(T? oldValue) getter)
     : super(
@@ -8,6 +17,8 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
       );
 
   final Computed<T> parent;
+
+  late final saved = _SavedInput(this);
 
   void dispose() {
     // `alien.stop` only unlinks the first subscriber, so unlink (and maybe
@@ -87,6 +98,8 @@ class _AlienSignal<T> extends alien.SignalNode<Option<T>> {
       );
 
   final SignalBase<dynamic> parent;
+
+  late final saved = _SavedInput(this);
 
   bool forceDirty = false;
 

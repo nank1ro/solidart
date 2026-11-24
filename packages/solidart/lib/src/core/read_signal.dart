@@ -272,6 +272,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   void _dispose() {
     // This will dispose the signal
     reactiveSystem.getSignalValue(_internalSignal);
+    _internalSignal.saved.node = null;
 
     // Fully unlink every subscriber from this signal — dispose means destroy,
     // so this runs regardless of `SolidartConfig.autoDispose` (matching

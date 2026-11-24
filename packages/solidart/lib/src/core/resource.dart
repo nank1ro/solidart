@@ -368,6 +368,8 @@ class Resource<T> extends Signal<ResourceState<T>> {
     if (fetcher != null) {
       // start fetching
       await _fetch();
+      // Disposed while fetching: do not subscribe to the source.
+      if (disposed) return;
     }
     // React the the [stream], if provided
     if (stream != null) {
@@ -379,7 +381,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
       _sourceDisposeObservation = source!.observe((p, v) {
         if (debounceDelay != null) {
           Debouncer.debounce(
-            source!._id,
+            this,
             debounceDelay!,
             refresh,
           );
@@ -403,9 +405,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
     assert(fetcher != null, 'You are trying to fetch, but fetcher is null');
     try {
       final result = await fetcher!();
-      state = ResourceState<T>.ready(result);
+      if (!disposed) state = ResourceState<T>.ready(result);
     } catch (e, s) {
-      state = ResourceState<T>.error(e, stackTrace: s);
+      if (!disposed) state = ResourceState<T>.error(e, stackTrace: s);
     }
   }
 
@@ -433,8 +435,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
   /// Forces a refresh of the [fetcher] or the [stream].
   ///
   /// In case of the [stream], cancels the previous subscription and
-  /// resubscribes.
+  /// resubscribes. A disposed resource does not refresh.
   Future<void> refresh() async {
+    if (disposed) return;
     if (fetcher != null) {
       return _refetch();
     }
@@ -481,9 +484,9 @@ class Resource<T> extends Signal<ResourceState<T>> {
     try {
       _transition();
       final result = await fetcher!();
-      state = ResourceState<T>.ready(result);
+      if (!disposed) state = ResourceState<T>.ready(result);
     } catch (e, s) {
-      state = ResourceState<T>.error(e, stackTrace: s);
+      if (!disposed) state = ResourceState<T>.error(e, stackTrace: s);
     }
   }
 
@@ -510,6 +513,7 @@ class Resource<T> extends Signal<ResourceState<T>> {
     _streamSubscription = null;
     _streamSubscriptions.clear();
     _broadcastStreams.clear();
+    Debouncer.cancel(this);
     final errors = _FirstError()..run(() => subscription?.cancel());
     for (final sub in subscriptions) {
       errors.run(sub.cancel);
