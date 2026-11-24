@@ -801,8 +801,8 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// list, the assignment notifies, so this one does not.
   ///
   /// Set [resizes] when [mutation] runs no code of the caller and changes
-  /// the list only when it changes its length. Then the length tells whether
-  /// the list changed, and the list is copied only for the history.
+  /// the list only when it changes its length. Then, without history, the
+  /// length tells whether the list changed, so the list is not copied.
   ///
   /// The error of [mutation] wins over an error of the notification, which
   /// goes to the current [Zone].
@@ -821,7 +821,7 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
         if (!identical(_untrackedValue, list)) return;
         var changed = length != list.length;
         if (before != null) {
-          for (var i = 0; !resizes && !changed && i < length; i++) {
+          for (var i = 0; !changed && i < length; i++) {
             changed = !identical(before[i], list[i]);
           }
           if (changed) _setPreviousValue(before);

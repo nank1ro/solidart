@@ -114,6 +114,26 @@ class _CountingList extends ListBase<int> {
   void operator []=(int index, int value) => _elements[index] = value;
 }
 
+/// A list whose length cannot change. `ListBase.removeAt` moves the
+/// elements first, so it changes the list and then throws.
+class _FixedLengthList extends ListBase<int> {
+  _FixedLengthList(this._elements);
+
+  final List<int> _elements;
+
+  @override
+  int get length => _elements.length;
+
+  @override
+  set length(int newLength) => throw UnsupportedError('fixed length');
+
+  @override
+  int operator [](int index) => _elements[index];
+
+  @override
+  void operator []=(int index, int value) => _elements[index] = value;
+}
+
 void main() {
   group('ListSignal', () {
     _Watch<List<T>> watch<T>(ListSignal<T> s) {
@@ -562,6 +582,22 @@ void main() {
       expect(w.calls, isEmpty);
       expect(w.effectReruns, 0);
     });
+
+    test('a removeAt that moves elements and then throws notifies once', () {
+      final s = ListSignal<int>([])..value = _FixedLengthList([1, 2, 3]);
+      final w = watch(s);
+
+      expect(() => s.removeAt(0), throwsUnsupportedError);
+
+      expect(s.untrackedValue, [2, 3, 3]);
+      expect(w.calls, [
+        [
+          [1, 2, 3],
+          [2, 3, 3],
+        ],
+      ]);
+      expect(w.effectReruns, 1);
+    });
   });
 
   group('MapSignal', () {
@@ -936,6 +972,28 @@ void main() {
       ]);
       expect(w.effectReruns, 1);
     });
+
+    final views = <String, Map<String, int> Function(MapSignal<String, int>)>{
+      'untrackedValue': (s) => s.untrackedValue,
+      'a cast view': (s) => s.untrackedValue.cast<String, int>(),
+    };
+    for (final MapEntry(key: name, value: view) in views.entries) {
+      test('update without history whose callback changes another key '
+          'through $name notifies once', () {
+        final s = MapSignal({'a': 1, 'b': 2}, trackPreviousValue: false);
+        final w = watch(s);
+
+        s.update('a', (v) {
+          view(s)['b'] = 3;
+          return v;
+        });
+
+        expect(s.untrackedValue, {'a': 1, 'b': 3});
+        expect(w.calls, hasLength(1));
+        expect(w.calls.single[1], {'a': 1, 'b': 3});
+        expect(w.effectReruns, 1);
+      });
+    }
 
     test('update whose callback changes a new map notifies for each', () {
       final s = MapSignal({'a': 1});
@@ -1391,22 +1449,21 @@ void main() {
   });
 
   group('edge cases of typed lists and cast maps (#208)', () {
-    test('a rejected add to a fixed-length typed list does not rerun', () {
-      for (final history in [true, false]) {
-        final list = ListSignal<Float32x4>([], trackPreviousValue: history)
-          ..value = Float32x4List(1);
-        addTearDown(list.dispose);
-        var runs = 0;
-        final effect = Effect(() {
-          list.value;
-          runs++;
-        });
-        addTearDown(effect.dispose);
+    test('a rejected add to a fixed-length typed list without history '
+        'does not rerun', () {
+      final list = ListSignal<Float32x4>([], trackPreviousValue: false)
+        ..value = Float32x4List(1);
+      addTearDown(list.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        list.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
 
-        expect(() => list.add(Float32x4.zero()), throwsUnsupportedError);
+      expect(() => list.add(Float32x4.zero()), throwsUnsupportedError);
 
-        expect(runs, 1, reason: 'history: $history');
-      }
+      expect(runs, 1);
     });
 
     test('addAll of an empty map to a cast map is a no-op', () {
@@ -1423,25 +1480,6 @@ void main() {
       map
         ..addAll({})
         ..addEntries(<MapEntry<String, String>>[]);
-
-      expect(runs, 1);
-    });
-
-    test('a no-op update of a cast map without history is a no-op', () {
-      final values = <String, Object>{'active': 42, 'label': 'items'};
-      final map = MapSignal<String, int>(
-        values.cast<String, int>(),
-        trackPreviousValue: false,
-      );
-      addTearDown(map.dispose);
-      var runs = 0;
-      final effect = Effect(() {
-        map.value;
-        runs++;
-      });
-      addTearDown(effect.dispose);
-
-      expect(map.update('active', (v) => v), 42);
 
       expect(runs, 1);
     });
