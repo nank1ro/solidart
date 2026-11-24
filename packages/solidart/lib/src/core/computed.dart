@@ -379,7 +379,16 @@ class Computed<T> extends ReadSignal<T> {
     final error = _error;
     // Like a read: record the inputs so dispose() reaches them.
     if (autoDispose) _recordInputs(merge: error != null);
-    if (changed) reactiveSystem.notifySubscribers(_internalComputed);
+    if (changed) {
+      try {
+        reactiveSystem.notifySubscribers(_internalComputed);
+      } catch (notifyError, notifyStackTrace) {
+        // Without a selector error, the notification error is the result.
+        if (error == null) rethrow;
+        // Otherwise the caller must still get the selector error.
+        Zone.current.handleUncaughtError(notifyError, notifyStackTrace);
+      }
+    }
     if (error != null) Error.throwWithStackTrace(error, error.stackTrace!);
   }
 
