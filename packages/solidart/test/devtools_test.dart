@@ -28,6 +28,14 @@ void main() {
       computed.dispose();
     });
 
+    test('the first value of a lazy Computed is sent to DevTools', () {
+      final sent = <int>[];
+      final computed = Computed(() => _SentProbe(42, sent));
+      expect(sent, isEmpty);
+      expect(computed.value.id, 42);
+      expect(sent, [42]);
+    });
+
     test('an autoDispose Computed is disposed with its only dependency', () {
       final source = Signal(1);
       final doubled = Computed(() => source.value * 2, autoDispose: true);
@@ -88,4 +96,17 @@ class _JsonProbe {
   final Signal<int> other;
 
   Object? toJson() => other.value;
+}
+
+/// Records each serialization for a DevTools event.
+class _SentProbe {
+  _SentProbe(this.id, this.sent);
+
+  final int id;
+  final List<int> sent;
+
+  Object? toJson() {
+    sent.add(id);
+    return id;
+  }
 }
