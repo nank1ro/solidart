@@ -40,8 +40,17 @@ extension MayDisposeDependencies on alien_system.ReactiveNode {
       final next = link.nextSub;
       final sub = link.sub;
       alien.unlink(link, sub);
-      if (sub is _AlienEffect) errors.run(sub.parent._mayDispose);
-      if (sub is _AlienComputed) errors.run(sub.parent._mayDispose);
+      // The saved dependencies of the subscriber must not retain this node.
+      if (sub is _AlienEffect) {
+        sub.parent
+          .._deps.remove(this)
+          .._runDeps.remove(this);
+        errors.run(sub.parent._mayDispose);
+      }
+      if (sub is _AlienComputed) {
+        sub.parent._deps.remove(this);
+        errors.run(sub.parent._mayDispose);
+      }
       link = next;
     }
     errors.rethrowIfAny();

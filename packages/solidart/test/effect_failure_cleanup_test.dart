@@ -25,6 +25,25 @@ import 'package:vm_service/vm_service_io.dart';
   return (reported: reported, timers: timers);
 }
 
+/// A stream whose subscription throws synchronously when cancelled.
+class _ThrowingCancelStream extends Stream<int> {
+  @override
+  StreamSubscription<int> listen(
+    void Function(int event)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) => _ThrowingCancelSubscription();
+}
+
+class _ThrowingCancelSubscription implements StreamSubscription<int> {
+  @override
+  Future<void> cancel() => throw StateError('cancel');
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
 String? _messageOf(Object? error) => (error as StateError?)?.message;
 
 /// Calls [onDispose] when a signal is disposed.
@@ -55,6 +74,67 @@ Signal<int>? _retained;
 (Effect, WeakReference<Signal<int>>) _disposeEffectThatReadsASignal() {
   final signal = _retained = Signal(0);
   final effect = Effect(() => _retained!.value)..dispose();
+  _retained = null;
+  return (effect, WeakReference(signal));
+}
+
+@pragma('vm:never-inline')
+(Effect, WeakReference<Signal<int>>) _disposeTheSignalOfALiveEffect() {
+  final signal = _retained = Signal(0);
+  final effect = Effect(() => _retained!.value);
+  signal.dispose();
+  _retained = null;
+  return (effect, WeakReference(signal));
+}
+
+// A Computed run by hand, then switched to a branch that does not read the
+// signal.
+@pragma('vm:never-inline')
+(Computed<int>, WeakReference<Signal<int>>) _switchAComputedAway() {
+  final signal = _retained = Signal(42);
+  final useSignal = Signal(true);
+  final computed = Computed(() => useSignal.value ? _retained!.value : 0)
+    ..run();
+  useSignal.value = false;
+  expect(computed.value, 0);
+  _retained = null;
+  return (computed, WeakReference(signal));
+}
+
+// A Computed that reads the signal only in a failed branch, then recovers.
+@pragma('vm:never-inline')
+(Computed<int>, WeakReference<Signal<int>>) _recoverAComputed() {
+  final signal = _retained = Signal(0);
+  final mode = Signal(0);
+  final computed = Computed(() {
+    if (mode.value == 1) {
+      _retained!.value;
+      throw StateError('selector');
+    }
+    return 7;
+  });
+  expect(computed.value, 7);
+  mode.value = 1;
+  expect(() => computed.value, throwsA(isA<SolidartCaughtException>()));
+  mode.value = 2;
+  expect(computed.value, 7);
+  _retained = null;
+  return (computed, WeakReference(signal));
+}
+
+// An observed autoDispose Computed switched to a branch with the same value:
+// it evaluates again, but the effect does not read it again.
+@pragma('vm:never-inline')
+(Effect, WeakReference<Signal<int>>) _switchAnObservedComputedAway() {
+  final signal = _retained = Signal(0);
+  final useSignal = Signal(true);
+  final computed = Computed(
+    () => useSignal.value ? _retained!.value : 0,
+    autoDispose: true,
+  );
+  final effect = Effect(() => computed.value);
+  useSignal.value = false;
+  expect(signal.listenerCount, 0);
   _retained = null;
   return (effect, WeakReference(signal));
 }
@@ -418,6 +498,43 @@ void main() {
       expect(thrown.map(_messageOf), ['first', 'first']);
       expect(zone.reported.map(_messageOf), ['second', 'second']);
     });
+
+    test('a Resource finishes its disposal when its source cleanup throws', () {
+      final source = Signal(0, autoDispose: true)
+        ..onDispose(() => throw StateError('source'));
+      final resource = Resource<int>(() async => 1, source: source);
+      var cleaned = false;
+      resource
+        ..state
+        ..onDispose(() => cleaned = true);
+
+      expect(
+        resource.dispose,
+        throwsA(
+          isA<StateError>().having((e) => e.message, 'message', 'source'),
+        ),
+      );
+      expect((resource.disposed, source.disposed, cleaned), (true, true, true));
+    });
+
+    test('a Resource stops observing its source when a cancel throws', () {
+      final source = Signal(0);
+      addTearDown(source.dispose);
+      final resource = Resource<int>.stream(
+        _ThrowingCancelStream.new,
+        source: source,
+      )..state;
+      expect(source.listenerCount, 1);
+
+      expect(
+        resource.dispose,
+        throwsA(
+          isA<StateError>().having((e) => e.message, 'message', 'cancel'),
+        ),
+      );
+      expect(resource.disposed, isTrue);
+      expect(source.listenerCount, 0);
+    });
   });
 
   group('a Computed without autoDispose', () {
@@ -621,7 +738,8 @@ void main() {
       expect(runs, 3);
     });
 
-    test('a child of a Computed reports a disposal error to the zone', () {
+    test('a child of a Computed disposes its dependency, then the Computed '
+        'rethrows', () {
       final childDep = Signal(0, autoDispose: true)
         ..onDispose(() => throw StateError('cleanup'));
       final own = Signal(0, autoDispose: true);
@@ -640,8 +758,8 @@ void main() {
         }
       });
 
-      expect(thrown, isNull);
-      expect(zone.reported.map(_messageOf), ['cleanup']);
+      expect(_messageOf(thrown), 'cleanup');
+      expect(zone.reported, isEmpty);
       expect((childDep.disposed, own.listenerCount), (true, 0));
     });
 
@@ -690,6 +808,25 @@ void main() {
       expect((second.disposed, seen.join(',')), (false, '1,2'));
     });
 
+    test('a Computed onDispose callback can subscribe to the dependency of '
+        'its child', () {
+      final childDep = Signal(1, autoDispose: true);
+      addTearDown(childDep.dispose);
+      final owner = Computed(() {
+        Effect(() => childDep.value);
+        return 0;
+      });
+      expect(owner.value, 0);
+      final seen = <int>[];
+      owner
+        ..onDispose(() => Effect(() => seen.add(childDep.value)))
+        ..dispose();
+
+      childDep.value = 2;
+
+      expect((childDep.disposed, seen.join(',')), (false, '1,2'));
+    });
+
     test('a disposed effect releases the dependencies it read', () async {
       final (effect, signal) = _disposeEffectThatReadsASignal();
 
@@ -700,6 +837,43 @@ void main() {
 
       expect(effect.disposed, isTrue);
       expect(signal.target, isNull);
+    });
+  });
+
+  group('released dependencies', () {
+    Future<void> expectReleased(WeakReference<Signal<int>> signal) async {
+      if (!await _collectGarbage()) {
+        markTestSkipped('No VM service to run the garbage collector.');
+        return;
+      }
+      expect(signal.target, isNull);
+    }
+
+    test('a live effect releases a disposed signal', () async {
+      final (effect, signal) = _disposeTheSignalOfALiveEffect();
+      await expectReleased(signal);
+      expect(effect.disposed, isFalse);
+    });
+
+    test('a Computed releases an input it stopped reading', () async {
+      final (computed, signal) = _switchAComputedAway();
+      await expectReleased(signal);
+      expect(computed.value, 0);
+    });
+
+    test(
+      'a recovered Computed releases the inputs of its failed branch',
+      () async {
+        final (computed, signal) = _recoverAComputed();
+        await expectReleased(signal);
+        expect(computed.value, 7);
+      },
+    );
+
+    test('an observed Computed releases an input it stopped reading', () async {
+      final (effect, signal) = _switchAnObservedComputedAway();
+      await expectReleased(signal);
+      expect(effect.disposed, isFalse);
     });
   });
 
@@ -1017,6 +1191,74 @@ void main() {
       final computed = Computed<int>(() {
         effect.dispose();
         throw StateError('selector');
+      });
+
+      Object? thrown;
+      final zone = _runInZone(() {
+        try {
+          computed.run();
+        } catch (e) {
+          thrown = e;
+        }
+      });
+
+      expect(thrown, isA<SolidartCaughtException>());
+      expect(
+        _messageOf((thrown! as SolidartCaughtException).exception),
+        'selector',
+      );
+      expect(zone.reported.map(_messageOf), ['cleanup']);
+    });
+
+    // A Computed whose failed run stops its child effect. The disposal of the
+    // child dependency, at the end of the run, calls [recover].
+    Computed<int> buildRecoveringComputed(
+      void Function(Computed<int> computed, Signal<bool> fail) recover,
+    ) {
+      final fail = Signal(false);
+      final childDep = Signal(0, autoDispose: true);
+      late final Computed<int> computed;
+      computed = Computed(() {
+        if (fail.value) throw StateError('selector');
+        Effect(() => childDep.value);
+        return 1;
+      });
+      expect(computed.value, 1);
+      childDep.onDispose(() => recover(computed, fail));
+      fail.value = true;
+      return computed;
+    }
+
+    test('Computed.run keeps its selector error when a cleanup runs it '
+        'again', () {
+      final computed = buildRecoveringComputed((computed, fail) {
+        fail.value = false;
+        computed.run();
+      });
+
+      Object? thrown;
+      final zone = _runInZone(() {
+        try {
+          computed.run();
+        } catch (e) {
+          thrown = e;
+        }
+      });
+
+      expect(thrown, isA<SolidartCaughtException>());
+      expect(
+        _messageOf((thrown! as SolidartCaughtException).exception),
+        'selector',
+      );
+      expect(zone.reported, isEmpty);
+    });
+
+    test('Computed.run keeps its selector error when a cleanup reads it, then '
+        'throws', () {
+      final computed = buildRecoveringComputed((computed, fail) {
+        fail.value = false;
+        computed.value;
+        throw StateError('cleanup');
       });
 
       Object? thrown;

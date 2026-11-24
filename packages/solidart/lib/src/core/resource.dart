@@ -502,23 +502,30 @@ class Resource<T> extends Signal<ResourceState<T>> {
 
   @override
   void dispose() {
-    _streamSubscription?.cancel();
+    // Every step runs when one throws: the first error is rethrown, later
+    // ones go to the zone.
+    final subscription = _streamSubscription;
+    final subscriptions = _streamSubscriptions.toList();
+    final observation = _sourceDisposeObservation;
     _streamSubscription = null;
-    for (final sub in _streamSubscriptions) {
-      sub.cancel();
-    }
     _streamSubscriptions.clear();
-
-    _sourceDisposeObservation?.call();
     _broadcastStreams.clear();
-    _streamSubscriptions.clear();
-    // Dispose the source, if needed
-    if (source != null) {
-      if (source!.autoDispose && source!.listenerCount == 0) {
-        source!.dispose();
-      }
+    final errors = _FirstError()..run(() => subscription?.cancel());
+    for (final sub in subscriptions) {
+      errors.run(sub.cancel);
     }
-    super.dispose();
+    errors
+      ..run(() => observation?.call())
+      ..run(() {
+        // Dispose the source, if needed
+        if (source != null) {
+          if (source!.autoDispose && source!.listenerCount == 0) {
+            source!.dispose();
+          }
+        }
+      })
+      ..run(super.dispose)
+      ..rethrowIfAny();
   }
 
   @override
