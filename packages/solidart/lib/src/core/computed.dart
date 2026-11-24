@@ -173,19 +173,24 @@ class Computed<T> extends ReadSignal<T> {
   @override
   void dispose() {
     if (_disposed) return;
+    // Set first: unlinking a subscriber can offer this computed disposal.
+    _disposed = true;
     // Keep the reads of onDispose callbacks out of the running effect.
     untracked(_dispose);
   }
 
   void _dispose() {
+    // Like Effect.dispose, offer the inputs whatever this computed's own
+    // autoDispose is. Only an autoDispose computed records [_deps].
+    final dependencies = {..._inputs, ..._deps};
     final errors = _FirstError()..run(_internalComputed.dispose);
-    _disposed = true;
-    for (final dep in _deps) {
-      if (dep is _AlienSignal) errors.run(dep.parent._mayDispose);
-      if (dep is _AlienComputed) errors.run(dep.parent._mayDispose);
-    }
-
+    // Like Effect.dispose: the auto-disposal of the dependencies waits for the
+    // running batch, flush or evaluation, and yields to queued effects.
+    reactiveSystem
+      ..startBatch()
+      .._pendingDisposals.addAll(dependencies);
     _deps.clear();
+    errors.run(reactiveSystem.endBatch);
 
     for (final cb in _onDisposeCallbacks) {
       errors.run(cb);
@@ -194,7 +199,7 @@ class Computed<T> extends ReadSignal<T> {
 
     _listeners.dispose();
 
-    _notifySignalDisposal();
+    _notifySignalDisposal(errors);
     errors.rethrowIfAny();
   }
 
@@ -203,6 +208,9 @@ class Computed<T> extends ReadSignal<T> {
     if (_disposed) {
       return untrackedValue;
     }
+    // A read from the selector or comparator: return the stored value or
+    // candidate without evaluating again.
+    if (_evaluating && _initialized) return _untrackedValue;
 
     final T value;
     try {
@@ -210,7 +218,7 @@ class Computed<T> extends ReadSignal<T> {
     } on Object {
       // A failed evaluation also reads inputs: record them so dispose()
       // reaches them. Do not dispose here, so later reads rethrow the error.
-      if (autoDispose) _recordInputs();
+      _recordInputs(merge: true);
       rethrow;
     }
     // The first evaluation runs from get(), without didUpdate().
@@ -227,7 +235,8 @@ class Computed<T> extends ReadSignal<T> {
     if (!_notifyPending) return;
     _notifyPending = false;
     if (_notifiedOnce) {
-      _notifySignalUpdate();
+      // Observers must not subscribe the effect or computed that reads this.
+      untracked(_notifySignalUpdate);
     } else {
       _notifiedOnce = true;
       // The creation event had no value yet: send the first one.
@@ -281,13 +290,18 @@ class Computed<T> extends ReadSignal<T> {
         link.dep,
   ];
 
-  void _recordInputs([List<alien_system.ReactiveNode>? inputs]) {
-    _deps
-      ..clear()
-      ..addAll([
-        for (final input in inputs ?? _inputs)
-          if (input case alien.SignalNode() || alien.ComputedNode()) input,
-      ]);
+  /// Records the current inputs. A failed evaluation merges them into the
+  /// earlier ones, because the failure may have unlinked inputs that
+  /// dispose() must still reach.
+  void _recordInputs({
+    List<alien_system.ReactiveNode>? inputs,
+    bool merge = false,
+  }) {
+    if (!merge) _deps.clear();
+    _deps.addAll([
+      for (final input in inputs ?? _inputs)
+        if (input case alien.SignalNode() || alien.ComputedNode()) input,
+    ]);
   }
 
   @override
@@ -297,7 +311,7 @@ class Computed<T> extends ReadSignal<T> {
     if (inputs.isEmpty && _internalComputed.subs == null) {
       dispose();
     } else {
-      _recordInputs(inputs);
+      _recordInputs(inputs: inputs);
     }
   }
 
@@ -357,7 +371,17 @@ class Computed<T> extends ReadSignal<T> {
   /// However, in some cases, you may want to force an update.
   void run() {
     if (_disposed) return;
-    _internalComputed.didUpdate();
+    try {
+      reactiveSystem._evaluate(_internalComputed.didUpdate);
+    } catch (e, s) {
+      // The selector error has priority over an error from the cleanup that
+      // ends the evaluation.
+      if (!_hasError) rethrow;
+      Zone.current.handleUncaughtError(e, s);
+    } finally {
+      // Like a read: record the inputs so dispose() reaches them.
+      _recordInputs(merge: _error != null);
+    }
     final error = _error;
     if (error != null) Error.throwWithStackTrace(error, error.stackTrace!);
   }

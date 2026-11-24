@@ -496,5 +496,74 @@ void main() {
 
       expect(reported.map((r) => r.$1), [same(error)]);
     });
+
+    test('an observer that runs the Computed again during the update '
+        'notification does not hide the change from an effect', () {
+      var reran = false;
+      final observer = _ReadingObserver((c) {
+        if (reran) return;
+        reran = true;
+        c.run();
+      });
+      final source = Signal(0);
+      final c = Computed(() => source.value);
+      final seen = <int>[];
+
+      addTearDown(source.dispose);
+
+      final effect = Effect(() => seen.add(c.value));
+      addTearDown(effect.dispose);
+      SolidartConfig.observers.add(observer);
+      addTearDown(() => SolidartConfig.observers.remove(observer));
+
+      source.value = 1;
+      expect(seen, [0, 1]);
+    });
+
+    test('a signal that an observer reads during the update notification is '
+        'not a dependency of the effect that reads the Computed', () {
+      final source = Signal(0);
+      final audit = Signal(0);
+      final observer = _ReadingObserver((_) => audit.value);
+      final c = Computed(() => source.value);
+      var runs = 0;
+
+      addTearDown(source.dispose);
+      addTearDown(audit.dispose);
+
+      expect(c.value, 0);
+      source.value = 1;
+      SolidartConfig.observers.add(observer);
+      addTearDown(() => SolidartConfig.observers.remove(observer));
+      // The effect's read evaluates the Computed and notifies the observer.
+      final effect = Effect(() {
+        c.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+
+      audit.value = 1;
+      expect(runs, 1);
+    });
+
+    test('a comparator that reads value untracked sees the new value', () {
+      final s = Signal(1);
+      final seen = <int>[];
+      late final Computed<int> c;
+      c = Computed(
+        () => s.value,
+        comparator: (a, b) {
+          seen.add(untracked(() => c.value));
+          return a == b;
+        },
+      );
+
+      addTearDown(s.dispose);
+
+      expect(c.value, 1);
+      s.value = 2;
+      expect(c.value, 2);
+      expect(seen, [2]);
+    });
   });
 }
