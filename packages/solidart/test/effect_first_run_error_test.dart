@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:solidart/solidart.dart';
 import 'package:test/test.dart';
 
@@ -18,6 +20,40 @@ void main() {
 
       s.value = 1;
       expect(seen, isEmpty);
+    });
+
+    test('rethrows the original error when disposal also throws', () {
+      final setupError = StateError('setup');
+      final reported = <Object>[];
+      final s = Signal(0, autoDispose: true)
+        ..onDispose(() => throw StateError('cleanup'));
+
+      Object? thrown;
+      StackTrace? thrownStack;
+      StackTrace? setupStack;
+      runZonedGuarded(() {
+        try {
+          Effect(() {
+            s.value;
+            try {
+              throw setupError;
+            } catch (_, st) {
+              setupStack = st;
+              rethrow;
+            }
+          });
+        } catch (e, st) {
+          thrown = e;
+          thrownStack = st;
+        }
+      }, (error, _) => reported.add(error));
+
+      expect(thrown, same(setupError));
+      expect(setupStack, isNotNull);
+      expect(thrownStack.toString(), setupStack.toString());
+      expect(reported, hasLength(1));
+      expect(reported.single, isA<StateError>());
+      expect((reported.single as StateError).message, 'cleanup');
     });
 
     test('with onError stays alive', () {
