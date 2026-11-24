@@ -34,9 +34,11 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
       updating = false;
     }
     if (parent._hasError) return changed;
+    // Read before notifying: an observer may evaluate the computed again.
+    final result = hadError ? changed : !parent._equalsPrevious;
     // Committed: observers now read the new value, not the old error.
     parent._notifyEvaluated();
-    return hadError ? changed : !parent._equalsPrevious;
+    return result;
   }
 }
 

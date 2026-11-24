@@ -49,6 +49,80 @@ void main() {
       expect(disposals, 1);
     });
 
+    test('disposing an autoDispose Computed after a failed run() disposes '
+        'its autoDispose source', () {
+      final source = Signal(0, autoDispose: true);
+      final c = Computed<int>(() {
+        source.value;
+        throw StateError('selector');
+      }, autoDispose: true);
+
+      addTearDown(c.dispose);
+      addTearDown(source.dispose);
+
+      expect(c.run, throwsA(isA<SolidartCaughtException>()));
+      expect(source.disposed, isFalse);
+
+      c.dispose();
+
+      expect(source.disposed, isTrue);
+    });
+
+    for (final viaRun in [true, false]) {
+      test(
+        'disposing after a failed ${viaRun ? 'run()' : 'read'} that switches '
+        'branch disposes the earlier and the new autoDispose source',
+        () {
+          final useB = Signal(false);
+          final a = Signal(1, autoDispose: true);
+          final b = Signal(2, autoDispose: true);
+          var aDisposals = 0;
+          a.onDispose(() => aDisposals++);
+          final c = Computed<int>(() {
+            if (!useB.value) return a.value;
+            b.value;
+            throw StateError('b');
+          }, autoDispose: true);
+
+          addTearDown(c.dispose);
+          addTearDown(useB.dispose);
+          addTearDown(a.dispose);
+          addTearDown(b.dispose);
+
+          if (viaRun) {
+            c.run();
+          } else {
+            c.value;
+          }
+          useB.value = true;
+          expect(
+            viaRun ? c.run : () => c.value,
+            throwsA(isA<SolidartCaughtException>()),
+          );
+
+          c.dispose();
+
+          expect((a.disposed, b.disposed, aDisposals), (true, true, 1));
+        },
+      );
+    }
+
+    test('disposing an autoDispose Computed after a successful run() '
+        'disposes its autoDispose source', () {
+      final source = Signal(0, autoDispose: true);
+      final c = Computed(() => source.value, autoDispose: true);
+
+      addTearDown(c.dispose);
+      addTearDown(source.dispose);
+
+      c.run();
+      expect(source.disposed, isFalse);
+
+      c.dispose();
+
+      expect(source.disposed, isTrue);
+    });
+
     test('disposing the only effect of a failing autoDispose Computed '
         'disposes the Computed and its autoDispose source', () {
       final source = Signal(0, autoDispose: true);

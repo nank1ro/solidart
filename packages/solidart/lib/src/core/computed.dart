@@ -210,6 +210,9 @@ class Computed<T> extends ReadSignal<T> {
     if (_disposed) {
       return untrackedValue;
     }
+    // A read from the selector or comparator: return the stored value or
+    // candidate without evaluating again.
+    if (_evaluating && _initialized) return _untrackedValue;
 
     final T value;
     try {
@@ -217,7 +220,7 @@ class Computed<T> extends ReadSignal<T> {
     } on Object {
       // A failed evaluation also reads inputs: record them so dispose()
       // reaches them. Do not dispose here, so later reads rethrow the error.
-      if (autoDispose) _recordInputs();
+      _recordInputs(merge: true);
       rethrow;
     }
     // The first evaluation runs from get(), without didUpdate().
@@ -234,7 +237,8 @@ class Computed<T> extends ReadSignal<T> {
     if (!_notifyPending) return;
     _notifyPending = false;
     if (_notifiedOnce) {
-      _notifySignalUpdate();
+      // Observers must not subscribe the effect or computed that reads this.
+      untracked(_notifySignalUpdate);
     } else {
       _notifiedOnce = true;
       // The creation event had no value yet: send the first one.
@@ -290,13 +294,18 @@ class Computed<T> extends ReadSignal<T> {
         link.dep,
   ];
 
-  void _recordInputs([List<alien_system.ReactiveNode>? inputs]) {
-    _deps
-      ..clear()
-      ..addAll([
-        for (final input in inputs ?? _inputs)
-          if (input case alien.SignalNode() || alien.ComputedNode()) input,
-      ]);
+  /// Records the current inputs. A failed evaluation merges them into the
+  /// earlier ones, because the failure may have unlinked inputs that
+  /// dispose() must still reach.
+  void _recordInputs({
+    List<alien_system.ReactiveNode>? inputs,
+    bool merge = false,
+  }) {
+    if (!merge) _deps.clear();
+    _deps.addAll([
+      for (final input in inputs ?? _inputs)
+        if (input case alien.SignalNode() || alien.ComputedNode()) input,
+    ]);
   }
 
   @override
@@ -306,7 +315,7 @@ class Computed<T> extends ReadSignal<T> {
     if (inputs.isEmpty && _internalComputed.subs == null) {
       dispose();
     } else {
-      _recordInputs(inputs);
+      _recordInputs(inputs: inputs);
     }
   }
 
@@ -373,6 +382,9 @@ class Computed<T> extends ReadSignal<T> {
       // ends the evaluation.
       if (!_hasError) rethrow;
       Zone.current.handleUncaughtError(e, s);
+    } finally {
+      // Like a read: record the inputs so dispose() reaches them.
+      _recordInputs(merge: _error != null);
     }
     final error = _error;
     if (error != null) Error.throwWithStackTrace(error, error.stackTrace!);
