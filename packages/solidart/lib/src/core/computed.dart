@@ -409,9 +409,19 @@ class Computed<T> extends ReadSignal<T> {
       _recordInputs(merge: error != null);
     }
     if (changed) {
-      errors
-        ..run(() => reactiveSystem.notifySubscribers(_internalComputed))
-        ..rethrowIfAny();
+      if (error != null) {
+        // The caller must still get the selector error: a notification
+        // error goes to the zone.
+        try {
+          reactiveSystem.notifySubscribers(_internalComputed);
+        } catch (notifyError, notifyStackTrace) {
+          Zone.current.handleUncaughtError(notifyError, notifyStackTrace);
+        }
+      } else {
+        errors
+          ..run(() => reactiveSystem.notifySubscribers(_internalComputed))
+          ..rethrowIfAny();
+      }
     }
     final runError = error;
     if (runError != null) {
