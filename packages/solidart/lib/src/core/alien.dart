@@ -34,6 +34,9 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
       updating = false;
     }
     if (parent._hasError) return changed;
+    // A success replaces the recorded inputs, so the ones it no longer reads
+    // are not retained.
+    if (parent._deps.isNotEmpty) parent._recordInputs();
     // Read before notifying: an observer may evaluate the computed again.
     final result = hadError ? changed : !parent._equalsPrevious;
     // Committed: observers now read the new value, not the old error.
@@ -57,16 +60,11 @@ class _AlienEffect extends alien.EffectNode<void> {
   // alien_signals runs the cleanup before each rerun, and when it stops the
   // effect, for example because its parent effect is disposed or reruns. Only
   // a stop clears the flags, and then the solidart effect is disposed too.
+  // The stop runs inside a batch, a flush or a Computed evaluation. They
+  // defer the auto-disposal of the dependencies, so this disposal does not
+  // throw.
   void _cleanup() {
-    if (flags != alien_system.ReactiveFlags.none) return;
-    try {
-      parent.dispose();
-    } catch (error, stackTrace) {
-      // A throw here would stop alien_signals halfway through the stop. It
-      // happens when the stop runs outside a batch, so the disposal of the
-      // dependencies runs at once, for example for an effect in a Computed.
-      Zone.current.handleUncaughtError(error, stackTrace);
-    }
+    if (flags == alien_system.ReactiveFlags.none) parent.dispose();
   }
 
   @override

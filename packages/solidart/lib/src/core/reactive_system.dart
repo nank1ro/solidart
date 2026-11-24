@@ -40,8 +40,17 @@ extension MayDisposeDependencies on alien_system.ReactiveNode {
       final next = link.nextSub;
       final sub = link.sub;
       alien.unlink(link, sub);
-      if (sub is _AlienEffect) errors.run(sub.parent._mayDispose);
-      if (sub is _AlienComputed) errors.run(sub.parent._mayDispose);
+      // The saved dependencies of the subscriber must not retain this node.
+      if (sub is _AlienEffect) {
+        sub.parent
+          .._deps.remove(this)
+          .._runDeps.remove(this);
+        errors.run(sub.parent._mayDispose);
+      }
+      if (sub is _AlienComputed) {
+        sub.parent._deps.remove(this);
+        errors.run(sub.parent._mayDispose);
+      }
       link = next;
     }
     errors.rethrowIfAny();
@@ -206,6 +215,17 @@ class ReactiveSystem {
 
   void propagate(alien_system.Link link) {
     alien.propagate(link, alien.runDepth > 0);
+  }
+
+  /// Notifies the subscribers of [node] that its value changed outside a
+  /// propagation, as `trigger` does, and runs the queued effects.
+  void notifySubscribers(alien_system.ReactiveNode node) {
+    final subs = node.subs;
+    if (subs == null) return;
+    propagate(subs);
+    // The subscribers must update: [node] itself is no longer dirty.
+    alien.shallowPropagate(subs);
+    if (batchDepth == 0) flush();
   }
 
   bool _flushing = false;

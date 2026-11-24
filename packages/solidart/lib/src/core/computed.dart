@@ -183,19 +183,20 @@ class Computed<T> extends ReadSignal<T> {
     // Like Effect.dispose, offer the inputs whatever this computed's own
     // autoDispose is. Only an autoDispose computed records [_deps].
     final dependencies = {..._inputs, ..._deps};
-    final errors = _FirstError()..run(_internalComputed.dispose);
-    // Like Effect.dispose: the auto-disposal of the dependencies waits for the
-    // running batch, flush or evaluation, and yields to queued effects.
-    reactiveSystem
-      ..startBatch()
-      .._pendingDisposals.addAll(dependencies);
     _deps.clear();
-    errors.run(reactiveSystem.endBatch);
+    // Like Effect.dispose: the auto-disposal of the dependencies waits for the
+    // running batch, flush or evaluation, and yields to queued effects. The
+    // batch also holds back the dependencies of the child effects, so the
+    // onDispose callbacks can subscribe to them first.
+    reactiveSystem.startBatch();
+    final errors = _FirstError()..run(_internalComputed.dispose);
+    reactiveSystem._pendingDisposals.addAll(dependencies);
 
     for (final cb in _onDisposeCallbacks) {
       errors.run(cb);
     }
     _onDisposeCallbacks.clear();
+    errors.run(reactiveSystem.endBatch);
 
     _listeners.dispose();
 
@@ -208,9 +209,17 @@ class Computed<T> extends ReadSignal<T> {
     if (_disposed) {
       return untrackedValue;
     }
-    // A read from the selector or comparator: return the stored value or
-    // candidate without evaluating again.
-    if (_evaluating && _initialized) return _untrackedValue;
+    // A read while the selector or comparator runs: return the stored value
+    // or candidate without evaluating again.
+    if (_evaluating && _initialized) {
+      // Link another reader, such as an effect created by the selector, so it
+      // reruns on later changes. The computed's own reads stay unlinked.
+      final sub = reactiveSystem.activeSub;
+      if (sub != null && !identical(sub, _internalComputed)) {
+        reactiveSystem.link(_internalComputed, sub);
+      }
+      return _untrackedValue;
+    }
 
     final T value;
     try {
@@ -371,19 +380,30 @@ class Computed<T> extends ReadSignal<T> {
   /// However, in some cases, you may want to force an update.
   void run() {
     if (_disposed) return;
+    // The error of this run. The cleanup that ends the evaluation, or a
+    // subscriber notified below, can run this computed again and replace
+    // [_error].
+    SolidartCaughtException? error;
+    var changed = false;
     try {
-      reactiveSystem._evaluate(_internalComputed.didUpdate);
+      reactiveSystem._evaluate(() {
+        changed = _internalComputed.didUpdate();
+        error = _error;
+      });
     } catch (e, s) {
       // The selector error has priority over an error from the cleanup that
       // ends the evaluation.
-      if (!_hasError) rethrow;
+      if (error == null) rethrow;
       Zone.current.handleUncaughtError(e, s);
     } finally {
       // Like a read: record the inputs so dispose() reaches them.
-      _recordInputs(merge: _error != null);
+      _recordInputs(merge: error != null);
     }
-    final error = _error;
-    if (error != null) Error.throwWithStackTrace(error, error.stackTrace!);
+    if (changed) reactiveSystem.notifySubscribers(_internalComputed);
+    final runError = error;
+    if (runError != null) {
+      Error.throwWithStackTrace(runError, runError.stackTrace!);
+    }
   }
 
   @override
