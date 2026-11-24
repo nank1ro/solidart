@@ -146,12 +146,10 @@ class ReadableSignal<T> implements ReadSignal<T> {
 
   late T _untrackedValue;
 
-  T? _untrackedPreviousValue;
-
   /// Returns the untracked previous value of the signal.
   @override
   T? get untrackedPreviousValue {
-    return _untrackedPreviousValue;
+    return _previousValue;
   }
 
   /// Returns the value without triggering the reactive system.
@@ -166,7 +164,6 @@ class ReadableSignal<T> implements ReadSignal<T> {
   }
 
   set _value(T newValue) {
-    _untrackedPreviousValue = _untrackedValue;
     _untrackedValue = newValue;
     reactiveSystem.setSignalValue(_internalSignal, Some(newValue));
   }

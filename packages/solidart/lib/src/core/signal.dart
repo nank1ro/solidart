@@ -175,5 +175,5 @@ class Signal<T> extends ReadableSignal<T> implements ValueNotifier<T> {
 
   @override
   String toString() =>
-      '''Signal<$T>(value: $_untrackedValue, previousValue: $_untrackedPreviousValue)''';
+      '''Signal<$T>(value: $_untrackedValue, previousValue: $_previousValue)''';
 }
