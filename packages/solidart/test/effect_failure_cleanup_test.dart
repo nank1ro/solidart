@@ -878,6 +878,28 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 80));
       expect(runs, 2);
     });
+
+    test('keeps every dependency linked while its timer is pending', () async {
+      final first = Signal(1, autoDispose: true);
+      final second = Signal(1, autoDispose: true);
+      var runs = 0;
+      final effect = Effect(() {
+        first.value;
+        second.value;
+        runs++;
+      }, delay: delay);
+      addTearDown(effect.dispose);
+      await afterDelay();
+      expect(runs, 1);
+
+      first.value = 2;
+      effect.dispose();
+      await afterDelay();
+
+      expect(first.disposed, isTrue);
+      expect(second.disposed, isTrue);
+      expect(runs, 1);
+    });
   });
 
   group('cleanup inside a running effect', () {
@@ -955,6 +977,39 @@ void main() {
   });
 
   group('error priority', () {
+    test('a disposal error after a queued effect error goes to the zone', () {
+      final trigger = Signal(0);
+      addTearDown(trigger.dispose);
+      final childDep = Signal(0, autoDispose: true)
+        ..onDispose(() => throw StateError('disposal'));
+      var created = 0;
+      final parent = Effect(() {
+        trigger.value;
+        if (created++ == 0) Effect(() => childDep.value);
+      });
+      addTearDown(parent.dispose);
+      var armed = false;
+      final thrower = Effect(() {
+        trigger.value;
+        if (armed) throw StateError('effect');
+      });
+      addTearDown(thrower.dispose);
+      armed = true;
+
+      Object? thrown;
+      final zone = _runInZone(() {
+        try {
+          trigger.value = 1;
+        } catch (e) {
+          thrown = e;
+        }
+      });
+
+      expect(_messageOf(thrown), 'effect');
+      expect(zone.reported.map(_messageOf), ['disposal']);
+      expect(childDep.disposed, isTrue);
+    });
+
     test('Computed.run rethrows the selector error over a cleanup error', () {
       final source = Signal(0, autoDispose: true)
         ..onDispose(() => throw StateError('cleanup'));
