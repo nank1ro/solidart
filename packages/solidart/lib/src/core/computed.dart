@@ -393,9 +393,9 @@ class Computed<T> extends ReadSignal<T> {
   /// However, in some cases, you may want to force an update.
   void run() {
     if (_disposed) return;
-    // The error of this run. The cleanup that ends the evaluation, or a
-    // subscriber notified below, can run this computed again and replace
-    // [_error].
+    // The error of this run. The cleanup that ends the evaluation, a
+    // subscriber notified below, or an observer can run this computed again
+    // and replace [_error].
     SolidartCaughtException? error;
     var changed = false;
     // A cleanup error after a committed change, rethrown after the
@@ -403,8 +403,7 @@ class Computed<T> extends ReadSignal<T> {
     final errors = _FirstError();
     try {
       reactiveSystem._evaluate(() {
-        changed = _internalComputed.didUpdate();
-        error = _error;
+        (:changed, :error) = _internalComputed.update();
       });
     } catch (e, s) {
       // The selector error has priority over an error from the cleanup that
