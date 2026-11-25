@@ -86,8 +86,9 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   ///
   /// If the collection changed, even when [mutation] throws, updates the
   /// previous value and notifies once. A point write saves [undo] until
-  /// a reader asks for history. If that write throws after a change, the
-  /// signal drops history because [undo] describes a completed write.
+  /// a reader asks for history. If that write throws after a change, or a
+  /// write through the signal runs inside it, the signal drops history,
+  /// because [undo] describes only one completed write.
   /// A [_mutate] inside [mutation] on the same collection does not notify:
   /// this one notifies once for both. If [mutation] assigns a new
   /// collection, the assignment notifies, so this one does not.
@@ -144,9 +145,12 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
       _nestedChanged |= changed;
     } else if (changed) {
       if (undo != null && trackPreviousValue) {
+        // After an error or a nested write through the signal, [undo] no
+        // longer describes the change, so keep no previous value.
+        final exact = !errors.hasError && !nestedChanged;
         _storedPreviousValue = null;
-        _hasPreviousValue = !errors.hasError;
-        _pendingUndo = errors.hasError ? null : undo;
+        _hasPreviousValue = exact;
+        _pendingUndo = exact ? undo : null;
       } else if (previous != null) {
         _setPreviousValue(previous);
       }

@@ -209,6 +209,64 @@ class _FixedLengthList extends ListBase<int> {
   void operator []=(int index, int value) => _elements[index] = value;
 }
 
+/// A list whose slot write runs [onWrite] once after it writes.
+class _ReentrantList extends ListBase<int> {
+  _ReentrantList(this._elements);
+
+  final List<int> _elements;
+  void Function()? onWrite;
+
+  @override
+  int get length => _elements.length;
+
+  @override
+  set length(int newLength) => _elements.length = newLength;
+
+  @override
+  int operator [](int index) => _elements[index];
+
+  @override
+  void operator []=(int index, int value) {
+    _elements[index] = value;
+    final callback = onWrite;
+    onWrite = null;
+    callback?.call();
+  }
+}
+
+/// A set whose add runs [onAdd] once after it adds.
+class _ReentrantSet extends SetBase<int> {
+  final Set<int> _elements = {};
+  void Function()? onAdd;
+
+  @override
+  bool add(int value) {
+    final added = _elements.add(value);
+    final callback = onAdd;
+    onAdd = null;
+    callback?.call();
+    return added;
+  }
+
+  @override
+  bool contains(Object? element) => _elements.contains(element);
+
+  @override
+  Iterator<int> get iterator => _elements.iterator;
+
+  @override
+  int get length => _elements.length;
+
+  @override
+  int? lookup(Object? element) => _elements.lookup(element);
+
+  @override
+  bool remove(Object? value) => _elements.remove(value);
+
+  @override
+  Set<int> toSet() => _elements.toSet();
+}
+
 void main() {
   group('bulk mutation cost', () {
     final listWrites = <String, void Function(List<int>)>{
@@ -265,6 +323,40 @@ void main() {
   });
 
   group('lazy collection history', () {
+    test('a lazy list write that writes through the signal keeps no '
+        'previous value', () {
+      final backing = _ReentrantList([1, 2]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      var calls = 0;
+      s.addListener(() => calls++);
+      backing.onWrite = () => s[1] = 8;
+
+      s[0] = 9;
+
+      expect(s.untrackedValue, [9, 8]);
+      expect(calls, 1);
+      expect(s.untrackedHasPreviousValue, isFalse);
+      expect(s.untrackedPreviousValue, isNull);
+    });
+
+    test('a lazy set add that adds through the signal keeps no previous '
+        'value', () {
+      final backing = _ReentrantSet();
+      final s = SetSignal<int>({})..value = backing;
+      addTearDown(s.dispose);
+      var calls = 0;
+      s.addListener(() => calls++);
+      backing.onAdd = () => s.add(2);
+
+      s.add(1);
+
+      expect(s.untrackedValue, {1, 2});
+      expect(calls, 1);
+      expect(s.untrackedHasPreviousValue, isFalse);
+      expect(s.untrackedPreviousValue, isNull);
+    });
+
     final writes = <String, void Function(ListSignal<int>)>{
       'slot': (s) => s[40] = -1,
       'first': (s) => s.first = -1,
