@@ -607,7 +607,11 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   E removeLast() {
-    return _resizeAt(_untrackedValue.length - 1, (list) => list.removeLast());
+    return _resizeAt(
+      _untrackedValue.length - 1,
+      (list) => list.removeLast(),
+      last: true,
+    );
   }
 
   /// Removes a range of elements from the list.
@@ -851,34 +855,50 @@ class ListSignal<E> extends Signal<List<E>>
   R _resize<R>(R Function(List<E>) write) =>
       _mutate(write, failedResizeChanged: _elementsDiffer);
 
+  /// Set [last] when [index] is the last slot, so the slot is read with
+  /// `last`, which a sequential backing list reads in O(1).
   R _resizeAt<R>(
     int index,
     R Function(List<E>) write, {
     bool inserting = false,
+    bool last = false,
   }) {
     if (!trackPreviousValue) return _mutate(write);
     final list = _untrackedValue;
     final valid = index >= 0 && index < list.length;
-    final old = valid ? _readSlot(list, index) : null;
+    Object? read() => last ? _readLast(list) : _readSlot(list, index);
+    final old = valid ? read() : null;
     return _mutate(
       write,
       undo: inserting
-          ? (list) => _copyPrevious(list)..removeAt(index)
-          // Build the list at its final length in one pass: a copy and then
-          // an insert can grow the backing array to twice its size.
-          : (list) => List<E>.generate(
-              list.length + 1,
-              (i) => i < index
-                  ? list[i]
-                  : i == index
-                  ? old as E
-                  : list[i - 1],
-            ),
+          ? (list) => _withoutSlot(list, index)
+          : (list) => _withElementAt(list, index, old as E),
       failedSlotChanged: () =>
-          valid &&
-          list is! TypedData &&
-          !identical(old, _readSlot(list, index)),
+          valid && list is! TypedData && !identical(old, read()),
     );
+  }
+
+  /// [list] with [element] back at [index]. It is built at its final length
+  /// in one pass over one iterator: a copy and then an insert can grow the
+  /// backing array to twice its size, and indexed reads can be slow.
+  List<E> _withElementAt(List<E> list, int index, E element) {
+    final elements = list.iterator;
+    // `List.generate` calls its generator in increasing index order.
+    return List<E>.generate(list.length + 1, (i) {
+      if (i == index) return element;
+      elements.moveNext();
+      return elements.current;
+    });
+  }
+
+  /// [list] without the slot at [index], built like [_withElementAt].
+  List<E> _withoutSlot(List<E> list, int index) {
+    final elements = list.iterator;
+    return List<E>.generate(list.length - 1, (i) {
+      elements.moveNext();
+      if (i == index) elements.moveNext();
+      return elements.current;
+    });
   }
 
   // A cast view can reject a read even when the backing write is valid.
@@ -887,6 +907,14 @@ class ListSignal<E> extends Signal<List<E>>
   Object? _readSlot(List<E> list, int index) {
     try {
       return list[index];
+    } on Object {
+      return _unreadable;
+    }
+  }
+
+  Object? _readLast(List<E> list) {
+    try {
+      return list.last;
     } on Object {
       return _unreadable;
     }

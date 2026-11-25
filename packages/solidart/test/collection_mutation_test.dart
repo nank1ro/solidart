@@ -404,20 +404,32 @@ void main() {
       final dependency = Signal(0);
       addTearDown(dependency.dispose);
       var fail = false;
+      var hashes = 0;
       final key = _HashKey(() {
+        hashes++;
         dependency.value;
         if (fail) throw StateError('hash');
         return 1;
       });
-      final s = MapSignal({key: 1})..[key] = 2;
+      final s = MapSignal<Object, int>({key: 0});
       addTearDown(s.dispose);
+      hashes = 0;
+      // A new value key is lazy, so the write copies nothing.
+      s['b'] = 1;
+      expect(hashes, 0);
       fail = true;
-      expect(() => s.previousValue, throwsStateError);
+      // A void closure: the matcher must not hash a returned map itself.
+      expect(() {
+        s.previousValue;
+      }, throwsStateError);
       fail = false;
       var runs = 0;
       final effect = Effect(() {
         runs++;
-        expect(s.untrackedPreviousValue!.values.single, 1);
+        final previous = s.untrackedPreviousValue!;
+        expect(previous.length, 1);
+        expect(identical(previous.keys.single, key), isTrue);
+        expect(previous.values.single, 0);
       });
       addTearDown(effect.dispose);
       dependency.value++;
@@ -646,6 +658,86 @@ void main() {
         expect(w.effectReruns, 1);
       });
     }
+
+    test('a sort with a caught nested failed resize does not notify', () {
+      final s = ListSignal(List.generate(63, (i) => i))..add(63);
+      addTearDown(s.dispose);
+      final w = _Watch<List<int>>(s, List.of);
+      s.sort((a, b) {
+        expect(() => s.removeRange(-1, 0), throwsRangeError);
+        return a.compareTo(b);
+      });
+      expect(s.value, List.generate(64, (i) => i));
+      expect(w.calls, isEmpty);
+      expect(w.effectReruns, 0);
+      expect(s.previousValue, List.generate(63, (i) => i));
+    });
+
+    test('removeLast on a cast list with an unreadable last element', () {
+      final s = ListSignal<int>([])..value = <Object>[1, 'x'].cast<int>();
+      addTearDown(s.dispose);
+      final w = _Watch<List<int>>(s, List.of);
+      expect(s.removeLast, throwsA(isA<TypeError>()));
+      expect(s.value, [1]);
+      expect(w.effectReruns, 1);
+      expect(s.hasPreviousValue, isFalse);
+    });
+
+    test('removeLast saves its history without an indexed read', () {
+      final backing = _SequentialList([1, 2, 3]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      backing.reads = 0;
+      expect(s.removeLast(), 3);
+      expect(backing.reads, 0);
+      expect(s.previousValue, [1, 2, 3]);
+    });
+
+    for (final (name, write, expected)
+        in <(String, void Function(ListSignal<int>), List<int>)>[
+          ('removeAt(0)', (s) => s.removeAt(0), [1, 2, 3, 4]),
+          ('removeAt(2)', (s) => s.removeAt(2), [1, 2, 3, 4]),
+          ('removeAt(3)', (s) => s.removeAt(3), [1, 2, 3, 4]),
+          ('removeLast', (s) => s.removeLast(), [1, 2, 3, 4]),
+          ('insert(0)', (s) => s.insert(0, 9), [1, 2, 3, 4]),
+          ('insert(2)', (s) => s.insert(2, 9), [1, 2, 3, 4]),
+          ('insert(4)', (s) => s.insert(4, 9), [1, 2, 3, 4]),
+        ]) {
+      test('the first history read after $name reads the list once', () {
+        final backing = _SequentialList([1, 2, 3, 4]);
+        final s = ListSignal<int>([])..value = backing;
+        addTearDown(s.dispose);
+        write(s);
+        backing.reads = 0;
+        final previous = s.previousValue!;
+        expect(previous, expected);
+        expect(backing.reads, 0);
+        previous.add(5);
+        expect(previous, [...expected, 5]);
+      });
+    }
+
+    test('a lazy insert builds history without the new entry', () {
+      final map = MapSignal({'a': 1, 'b': 2})..['c'] = 3;
+      addTearDown(map.dispose);
+      expect(map.previousValue, {'a': 1, 'b': 2});
+      expect(map.previousValue!.keys, ['a', 'b']);
+      final set = SetSignal({1, 2})..add(3);
+      addTearDown(set.dispose);
+      expect(set.previousValue, {1, 2});
+      expect(set.previousValue!.toList(), [1, 2]);
+      final custom = SetSignal<String>({})
+        ..value = LinkedHashSet<String>(
+          equals: (a, b) => a.toLowerCase() == b.toLowerCase(),
+          hashCode: (a) => a.toLowerCase().hashCode,
+        )
+        ..add('A')
+        ..add('b');
+      addTearDown(custom.dispose);
+      final previous = custom.previousValue!;
+      expect(previous, {'A'});
+      expect(previous.contains('a'), isTrue);
+    });
 
     test('a rejected typed list slot write keeps its history', () {
       final s = ListSignal<Float32x4>([])
@@ -2856,4 +2948,44 @@ class _MutableKey {
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   int get hashCode => id.hashCode;
+}
+
+/// A list whose `[]` counts reads. `last`, `removeLast`, `removeAt`,
+/// `insert` and `iterator` do not use `[]`, like a sequential backing.
+class _SequentialList extends ListBase<int> {
+  _SequentialList(List<int> elements) : _elements = List.of(elements);
+
+  final List<int> _elements;
+
+  int reads = 0;
+
+  @override
+  int get length => _elements.length;
+
+  @override
+  set length(int newLength) => _elements.length = newLength;
+
+  @override
+  int operator [](int index) {
+    reads++;
+    return _elements[index];
+  }
+
+  @override
+  void operator []=(int index, int value) => _elements[index] = value;
+
+  @override
+  int get last => _elements.last;
+
+  @override
+  int removeLast() => _elements.removeLast();
+
+  @override
+  int removeAt(int index) => _elements.removeAt(index);
+
+  @override
+  void insert(int index, int element) => _elements.insert(index, element);
+
+  @override
+  Iterator<int> get iterator => _elements.iterator;
 }

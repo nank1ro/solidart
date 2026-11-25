@@ -61,6 +61,11 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// collection.
   bool _nestedChanged = false;
 
+  /// The check of a nested list resize that threw. The outermost [_mutate]
+  /// runs it with its history copy when it ends, because the collection can
+  /// be in the middle of a change (for example a `sort`) while it runs.
+  bool Function(C, C)? _nestedResizeCheck;
+
   @override
   C setValue(C newValue) {
     final old = _untrackedValue;
@@ -97,7 +102,8 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// bounded writes or [bulkCheck] for a full comparison. A list mutation
   /// that can change the length can also move elements and then throw.
   /// In that case, [failedResizeChanged] compares the elements with the
-  /// history copy, if one exists.
+  /// history copy, if one exists. A nested mutation leaves that check to the
+  /// outermost one, which runs it on the final collection.
   ///
   /// The error of [mutation] wins over an error of the notification, which
   /// goes to the current [Zone].
@@ -119,30 +125,37 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     final check = slotChanged ?? bulkCheck?.call(collection, previous);
     final outerChanged = _nestedChanged;
     final outerPrevious = _mutatingPrevious;
+    final outerResizeCheck = _nestedResizeCheck;
     _nestedChanged = false;
+    _nestedResizeCheck = null;
     _mutating = collection;
     if (!nested) _mutatingPrevious = previous;
     late final R result;
     final errors = _FirstError()..run(() => result = mutation(collection));
     final nestedChanged = _nestedChanged;
+    final nestedResizeCheck = _nestedResizeCheck;
     _mutating = outer;
     _mutatingPrevious = outerPrevious;
     _nestedChanged = outerChanged;
+    _nestedResizeCheck = outerResizeCheck;
+    final resizeCheck =
+        (errors.hasError ? failedResizeChanged : null) ?? nestedResizeCheck;
     var changed = false;
     errors.run(() {
       if (!identical(_untrackedValue, collection)) return;
       final slotCheck = errors.hasError ? failedSlotChanged ?? check : check;
-      final resizeSnapshot = nested ? outerPrevious : previous;
       changed =
           nestedChanged ||
           length != _lengthOf(collection) ||
           (slotCheck?.call() ?? false) ||
-          (errors.hasError &&
-              resizeSnapshot != null &&
-              (failedResizeChanged?.call(collection, resizeSnapshot) ?? false));
+          (!nested &&
+              previous != null &&
+              (resizeCheck?.call(collection, previous) ?? false));
     });
     if (nested) {
       _nestedChanged |= changed;
+      // Leave a failed resize to the outermost mutation that has a copy.
+      if (outerPrevious != null) _nestedResizeCheck ??= resizeCheck;
     } else if (changed) {
       if (undo != null && trackPreviousValue) {
         // After an error or a nested write through the signal, [undo] no

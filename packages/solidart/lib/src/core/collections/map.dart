@@ -94,12 +94,13 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       slotChanged: () => !identical(old, map[key]),
       undo: lazy
           ? (map) {
-              final copy = _copyPrevious(map);
-              if (present) {
-                copy[key] = old as V;
-              } else {
-                copy.remove(key);
-              }
+              if (present) return _copyPrevious(map)..[key] = old as V;
+              // Build the map without the new key. A copy of the map would
+              // be sized for a table that may have grown for that key.
+              final copy = <K, V>{};
+              map.forEach((k, v) {
+                if (!identical(k, key)) copy[k] = v;
+              });
               return copy;
             }
           : null,

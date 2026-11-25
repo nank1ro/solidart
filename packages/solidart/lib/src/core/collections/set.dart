@@ -80,12 +80,31 @@ class SetSignal<E> extends Signal<Set<E>>
   /// ```
   @override
   bool add(E value) {
+    final set = _untrackedValue;
     return _mutateUnless(
-      _untrackedValue.contains(value),
+      set.contains(value),
       (set) => set.add(value),
       // NaN is not equal to itself, so `remove` cannot undo it.
-      undo: _isNaN(value) ? null : (set) => _copyPrevious(set)..remove(value),
+      undo: _isNaN(value)
+          ? null
+          : set.runtimeType == _defaultSetType
+          ? (set) => _without(set, value)
+          : (set) => _copyPrevious(set)..remove(value),
     );
+  }
+
+  // A default set has the same equality as a new `<E>{}`. Its type
+  // arguments must match the signal's.
+  late final Type _defaultSetType = <E>{}.runtimeType;
+
+  /// [set] without [element], the new element that `add` stored. A copy of
+  /// the set would be sized for a table that may have grown for it.
+  Set<E> _without(Set<E> set, E element) {
+    final copy = <E>{};
+    for (final other in set) {
+      if (!identical(other, element)) copy.add(other);
+    }
+    return copy;
   }
 
   /// Adds all [elements] to this set.
