@@ -160,14 +160,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// print(numbers); // [1, 2, 3, 4]
   /// ```
   @override
-  void add(E element) {
-    _mutate(
-      (list) => list.add(element),
-      undo: trackPreviousValue
-          ? (list) => _copyPrevious(list)..removeLast()
-          : null,
-    );
-  }
+  void add(E element) => _append((list) => list.add(element));
 
   /// Appends all objects of [iterable] to the end of this list.
   ///
@@ -499,29 +492,43 @@ class ListSignal<E> extends Signal<List<E>>
       // For an invalid range, the backing list throws its own error.
       return list.fillRange(start, end, fillValue);
     }
-    // A list can convert the value on write (a Uint8List stores 256 as 0),
-    // so compare the slots with each other, not with [fillValue].
-    final first = _readSlot(list, start);
-    var allSame = true;
-    for (var i = start + 1; allSame && i < end; i++) {
-      allSame = identical(_readSlot(list, i), first);
+    // Find the first slot that the fill changes. A list can convert the
+    // value on write (a Uint8List stores 256 as 0), so compare with the
+    // value it will store, not with [fillValue].
+    final stored = _storedValue(list, start, fillValue);
+    var index = start;
+    Object? old;
+    while (index < end && identical(old = _readSlot(list, index), stored)) {
+      index++;
     }
-    // Every slot already holds the fill value, so nothing changes.
-    if (allSame && identical(first, fillValue)) {
-      return list.fillRange(start, end, fillValue);
-    }
+    // Without such a slot, the call changes nothing, so it needs no copy.
+    if (index == end) return list.fillRange(start, end, fillValue);
     _mutate(
       (list) => list.fillRange(start, end, fillValue),
-      // After a fill, every slot of the range holds the same value. So if
-      // the slots differed before, a slot changed.
-      slotChanged: () => !(allSame && identical(first, _readSlot(list, start))),
-      // A fill writes from [start] in order, and a built-in list rejects
-      // the call before it writes. A typed list rejects it before it
-      // writes too, and reading a SIMD slot again boxes a new object.
-      failedSlotChanged: list is TypedData
-          ? () => false
-          : () => !identical(first, _readSlot(list, start)),
+      // With history, compare the range with the copy. That is exact also
+      // for a view that converts the value (a cast of a typed list), whose
+      // stored value cannot be found from a one-slot copy.
+      bulkCheck: (list, previous) => previous == null
+          ? () => !identical(old, _readSlot(list, index))
+          : () => _rangeChanged(list, start, end - start, previous, start),
+      // A typed list rejects a fill before it writes, and reading a SIMD
+      // slot again boxes a new object.
+      failedSlotChanged: list is TypedData ? () => false : null,
     );
+  }
+
+  /// The value that [list] stores when [value] is written at [index]. A
+  /// default list stores [value] itself. Another list can convert it, so it
+  /// is written to a one-slot copy and read back.
+  Object? _storedValue(List<E> list, int index, E? value) {
+    if (list.runtimeType == _defaultListType) return value;
+    try {
+      final probe = list.sublist(index, index + 1);
+      probe[0] = value as E;
+      return probe[0];
+    } on Object {
+      return value;
+    }
   }
 
   /// Inserts [element] at position [index] in this list.
@@ -540,6 +547,11 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void insert(int index, E element) {
+    final list = _untrackedValue;
+    // At the end, an insert is an add, so it can use the cheaper undo step.
+    if (index == list.length && list.runtimeType == _defaultListType) {
+      return _append((list) => list.insert(index, element));
+    }
     _resizeAt(index, (list) => list.insert(index, element), inserting: true);
   }
 
@@ -859,6 +871,17 @@ class ListSignal<E> extends Signal<List<E>>
 
   bool _elementsDiffer(List<E> list, List<E> before) =>
       !const ListEquality<Object?>(IdentityEquality()).equals(before, list);
+
+  /// Runs [write], which adds one element at the end, with the undo step
+  /// that removes it. Private, so an override of [add] is not called.
+  void _append(void Function(List<E>) write) {
+    _mutate(
+      write,
+      undo: trackPreviousValue
+          ? (list) => _copyPrevious(list)..removeLast()
+          : null,
+    );
+  }
 
   R _resize<R>(R Function(List<E>) write) =>
       _mutate(write, failedResizeChanged: _elementsDiffer);

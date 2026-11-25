@@ -953,8 +953,9 @@ void main() {
       addTearDown(s.dispose);
       backing.reads = 0;
       s.fillRange(0, 3, 1);
-      // The three slots once, one copy for the previous value, then one slot.
-      expect(backing.reads, lessThanOrEqualTo(104));
+      // One slot for the stored value, the first slot of the range, one copy
+      // for the previous value, then that slot again.
+      expect(backing.reads, lessThanOrEqualTo(103));
     });
   });
 
@@ -2861,8 +2862,9 @@ void main() {
 
       s.fillRange(0, 100, 7);
 
-      // The range once before the write, and one slot after it.
-      expect(backing.reads, lessThanOrEqualTo(101));
+      // One slot to learn the stored value, the first slot of the range,
+      // and that slot again after the write.
+      expect(backing.reads, lessThanOrEqualTo(3));
       expect(s.untrackedValue, List.filled(100, 7));
       expect(runs, 2);
     });
@@ -2901,9 +2903,67 @@ void main() {
 
       s.fillRange(0, 3, 0);
 
-      // Only the three slots of the range are read: no copy of the list.
-      expect(backing.reads, lessThanOrEqualTo(3));
+      // One slot for the stored value and the three slots of the range: no
+      // copy of the list.
+      expect(backing.reads, lessThanOrEqualTo(4));
       expect(runs, 1);
+    });
+  });
+
+  group('adversarial round 5', () {
+    test('insert at the end does not call an overridden add', () {
+      final s = _InsertingAddList([1, 2]);
+      addTearDown(s.dispose);
+      var calls = 0;
+      s
+        ..addListener(() => calls++)
+        ..insert(2, 3);
+
+      expect(s.addCalls, 0);
+      expect(calls, 1);
+      expect(s.untrackedValue, [1, 2, 3]);
+      expect(s.untrackedPreviousValue, [1, 2]);
+    });
+
+    test('a rejected fill of an unmodifiable list reads a constant number '
+        'of slots', () {
+      final backing = _CountingList(100);
+      final s = ListSignal<int>([], trackPreviousValue: false)
+        ..value = UnmodifiableListView(backing);
+      addTearDown(s.dispose);
+      var calls = 0;
+      s.addListener(() => calls++);
+      backing.reads = 0;
+
+      expect(() => s.fillRange(0, 100, 1), throwsUnsupportedError);
+
+      expect(backing.reads, lessThanOrEqualTo(3));
+      expect(calls, 0);
+    });
+
+    test('a rejected fill of an unmodifiable typed list does not notify', () {
+      final s = ListSignal<int>([], trackPreviousValue: false)
+        ..value = Uint8List(100).asUnmodifiableView();
+      addTearDown(s.dispose);
+      var calls = 0;
+      s.addListener(() => calls++);
+
+      expect(() => s.fillRange(0, 100, 1), throwsUnsupportedError);
+
+      expect(calls, 0);
+      expect(s.untrackedValue, List.filled(100, 0));
+    });
+
+    test('insert at the end keeps exact history', () {
+      final s = ListSignal([1, 2, 3]);
+      addTearDown(s.dispose);
+
+      s.insert(3, 4);
+
+      expect(s.untrackedValue, [1, 2, 3, 4]);
+      expect(s.untrackedPreviousValue, [1, 2, 3]);
+      s.insert(0, 0);
+      expect(s.untrackedPreviousValue, [1, 2, 3, 4]);
     });
   });
 
@@ -3156,4 +3216,17 @@ class _SequentialList extends ListBase<int> {
 
   @override
   Iterator<int> get iterator => _elements.iterator;
+}
+
+/// A list signal whose `add` is written with `insert` at the end.
+class _InsertingAddList extends ListSignal<int> {
+  _InsertingAddList(super.initialValue);
+
+  int addCalls = 0;
+
+  @override
+  void add(int element) {
+    addCalls++;
+    insert(length, element);
+  }
 }
