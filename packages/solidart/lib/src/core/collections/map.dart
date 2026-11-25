@@ -252,12 +252,9 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     if (_isEmptyCollection(newEntries)) {
       return _untrackedValue.addEntries(newEntries);
     }
-    // Only a list or a set can be read twice: other iterables can run code
-    // each time.
-    final keys = newEntries is List || newEntries is Set
-        ? _keysOf(() => [for (final entry in newEntries) entry.key])
-        : null;
-    _writeKeys(keys, (map) => map.addEntries(newEntries));
+    // Even a list can run code each time it is read (for example a view
+    // over a lazy iterable), so read [newEntries] only once.
+    _mutate((map) => map.addEntries(newEntries), bulkCheck: _bulkChangeCheck);
   }
 
   /// Adds all key/value pairs of [other] to this map.

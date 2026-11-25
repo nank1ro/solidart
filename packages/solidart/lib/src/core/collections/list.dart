@@ -654,8 +654,12 @@ class ListSignal<E> extends Signal<List<E>>
   /// [setRange] instead.
   @override
   void replaceRange(int start, int end, Iterable<E> replacements) {
-    if (start == end && _isEmptyCollection(replacements)) {
-      return _untrackedValue.replaceRange(start, end, replacements);
+    if (_isEmptyCollection(replacements)) {
+      if (start == end) {
+        return _untrackedValue.replaceRange(start, end, replacements);
+      }
+      // It only removes, so the length tells whether it changed the list.
+      return _resize((list) => list.replaceRange(start, end, replacements));
     }
     _writeRange(
       start,
@@ -862,7 +866,9 @@ class ListSignal<E> extends Signal<List<E>>
     _mutate(
       write,
       bulkCheck: (list, previous) {
-        final count = start >= 0 && end <= list.length ? end - start : 0;
+        final count = 0 <= start && start <= end && end <= list.length
+            ? end - start
+            : 0;
         if (previous != null) {
           return () => _rangeChanged(list, start, count, previous, start);
         }

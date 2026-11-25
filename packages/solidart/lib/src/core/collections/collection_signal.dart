@@ -101,7 +101,10 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
       _nestedChanged |= changed;
     } else if (changed) {
       if (previous != null) errors.run(() => _setPreviousValue(previous));
-      errors.run(_notifyChanged);
+      // Separate steps, so a throwing effect does not skip the observers.
+      errors
+        ..run(_reportChanged)
+        ..run(_notifySignalUpdate);
     }
     errors.rethrowIfAny();
     return result;
@@ -118,9 +121,4 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   }) => unchanged
       ? mutation(_untrackedValue)
       : _mutate(mutation, bulkCheck: bulkCheck, slotChanged: slotChanged);
-
-  void _notifyChanged() {
-    _reportChanged();
-    _notifySignalUpdate();
-  }
 }

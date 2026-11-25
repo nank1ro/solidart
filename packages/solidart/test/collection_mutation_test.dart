@@ -301,7 +301,6 @@ void main() {
       'putIfAbsent of a missing key': (s) => s.putIfAbsent(100, () => -1),
       'addAll that keeps the value': (s) => s.addAll({50: 50}),
       'addAll that changes a value': (s) => s.addAll({50: -1}),
-      'addEntries from a list': (s) => s.addEntries([const MapEntry(50, -1)]),
     };
     for (final MapEntry(key: name, value: write) in keyWrites.entries) {
       test('map $name without history does not scan the map', () {
@@ -2073,6 +2072,95 @@ void main() {
       expect(runs, 2);
     });
   });
+
+  group('adversarial round 2', () {
+    for (final history in [false, true]) {
+      test('addEntries from a list view that reruns its source, history '
+          '$history', () {
+        final s = MapSignal({'a': 0, 'b': 0}, trackPreviousValue: history);
+        addTearDown(s.dispose);
+        var calls = 0;
+        final effect = Effect(() {
+          s.value;
+          calls++;
+        });
+        addTearDown(effect.dispose);
+        var visits = 0;
+        final entries = UnmodifiableListView(
+          [0].map((_) => MapEntry(++visits == 1 ? 'a' : 'b', 1)),
+        );
+
+        s.addEntries(entries);
+
+        expect(calls - 1, 1);
+        expect(s.untrackedValue, {'a': 1, 'b': 0});
+        if (history) expect(s.untrackedPreviousValue, {'a': 0, 'b': 0});
+      });
+    }
+
+    test('a throwing effect does not skip the observers', () {
+      final observer = _CountingObserver();
+      final s = ListSignal<int>([]);
+      addTearDown(s.dispose);
+      final effect = Effect(() {
+        if (s.value.isNotEmpty) throw StateError('effect');
+      });
+      addTearDown(effect.dispose);
+      SolidartConfig.observers.add(observer);
+      addTearDown(() => SolidartConfig.observers.remove(observer));
+      Iterable<int> partial() sync* {
+        yield 1;
+        throw StateError('mutation');
+      }
+
+      final zone = <Object>[];
+      Object? thrown;
+      runZonedGuarded(() {
+        try {
+          s.addAll(partial());
+        } on Object catch (error) {
+          thrown = error;
+        }
+      }, (error, _) => zone.add(error));
+
+      expect((thrown! as StateError).message, 'mutation');
+      expect(observer.updates, 1);
+      expect(zone.map((e) => (e as StateError).message), ['effect']);
+    });
+
+    test('fillRange with a reversed range throws like the plain list', () {
+      final backing = List<int>.unmodifiable([1]);
+      final s = ListSignal<int>([], trackPreviousValue: false)..value = backing;
+      addTearDown(s.dispose);
+      Object? plain;
+      Object? signal;
+      try {
+        backing.fillRange(1, 0, 2);
+      } on Object catch (error) {
+        plain = error;
+      }
+      try {
+        s.fillRange(1, 0, 2);
+      } on Object catch (error) {
+        signal = error;
+      }
+
+      expect(signal.runtimeType, plain.runtimeType);
+    });
+
+    test('replaceRange that only removes reads no slot before the write', () {
+      final plain = _CountingList(100)..replaceRange(0, 100, const []);
+      final backing = _CountingList(100);
+      final s = ListSignal<int>([], trackPreviousValue: false)..value = backing;
+      addTearDown(s.dispose);
+      backing.reads = 0;
+
+      s.replaceRange(0, 100, const []);
+
+      expect(backing.reads, plain.reads);
+      expect(s.untrackedValue, isEmpty);
+    });
+  });
 }
 
 class _ThrowingHash {
@@ -2188,4 +2276,17 @@ class _ThrowAfterFirstList extends ListBase<MapEntry<String, int>> {
   @override
   Iterator<MapEntry<String, int>> get iterator =>
       _throwAfter([const MapEntry('b', 2)]).iterator;
+}
+
+class _CountingObserver extends SolidartObserver {
+  int updates = 0;
+
+  @override
+  void didCreateSignal(SignalBase<Object?> signal) {}
+
+  @override
+  void didUpdateSignal(SignalBase<Object?> signal) => updates++;
+
+  @override
+  void didDisposeSignal(SignalBase<Object?> signal) {}
 }
