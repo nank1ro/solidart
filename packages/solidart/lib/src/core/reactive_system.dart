@@ -58,8 +58,10 @@ extension MayDisposeDependencies on alien_system.ReactiveNode {
   }
 }
 
-typedef ReactionErrorHandler =
-    void Function(Object error, ReactionInterface reaction);
+typedef ReactionErrorHandler = void Function(
+  Object error,
+  ReactionInterface reaction,
+);
 
 class ReactiveName {
   ReactiveName._internal();
@@ -153,6 +155,17 @@ class ReactiveSystem {
 
   void propagate(alien_system.Link link) {
     alien.propagate(link, alien.runDepth > 0);
+  }
+
+  /// Notifies the subscribers of [node] that its value changed outside a
+  /// propagation, as `trigger` does, and runs the queued effects.
+  void notifySubscribers(alien_system.ReactiveNode node) {
+    final subs = node.subs;
+    if (subs == null) return;
+    propagate(subs);
+    // The subscribers must update: [node] itself is no longer dirty.
+    alien.shallowPropagate(subs);
+    if (batchDepth == 0) flush();
   }
 
   bool _flushing = false;

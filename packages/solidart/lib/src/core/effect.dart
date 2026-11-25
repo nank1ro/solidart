@@ -142,13 +142,12 @@ class Effect implements ReactionInterface {
 
   /// {@macro effect}
   Effect._internal({
-    required VoidCallback callback,
+    required this._callback,
     required this.name,
     required this.autoDispose,
-    ErrorCallback? onError,
+    this._onError,
     bool? detach,
-  }) : _onError = onError,
-       _callback = callback {
+  }) {
     _internalEffect = _AlienEffect(this, _runCallback, detach: detach);
   }
 

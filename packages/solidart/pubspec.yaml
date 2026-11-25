@@ -8,13 +8,13 @@ topics:
   - signals
 
 environment:
-  sdk: ^3.10.0
+  sdk: ^3.13.0
 
 resolution: workspace
 
 dependencies:
   # we depend on the alien signals reactivity implementation because it's the fastest available right now (30/12/2024)
-  alien_signals: ^2.3.1
+  alien_signals: ^2.4.0
   collection: ^1.18.0
   listen: ^1.0.1
   meta: ^1.11.0

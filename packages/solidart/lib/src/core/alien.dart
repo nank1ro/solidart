@@ -17,27 +17,44 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
     alien.stop(this);
   }
 
-  @override
-  bool didUpdate() {
-    if ((flags & _hasChildEffect) != alien_system.ReactiveFlags.none) {
-      alien.disposeChildDepsInReverse(this);
-    }
+  // Whether the getter runs from didUpdate(), not from the first get().
+  bool updating = false;
 
-    depsTail = null;
-    flags =
-        alien_system.ReactiveFlags.mutable |
-        alien_system.ReactiveFlags.recursedCheck;
-    final prevSub = alien.setActiveSub(this);
+  // The number of evaluations that changed the stored value or error.
+  int changes = 0;
+
+  @override
+  bool didUpdate() => update().changed;
+
+  // Evaluates once and returns the outcome of this call. An observer can run
+  // the computed again while it is notified, so the outcome is read before
+  // the notification. A change stored by that nested run is a change for the
+  // dirty check, but it already reached the subscribers, so [notify] is false.
+  ({bool changed, bool notify, SolidartCaughtException? error}) update() {
+    final hadError = parent._hasError;
+    final bool changed;
+    updating = true;
     try {
-      ++alien.cycle;
-      final oldValue = currentValue;
-      currentValue = getter(oldValue);
-      return !parent._compare(oldValue, currentValue);
+      changed = super.didUpdate();
     } finally {
-      alien.setActiveSub(prevSub);
-      flags &= ~alien_system.ReactiveFlags.recursedCheck;
-      alien.purgeDeps(this);
+      updating = false;
     }
+    final error = parent._error;
+    if (error != null) {
+      if (changed) changes++;
+      return (changed: changed, notify: changed, error: error);
+    }
+    final result = hadError ? changed : !parent._equalsPrevious;
+    if (result) changes++;
+    final before = changes;
+    // Committed: observers now read the new value, not the old error.
+    parent._notifyEvaluated();
+    final nested = changes != before;
+    return (
+      changed: result || nested,
+      notify: result && !nested,
+      error: null,
+    );
   }
 }
 

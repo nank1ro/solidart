@@ -73,32 +73,44 @@ class Computed<T> extends ReadSignal<T> {
     /// {@macro SignalBase.trackPreviousValue}
     super.trackPreviousValue,
   }) {
-    var runnedOnce = false;
     _internalComputed = _AlienComputed(
       this,
       (previousValue) {
-        if (trackPreviousValue && previousValue is T) {
+        // Only an earlier successful evaluation is a previous value. For a
+        // nullable T, the null passed before the first one is not.
+        if (trackPreviousValue && _initialized) {
           _hasPreviousValue = true;
-          _untrackedPreviousValue = _previousValue = previousValue;
+          _untrackedPreviousValue = _previousValue = previousValue as T;
         }
 
+        _evaluating = true;
         try {
-          _untrackedValue = selector();
-          _initialized = true;
-
-          if (runnedOnce) {
-            _notifySignalUpdate();
-          } else {
-            runnedOnce = true;
-            // The creation event had no value yet: send the first one.
-            _notifyDevToolsAboutSignal(
-              this,
-              eventType: DevToolsEventType.updated,
-            );
+          final T value;
+          try {
+            value = selector();
+          } catch (e, s) {
+            throw _error = SolidartCaughtException(e, stackTrace: s);
           }
-          return _untrackedValue;
-        } catch (e, s) {
-          throw SolidartCaughtException(e, stackTrace: s);
+          _untrackedValue = value;
+          _error = null;
+          _initialized = true;
+          _equalsPrevious = false;
+          // The first evaluation from get() has nothing to compare with.
+          if (_internalComputed.updating) {
+            try {
+              // Runs while this computed is the active subscriber, so
+              // signals read by the comparator become dependencies.
+              _equalsPrevious = _compare(previousValue, value);
+            } catch (e, s) {
+              // Not a selector error: keep the value as a change and report
+              // the error to the zone, untracked, instead of throwing it.
+              untracked(() => Zone.current.handleUncaughtError(e, s));
+            }
+          }
+          _notifyPending = true;
+          return value;
+        } finally {
+          _evaluating = false;
         }
       },
     );
@@ -114,6 +126,24 @@ class Computed<T> extends ReadSignal<T> {
   bool _disposed = false;
 
   bool _initialized = false;
+
+  // The error of the latest evaluation, or null if it succeeded.
+  SolidartCaughtException? _error;
+
+  bool get _hasError => _error != null;
+
+  // Whether the latest successful value equals the one before it.
+  bool _equalsPrevious = false;
+
+  // Whether the selector or the comparator is running. Reads of the stored
+  // state then return it without evaluating again.
+  bool _evaluating = false;
+
+  // Whether a successful evaluation still has to notify, after it is
+  // committed.
+  bool _notifyPending = false;
+
+  bool _notifiedOnce = false;
 
   late T _untrackedValue;
 
@@ -170,13 +200,53 @@ class Computed<T> extends ReadSignal<T> {
     if (_disposed) {
       return untrackedValue;
     }
+    // A read while the selector or comparator runs: return the stored value
+    // or candidate without evaluating again.
+    if (_evaluating && _initialized) {
+      _linkActiveSubscriber();
+      return _untrackedValue;
+    }
 
-    final value = reactiveSystem.getComputedValue(_internalComputed);
+    final T value;
+    try {
+      value = reactiveSystem.getComputedValue(_internalComputed);
+    } on Object {
+      // A failed evaluation also reads inputs: record them so dispose()
+      // reaches them. Do not dispose here, so later reads rethrow the error.
+      if (autoDispose) _recordInputs(merge: true);
+      rethrow;
+    }
+    // The first evaluation runs from get(), without didUpdate().
+    _notifyEvaluated();
     if (autoDispose) {
       _mayDispose();
     }
 
     return value;
+  }
+
+  // Links another reader, such as an effect created by the selector, so it
+  // reruns on later changes. The computed's own reads stay unlinked.
+  void _linkActiveSubscriber() {
+    if (disposed) return;
+    final sub = reactiveSystem.activeSub;
+    if (sub != null && !identical(sub, _internalComputed)) {
+      reactiveSystem.link(_internalComputed, sub);
+    }
+  }
+
+  // Notifies about a successful evaluation once alien_signals committed it.
+  void _notifyEvaluated() {
+    if (!_notifyPending) return;
+    _notifyPending = false;
+    if (_notifiedOnce) {
+      // Observers must not subscribe the effect or computed that reads this.
+      untracked(_notifySignalUpdate);
+    } else {
+      _notifiedOnce = true;
+      // The creation event had no value yet: send the first one.
+      _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
+    }
   }
 
   @override
@@ -189,7 +259,11 @@ class Computed<T> extends ReadSignal<T> {
   T? get previousValue {
     if (!trackPreviousValue) return null;
     // cause observation
-    if (!disposed) value;
+    if (_evaluating) {
+      _linkActiveSubscriber();
+    } else if (!disposed) {
+      value;
+    }
     return _previousValue;
   }
 
@@ -202,7 +276,7 @@ class Computed<T> extends ReadSignal<T> {
       'Access "value" or "hasValue" first to trigger computation.',
     );
     // Re-evaluate if stale, without registering as a dependency.
-    if (!_disposed) {
+    if (!_disposed && !_evaluating) {
       untracked(() => value);
     }
     return _untrackedValue;
@@ -214,19 +288,41 @@ class Computed<T> extends ReadSignal<T> {
     return _untrackedPreviousValue;
   }
 
+  // The real inputs, including child effects and scopes. Skips internal
+  // nodes, such as the retry dependency that alien_signals links after a
+  // failed evaluation.
+  List<alien_system.ReactiveNode> get _inputs => [
+    for (var link = _internalComputed.deps; link != null; link = link.nextDep)
+      if (link.dep
+          case alien.SignalNode() ||
+              alien.ComputedNode() ||
+              alien.LinkedEffect() ||
+              alien.EffectScopeNode())
+        link.dep,
+  ];
+
+  /// Records the current inputs. A failed evaluation merges them into the
+  /// earlier ones, because the failure may have unlinked inputs that
+  /// dispose() must still reach.
+  void _recordInputs({
+    List<alien_system.ReactiveNode>? inputs,
+    bool merge = false,
+  }) {
+    if (!merge) _deps.clear();
+    _deps.addAll([
+      for (final input in inputs ?? _inputs)
+        if (input case alien.SignalNode() || alien.ComputedNode()) input,
+    ]);
+  }
+
   @override
   void _mayDispose() {
     if (_disposed || !autoDispose) return;
-    if (_internalComputed.deps == null && _internalComputed.subs == null) {
+    final inputs = _inputs;
+    if (inputs.isEmpty && _internalComputed.subs == null) {
       dispose();
     } else {
-      _deps.clear();
-
-      var link = _internalComputed.deps;
-      for (; link != null; link = link.nextDep) {
-        final dep = link.dep;
-        _deps.add(dep);
-      }
+      _recordInputs(inputs: inputs);
     }
   }
 
@@ -237,7 +333,11 @@ class Computed<T> extends ReadSignal<T> {
   bool get hasPreviousValue {
     if (!trackPreviousValue) return false;
     // cause observation
-    value;
+    if (_evaluating) {
+      _linkActiveSubscriber();
+    } else {
+      value;
+    }
     return _hasPreviousValue;
   }
 
@@ -286,7 +386,22 @@ class Computed<T> extends ReadSignal<T> {
   /// However, in some cases, you may want to force an update.
   void run() {
     if (_disposed) return;
-    _internalComputed.didUpdate();
+    // The outcome of this run: a subscriber or an observer may run the
+    // computed again, and that inner run would overwrite `_error`.
+    final (changed: _, :notify, :error) = _internalComputed.update();
+    // Like a read: record the inputs so dispose() reaches them.
+    if (autoDispose) _recordInputs(merge: error != null);
+    if (notify) {
+      try {
+        reactiveSystem.notifySubscribers(_internalComputed);
+      } catch (notifyError, notifyStackTrace) {
+        // Without a selector error, the notification error is the result.
+        if (error == null) rethrow;
+        // Otherwise the caller must still get the selector error.
+        Zone.current.handleUncaughtError(notifyError, notifyStackTrace);
+      }
+    }
+    if (error != null) Error.throwWithStackTrace(error, error.stackTrace!);
   }
 
   @override
