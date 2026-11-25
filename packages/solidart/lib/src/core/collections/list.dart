@@ -492,22 +492,19 @@ class ListSignal<E> extends Signal<List<E>>
       // For an invalid range, the backing list throws its own error.
       return list.fillRange(start, end, fillValue);
     }
-    // Find the first slot that the fill changes. A list can convert the
-    // value on write (a Uint8List stores 256 as 0), so compare with the
-    // value it will store, not with [fillValue].
-    final stored = _storedValue(list, start, fillValue);
+    // Find the first slot that differs from [fillValue]. Without one, the
+    // call changes nothing, so it needs no copy.
     var index = start;
     Object? old;
-    while (index < end && identical(old = _readSlot(list, index), stored)) {
+    while (index < end && identical(old = _readSlot(list, index), fillValue)) {
       index++;
     }
-    // Without such a slot, the call changes nothing, so it needs no copy.
     if (index == end) return list.fillRange(start, end, fillValue);
     _mutate(
       (list) => list.fillRange(start, end, fillValue),
       // With history, compare the range with the copy. That is exact also
-      // for a view that converts the value (a cast of a typed list), whose
-      // stored value cannot be found from a one-slot copy.
+      // for a list that converts the value on write (a Uint8List stores 256
+      // as 0). Without history, check only the first slot that differed.
       bulkCheck: (list, previous) => previous == null
           ? () => !identical(old, _readSlot(list, index))
           : () => _rangeChanged(list, start, end - start, previous, start),
@@ -515,20 +512,6 @@ class ListSignal<E> extends Signal<List<E>>
       // slot again boxes a new object.
       failedSlotChanged: list is TypedData ? () => false : null,
     );
-  }
-
-  /// The value that [list] stores when [value] is written at [index]. A
-  /// default list stores [value] itself. Another list can convert it, so it
-  /// is written to a one-slot copy and read back.
-  Object? _storedValue(List<E> list, int index, E? value) {
-    if (list.runtimeType == _defaultListType) return value;
-    try {
-      final probe = list.sublist(index, index + 1);
-      probe[0] = value as E;
-      return probe[0];
-    } on Object {
-      return value;
-    }
   }
 
   /// Inserts [element] at position [index] in this list.
@@ -547,6 +530,9 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void insert(int index, E element) {
+    if (!trackPreviousValue) {
+      return _mutate((list) => list.insert(index, element));
+    }
     final list = _untrackedValue;
     // At the end, an insert is an add, so it can use the cheaper undo step.
     if (index == list.length && list.runtimeType == _defaultListType) {

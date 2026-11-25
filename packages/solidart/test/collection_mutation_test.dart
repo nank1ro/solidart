@@ -2862,9 +2862,8 @@ void main() {
 
       s.fillRange(0, 100, 7);
 
-      // One slot to learn the stored value, the first slot of the range,
-      // and that slot again after the write.
-      expect(backing.reads, lessThanOrEqualTo(3));
+      // The first slot of the range, and that slot again after the write.
+      expect(backing.reads, lessThanOrEqualTo(2));
       expect(s.untrackedValue, List.filled(100, 7));
       expect(runs, 2);
     });
@@ -2903,9 +2902,8 @@ void main() {
 
       s.fillRange(0, 3, 0);
 
-      // One slot for the stored value and the three slots of the range: no
-      // copy of the list.
-      expect(backing.reads, lessThanOrEqualTo(4));
+      // The three slots of the range: no copy of the list.
+      expect(backing.reads, lessThanOrEqualTo(3));
       expect(runs, 1);
     });
   });
@@ -2937,8 +2935,23 @@ void main() {
 
       expect(() => s.fillRange(0, 100, 1), throwsUnsupportedError);
 
-      expect(backing.reads, lessThanOrEqualTo(3));
+      // The first slot, and that slot again after the error.
+      expect(backing.reads, lessThanOrEqualTo(2));
       expect(calls, 0);
+    });
+
+    test('a rejected fill that a typed list would convert does not notify '
+        'without history', () {
+      final s = ListSignal<int>([], trackPreviousValue: false)
+        ..value = Uint8List(100).asUnmodifiableView();
+      addTearDown(s.dispose);
+      var calls = 0;
+      s.addListener(() => calls++);
+
+      expect(() => s.fillRange(0, 100, 256), throwsUnsupportedError);
+
+      expect(calls, 0);
+      expect(s.untrackedValue, List.filled(100, 0));
     });
 
     test('a rejected fill of an unmodifiable typed list does not notify', () {
