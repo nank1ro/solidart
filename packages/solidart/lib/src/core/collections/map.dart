@@ -13,7 +13,8 @@ part of '../core.dart';
 /// map['first'] = 100; // the effect prints 100
 /// ```
 /// {@endtemplate}
-class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
+class MapSignal<K, V> extends Signal<Map<K, V>>
+    with MapMixin<K, V>, _CollectionSignal<Map<K, V>> {
   /// {@macro map-signal}
   MapSignal(
     super.initialValue, {
@@ -36,23 +37,6 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
     /// {@macro SignalBase.trackPreviousValue}
     super.trackPreviousValue,
   });
-
-  @override
-  Map<K, V> setValue(Map<K, V> newValue) {
-    if (_compare(_untrackedValue, newValue)) {
-      return newValue;
-    }
-    // An outer [_mutate] may still change the outgoing collection.
-    _setPreviousValue(
-      identical(_untrackedValue, _mutating)
-          ? Map<K, V>.of(_untrackedValue)
-          : _untrackedValue,
-    );
-    // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
-    _value = newValue;
-    _notifySignalUpdate();
-    return newValue;
-  }
 
   @override
   Map<K, V> updateValue(Map<K, V> Function(Map<K, V> value) callback) =>
@@ -377,70 +361,24 @@ class MapSignal<K, V> extends Signal<Map<K, V>> with MapMixin<K, V> {
   String toString() =>
       '''MapSignal<$K, $V>(value: $_value, previousValue: $_previousValue)''';
 
-  /// The map that the outermost running [_mutate] copied.
-  Map<K, V>? _mutating;
+  @override
+  int _lengthOf(Map<K, V> map) => map.length;
 
-  /// Runs [mutation] on the map that holds the value.
-  ///
-  /// If the map changed, even when [mutation] throws, records the map as it
-  /// was before as the previous value and notifies once. The entries are
-  /// compared in iteration order, and their keys and values with
-  /// `identical`. The previous value is a plain [Map], so it does not
-  /// keep a custom key equality. A [_mutate] inside [mutation] on the same
-  /// map does not notify: this one notifies once for both. If [mutation]
-  /// assigns a new map, the assignment notifies, so this one does not.
-  ///
-  /// Set [resizes] when [mutation] runs no code of the caller and changes
-  /// the map only when it changes its length. Then, without history, the
-  /// length tells whether the map changed, so the map is not copied.
-  ///
-  /// The error of [mutation] wins over an error of the notification, which
-  /// goes to the current [Zone].
-  R _mutate<R>(R Function(Map<K, V> map) mutation, {bool resizes = false}) {
-    final map = _untrackedValue;
-    if (identical(map, _mutating)) return mutation(map);
-    final outer = _mutating;
-    final length = map.length;
-    final before = resizes && !trackPreviousValue
-        ? null
-        : map.entries.toList(growable: false);
-    late final R result;
-    _mutating = map;
-    final errors = _FirstError()..run(() => result = mutation(map));
-    _mutating = outer;
-    errors
-      ..run(() {
-        if (!identical(_untrackedValue, map)) return;
-        var changed = length != map.length;
-        if (before != null) {
-          var i = 0;
-          changed =
-              changed ||
-              map.entries.any((entry) {
-                final old = before[i++];
-                return !identical(entry.key, old.key) ||
-                    !identical(entry.value, old.value);
-              });
-          if (changed && trackPreviousValue) {
-            _setPreviousValue(Map<K, V>.fromEntries(before));
-          }
-        }
-        if (changed) _notifyChanged();
-      })
-      ..rethrowIfAny();
-    return result;
+  /// The key and then the value of each entry.
+  @override
+  Iterable<Object?> _identitiesOf(Map<K, V> map) sync* {
+    for (final entry in map.entries) {
+      yield entry.key;
+      yield entry.value;
+    }
   }
 
-  /// Runs [mutation] like [_mutate], or directly on the map when [unchanged]
-  /// is true, so the map is not copied or compared. The map still runs
-  /// [mutation], so it throws like a plain map.
-  R _mutateUnless<R>(bool unchanged, R Function(Map<K, V> map) mutation) =>
-      unchanged ? mutation(_untrackedValue) : _mutate(mutation);
-
-  void _notifyChanged() {
-    _reportChanged();
-    _notifySignalUpdate();
-  }
+  /// A plain [Map], so it does not keep a custom key equality.
+  @override
+  Map<K, V> _restore(List<Object?> identities) => {
+    for (var i = 0; i < identities.length; i += 2)
+      identities[i] as K: identities[i + 1] as V,
+  };
 
   @override
   // ignore: overridden_fields

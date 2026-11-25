@@ -13,7 +13,8 @@ part of '../core.dart';
 /// set[0] = 100; // the effect prints 100
 /// ```
 /// {@endtemplate}
-class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
+class SetSignal<E> extends Signal<Set<E>>
+    with SetMixin<E>, _CollectionSignal<Set<E>> {
   /// {@macro set-signal}
   SetSignal(
     Iterable<E> initialValue, {
@@ -36,23 +37,6 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
     /// {@macro SignalBase.trackPreviousValue}
     super.trackPreviousValue,
   }) : super(initialValue.toSet());
-
-  @override
-  Set<E> setValue(Set<E> newValue) {
-    if (_compare(_untrackedValue, newValue)) {
-      return newValue;
-    }
-    // An outer [_mutate] may still change the outgoing collection.
-    _setPreviousValue(
-      identical(_untrackedValue, _mutating)
-          ? _untrackedValue.toSet()
-          : _untrackedValue,
-    );
-    // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
-    _value = newValue;
-    _notifySignalUpdate();
-    return newValue;
-  }
 
   @override
   Set<E> updateValue(Set<E> Function(Set<E> value) callback) =>
@@ -441,64 +425,17 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   String toString() =>
       '''SetSignal<$E>(value: $_value, previousValue: $_previousValue)''';
 
-  /// The set that the outermost running [_mutate] copied.
-  Set<E>? _mutating;
+  @override
+  int _lengthOf(Set<E> set) => set.length;
 
-  /// Runs [mutation] on the set that holds the value.
-  ///
-  /// If the set changed, even when [mutation] throws, records the set as it
-  /// was before as the previous value and notifies once. The elements are
-  /// compared in iteration order with `identical`. `toSet` keeps the
-  /// equality of the set for the previous value. A [_mutate] inside
-  /// [mutation] on the same set does not notify: this one notifies once for
-  /// both. If [mutation] assigns a new set, the assignment notifies, so this
-  /// one does not.
-  ///
-  /// Set [resizes] when [mutation] runs no code of the caller and changes
-  /// the set only when it changes its length. Then, without history, the
-  /// length tells whether the set changed, so the set is not copied.
-  ///
-  /// The error of [mutation] wins over an error of the notification, which
-  /// goes to the current [Zone].
-  R _mutate<R>(R Function(Set<E> set) mutation, {bool resizes = false}) {
-    final set = _untrackedValue;
-    if (identical(set, _mutating)) return mutation(set);
-    final outer = _mutating;
-    final length = set.length;
-    final elements = resizes && !trackPreviousValue
-        ? null
-        : set.toList(growable: false);
-    final before = trackPreviousValue ? set.toSet() : null;
-    late final R result;
-    _mutating = set;
-    final errors = _FirstError()..run(() => result = mutation(set));
-    _mutating = outer;
-    errors
-      ..run(() {
-        if (!identical(_untrackedValue, set)) return;
-        var changed = length != set.length;
-        if (elements != null && !changed) {
-          var i = 0;
-          changed = set.any((element) => !identical(element, elements[i++]));
-        }
-        if (!changed) return;
-        if (before != null) _setPreviousValue(before);
-        _notifyChanged();
-      })
-      ..rethrowIfAny();
-    return result;
-  }
+  @override
+  Iterable<Object?> _identitiesOf(Set<E> set) => set;
 
-  /// Runs [mutation] like [_mutate], or directly on the set when [unchanged]
-  /// is true, so the set is not copied or compared. The set still runs
-  /// [mutation], so it throws like a plain set.
-  R _mutateUnless<R>(bool unchanged, R Function(Set<E> set) mutation) =>
-      unchanged ? mutation(_untrackedValue) : _mutate(mutation);
-
-  void _notifyChanged() {
-    _reportChanged();
-    _notifySignalUpdate();
-  }
+  /// `toSet` on the current set keeps its type and equality.
+  @override
+  Set<E> _restore(List<Object?> identities) => _untrackedValue.toSet()
+    ..clear()
+    ..addAll(identities.cast<E>());
 
   @override
   // ignore: overridden_fields

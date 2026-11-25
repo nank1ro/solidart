@@ -13,7 +13,8 @@ part of '../core.dart';
 /// list[0] = 100; // the effect prints 100
 /// ```
 /// {@endtemplate}
-class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
+class ListSignal<E> extends Signal<List<E>>
+    with ListMixin<E>, _CollectionSignal<List<E>> {
   /// {@macro list-signal}
   ListSignal(
     Iterable<E> initialValue, {
@@ -36,23 +37,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
     /// {@macro SignalBase.trackPreviousValue}
     super.trackPreviousValue,
   }) : super(initialValue.toList());
-
-  @override
-  List<E> setValue(List<E> newValue) {
-    if (_compare(_untrackedValue, newValue)) {
-      return newValue;
-    }
-    // An outer [_mutate] may still change the outgoing collection.
-    _setPreviousValue(
-      identical(_untrackedValue, _mutating)
-          ? List<E>.of(_untrackedValue)
-          : _untrackedValue,
-    );
-    // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
-    _value = newValue;
-    _notifySignalUpdate();
-    return newValue;
-  }
 
   @override
   List<E> updateValue(List<E> Function(List<E> value) callback) {
@@ -789,54 +773,16 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   String toString() =>
       '''ListSignal<$E>(value: $_value, previousValue: $_previousValue)''';
 
-  /// The list that the outermost running [_mutate] copied.
-  List<E>? _mutating;
+  @override
+  int _lengthOf(List<E> list) => list.length;
 
-  /// Runs [mutation] on the list that holds the value.
-  ///
-  /// If the list changed, even when [mutation] throws, records the list as it
-  /// was before as the previous value and notifies once. Elements are compared
-  /// with `identical`. A [_mutate] inside [mutation] on the same list does not
-  /// notify: this one notifies once for both. If [mutation] assigns a new
-  /// list, the assignment notifies, so this one does not.
-  ///
-  /// Set [resizes] when [mutation] runs no code of the caller and changes
-  /// the list only when it changes its length. Then, without history, the
-  /// length tells whether the list changed, so the list is not copied.
-  ///
-  /// The error of [mutation] wins over an error of the notification, which
-  /// goes to the current [Zone].
-  R _mutate<R>(R Function(List<E> list) mutation, {bool resizes = false}) {
-    final list = _untrackedValue;
-    if (identical(list, _mutating)) return mutation(list);
-    final outer = _mutating;
-    final length = list.length;
-    final before = resizes && !trackPreviousValue ? null : List<E>.of(list);
-    late final R result;
-    _mutating = list;
-    final errors = _FirstError()..run(() => result = mutation(list));
-    _mutating = outer;
-    errors
-      ..run(() {
-        if (!identical(_untrackedValue, list)) return;
-        var changed = length != list.length;
-        if (before != null) {
-          for (var i = 0; !changed && i < length; i++) {
-            changed = !identical(before[i], list[i]);
-          }
-          if (changed) _setPreviousValue(before);
-        }
-        if (changed) _notifyChanged();
-      })
-      ..rethrowIfAny();
-    return result;
-  }
+  @override
+  Iterable<Object?> _identitiesOf(List<E> list) => list;
 
-  /// Runs [mutation] like [_mutate], or directly on the list when
-  /// [unchanged] is true, so the list is not copied or compared. The list
-  /// still runs [mutation], so it throws like a plain list.
-  R _mutateUnless<R>(bool unchanged, R Function(List<E> list) mutation) =>
-      unchanged ? mutation(_untrackedValue) : _mutate(mutation);
+  /// [identities] is a `List<E>`, because `toList` on a `List<E>` returns
+  /// one, so it is the previous list without another copy.
+  @override
+  List<E> _restore(List<Object?> identities) => identities as List<E>;
 
   /// Whether the list has [element] at [index], compared with `identical`.
   bool _holds(int index, E element) {
@@ -848,11 +794,6 @@ class ListSignal<E> extends Signal<List<E>> with ListMixin<E> {
   /// other iterables can run code each time they are iterated.
   static bool _isEmpty(Iterable<Object?> elements) =>
       elements is List && elements.isEmpty;
-
-  void _notifyChanged() {
-    _reportChanged();
-    _notifySignalUpdate();
-  }
 
   @override
   // ignore: overridden_fields

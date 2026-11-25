@@ -16,6 +16,7 @@ import 'package:solidart/src/utils.dart';
 
 part 'alien.dart';
 part 'batch.dart';
+part 'collections/collection_signal.dart';
 part 'collections/list.dart';
 part 'collections/map.dart';
 part 'collections/set.dart';
