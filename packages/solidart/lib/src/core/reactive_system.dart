@@ -40,6 +40,9 @@ extension MayDisposeDependencies on alien_system.ReactiveNode {
       final next = link.nextSub;
       final sub = link.sub;
       alien.unlink(link, sub);
+      // alien_signals checks the dependencies of a pending subscriber before
+      // it runs or reads it. Without dependencies, nothing it read changed.
+      if (sub.deps == null) sub.flags &= ~alien_system.ReactiveFlags.pending;
       // The saved dependencies of the subscriber must not retain this node.
       if (sub is _AlienEffect) {
         sub.parent

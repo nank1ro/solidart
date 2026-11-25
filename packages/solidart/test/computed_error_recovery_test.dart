@@ -857,5 +857,30 @@ void main() {
       c.run();
       expect(seen, [0, 1]);
     });
+
+    test('run() does not notify again a change that a run in the disposal '
+        'drain already stored', () {
+      var next = 0;
+      final queued = Signal(0, autoDispose: true);
+      final holder = Effect(() => queued.value);
+      late Computed<int> c;
+      // Runs in the drain at the end of the outer evaluation.
+      queued.onDispose(() {
+        next = 2;
+        c.run();
+      });
+      c = Computed(() {
+        if (next == 1) holder.dispose();
+        return next;
+      });
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(c.value));
+      addTearDown(effect.dispose);
+
+      next = 1;
+      c.run();
+      expect(queued.disposed, isTrue);
+      expect(seen, [0, 2]);
+    });
   });
 }

@@ -224,6 +224,40 @@ void main() {
       expect(c.disposed, isTrue);
       expect(source.disposed, isTrue);
     });
+
+    test('dispose reaches an input of a failed evaluation that a nested '
+        'evaluation during the disposal drain no longer reads', () {
+      final first = Signal(0, autoDispose: true);
+      final retry = Signal(false);
+      final second = Signal(0);
+      final queued = Signal(0, autoDispose: true);
+      final holder = Effect(() => queued.value);
+      late Computed<int> c;
+      // Runs in the drain at the end of the evaluation below. The nested
+      // evaluation reads `second` instead of `first`.
+      queued.onDispose(() {
+        retry.value = true;
+        expect(() => c.value, throwsA(isA<SolidartCaughtException>()));
+      });
+      c = Computed(() {
+        if (retry.value) {
+          second.value;
+          throw StateError('second');
+        }
+        first.value;
+        holder.dispose();
+        throw StateError('first');
+      });
+
+      addTearDown(retry.dispose);
+      addTearDown(second.dispose);
+
+      expect(() => c.value, throwsA(isA<SolidartCaughtException>()));
+      expect(queued.disposed, isTrue);
+
+      c.dispose();
+      expect(first.disposed, isTrue);
+    });
   });
 
   group('Computed previous value history (#201)', () {
