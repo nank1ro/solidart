@@ -508,9 +508,13 @@ class ListSignal<E> extends Signal<List<E>>
       bulkCheck: (list, previous) => previous == null
           ? () => !identical(old, _readSlot(list, index))
           : () => _rangeChanged(list, start, end - start, previous, start),
-      // A typed list rejects a fill before it writes, and reading a SIMD
-      // slot again boxes a new object.
-      failedSlotChanged: list is TypedData ? () => false : null,
+      // A fill writes in order from its first changed slot. So after an
+      // error, that slot tells whether the fill wrote anything. A typed
+      // list rejects a fill before it writes, and reading a SIMD slot again
+      // boxes a new object.
+      failedSlotChanged: list is TypedData
+          ? () => false
+          : () => !identical(old, _readSlot(list, index)),
     );
   }
 

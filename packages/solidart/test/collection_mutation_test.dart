@@ -2940,6 +2940,31 @@ void main() {
       expect(calls, 0);
     });
 
+    test('a rejected fill with history checks one slot after the error', () {
+      final backing = _CountingList(100);
+      final s = ListSignal<int>([])..value = UnmodifiableListView(backing);
+      addTearDown(s.dispose);
+      var calls = 0;
+      s.addListener(() => calls++);
+      backing.reads = 0;
+
+      expect(() => s.fillRange(0, 100, 1), throwsUnsupportedError);
+
+      // The first slot, the history copy, and that slot again after the
+      // error, but no comparison of the whole range.
+      expect(backing.reads, lessThanOrEqualTo(102));
+      expect(calls, 0);
+    });
+
+    test('a history read with nothing pending returns the stored value', () {
+      final s = ListSignal([1, 2]);
+      addTearDown(s.dispose);
+      s.value = [3];
+
+      expect(s.untrackedPreviousValue, [1, 2]);
+      expect(s.untrackedPreviousValue, same(s.untrackedPreviousValue));
+    });
+
     test('a rejected fill that a typed list would convert does not notify '
         'without history', () {
       final s = ListSignal<int>([], trackPreviousValue: false)

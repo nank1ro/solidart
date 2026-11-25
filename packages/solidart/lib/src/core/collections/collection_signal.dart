@@ -34,7 +34,12 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   @override
   void _settlePreviousValue() {
     final undo = _pendingUndo;
-    if (undo == null) return;
+    // A separate method, so a read with nothing pending allocates no
+    // closure.
+    if (undo != null) _applyPendingUndo(undo);
+  }
+
+  void _applyPendingUndo(C Function(C) undo) {
     final current = _untrackedValue;
     // A callback can read history while its outer mutation is in progress.
     final source = identical(_mutating, current)
