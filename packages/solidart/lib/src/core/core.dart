@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:developer' as dev;
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:alien_signals/preset.dart' as alien;
 import 'package:alien_signals/system.dart' as alien_system;

@@ -119,6 +119,23 @@ class _CountingList extends ListBase<int> {
   void operator []=(int index, int value) => _elements[index] = value;
 }
 
+class _PointList extends DelegatingList<int> {
+  _PointList(super.base);
+  int reads = 0;
+
+  @override
+  int operator [](int index) {
+    reads++;
+    return super[index];
+  }
+
+  @override
+  Iterator<int> get iterator {
+    reads += length;
+    return super.iterator;
+  }
+}
+
 class _CountingMap extends DelegatingMap<int, int> {
   _CountingMap() : super({for (var i = 0; i < 100; i++) i: i});
   int scans = 0;
@@ -244,6 +261,241 @@ void main() {
       addTearDown(s.dispose);
       s.fillRange(50, 53, 0);
       expect(backing.reads, lessThanOrEqualTo(6));
+    });
+  });
+
+  group('lazy collection history', () {
+    final writes = <String, void Function(ListSignal<int>)>{
+      'slot': (s) => s[40] = -1,
+      'first': (s) => s.first = -1,
+      'last': (s) => s.last = -1,
+      'add': (s) => s.add(-1),
+      'insert': (s) => s.insert(40, -1),
+      'removeAt': (s) => s.removeAt(40),
+      'removeLast': (s) => s.removeLast(),
+    };
+    for (final entry in writes.entries) {
+      test('list ${entry.key} copies only at the first read', () {
+        final before = List.generate(100, (i) => i);
+        final backing = _PointList(before.toList());
+        final s = ListSignal<int>([])..value = backing;
+        addTearDown(s.dispose);
+        entry.value(s);
+        expect(backing.reads, lessThanOrEqualTo(2));
+        final previous = s.previousValue;
+        expect(previous, orderedEquals(before));
+        final reads = backing.reads;
+        expect(reads, greaterThanOrEqualTo(backing.length));
+        expect(s.untrackedPreviousValue, same(previous));
+        expect(backing.reads, reads);
+      });
+    }
+
+    for (final key in ['b', 'c']) {
+      test('default map builds history on the first read for $key', () {
+        final backing = <String, int?>{'a': 1, 'b': null};
+        final s = MapSignal(backing);
+        addTearDown(s.dispose);
+        s[key] = 5;
+        // An external write is visible only if the copy is still pending.
+        backing['a'] = 2;
+        final previous = s.previousValue!;
+        expect(previous, {'a': 2, 'b': null});
+        expect(previous.keys, orderedEquals(['a', 'b']));
+        backing['a'] = 3;
+        expect(s.untrackedPreviousValue, same(previous));
+        expect(previous['a'], 2);
+      });
+    }
+
+    test('a failing history read can retry without tracking key reads', () {
+      final dependency = Signal(0);
+      addTearDown(dependency.dispose);
+      var fail = false;
+      final key = _HashKey(() {
+        dependency.value;
+        if (fail) throw StateError('hash');
+        return 1;
+      });
+      final s = MapSignal({key: 1})..[key] = 2;
+      addTearDown(s.dispose);
+      fail = true;
+      expect(() => s.previousValue, throwsStateError);
+      fail = false;
+      var runs = 0;
+      final effect = Effect(() {
+        runs++;
+        expect(s.untrackedPreviousValue!.values.single, 1);
+      });
+      addTearDown(effect.dispose);
+      dependency.value++;
+      expect(runs, 1);
+    });
+
+    test('custom and identity maps copy history before the write', () {
+      final maps = [
+        LinkedHashMap<String, int>(
+          equals: (a, b) => a.toLowerCase() == b.toLowerCase(),
+          hashCode: (a) => a.toLowerCase().hashCode,
+        ),
+        Map<String, int>.identity(),
+      ];
+      for (final backing in maps) {
+        backing['A'] = 1;
+        final s = MapSignal(backing);
+        addTearDown(s.dispose);
+        s['a'] = 2;
+        backing['extra'] = 3;
+        expect(s.previousValue, {'A': 1});
+      }
+    });
+
+    test('list add answers hasPreviousValue without a copy', () {
+      final backing = _PointList(List.generate(100, (i) => i));
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      s.add(-1);
+      final reads = backing.reads;
+      expect(s.untrackedHasPreviousValue, isTrue);
+      expect(s.hasPreviousValue, isTrue);
+      expect(backing.reads, reads);
+      expect(s.previousValue, orderedEquals(List.generate(100, (i) => i)));
+      expect(backing.reads, greaterThan(reads));
+    });
+
+    test('default map answers hasPreviousValue without a copy', () {
+      final backing = <String, int>{'a': 1};
+      final s = MapSignal(backing);
+      addTearDown(s.dispose);
+      s['b'] = 5;
+      expect(s.untrackedHasPreviousValue, isTrue);
+      // The copy is still pending, so a later external write shows in it.
+      backing['a'] = 2;
+      expect(s.previousValue, {'a': 2});
+    });
+
+    test('set add copies only at the first read', () {
+      final backing = _CountingSet();
+      final s = SetSignal<int>({})..value = backing;
+      addTearDown(s.dispose);
+      s
+        ..add(-1)
+        ..add(-1);
+      expect(backing.scans, 0);
+      expect(s.hasPreviousValue, isTrue);
+      expect(s.untrackedHasPreviousValue, isTrue);
+      expect(backing.scans, 0);
+      final previous = s.previousValue;
+      expect(backing.scans, 1);
+      expect(previous, orderedEquals(List.generate(100, (i) => i)));
+      expect(s.untrackedPreviousValue, same(previous));
+      expect(backing.scans, 1);
+    });
+
+    test('later writes replace history and no-ops keep it', () {
+      final s = ListSignal([1])
+        ..add(2)
+        ..add(3)
+        ..last = 3;
+      addTearDown(s.dispose);
+      expect(s.toString(), contains('previousValue: [1, 2]'));
+      s
+        ..add(4)
+        ..removeWhere((v) => v.isEven);
+      expect(s.untrackedPreviousValue, [1, 2, 3, 4]);
+      s
+        ..add(5)
+        ..value = [8];
+      expect(s.previousValue, [1, 3, 5]);
+    });
+
+    test('history reads track the signal once', () {
+      final s = ListSignal([1]);
+      addTearDown(s.dispose);
+      final seen = <List<int>?>[];
+      final effect = Effect(() => seen.add(s.previousValue));
+      addTearDown(effect.dispose);
+      s.add(2);
+      expect(s.untrackedPreviousValue, same(seen.last));
+      expect(seen, [
+        null,
+        [1],
+      ]);
+    });
+
+    test('a rejected add preserves pending history', () {
+      final s = ListSignal<int>([])
+        ..value = List.filled(2, 1)
+        ..first = 2;
+      addTearDown(s.dispose);
+      final w = _Watch<List<int>>(s, List.of);
+      expect(() => s.add(3), throwsUnsupportedError);
+      expect(s.previousValue, [1, 1]);
+      expect(w.effectReruns, 0);
+    });
+
+    test('a callback reads the history from before the outer write', () {
+      final s = ListSignal([1, 2])..add(3);
+      addTearDown(s.dispose);
+      s.removeWhere((v) {
+        if (v == 2) {
+          s[0] = 7;
+          expect(s.previousValue, [1, 2]);
+        }
+        return false;
+      });
+      expect(s.previousValue, [1, 2, 3]);
+    });
+
+    for (final caught in [false, true]) {
+      test('a nested failed eager resize notifies once (caught: $caught)', () {
+        final s = ListSignal<int>([])..value = _FixedLengthList([1, 2, 3, 4]);
+        addTearDown(s.dispose);
+        final w = _Watch<List<int>>(s, List.of);
+        if (caught) {
+          s.removeWhere((v) {
+            if (v == 1) expect(() => s.remove(1), throwsUnsupportedError);
+            return false;
+          });
+        } else {
+          Iterable<int> input() sync* {
+            s.remove(3);
+            yield 9;
+          }
+
+          expect(() => s.setRange(0, 1, input()), throwsUnsupportedError);
+        }
+        final after = caught ? [2, 3, 4, 4] : [1, 2, 4, 4];
+        expect(s.value, after);
+        expect(w.calls, [
+          [
+            [1, 2, 3, 4],
+            after,
+          ],
+        ]);
+        expect(w.effectReruns, 1);
+      });
+    }
+
+    test('a rejected typed list slot write keeps its history', () {
+      final s = ListSignal<Float32x4>([])
+        ..value = Float32x4List(1).asUnmodifiableView();
+      addTearDown(s.dispose);
+      final w = _Watch<List<Float32x4>>(s, List.of);
+      expect(() => s.first = Float32x4.zero(), throwsUnsupportedError);
+      expect(w.effectReruns, 0);
+      expect(s.previousValue, isEmpty);
+    });
+
+    test('removeWhere owns history for its nested point write', () {
+      final s = ListSignal([1, 2])..add(3);
+      addTearDown(s.dispose);
+      s.removeWhere((v) {
+        if (v == 2) s[0] = 7;
+        return false;
+      });
+      expect(s.value, [7, 2, 3]);
+      expect(s.previousValue, [1, 2, 3]);
     });
   });
 
@@ -921,11 +1173,13 @@ void main() {
       expect(s.untrackedValue, [2, 3, 3]);
       expect(w.calls, [
         [
-          [1, 2, 3],
+          null,
           [2, 3, 3],
         ],
       ]);
       expect(w.effectReruns, 1);
+      expect(s.hasPreviousValue, isFalse);
+      expect(s.untrackedPreviousValue, isNull);
     });
 
     final shiftThenThrow = <String, void Function(ListSignal<int>)>{
@@ -2278,6 +2532,16 @@ class _KeyCountingMap extends DelegatingMap<int, int> {
     keyReads++;
     return super.keys;
   }
+}
+
+class _HashKey {
+  _HashKey(this.hash);
+
+  final int Function() hash;
+
+  @override
+  // ignore: hash_and_equals, avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => hash();
 }
 
 class _ThrowingHash {

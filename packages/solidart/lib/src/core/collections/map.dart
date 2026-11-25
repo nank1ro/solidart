@@ -68,6 +68,9 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     return _value[(key as K?)];
   }
 
+  // Only the default map shares key equality with the plain history copy.
+  late final Type _defaultMapType = <K, V>{}.runtimeType;
+
   /// Associates the [key] with the given [value].
   ///
   /// If the key was already in the map, its associated value is changed.
@@ -76,10 +79,23 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   void operator []=(K key, V value) {
     final map = _untrackedValue;
     final old = map[key];
+    final lazy = trackPreviousValue && map.runtimeType == _defaultMapType;
+    final sameValue = identical(old, value);
+    final present =
+        old != null || ((lazy || sameValue) && map.containsKey(key));
     _mutateUnless(
-      identical(old, value) && (old != null || map.containsKey(key)),
+      sameValue && present,
       (map) => map[key] = value,
       slotChanged: () => !identical(old, map[key]),
+      undo: lazy
+          ? (copy) {
+              if (present) {
+                copy[key] = old as V;
+              } else {
+                copy.remove(key);
+              }
+            }
+          : null,
     );
   }
 

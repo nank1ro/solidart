@@ -161,7 +161,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void add(E element) {
-    _resize((list) => list.add(element));
+    _mutate((list) => list.add(element), undo: (copy) => copy.removeLast());
   }
 
   /// Appends all objects of [iterable] to the end of this list.
@@ -529,7 +529,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void insert(int index, E element) {
-    _resize((list) => list.insert(index, element));
+    _resizeAt(index, (list) => list.insert(index, element), inserting: true);
   }
 
   /// Inserts all objects of [iterable] at position [index] in this list.
@@ -591,7 +591,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   E removeAt(int index) {
-    return _resize((list) => list.removeAt(index));
+    return _resizeAt(index, (list) => list.removeAt(index));
   }
 
   /// Removes and returns the last object in this list.
@@ -604,7 +604,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   E removeLast() {
-    return _resize((list) => list.removeLast());
+    return _resizeAt(_untrackedValue.length - 1, (list) => list.removeLast());
   }
 
   /// Removes a range of elements from the list.
@@ -848,6 +848,27 @@ class ListSignal<E> extends Signal<List<E>>
   R _resize<R>(R Function(List<E>) write) =>
       _mutate(write, failedResizeChanged: _elementsDiffer);
 
+  R _resizeAt<R>(
+    int index,
+    R Function(List<E>) write, {
+    bool inserting = false,
+  }) {
+    if (!trackPreviousValue) return _mutate(write);
+    final list = _untrackedValue;
+    final valid = index >= 0 && index < list.length;
+    final old = valid ? _readSlot(list, index) : null;
+    return _mutate(
+      write,
+      undo: inserting
+          ? (copy) => copy.removeAt(index)
+          : (copy) => copy.insert(index, old as E),
+      failedSlotChanged: () =>
+          valid &&
+          list is! TypedData &&
+          !identical(old, _readSlot(list, index)),
+    );
+  }
+
   // A cast view can reject a read even when the backing write is valid.
   static final _unreadable = Object();
 
@@ -911,10 +932,14 @@ class ListSignal<E> extends Signal<List<E>>
     final list = _untrackedValue;
     final valid = index >= 0 && index < list.length;
     final old = valid ? list[index] : null;
-    _mutateUnless(
-      valid && identical(old, value),
+    if (valid && identical(old, value)) return write(list);
+    _mutate(
       write,
       slotChanged: () => valid && !identical(old, list[index]),
+      // A typed list rejects a write before it changes the slot. Reading
+      // a SIMD slot again would box the same value in a different object.
+      failedSlotChanged: list is TypedData ? () => false : null,
+      undo: (copy) => copy[index] = old as E,
     );
   }
 

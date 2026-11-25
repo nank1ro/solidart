@@ -83,6 +83,7 @@ class SetSignal<E> extends Signal<Set<E>>
     return _mutateUnless(
       _untrackedValue.contains(value),
       (set) => set.add(value),
+      undo: (copy) => copy.remove(value),
     );
   }
 
