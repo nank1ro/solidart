@@ -272,6 +272,8 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   @override
   void addAll(Map<K, V> other) {
     if (other.isEmpty) return _untrackedValue.addAll(other);
+    // Into an empty map, each new key changes the length.
+    if (_untrackedValue.isEmpty) return _mutate((map) => map.addAll(other));
     _writeKeys(
       _keysOf(() => other.keys.toList(growable: false)),
       (map) => map.addAll(other),

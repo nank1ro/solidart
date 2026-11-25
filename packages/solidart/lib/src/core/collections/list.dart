@@ -661,6 +661,11 @@ class ListSignal<E> extends Signal<List<E>>
       // It only removes, so the length tells whether it changed the list.
       return _resize((list) => list.replaceRange(start, end, replacements));
     }
+    if ((replacements is List || replacements is Set) &&
+        replacements.length != end - start) {
+      // A success always changes the length, so it tells the change.
+      return _resize((list) => list.replaceRange(start, end, replacements));
+    }
     _writeRange(
       start,
       end,

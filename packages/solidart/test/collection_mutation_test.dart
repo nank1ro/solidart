@@ -2161,6 +2161,62 @@ void main() {
       expect(s.untrackedValue, isEmpty);
     });
   });
+
+  group('adversarial round 3', () {
+    test('replaceRange with a shorter list reads no slot before the write', () {
+      final plain = _CountingList(100)..replaceRange(0, 100, const [7]);
+      final backing = _CountingList(100);
+      final s = ListSignal<int>([], trackPreviousValue: false)..value = backing;
+      addTearDown(s.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        s.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+      backing.reads = 0;
+
+      s.replaceRange(0, 100, const [7]);
+
+      expect(backing.reads, plain.reads);
+      expect(s.untrackedValue, [7]);
+      expect(runs, 2);
+    });
+
+    for (final history in [false, true]) {
+      test('addAll into an empty map does not list the input keys, history '
+          '$history', () {
+        final s = MapSignal<int, int>({}, trackPreviousValue: history);
+        addTearDown(s.dispose);
+        var runs = 0;
+        final effect = Effect(() {
+          s.value;
+          runs++;
+        });
+        addTearDown(effect.dispose);
+        final input = _KeyCountingMap();
+
+        s.addAll(input);
+
+        expect(input.keyReads, 0);
+        expect(s.untrackedValue, hasLength(100));
+        expect(runs, 2);
+        if (history) expect(s.untrackedPreviousValue, isEmpty);
+      });
+    }
+  });
+}
+
+/// A map that counts how often its keys are listed.
+class _KeyCountingMap extends DelegatingMap<int, int> {
+  _KeyCountingMap() : super({for (var i = 0; i < 100; i++) i: i});
+  int keyReads = 0;
+
+  @override
+  Iterable<int> get keys {
+    keyReads++;
+    return super.keys;
+  }
 }
 
 class _ThrowingHash {
