@@ -163,7 +163,9 @@ class ListSignal<E> extends Signal<List<E>>
   void add(E element) {
     _mutate(
       (list) => list.add(element),
-      undo: (list) => _copyPrevious(list)..removeLast(),
+      undo: trackPreviousValue
+          ? (list) => _copyPrevious(list)..removeLast()
+          : null,
     );
   }
 
@@ -493,28 +495,32 @@ class ListSignal<E> extends Signal<List<E>>
   @override
   void fillRange(int start, int end, [E? fillValue]) {
     final list = _untrackedValue;
-    if (start == end) return list.fillRange(start, end, fillValue);
-    // A typed list converts the value on write (a Uint8List stores 256 as
-    // 0), so only the stored slots tell what changed.
-    if (list is TypedData || 0 > start || start > end || end > list.length) {
+    if (start == end || 0 > start || start > end || end > list.length) {
       // For an invalid range, the backing list throws its own error.
-      return _writeRange(
-        start,
-        end,
-        (list) => list.fillRange(start, end, fillValue),
-      );
+      return list.fillRange(start, end, fillValue);
     }
-    // Find the first slot that the fill changes. Without one, the call
-    // changes nothing, so it needs no copy and no check.
-    var index = start;
-    Object? old;
-    while (index < end && identical(old = _readSlot(list, index), fillValue)) {
-      index++;
+    // A list can convert the value on write (a Uint8List stores 256 as 0),
+    // so compare the slots with each other, not with [fillValue].
+    final first = _readSlot(list, start);
+    var allSame = true;
+    for (var i = start + 1; allSame && i < end; i++) {
+      allSame = identical(_readSlot(list, i), first);
     }
-    if (index == end) return list.fillRange(start, end, fillValue);
+    // Every slot already holds the fill value, so nothing changes.
+    if (allSame && identical(first, fillValue)) {
+      return list.fillRange(start, end, fillValue);
+    }
     _mutate(
       (list) => list.fillRange(start, end, fillValue),
-      slotChanged: () => !identical(old, _readSlot(list, index)),
+      // After a fill, every slot of the range holds the same value. So if
+      // the slots differed before, a slot changed.
+      slotChanged: () => !(allSame && identical(first, _readSlot(list, start))),
+      // A fill writes from [start] in order, and a built-in list rejects
+      // the call before it writes. A typed list rejects it before it
+      // writes too, and reading a SIMD slot again boxes a new object.
+      failedSlotChanged: list is TypedData
+          ? () => false
+          : () => !identical(first, _readSlot(list, start)),
     );
   }
 
@@ -880,18 +886,19 @@ class ListSignal<E> extends Signal<List<E>>
     );
   }
 
-  // A default growable list, which the VM copies in blocks with setRange.
+  // A default growable list, which reads any slot in O(1).
   late final Type _defaultListType = <E>[].runtimeType;
 
   /// [list] with [element] back at [index]. It is built at its final length:
   /// a copy and then an insert can grow the backing array to twice its size.
-  /// A default list is copied in blocks. Another list is read once with one
-  /// iterator, because its indexed reads can be slow.
+  /// A default list is built in one pass by index. Another list is read once
+  /// with one iterator, because its indexed reads can be slow.
   List<E> _withElementAt(List<E> list, int index, E element) {
     if (list.runtimeType == _defaultListType) {
-      return List<E>.filled(list.length + 1, element, growable: true)
-        ..setRange(0, index, list)
-        ..setRange(index + 1, list.length + 1, list, index);
+      return List<E>.generate(
+        list.length + 1,
+        (i) => i < index ? list[i] : (i == index ? element : list[i - 1]),
+      );
     }
     final elements = list.iterator;
     // `List.generate` calls its generator in increasing index order.
@@ -905,8 +912,10 @@ class ListSignal<E> extends Signal<List<E>>
   /// [list] without the slot at [index], built like [_withElementAt].
   List<E> _withoutSlot(List<E> list, int index) {
     if (list.runtimeType == _defaultListType) {
-      return list.sublist(0, list.length - 1)
-        ..setRange(index, list.length - 1, list, index + 1);
+      return List<E>.generate(
+        list.length - 1,
+        (i) => i < index ? list[i] : list[i + 1],
+      );
     }
     final elements = list.iterator;
     return List<E>.generate(list.length - 1, (i) {
@@ -994,7 +1003,9 @@ class ListSignal<E> extends Signal<List<E>>
       // A typed list rejects a write before it changes the slot. Reading
       // a SIMD slot again would box the same value in a different object.
       failedSlotChanged: list is TypedData ? () => false : null,
-      undo: (list) => _copyPrevious(list)..[index] = old as E,
+      undo: trackPreviousValue
+          ? (list) => _copyPrevious(list)..[index] = old as E
+          : null,
     );
   }
 

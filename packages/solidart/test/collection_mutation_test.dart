@@ -953,8 +953,8 @@ void main() {
       addTearDown(s.dispose);
       backing.reads = 0;
       s.fillRange(0, 3, 1);
-      // One copy for the previous value, then the three slots once.
-      expect(backing.reads, lessThanOrEqualTo(103));
+      // The three slots once, one copy for the previous value, then one slot.
+      expect(backing.reads, lessThanOrEqualTo(104));
     });
   });
 
@@ -2766,6 +2766,86 @@ void main() {
     });
   });
 
+  group('adversarial #213 round 4', () {
+    for (final (name, backing) in <(String, List<int> Function())>[
+      ('typed list', () => Uint8List.fromList([0, 17, 2])),
+      (
+        'cast view of a typed list',
+        () => Uint8List.fromList([0, 17, 2]).cast<int>(),
+      ),
+    ]) {
+      test('a fill that a $name converts keeps exact history', () {
+        final s = ListSignal<int>([])..value = backing();
+        addTearDown(s.dispose);
+        var calls = 0;
+        s.addListener(() => calls++);
+
+        s[2] = 9;
+        // 256 is stored as 0, so slot 0 keeps its value and slot 1 changes.
+        s.fillRange(0, 2, 256);
+
+        expect(calls, 2);
+        expect(s.untrackedValue, [0, 0, 9]);
+        expect(s.untrackedPreviousValue, [0, 17, 9]);
+      });
+    }
+
+    test('a fill that a typed list converts to the stored values does not '
+        'notify', () {
+      final s = ListSignal<int>([])..value = Uint8List.fromList([0, 0, 5]);
+      addTearDown(s.dispose);
+      var calls = 0;
+      s
+        ..addListener(() => calls++)
+        ..fillRange(0, 2, 256);
+
+      expect(calls, 0);
+      expect(s.untrackedValue, [0, 0, 5]);
+    });
+
+    test('fillRange on an unmodifiable typed list throws and does not '
+        'notify', () {
+      final s = ListSignal<int>([])..value = Uint8List(2).asUnmodifiableView();
+      addTearDown(s.dispose);
+      final previous = s.untrackedPreviousValue;
+      var calls = 0;
+      s.addListener(() => calls++);
+
+      expect(() => s.fillRange(0, 2, 1), throwsUnsupportedError);
+
+      expect(calls, 0);
+      expect(s.untrackedPreviousValue, same(previous));
+    });
+
+    test('fillRange on an unmodifiable list throws and does not notify', () {
+      final s = ListSignal<int>([])..value = List<int>.unmodifiable([1, 2]);
+      addTearDown(s.dispose);
+      final previous = s.untrackedPreviousValue;
+      var calls = 0;
+      s.addListener(() => calls++);
+
+      expect(() => s.fillRange(0, 2, 0), throwsUnsupportedError);
+
+      expect(calls, 0);
+      expect(s.untrackedPreviousValue, same(previous));
+    });
+
+    test('fillRange with history that changes nothing on a default list makes '
+        'no copy', () {
+      final s = ListSignal([0, 0, 0, 4]);
+      addTearDown(s.dispose);
+      s[3] = 5;
+      var calls = 0;
+      s
+        ..addListener(() => calls++)
+        ..fillRange(0, 3, 0);
+
+      expect(calls, 0);
+      // The pending history of `s[3] = 5` is kept, so no copy replaced it.
+      expect(s.untrackedPreviousValue, [0, 0, 0, 4]);
+    });
+  });
+
   group('adversarial round 4', () {
     test('fillRange without history keeps no per-slot buffer', () {
       final backing = _CountingList(100);
@@ -2781,8 +2861,8 @@ void main() {
 
       s.fillRange(0, 100, 7);
 
-      // One read finds the first slot that changes, one read checks it.
-      expect(backing.reads, lessThanOrEqualTo(2));
+      // The range once before the write, and one slot after it.
+      expect(backing.reads, lessThanOrEqualTo(101));
       expect(s.untrackedValue, List.filled(100, 7));
       expect(runs, 2);
     });
