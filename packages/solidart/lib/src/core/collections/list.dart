@@ -494,8 +494,10 @@ class ListSignal<E> extends Signal<List<E>>
   void fillRange(int start, int end, [E? fillValue]) {
     final list = _untrackedValue;
     if (start == end) return list.fillRange(start, end, fillValue);
-    if (0 > start || start > end || end > list.length) {
-      // The backing list throws its own error for an invalid range.
+    // A typed list converts the value on write (a Uint8List stores 256 as
+    // 0), so only the stored slots tell what changed.
+    if (list is TypedData || 0 > start || start > end || end > list.length) {
+      // For an invalid range, the backing list throws its own error.
       return _writeRange(
         start,
         end,
@@ -878,10 +880,19 @@ class ListSignal<E> extends Signal<List<E>>
     );
   }
 
-  /// [list] with [element] back at [index]. It is built at its final length
-  /// in one pass over one iterator: a copy and then an insert can grow the
-  /// backing array to twice its size, and indexed reads can be slow.
+  // A default growable list, which the VM copies in blocks with setRange.
+  late final Type _defaultListType = <E>[].runtimeType;
+
+  /// [list] with [element] back at [index]. It is built at its final length:
+  /// a copy and then an insert can grow the backing array to twice its size.
+  /// A default list is copied in blocks. Another list is read once with one
+  /// iterator, because its indexed reads can be slow.
   List<E> _withElementAt(List<E> list, int index, E element) {
+    if (list.runtimeType == _defaultListType) {
+      return List<E>.filled(list.length + 1, element, growable: true)
+        ..setRange(0, index, list)
+        ..setRange(index + 1, list.length + 1, list, index);
+    }
     final elements = list.iterator;
     // `List.generate` calls its generator in increasing index order.
     return List<E>.generate(list.length + 1, (i) {
@@ -893,6 +904,10 @@ class ListSignal<E> extends Signal<List<E>>
 
   /// [list] without the slot at [index], built like [_withElementAt].
   List<E> _withoutSlot(List<E> list, int index) {
+    if (list.runtimeType == _defaultListType) {
+      return list.sublist(0, list.length - 1)
+        ..setRange(index, list.length - 1, list, index + 1);
+    }
     final elements = list.iterator;
     return List<E>.generate(list.length - 1, (i) {
       elements.moveNext();

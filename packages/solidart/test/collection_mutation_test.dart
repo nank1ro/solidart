@@ -323,6 +323,92 @@ void main() {
   });
 
   group('lazy collection history', () {
+    test('a typed-list fill that the list converts keeps exact history', () {
+      final s = ListSignal<int>([])..value = Uint8List.fromList([0, 1, 2]);
+      addTearDown(s.dispose);
+      var calls = 0;
+      s.addListener(() => calls++);
+
+      s[2] = 3;
+      // A Uint8List stores 256 as 0, so slot 0 keeps its value.
+      s.fillRange(0, 2, 256);
+
+      expect(calls, 2);
+      expect(s.untrackedValue, [0, 0, 3]);
+      expect(s.untrackedPreviousValue, [0, 1, 3]);
+    });
+
+    test('a set add on a widened or custom set copies before the write', () {
+      final widened = <int>{1, 2};
+      final custom = LinkedHashSet<String>(
+        equals: (a, b) => a.toLowerCase() == b.toLowerCase(),
+        hashCode: (a) => a.toLowerCase().hashCode,
+      )..add('a');
+      final w = SetSignal<num>({})..value = widened;
+      final c = SetSignal<String>({})..value = custom;
+      addTearDown(w.dispose);
+      addTearDown(c.dispose);
+
+      w.add(3);
+      c.add('b');
+      // A raw write after the signal write shows only in lazy history.
+      widened.add(7);
+      custom.add('z');
+
+      expect(w.untrackedPreviousValue, {1, 2});
+      expect(c.untrackedPreviousValue!.toList(), ['a']);
+      expect(c.untrackedPreviousValue!.contains('A'), isTrue);
+    });
+
+    test('a set add on a default set stays lazy', () {
+      final backing = <int>{1, 2};
+      final s = SetSignal<int>({})..value = backing;
+      addTearDown(s.dispose);
+
+      s.add(3);
+      // A pending undo step is applied to the current set at read time.
+      backing.add(7);
+
+      expect(s.untrackedPreviousValue, {1, 2, 7});
+    });
+
+    test('a duplicate set add without history changes nothing', () {
+      final backing = _CountingSet();
+      final s = SetSignal<int>({}, trackPreviousValue: false)..value = backing;
+      addTearDown(s.dispose);
+      var calls = 0;
+      s.addListener(() => calls++);
+      backing.scans = 0;
+
+      expect(s.add(5), isFalse);
+
+      expect(backing.scans, 0);
+      expect(calls, 0);
+    });
+
+    for (final (name, write) in <(String, void Function(ListSignal<int>))>[
+      ('removeAt(0)', (s) => s.removeAt(0)),
+      ('removeAt(2)', (s) => s.removeAt(2)),
+      ('removeAt(4)', (s) => s.removeAt(4)),
+      ('removeLast', (s) => s.removeLast()),
+      ('insert(0)', (s) => s.insert(0, 9)),
+      ('insert(2)', (s) => s.insert(2, 9)),
+      ('insert(5)', (s) => s.insert(5, 9)),
+    ]) {
+      test('a default list $name builds the previous list', () {
+        final s = ListSignal([1, 2, 3, 4, 5]);
+        addTearDown(s.dispose);
+
+        write(s);
+        final previous = s.untrackedPreviousValue!;
+
+        expect(previous, [1, 2, 3, 4, 5]);
+        expect(previous, isNot(same(s.untrackedValue)));
+        previous.add(6);
+        expect(previous.length, 6);
+      });
+    }
+
     test('a lazy list write that writes through the signal keeps no '
         'previous value', () {
       final backing = _ReentrantList([1, 2]);
@@ -340,8 +426,9 @@ void main() {
       expect(s.untrackedPreviousValue, isNull);
     });
 
-    test('a lazy set add that adds through the signal keeps no previous '
-        'value', () {
+    test('a custom set add that adds through the signal keeps its copy', () {
+      // A custom set is not a default set, so it copies before the write,
+      // and that copy stays right when the backing writes through the signal.
       final backing = _ReentrantSet();
       final s = SetSignal<int>({})..value = backing;
       addTearDown(s.dispose);
@@ -353,8 +440,8 @@ void main() {
 
       expect(s.untrackedValue, {1, 2});
       expect(calls, 1);
-      expect(s.untrackedHasPreviousValue, isFalse);
-      expect(s.untrackedPreviousValue, isNull);
+      expect(s.untrackedHasPreviousValue, isTrue);
+      expect(s.untrackedPreviousValue, isEmpty);
     });
 
     final writes = <String, void Function(ListSignal<int>)>{
@@ -556,17 +643,18 @@ void main() {
       expect(s.previousValue, {'a': 2});
     });
 
-    test('set add copies only at the first read', () {
+    test('a custom set add copies before the write', () {
+      // Only a default set is lazy: a custom set copies before the write.
       final backing = _CountingSet();
       final s = SetSignal<int>({})..value = backing;
       addTearDown(s.dispose);
       s
         ..add(-1)
         ..add(-1);
-      expect(backing.scans, 0);
+      expect(backing.scans, 1);
       expect(s.hasPreviousValue, isTrue);
       expect(s.untrackedHasPreviousValue, isTrue);
-      expect(backing.scans, 0);
+      expect(backing.scans, 1);
       final previous = s.previousValue;
       expect(backing.scans, 1);
       expect(previous, orderedEquals(List.generate(100, (i) => i)));

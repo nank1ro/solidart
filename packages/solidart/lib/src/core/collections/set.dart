@@ -81,15 +81,16 @@ class SetSignal<E> extends Signal<Set<E>>
   @override
   bool add(E value) {
     final set = _untrackedValue;
-    return _mutateUnless(
-      set.contains(value),
+    if (set.contains(value)) return set.add(value);
+    // Only a default set shares its equality with the rebuilt history set.
+    // NaN is not equal to itself, so it cannot be found to skip it.
+    final lazy =
+        trackPreviousValue &&
+        set.runtimeType == _defaultSetType &&
+        !_isNaN(value);
+    return _mutate(
       (set) => set.add(value),
-      // NaN is not equal to itself, so `remove` cannot undo it.
-      undo: _isNaN(value)
-          ? null
-          : set.runtimeType == _defaultSetType
-          ? (set) => _without(set, value)
-          : (set) => _copyPrevious(set)..remove(value),
+      undo: lazy ? (set) => _without(set, value) : null,
     );
   }
 
