@@ -42,8 +42,9 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
 
   // Evaluates once and returns the outcome of this call. An observer can run
   // the computed again while it is notified, so the outcome is read before
-  // the notification, and a change stored by that nested run counts too.
-  ({bool changed, SolidartCaughtException? error}) update() {
+  // the notification. A change stored by that nested run is a change for the
+  // dirty check, but it already reached the subscribers, so [notify] is false.
+  ({bool changed, bool notify, SolidartCaughtException? error}) update() {
     final hadError = parent._hasError;
     final bool changed;
     updating = true;
@@ -55,7 +56,7 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
     final error = parent._error;
     if (error != null) {
       if (changed) changes++;
-      return (changed: changed, error: error);
+      return (changed: changed, notify: changed, error: error);
     }
     // A success replaces the recorded inputs, so the ones it no longer reads
     // are not retained.
@@ -65,7 +66,12 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
     final before = changes;
     // Committed: observers now read the new value, not the old error.
     parent._notifyEvaluated();
-    return (changed: result || changes != before, error: null);
+    final nested = changes != before;
+    return (
+      changed: result || nested,
+      notify: result && !nested,
+      error: null,
+    );
   }
 }
 
