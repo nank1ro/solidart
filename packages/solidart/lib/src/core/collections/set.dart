@@ -97,6 +97,7 @@ class SetSignal<E> extends Signal<Set<E>>
   /// ```
   @override
   void addAll(Iterable<E> elements) {
+    if (_isEmptyCollection(elements)) return _untrackedValue.addAll(elements);
     _mutate((set) => set.addAll(elements));
   }
 
@@ -204,6 +205,9 @@ class SetSignal<E> extends Signal<Set<E>>
   /// ```
   @override
   void removeAll(Iterable<Object?> elements) {
+    if (_isEmptyCollection(elements)) {
+      return _untrackedValue.removeAll(elements);
+    }
     _mutate((set) => set.removeAll(elements));
   }
 
@@ -428,6 +432,8 @@ class SetSignal<E> extends Signal<Set<E>>
   @override
   int _lengthOf(Set<E> set) => set.length;
 
+  /// `toSet` keeps the type and equality of the set. A linked or sorted
+  /// set also keeps its order. A hash set has no defined order.
   @override
   Set<E> _copyPrevious(Set<E> set) => set.toSet();
 

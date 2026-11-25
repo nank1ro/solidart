@@ -154,6 +154,12 @@ class _CountingSet extends DelegatingSet<int> {
   int scans = 0;
 
   @override
+  Set<int> toSet() {
+    scans++;
+    return super.toSet();
+  }
+
+  @override
   List<int> toList({bool growable = true}) {
     scans++;
     return super.toList(growable: growable);
@@ -288,6 +294,67 @@ void main() {
         expect(backing.scans, 0);
       });
     }
+
+    final keyWrites = <String, void Function(MapSignal<int, int>)>{
+      'update that keeps the value': (s) => s.update(50, (v) => v),
+      'update that changes the value': (s) => s.update(50, (v) => -1),
+      'putIfAbsent of a missing key': (s) => s.putIfAbsent(100, () => -1),
+      'addAll that keeps the value': (s) => s.addAll({50: 50}),
+      'addAll that changes a value': (s) => s.addAll({50: -1}),
+      'addEntries from a list': (s) => s.addEntries([const MapEntry(50, -1)]),
+    };
+    for (final MapEntry(key: name, value: write) in keyWrites.entries) {
+      test('map $name without history does not scan the map', () {
+        final backing = _CountingMap();
+        final s = MapSignal<int, int>({}, trackPreviousValue: false)
+          ..value = backing;
+        addTearDown(s.dispose);
+        backing.scans = 0;
+        write(s);
+        expect(backing.scans, 0);
+      });
+    }
+
+    final listNoOps = <String, void Function(ListSignal<int>)>{
+      'length = length': (s) => s.length = 100,
+      'addAll of an empty list': (s) => s.addAll(const []),
+      'insertAll of an empty list': (s) => s.insertAll(0, const []),
+    };
+    for (final MapEntry(key: name, value: write) in listNoOps.entries) {
+      test('list $name with history does not copy the list', () {
+        final backing = _CountingList(100);
+        final s = ListSignal<int>([])..value = backing;
+        addTearDown(s.dispose);
+        backing.reads = 0;
+        write(s);
+        expect(backing.reads, 0);
+      });
+    }
+
+    final setNoOps = <String, void Function(SetSignal<int>)>{
+      'addAll of an empty set': (s) => s.addAll(const {}),
+      'removeAll of an empty list': (s) => s.removeAll(const []),
+    };
+    for (final MapEntry(key: name, value: write) in setNoOps.entries) {
+      test('set $name with history does not copy the set', () {
+        final backing = _CountingSet();
+        final s = SetSignal<int>({})..value = backing;
+        addTearDown(s.dispose);
+        backing.scans = 0;
+        write(s);
+        expect(backing.scans, 0);
+      });
+    }
+
+    test('list fillRange with history reads the range only for the check', () {
+      final backing = _CountingList(100);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      backing.reads = 0;
+      s.fillRange(0, 3, 1);
+      // One copy for the previous value, then the three slots once.
+      expect(backing.reads, lessThanOrEqualTo(103));
+    });
   });
 
   group('ListSignal', () {
@@ -1389,8 +1456,8 @@ void main() {
       'a cast view': (s) => s.untrackedValue.cast<String, int>(),
     };
     for (final MapEntry(key: name, value: view) in views.entries) {
-      test('update without history whose callback changes another key '
-          'through $name notifies once', () {
+      test('update without history does not see a raw write through '
+          '$name to another key', () {
         final s = MapSignal({'a': 1, 'b': 2}, trackPreviousValue: false);
         final w = watch(s);
 
@@ -1400,11 +1467,31 @@ void main() {
         });
 
         expect(s.untrackedValue, {'a': 1, 'b': 3});
-        expect(w.calls, hasLength(1));
-        expect(w.calls.single[1], {'a': 1, 'b': 3});
-        expect(w.effectReruns, 1);
+        expect(w.calls, isEmpty);
+        expect(w.effectReruns, 0);
       });
     }
+
+    test('an assignment during updateAll keeps the map from before the '
+        'mutation as previous', () {
+      final s = MapSignal({'a': 1, 'b': 2});
+      final w = watch(s);
+
+      s.updateAll((key, value) {
+        if (key == 'a') return 11;
+        s.value = {'c': 3};
+        return value;
+      });
+
+      expect(s.untrackedValue, {'c': 3});
+      expect(s.untrackedPreviousValue, {'a': 1, 'b': 2});
+      expect(w.calls, [
+        [
+          {'a': 1, 'b': 2},
+          {'c': 3},
+        ],
+      ]);
+    });
 
     test('update whose callback changes a new map notifies for each', () {
       final s = MapSignal({'a': 1});
@@ -1430,6 +1517,31 @@ void main() {
       ]);
       expect(w.effectReruns, 2);
     });
+
+    for (final history in [false, true]) {
+      final inputs = <String, void Function(MapSignal<String, int>)>{
+        'addAll': (s) => s.addAll(_ThrowAfterFirstMap()),
+        'addEntries from a list': (s) => s.addEntries(_ThrowAfterFirstList()),
+      };
+      for (final MapEntry(key: name, value: write) in inputs.entries) {
+        test('$name from an input that throws after one entry notifies the '
+            'partial change, history $history', () {
+          final s = MapSignal({'a': 1}, trackPreviousValue: history);
+          addTearDown(s.dispose);
+          var runs = 0;
+          final effect = Effect(() {
+            s.value;
+            runs++;
+          });
+          addTearDown(effect.dispose);
+
+          expect(() => write(s), throwsStateError);
+
+          expect(s.untrackedValue, {'a': 1, 'b': 2});
+          expect(runs, 2);
+        });
+      }
+    }
 
     test('a partial change keeps its error when an effect also throws', () {
       final s = MapSignal({'a': 1});
@@ -1890,6 +2002,23 @@ void main() {
       expect(runs, 1);
     });
 
+    test('addAll over an unreadable value of a cast map notifies once', () {
+      final backing = <String, Object>{'unread': 42}.cast<String, String>();
+      final map = MapSignal<String, String>(backing, trackPreviousValue: false);
+      addTearDown(map.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        map.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+
+      map.addAll({'unread': 'ok'});
+
+      expect(map.untrackedValue['unread'], 'ok');
+      expect(runs, 2);
+    });
+
     test('addAll of an empty map to a cast map is a no-op', () {
       final backing = <String, Object>{'unread': 42}.cast<String, String>();
       final map = MapSignal<String, String>(backing);
@@ -2017,4 +2146,46 @@ class _NoSwapRandom implements Random {
 
   @override
   double nextDouble() => throw UnimplementedError();
+}
+
+/// A map that yields the key 'b' and then throws, both from [keys] and
+/// from [forEach].
+class _ThrowAfterFirstMap extends MapBase<String, int> {
+  @override
+  int? operator [](Object? key) => key == 'b' ? 2 : null;
+
+  @override
+  void operator []=(String key, int value) => throw UnimplementedError();
+
+  @override
+  void clear() => throw UnimplementedError();
+
+  @override
+  Iterable<String> get keys => _throwAfter(['b']);
+
+  @override
+  int get length => 2;
+
+  @override
+  int? remove(Object? key) => throw UnimplementedError();
+}
+
+/// A list of entries whose iterator yields `b: 2` and then throws.
+class _ThrowAfterFirstList extends ListBase<MapEntry<String, int>> {
+  @override
+  int get length => 2;
+
+  @override
+  set length(int newLength) => throw UnimplementedError();
+
+  @override
+  MapEntry<String, int> operator [](int index) => const MapEntry('b', 2);
+
+  @override
+  void operator []=(int index, MapEntry<String, int> value) =>
+      throw UnimplementedError();
+
+  @override
+  Iterator<MapEntry<String, int>> get iterator =>
+      _throwAfter([const MapEntry('b', 2)]).iterator;
 }

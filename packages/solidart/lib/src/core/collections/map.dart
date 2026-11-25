@@ -249,11 +249,15 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// ```
   @override
   void addEntries(Iterable<MapEntry<K, V>> newEntries) {
-    // Only a collection is checked: other iterables can run code each time.
-    if ((newEntries is List || newEntries is Set) && newEntries.isEmpty) {
+    if (_isEmptyCollection(newEntries)) {
       return _untrackedValue.addEntries(newEntries);
     }
-    _mutate((map) => map.addEntries(newEntries), bulkCheck: _bulkChangeCheck);
+    // Only a list or a set can be read twice: other iterables can run code
+    // each time.
+    final keys = newEntries is List || newEntries is Set
+        ? _keysOf(() => [for (final entry in newEntries) entry.key])
+        : null;
+    _writeKeys(keys, (map) => map.addEntries(newEntries));
   }
 
   /// Adds all key/value pairs of [other] to this map.
@@ -271,7 +275,10 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   @override
   void addAll(Map<K, V> other) {
     if (other.isEmpty) return _untrackedValue.addAll(other);
-    _mutate((map) => map.addAll(other), bulkCheck: _bulkChangeCheck);
+    _writeKeys(
+      _keysOf(() => other.keys.toList(growable: false)),
+      (map) => map.addAll(other),
+    );
   }
 
   /// Look up the value of [key], or add a new entry if it isn't there.
@@ -296,10 +303,10 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// Calling [ifAbsent] must not add or remove keys from the map.
   @override
   V putIfAbsent(K key, V Function() ifAbsent) {
+    // A new key changes the length.
     return _mutateUnless(
       _untrackedValue.containsKey(key),
       (map) => map.putIfAbsent(key, ifAbsent),
-      bulkCheck: _bulkChangeCheck,
     );
   }
 
@@ -340,10 +347,14 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// ```
   @override
   V update(K key, V Function(V value) update, {V Function()? ifAbsent}) {
-    return _mutateUnless(
-      ifAbsent == null && !_untrackedValue.containsKey(key),
+    final map = _untrackedValue;
+    if (ifAbsent == null && !map.containsKey(key)) {
+      return map.update(key, update);
+    }
+    final old = _readValue(map, key);
+    return _mutate(
       (map) => map.update(key, update, ifAbsent: ifAbsent),
-      bulkCheck: _bulkChangeCheck,
+      slotChanged: () => !identical(old, _readValue(map, key)),
     );
   }
 
@@ -364,6 +375,47 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   @override
   String toString() =>
       '''MapSignal<$K, $V>(value: $_value, previousValue: $_previousValue)''';
+
+  // A cast view can reject a read even when the backing write is valid.
+  static final _unreadable = Object();
+
+  Object? _readValue(Map<K, V> map, Object? key) {
+    try {
+      return map[key];
+    } on Object {
+      return _unreadable;
+    }
+  }
+
+  /// The keys that [list] returns, or null if listing them throws. Then the
+  /// backing call meets the same error after its own partial writes.
+  List<K>? _keysOf(List<K> Function() list) {
+    try {
+      return list();
+    } on Object {
+      return null;
+    }
+  }
+
+  /// Runs [write], which can change only the values of [keys]. Without
+  /// [keys], compares the whole map.
+  R _writeKeys<R>(List<K>? keys, R Function(Map<K, V>) write) {
+    if (keys == null) return _mutate(write, bulkCheck: _bulkChangeCheck);
+    final map = _untrackedValue;
+    final before = List<Object?>.filled(keys.length, null);
+    for (var i = 0; i < keys.length; i++) {
+      before[i] = _readValue(map, keys[i]);
+    }
+    return _mutate(
+      write,
+      slotChanged: () {
+        for (var i = 0; i < keys.length; i++) {
+          if (!identical(before[i], _readValue(map, keys[i]))) return true;
+        }
+        return false;
+      },
+    );
+  }
 
   @override
   int _lengthOf(Map<K, V> map) => map.length;

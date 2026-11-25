@@ -88,6 +88,11 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   set length(int newLength) {
+    final list = _untrackedValue;
+    if (newLength == list.length) {
+      list.length = newLength;
+      return;
+    }
     _resize((list) => list.length = newLength);
   }
 
@@ -171,6 +176,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void addAll(Iterable<E> iterable) {
+    if (_isEmptyCollection(iterable)) return _untrackedValue.addAll(iterable);
     _resize((list) => list.addAll(iterable));
   }
 
@@ -521,6 +527,9 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void insertAll(int index, Iterable<E> iterable) {
+    if (_isEmptyCollection(iterable)) {
+      return _untrackedValue.insertAll(index, iterable);
+    }
     _resize((list) => list.insertAll(index, iterable));
   }
 
@@ -645,7 +654,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// [setRange] instead.
   @override
   void replaceRange(int start, int end, Iterable<E> replacements) {
-    if (start == end && _isEmpty(replacements)) {
+    if (start == end && _isEmptyCollection(replacements)) {
       return _untrackedValue.replaceRange(start, end, replacements);
     }
     _writeRange(
@@ -821,13 +830,27 @@ class ListSignal<E> extends Signal<List<E>>
     }
   }
 
-  bool _rangeChanged(List<E> list, int start, List<Object?> before) {
-    for (var i = 0; i < before.length; i++) {
-      if (!identical(before[i], _readSlot(list, start + i))) return true;
+  /// Whether a slot of `list` from [start] differs from [before], where
+  /// `before[offset + i]` held slot `start + i`.
+  bool _rangeChanged(
+    List<E> list,
+    int start,
+    int count,
+    List<Object?> before,
+    int offset,
+  ) {
+    for (var i = 0; i < count; i++) {
+      if (!identical(before[offset + i], _readSlot(list, start + i))) {
+        return true;
+      }
     }
     return false;
   }
 
+  /// Runs [write], which can change only the slots from [start] to [end].
+  /// With history, the slots are compared with the history copy. Without
+  /// it, only those slots are saved.
+  ///
   /// Set [resizes] when [write] can change the length, so a write that
   /// fails after it moved elements is still found.
   void _writeRange(
@@ -836,14 +859,19 @@ class ListSignal<E> extends Signal<List<E>>
     void Function(List<E>) write, {
     bool resizes = false,
   }) {
-    final list = _untrackedValue;
-    final before = [
-      if (start >= 0 && end <= list.length)
-        for (var i = start; i < end; i++) _readSlot(list, i),
-    ];
     _mutate(
       write,
-      slotChanged: () => _rangeChanged(list, start, before),
+      bulkCheck: (list, previous) {
+        final count = start >= 0 && end <= list.length ? end - start : 0;
+        if (previous != null) {
+          return () => _rangeChanged(list, start, count, previous, start);
+        }
+        final before = List<Object?>.filled(count, null);
+        for (var i = 0; i < count; i++) {
+          before[i] = _readSlot(list, start + i);
+        }
+        return () => _rangeChanged(list, start, count, before, 0);
+      },
       failedResizeChanged: resizes ? _elementsDiffer : null,
     );
   }
@@ -858,11 +886,6 @@ class ListSignal<E> extends Signal<List<E>>
       slotChanged: () => valid && !identical(old, list[index]),
     );
   }
-
-  /// Whether [elements] is an empty list. Only a list is checked, because
-  /// other iterables can run code each time they are iterated.
-  static bool _isEmpty(Iterable<Object?> elements) =>
-      elements is List && elements.isEmpty;
 
   @override
   // ignore: overridden_fields

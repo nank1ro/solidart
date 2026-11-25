@@ -1,5 +1,10 @@
 part of '../core.dart';
 
+/// Whether [elements] is an empty list or set. Only these are checked,
+/// because other iterables can run code each time they are iterated.
+bool _isEmptyCollection(Iterable<Object?> elements) =>
+    (elements is List || elements is Set) && elements.isEmpty;
+
 /// The mutation logic that [ListSignal], [MapSignal] and [SetSignal] share.
 mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// The number of elements or entries in [collection].
@@ -10,6 +15,10 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
 
   /// The collection that the current [_mutate] is changing.
   C? _mutating;
+
+  /// The history copy that the outermost [_mutate] took of [_mutating]
+  /// before it changed, or null without history.
+  C? _mutatingPrevious;
 
   /// Whether a mutation nested in the current [_mutate] changed the
   /// collection.
@@ -22,8 +31,13 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
       return newValue;
     }
     if (trackPreviousValue) {
-      // An outer [_mutate] may still change the outgoing collection.
-      _setPreviousValue(identical(old, _mutating) ? _copyPrevious(old) : old);
+      // An outer [_mutate] may already have changed the outgoing
+      // collection, and may still change it. So use its copy from before.
+      _setPreviousValue(
+        identical(old, _mutating)
+            ? _mutatingPrevious ?? _copyPrevious(old)
+            : old,
+      );
     }
     // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
     _value = newValue;
@@ -62,12 +76,15 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
         : null;
     final check = slotChanged ?? bulkCheck?.call(collection, previous);
     final outerChanged = _nestedChanged;
+    final outerPrevious = _mutatingPrevious;
     _nestedChanged = false;
     _mutating = collection;
+    if (!nested) _mutatingPrevious = previous;
     late final R result;
     final errors = _FirstError()..run(() => result = mutation(collection));
     final nestedChanged = _nestedChanged;
     _mutating = outer;
+    _mutatingPrevious = outerPrevious;
     _nestedChanged = outerChanged;
     var changed = false;
     errors.run(() {
