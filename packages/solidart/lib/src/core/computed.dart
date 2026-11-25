@@ -386,10 +386,9 @@ class Computed<T> extends ReadSignal<T> {
   /// However, in some cases, you may want to force an update.
   void run() {
     if (_disposed) return;
-    final changed = _internalComputed.didUpdate();
-    // Capture this run's error: a subscriber may run the computed again while
-    // being notified, and that inner run would overwrite `_error`.
-    final error = _error;
+    // The outcome of this run: a subscriber or an observer may run the
+    // computed again, and that inner run would overwrite `_error`.
+    final (:changed, :error) = _internalComputed.update();
     // Like a read: record the inputs so dispose() reaches them.
     if (autoDispose) _recordInputs(merge: error != null);
     if (changed) {

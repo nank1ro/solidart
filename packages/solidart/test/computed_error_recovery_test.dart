@@ -776,5 +776,63 @@ void main() {
       expect(c.value, 1);
       expect(seen, [0, 1]);
     });
+
+    test('an effect reruns when an observer of an equal update runs the '
+        'Computed to a new value', () {
+      final trigger = Signal(0);
+      var sampled = 0;
+      final c = Computed(() {
+        trigger.value;
+        return sampled;
+      });
+      final seen = <int>[];
+      var once = true;
+      final observer = _ReadingObserver((computed) {
+        if (!once || !identical(computed, c)) return;
+        once = false;
+        sampled = 1;
+        computed.run();
+      });
+
+      addTearDown(trigger.dispose);
+
+      final effect = Effect(() => seen.add(c.value));
+      addTearDown(effect.dispose);
+      SolidartConfig.observers.add(observer);
+      addTearDown(() => SolidartConfig.observers.remove(observer));
+
+      // The outer evaluation returns 0 again, then the observer stores 1.
+      trigger.value = 1;
+      expect(c.value, 1);
+      expect(seen, [0, 1]);
+    });
+
+    test('run() throws only its own error when an observer runs it again', () {
+      var next = 0;
+      final c = Computed(() {
+        if (next == 2) throw StateError('nested');
+        return next;
+      });
+      Object? nestedError;
+      var once = true;
+      final observer = _ReadingObserver((computed) {
+        if (!once || !identical(computed, c)) return;
+        once = false;
+        next = 2;
+        try {
+          computed.run();
+        } on Object catch (e) {
+          nestedError = e;
+        }
+      });
+
+      expect(c.value, 0);
+      SolidartConfig.observers.add(observer);
+      addTearDown(() => SolidartConfig.observers.remove(observer));
+
+      next = 1;
+      expect(c.run, returnsNormally);
+      expect(nestedError, isA<SolidartCaughtException>());
+    });
   });
 }
