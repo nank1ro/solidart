@@ -88,7 +88,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   set length(int newLength) {
-    _mutate((list) => list.length = newLength, resizes: true);
+    _resize((list) => list.length = newLength);
   }
 
   /// Returns the [index]th element.
@@ -156,7 +156,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void add(E element) {
-    _mutate((list) => list.add(element), resizes: true);
+    _resize((list) => list.add(element));
   }
 
   /// Appends all objects of [iterable] to the end of this list.
@@ -171,7 +171,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void addAll(Iterable<E> iterable) {
-    _mutate((list) => list.addAll(iterable));
+    _resize((list) => list.addAll(iterable));
   }
 
   /// A new `Iterator` that allows iterating the elements of this `Iterable`.
@@ -459,7 +459,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void clear() {
-    _mutate((list) => list.clear(), resizes: true);
+    _resize((list) => list.clear());
   }
 
   /// Overwrites a range of elements with [fillValue].
@@ -483,10 +483,8 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void fillRange(int start, int end, [E? fillValue]) {
-    _mutateUnless(
-      start == end,
-      (list) => list.fillRange(start, end, fillValue),
-    );
+    if (start == end) return _untrackedValue.fillRange(start, end, fillValue);
+    _writeRange(start, end, (list) => list.fillRange(start, end, fillValue));
   }
 
   /// Inserts [element] at position [index] in this list.
@@ -505,7 +503,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void insert(int index, E element) {
-    _mutate((list) => list.insert(index, element), resizes: true);
+    _resize((list) => list.insert(index, element));
   }
 
   /// Inserts all objects of [iterable] at position [index] in this list.
@@ -523,7 +521,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void insertAll(int index, Iterable<E> iterable) {
-    _mutate((list) => list.insertAll(index, iterable));
+    _resize((list) => list.insertAll(index, iterable));
   }
 
   /// Removes the first occurrence of [value] from this list.
@@ -545,7 +543,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   bool remove(Object? element) {
-    return _mutate((list) => list.remove(element));
+    return _resize((list) => list.remove(element));
   }
 
   /// Removes the object at position [index] from this list.
@@ -564,7 +562,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   E removeAt(int index) {
-    return _mutate((list) => list.removeAt(index), resizes: true);
+    return _resize((list) => list.removeAt(index));
   }
 
   /// Removes and returns the last object in this list.
@@ -577,7 +575,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   E removeLast() {
-    return _mutate((list) => list.removeLast(), resizes: true);
+    return _resize((list) => list.removeLast());
   }
 
   /// Removes a range of elements from the list.
@@ -598,7 +596,8 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void removeRange(int start, int end) {
-    _mutateUnless(start == end, (list) => list.removeRange(start, end));
+    if (start == end) return _untrackedValue.removeRange(start, end);
+    _resize((list) => list.removeRange(start, end));
   }
 
   /// Removes all objects from this list that satisfy [test].
@@ -612,7 +611,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// The list must be growable.
   @override
   void removeWhere(bool Function(E element) test) {
-    _mutate((list) => list.removeWhere(test));
+    _resize((list) => list.removeWhere(test));
   }
 
   /// Replaces a range of elements with the elements of [replacements].
@@ -646,9 +645,14 @@ class ListSignal<E> extends Signal<List<E>>
   /// [setRange] instead.
   @override
   void replaceRange(int start, int end, Iterable<E> replacements) {
-    _mutateUnless(
-      start == end && _isEmpty(replacements),
+    if (start == end && _isEmpty(replacements)) {
+      return _untrackedValue.replaceRange(start, end, replacements);
+    }
+    _writeRange(
+      start,
+      end,
       (list) => list.replaceRange(start, end, replacements),
+      resizes: true,
     );
   }
 
@@ -663,7 +667,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// The list must be growable.
   @override
   void retainWhere(bool Function(E element) test) {
-    _mutate((list) => list.retainWhere(test));
+    _resize((list) => list.retainWhere(test));
   }
 
   /// Overwrites elements with the objects of [iterable].
@@ -686,9 +690,20 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void setAll(int index, Iterable<E> iterable) {
-    _mutateUnless(
-      _isEmpty(iterable),
+    final list = _untrackedValue;
+    if (iterable is List<E>) {
+      if (iterable.isEmpty) return list.setAll(index, iterable);
+      _writeRange(
+        index,
+        index + min(iterable.length, max(0, list.length - index)),
+        (list) => list.setAll(index, iterable),
+      );
+      return;
+    }
+    // Other iterables run caller code, so compare the whole list.
+    _mutate(
       (list) => list.setAll(index, iterable),
+      bulkCheck: _bulkChangeCheck,
     );
   }
 
@@ -720,8 +735,12 @@ class ListSignal<E> extends Signal<List<E>>
   /// made.
   @override
   void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) {
-    _mutateUnless(
-      start == end,
+    if (start == end) {
+      return _untrackedValue.setRange(start, end, iterable, skipCount);
+    }
+    _writeRange(
+      start,
+      end,
       (list) => list.setRange(start, end, iterable, skipCount),
     );
   }
@@ -734,7 +753,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void shuffle([Random? random]) {
-    _mutate((list) => list.shuffle(random));
+    _mutate((list) => list.shuffle(random), bulkCheck: _bulkChangeCheck);
   }
 
   /// Sorts this list according to the order specified by the [compare] function
@@ -767,7 +786,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void sort([int Function(E a, E b)? compare]) {
-    _mutate((list) => list.sort(compare));
+    _mutate((list) => list.sort(compare), bulkCheck: _bulkChangeCheck);
   }
 
   @override
@@ -780,11 +799,53 @@ class ListSignal<E> extends Signal<List<E>>
   @override
   List<E> _copyPrevious(List<E> list) => List<E>.of(list);
 
-  @override
   bool Function() _bulkChangeCheck(List<E> list, List<E>? previous) {
     final before = previous ?? List<E>.of(list);
-    return () =>
-        !const ListEquality<Object?>(IdentityEquality()).equals(before, list);
+    return () => _elementsDiffer(list, before);
+  }
+
+  bool _elementsDiffer(List<E> list, List<E> before) =>
+      !const ListEquality<Object?>(IdentityEquality()).equals(before, list);
+
+  R _resize<R>(R Function(List<E>) write) =>
+      _mutate(write, failedResizeChanged: _elementsDiffer);
+
+  // A cast view can reject a read even when the backing write is valid.
+  static final _unreadable = Object();
+
+  Object? _readSlot(List<E> list, int index) {
+    try {
+      return list[index];
+    } on Object {
+      return _unreadable;
+    }
+  }
+
+  bool _rangeChanged(List<E> list, int start, List<Object?> before) {
+    for (var i = 0; i < before.length; i++) {
+      if (!identical(before[i], _readSlot(list, start + i))) return true;
+    }
+    return false;
+  }
+
+  /// Set [resizes] when [write] can change the length, so a write that
+  /// fails after it moved elements is still found.
+  void _writeRange(
+    int start,
+    int end,
+    void Function(List<E>) write, {
+    bool resizes = false,
+  }) {
+    final list = _untrackedValue;
+    final before = [
+      if (start >= 0 && end <= list.length)
+        for (var i = start; i < end; i++) _readSlot(list, i),
+    ];
+    _mutate(
+      write,
+      slotChanged: () => _rangeChanged(list, start, before),
+      failedResizeChanged: resizes ? _elementsDiffer : null,
+    );
   }
 
   void _writeSlot(int index, E value, void Function(List<E>) write) {

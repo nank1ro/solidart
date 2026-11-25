@@ -92,7 +92,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// ```
   @override
   void clear() {
-    _mutate((map) => map.clear(), resizes: true);
+    _mutate((map) => map.clear());
   }
 
   /// The keys of the Map.
@@ -144,7 +144,6 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     return _mutateUnless(
       !_untrackedValue.containsKey(key),
       (map) => map.remove(key),
-      resizes: true,
     );
   }
 
@@ -254,7 +253,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     if ((newEntries is List || newEntries is Set) && newEntries.isEmpty) {
       return _untrackedValue.addEntries(newEntries);
     }
-    _mutate((map) => map.addEntries(newEntries));
+    _mutate((map) => map.addEntries(newEntries), bulkCheck: _bulkChangeCheck);
   }
 
   /// Adds all key/value pairs of [other] to this map.
@@ -272,7 +271,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   @override
   void addAll(Map<K, V> other) {
     if (other.isEmpty) return _untrackedValue.addAll(other);
-    _mutate((map) => map.addAll(other));
+    _mutate((map) => map.addAll(other), bulkCheck: _bulkChangeCheck);
   }
 
   /// Look up the value of [key], or add a new entry if it isn't there.
@@ -300,6 +299,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     return _mutateUnless(
       _untrackedValue.containsKey(key),
       (map) => map.putIfAbsent(key, ifAbsent),
+      bulkCheck: _bulkChangeCheck,
     );
   }
 
@@ -343,6 +343,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     return _mutateUnless(
       ifAbsent == null && !_untrackedValue.containsKey(key),
       (map) => map.update(key, update, ifAbsent: ifAbsent),
+      bulkCheck: _bulkChangeCheck,
     );
   }
 
@@ -357,7 +358,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// ```
   @override
   void updateAll(V Function(K key, V value) update) {
-    _mutate((map) => map.updateAll(update));
+    _mutate((map) => map.updateAll(update), bulkCheck: _bulkChangeCheck);
   }
 
   @override
@@ -370,7 +371,6 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   @override
   Map<K, V> _copyPrevious(Map<K, V> map) => Map<K, V>.of(map);
 
-  @override
   bool Function() _bulkChangeCheck(Map<K, V> map, Map<K, V>? previous) {
     if (previous != null && previous.length == map.length) {
       return () {

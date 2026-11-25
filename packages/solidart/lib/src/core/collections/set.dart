@@ -83,7 +83,6 @@ class SetSignal<E> extends Signal<Set<E>>
     return _mutateUnless(
       _untrackedValue.contains(value),
       (set) => set.add(value),
-      resizes: true,
     );
   }
 
@@ -194,7 +193,6 @@ class SetSignal<E> extends Signal<Set<E>>
     return _mutateUnless(
       !_untrackedValue.contains(value),
       (set) => set.remove(value),
-      resizes: true,
     );
   }
 
@@ -260,7 +258,7 @@ class SetSignal<E> extends Signal<Set<E>>
   /// ```
   @override
   void clear() {
-    _mutate((set) => set.clear(), resizes: true);
+    _mutate((set) => set.clear());
   }
 
   /// Removes all elements of this set that are not elements in [elements].
@@ -432,15 +430,6 @@ class SetSignal<E> extends Signal<Set<E>>
 
   @override
   Set<E> _copyPrevious(Set<E> set) => set.toSet();
-
-  @override
-  bool Function() _bulkChangeCheck(Set<E> set, Set<E>? previous) {
-    // The history set can have a different iteration order.
-    final before = set.toList();
-    return () =>
-        !const IterableEquality<Object?>(IdentityEquality())
-            .equals(before, set);
-  }
 
   @override
   // ignore: overridden_fields

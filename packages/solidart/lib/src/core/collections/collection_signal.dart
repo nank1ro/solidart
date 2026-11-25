@@ -8,14 +8,12 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// A detached copy of [collection], used as the previous value.
   C _copyPrevious(C collection);
 
-  /// Saves what a bulk mutation of [collection] must compare. Returns a
-  /// function that tells, after the mutation, whether an element or entry
-  /// is no longer `identical` to the one at the same position before.
-  /// [previous] is the history copy, or null without history.
-  bool Function() _bulkChangeCheck(C collection, C? previous);
-
   /// The collection that the current [_mutate] is changing.
   C? _mutating;
+
+  /// Whether a mutation nested in the current [_mutate] changed the
+  /// collection.
+  bool _nestedChanged = false;
 
   @override
   C setValue(C newValue) {
@@ -41,44 +39,50 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// this one notifies once for both. If [mutation] assigns a new
   /// collection, the assignment notifies, so this one does not.
   ///
-  /// Set [resizes] when [mutation] runs no code of the caller and changes
-  /// the collection only when it changes its length. Set [slotChanged] when
-  /// [mutation] can change only one slot: it tells whether that slot
-  /// changed. Then no full comparison is made. Other mutations can run code
-  /// of the caller, so they use [_bulkChangeCheck].
+  /// Length and nested writes are always checked. Use [slotChanged] for
+  /// bounded writes or [bulkCheck] for a full comparison. A list mutation
+  /// that can change the length can also move elements and then throw.
+  /// In that case, [failedResizeChanged] compares the elements with the
+  /// history copy, if one exists.
   ///
   /// The error of [mutation] wins over an error of the notification, which
   /// goes to the current [Zone].
   R _mutate<R>(
     R Function(C collection) mutation, {
-    bool resizes = false,
+    bool Function() Function(C, C?)? bulkCheck,
     bool Function()? slotChanged,
+    bool Function(C, C)? failedResizeChanged,
   }) {
     final collection = _untrackedValue;
-    if (identical(collection, _mutating)) return mutation(collection);
     final outer = _mutating;
+    final nested = identical(collection, outer);
     final length = _lengthOf(collection);
-    final previous = trackPreviousValue ? _copyPrevious(collection) : null;
-    final check = resizes
-        ? null
-        : slotChanged ?? _bulkChangeCheck(collection, previous);
-    late final R result;
+    final previous = !nested && trackPreviousValue
+        ? _copyPrevious(collection)
+        : null;
+    final check = slotChanged ?? bulkCheck?.call(collection, previous);
+    final outerChanged = _nestedChanged;
+    _nestedChanged = false;
     _mutating = collection;
+    late final R result;
     final errors = _FirstError()..run(() => result = mutation(collection));
+    final nestedChanged = _nestedChanged;
     _mutating = outer;
+    _nestedChanged = outerChanged;
     var changed = false;
     errors.run(() {
       if (!identical(_untrackedValue, collection)) return;
-      changed = length != _lengthOf(collection);
-      if (changed) return;
-      if (check != null) {
-        changed = check();
-      } else if (errors.hasError && previous != null && collection is List) {
-        // A failed list resize can shift elements before the length changes.
-        changed = _bulkChangeCheck(collection, previous)();
-      }
+      changed =
+          nestedChanged ||
+          length != _lengthOf(collection) ||
+          (check?.call() ?? false) ||
+          (errors.hasError &&
+              previous != null &&
+              (failedResizeChanged?.call(collection, previous) ?? false));
     });
-    if (changed) {
+    if (nested) {
+      _nestedChanged |= changed;
+    } else if (changed) {
       if (previous != null) errors.run(() => _setPreviousValue(previous));
       errors.run(_notifyChanged);
     }
@@ -92,11 +96,11 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   R _mutateUnless<R>(
     bool unchanged,
     R Function(C collection) mutation, {
-    bool resizes = false,
+    bool Function() Function(C, C?)? bulkCheck,
     bool Function()? slotChanged,
   }) => unchanged
       ? mutation(_untrackedValue)
-      : _mutate(mutation, resizes: resizes, slotChanged: slotChanged);
+      : _mutate(mutation, bulkCheck: bulkCheck, slotChanged: slotChanged);
 
   void _notifyChanged() {
     _reportChanged();

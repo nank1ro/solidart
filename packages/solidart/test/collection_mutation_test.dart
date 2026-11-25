@@ -93,9 +93,13 @@ void _expectMutationErrorWins(void Function() mutate) {
 
 /// A list of zeros that counts how many times an element is read.
 class _CountingList extends ListBase<int> {
-  _CountingList(int length) : _elements = List.filled(length, 0);
+  _CountingList(int length)
+    : _elements = List.filled(length, 0, growable: true);
 
   final List<int> _elements;
+
+  @override
+  void addAll(Iterable<int> iterable) => _elements.addAll(iterable);
 
   int reads = 0;
 
@@ -183,6 +187,60 @@ class _FixedLengthList extends ListBase<int> {
 }
 
 void main() {
+  group('bulk mutation cost', () {
+    final listWrites = <String, void Function(List<int>)>{
+      'removeWhere': (list) => list.removeWhere((_) => false),
+      'addAll': (list) => list.addAll([1, 2]),
+    };
+    for (final MapEntry(key: name, value: write) in listWrites.entries) {
+      test('list $name adds no reads', () {
+        final reference = _CountingList(100);
+        write(reference);
+        final backing = _CountingList(100);
+        final s = ListSignal<int>([], trackPreviousValue: false)
+          ..value = backing;
+        addTearDown(s.dispose);
+        write(s);
+        expect(backing.reads, reference.reads);
+      });
+    }
+
+    final setWrites = <String, void Function(Set<int>)>{
+      'removeWhere': (set) => set.removeWhere((_) => false),
+      'retainAll': (set) => set.retainAll(List.generate(100, (i) => i)),
+    };
+    for (final MapEntry(key: name, value: write) in setWrites.entries) {
+      test('set $name adds no scans', () {
+        final reference = _CountingSet();
+        write(reference);
+        final backing = _CountingSet();
+        final s = SetSignal<int>({}, trackPreviousValue: false)
+          ..value = backing;
+        addTearDown(s.dispose);
+        write(s);
+        expect(backing.scans, reference.scans);
+      });
+    }
+
+    test('map removeWhere adds no scans', () {
+      final reference = _CountingMap()..removeWhere((_, _) => false);
+      final backing = _CountingMap();
+      final s = MapSignal<int, int>({}, trackPreviousValue: false)
+        ..value = backing;
+      addTearDown(s.dispose);
+      s.removeWhere((_, _) => false);
+      expect(backing.scans, reference.scans);
+    });
+
+    test('list fillRange reads only the affected slots', () {
+      final backing = _CountingList(100);
+      final s = ListSignal<int>([], trackPreviousValue: false)..value = backing;
+      addTearDown(s.dispose);
+      s.fillRange(50, 53, 0);
+      expect(backing.reads, lessThanOrEqualTo(6));
+    });
+  });
+
   group('point mutation cost', () {
     test('list slot write without history reads only the slot', () {
       final backing = _CountingList(100);
@@ -252,6 +310,39 @@ void main() {
       expect(s.untrackedValue, [9]);
       expect(s.previousValue, [1, 2]);
       expect(w.calls.single[0], [1, 2]);
+    });
+
+    for (final changed in [true, false]) {
+      test('removeWhere with a nested slot write (changed: $changed)', () {
+        final s = ListSignal([1, 2]);
+        final w = watch(s);
+        s.removeWhere((_) {
+          s[1] = changed ? 99 : 2;
+          return false;
+        });
+        expect(w.effectReruns, changed ? 1 : 0);
+        expect(w.calls, hasLength(changed ? 1 : 0));
+        if (changed) expect(s.untrackedPreviousValue, [1, 2]);
+      });
+    }
+
+    test('nested writes that restore the original slot notify once', () {
+      final s = ListSignal([1, 2], trackPreviousValue: false);
+      final w = watch(s);
+      s.removeWhere((value) {
+        if (value == 1) {
+          s.retainWhere((_) {
+            s
+              ..[1] = 99
+              ..[1] = 2;
+            return true;
+          });
+        }
+        return false;
+      });
+      expect(w.effectReruns, 1);
+      expect(w.calls, hasLength(1));
+      expect(s.untrackedValue, [1, 2]);
     });
 
     test('retainWhere notifies once with the old list', () {
@@ -523,6 +614,70 @@ void main() {
       expect(w.effectReruns, 1);
     });
 
+    test('setAll consumes a lazy input once and reports a partial write', () {
+      final s = ListSignal([1, 2, 3], trackPreviousValue: false);
+      final w = watch(s);
+      var iterations = 0;
+      Iterable<int> source() sync* {
+        iterations++;
+        yield 9;
+        throw StateError('interrupted');
+      }
+
+      expect(() => s.setAll(1, source()), throwsStateError);
+      expect(s.untrackedValue, [1, 9, 3]);
+      expect(w.effectReruns, 1);
+      expect(iterations, 1);
+    });
+
+    for (final history in [false, true]) {
+      test('setAll sees a raw write that its lazy input makes ahead '
+          '(history $history)', () {
+        final s = ListSignal<int>([1, 2, 3], trackPreviousValue: history);
+        final w = watch(s);
+        final raw = s.untrackedValue;
+        Iterable<int> input() sync* {
+          yield 1;
+          raw[1] = 99;
+          yield 99;
+        }
+
+        s.setAll(0, input());
+
+        expect(s.untrackedValue, [1, 99, 3]);
+        expect(w.effectReruns, 1);
+      });
+    }
+
+    test('setAll on a typed list preserves lazy input evaluation', () {
+      final s = ListSignal<int>([], trackPreviousValue: false)
+        ..value = Uint8List(2);
+      addTearDown(s.dispose);
+      var reads = 0;
+      final input = [1, 2].map((i) {
+        reads++;
+        return i;
+      });
+      s.setAll(0, input);
+      expect(reads, 2);
+      expect(s.untrackedValue, [1, 2]);
+    });
+
+    test('fillRange can overwrite an unreadable slot without history', () {
+      final s = ListSignal<int>([], trackPreviousValue: false)
+        ..value = <Object>['bad'].cast<int>();
+      addTearDown(s.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        s.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+      s.fillRange(0, 1, 1);
+      expect(s.single, 1);
+      expect(runs, 2);
+    });
+
     final rejectedMutations = <String, void Function(ListSignal<int>)>{
       'add': (s) => s.add(4),
       'sort': (s) => s.sort(),
@@ -706,6 +861,48 @@ void main() {
       ]);
       expect(w.effectReruns, 1);
     });
+
+    final shiftThenThrow = <String, void Function(ListSignal<int>)>{
+      'removeWhere': (s) => s.removeWhere((x) => x == 1),
+      'remove': (s) => s.remove(1),
+      'removeRange': (s) => s.removeRange(0, 1),
+    };
+    for (final MapEntry(key: name, value: mutate) in shiftThenThrow.entries) {
+      test('a $name that moves elements and then throws notifies once', () {
+        final s = ListSignal<int>([])..value = _FixedLengthList([1, 2, 3]);
+        final w = watch(s);
+
+        expect(() => mutate(s), throwsUnsupportedError);
+
+        expect(s.untrackedValue, [2, 3, 3]);
+        expect(w.calls, [
+          [
+            [1, 2, 3],
+            [2, 3, 3],
+          ],
+        ]);
+        expect(w.effectReruns, 1);
+      });
+    }
+
+    test(
+      'a replaceRange that moves elements and then throws notifies once',
+      () {
+        final s = ListSignal<int>([])..value = _FixedLengthList([1, 1, 3]);
+        final w = watch(s);
+
+        expect(() => s.replaceRange(0, 1, const []), throwsUnsupportedError);
+
+        expect(s.untrackedValue, [1, 3, 3]);
+        expect(w.calls, [
+          [
+            [1, 1, 3],
+            [1, 3, 3],
+          ],
+        ]);
+        expect(w.effectReruns, 1);
+      },
+    );
   });
 
   group('MapSignal', () {
