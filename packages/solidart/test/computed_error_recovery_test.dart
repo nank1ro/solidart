@@ -834,5 +834,28 @@ void main() {
       expect(c.run, returnsNormally);
       expect(nestedError, isA<SolidartCaughtException>());
     });
+
+    test('run() does not notify again a change that an observer already '
+        'stored with a nested run()', () {
+      var next = 0;
+      final c = Computed(() => next);
+      final seen = <int>[];
+      var once = true;
+      final observer = _ReadingObserver((computed) {
+        if (!once || !identical(computed, c)) return;
+        once = false;
+        next = 1;
+        computed.run();
+      });
+
+      final effect = Effect(() => seen.add(c.value));
+      addTearDown(effect.dispose);
+      SolidartConfig.observers.add(observer);
+      addTearDown(() => SolidartConfig.observers.remove(observer));
+
+      // The outer run is equal. The nested run stores 1 and notifies.
+      c.run();
+      expect(seen, [0, 1]);
+    });
   });
 }
