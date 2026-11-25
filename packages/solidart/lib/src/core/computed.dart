@@ -406,12 +406,15 @@ class Computed<T> extends ReadSignal<T> {
     SolidartCaughtException? error;
     // Whether this run must notify the subscribers of its change.
     var notify = false;
+    // The changes stored when this evaluation ended.
+    var changes = 0;
     // A cleanup error after a committed change, rethrown after the
     // subscribers are notified of the change.
     final errors = _FirstError();
     try {
       reactiveSystem._evaluate(() {
         (changed: _, :notify, :error) = _internalComputed.update();
+        changes = _internalComputed.changes;
       });
     } catch (e, s) {
       // The selector error has priority over an error from the cleanup that
@@ -427,6 +430,9 @@ class Computed<T> extends ReadSignal<T> {
       // Like a read: record the inputs so dispose() reaches them.
       _recordInputs(merge: error != null);
     }
+    // A run in the drain at the end of the evaluation stored a newer change
+    // and notified the subscribers of it.
+    if (_internalComputed.changes != changes) notify = false;
     if (notify) {
       if (error != null) {
         // The caller must still get the selector error: a notification
@@ -437,11 +443,10 @@ class Computed<T> extends ReadSignal<T> {
           Zone.current.handleUncaughtError(notifyError, notifyStackTrace);
         }
       } else {
-        errors
-          ..run(() => reactiveSystem.notifySubscribers(_internalComputed))
-          ..rethrowIfAny();
+        errors.run(() => reactiveSystem.notifySubscribers(_internalComputed));
       }
     }
+    errors.rethrowIfAny();
     final runError = error;
     if (runError != null) {
       Error.throwWithStackTrace(runError, runError.stackTrace!);
