@@ -13,9 +13,12 @@ mixin _CollectionSignal<C> on Signal<C> {
   /// in iteration order.
   Iterable<Object?> _identitiesOf(C collection);
 
-  /// A new collection that holds [identities], which came from
-  /// [_identitiesOf] on the current collection before it changed.
-  C _restore(List<Object?> identities);
+  /// Saves the previous value of [collection] before a mutation.
+  ///
+  /// [identities] came from [_identitiesOf] on [collection]. Returns a
+  /// function that gives the previous value. [_mutate] calls it only after
+  /// a change.
+  C Function() _savePrevious(C collection, List<Object?> identities);
 
   /// The collection that the outermost running [_mutate] copied.
   C? _mutating;
@@ -26,10 +29,14 @@ mixin _CollectionSignal<C> on Signal<C> {
     if (_compare(old, newValue)) {
       return newValue;
     }
-    // An outer [_mutate] may still change the outgoing collection.
-    _setPreviousValue(
-      identical(old, _mutating) ? _restore(_identitiesOf(old).toList()) : old,
-    );
+    if (trackPreviousValue) {
+      // An outer [_mutate] may still change the outgoing collection.
+      _setPreviousValue(
+        identical(old, _mutating)
+            ? _savePrevious(old, _identitiesOf(old).toList())()
+            : old,
+      );
+    }
     // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
     _value = newValue;
     _notifySignalUpdate();
@@ -59,27 +66,30 @@ mixin _CollectionSignal<C> on Signal<C> {
     final before = resizes && !trackPreviousValue
         ? null
         : _identitiesOf(collection).toList();
+    final previous = trackPreviousValue
+        ? _savePrevious(collection, before!)
+        : null;
     late final R result;
     _mutating = collection;
     final errors = _FirstError()..run(() => result = mutation(collection));
     _mutating = outer;
-    errors
-      ..run(() {
-        if (!identical(_untrackedValue, collection)) return;
-        var changed = length != _lengthOf(collection);
-        if (before != null && !changed) {
-          var i = 0;
-          changed = _identitiesOf(
-            collection,
-          ).any((object) => !identical(object, before[i++]));
-        }
-        if (!changed) return;
-        if (before != null && trackPreviousValue) {
-          _setPreviousValue(_restore(before));
-        }
-        _notifyChanged();
-      })
-      ..rethrowIfAny();
+    var changed = false;
+    errors.run(() {
+      if (!identical(_untrackedValue, collection)) return;
+      changed = length != _lengthOf(collection);
+      if (before != null && !changed) {
+        var i = 0;
+        changed = _identitiesOf(
+          collection,
+        ).any((object) => !identical(object, before[i++]));
+      }
+    });
+    if (changed) {
+      // The change is done, so it notifies even if [previous] throws.
+      if (previous != null) errors.run(() => _setPreviousValue(previous()));
+      errors.run(_notifyChanged);
+    }
+    errors.rethrowIfAny();
     return result;
   }
 

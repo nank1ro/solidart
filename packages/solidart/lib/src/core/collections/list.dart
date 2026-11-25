@@ -782,7 +782,11 @@ class ListSignal<E> extends Signal<List<E>>
   /// [identities] is a `List<E>`, because `toList` on a `List<E>` returns
   /// one, so it is the previous list without another copy.
   @override
-  List<E> _restore(List<Object?> identities) => identities as List<E>;
+  List<E> Function() _savePrevious(
+    List<E> list,
+    List<Object?> identities,
+  ) =>
+      () => identities as List<E>;
 
   /// Whether the list has [element] at [index], compared with `identical`.
   bool _holds(int index, E element) {

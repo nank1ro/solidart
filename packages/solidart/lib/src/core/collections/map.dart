@@ -373,12 +373,17 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     }
   }
 
-  /// A plain [Map], so it does not keep a custom key equality.
+  /// Builds a plain [Map] only after a change, so it does not keep a custom
+  /// key equality.
   @override
-  Map<K, V> _restore(List<Object?> identities) => {
-    for (var i = 0; i < identities.length; i += 2)
-      identities[i] as K: identities[i + 1] as V,
-  };
+  Map<K, V> Function() _savePrevious(
+    Map<K, V> map,
+    List<Object?> identities,
+  ) =>
+      () => {
+        for (var i = 0; i < identities.length; i += 2)
+          identities[i] as K: identities[i + 1] as V,
+      };
 
   @override
   // ignore: overridden_fields

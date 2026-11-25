@@ -264,12 +264,10 @@ void main() {
     });
 
     test('shuffle that keeps the order does not notify', () {
-      // Random(1) shuffles a 5-element list back into the same order.
-      expect([1, 2, 3, 4, 5]..shuffle(Random(1)), [1, 2, 3, 4, 5]);
       final s = ListSignal([1, 2, 3, 4, 5]);
       final w = watch(s);
 
-      s.shuffle(Random(1));
+      s.shuffle(_NoSwapRandom());
 
       expect(s.untrackedValue, [1, 2, 3, 4, 5]);
       expect(w.calls, isEmpty);
@@ -639,6 +637,51 @@ void main() {
       final result = s.update('a', (_) => 2);
 
       expect([result, s.untrackedValue['a'], runs - 1], [2, 2, 1]);
+    });
+
+    test('history on: a failed previous value still notifies the change', () {
+      final s = MapSignal<Object, int>(
+        Map<Object, int>.identity()
+          ..[_ThrowingHash()] = 0
+          ..['a'] = 1,
+      );
+      addTearDown(s.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        s.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+
+      expect(s.clear, throwsUnsupportedError);
+
+      expect(s.untrackedValue, isEmpty);
+      expect(runs, 2);
+    });
+
+    test('history off: an assignment inside a mutation does not copy the '
+        'map', () {
+      final s = MapSignal<Object, int>(
+        Map<Object, int>.identity()
+          ..[_ThrowingHash()] = 0
+          ..['a'] = 1,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        s.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+
+      s.update('a', (_) {
+        s.value = {'x': 9};
+        return 2;
+      });
+
+      expect(s.untrackedValue, {'x': 9});
+      expect(runs, 2);
     });
 
     test('update of an existing key notifies once with the old map', () {
@@ -1161,6 +1204,19 @@ void main() {
       return _Watch<Set<E>>(s, (value) => value.toSet());
     }
 
+    test('the previous value keeps the iteration order of the set', () {
+      final s = SetSignal<int>({})
+        ..value = (_NewestFirstSet()
+          ..add(1)
+          ..add(2));
+      addTearDown(s.dispose);
+
+      s.add(3);
+
+      expect(s.untrackedValue.toList(), [3, 2, 1]);
+      expect(s.untrackedPreviousValue!.toList(), [2, 1]);
+    });
+
     test('a callback that assigns a value keeps the old set as previous', () {
       final s = SetSignal({1, 2});
       final w = watch(s);
@@ -1571,4 +1627,47 @@ class _WriteThenThrowMap extends MapBase<String, int> {
 
   @override
   int? remove(Object? key) => _delegate.remove(key);
+}
+
+/// A set that iterates its newest element first. `toSet` keeps the order.
+class _NewestFirstSet extends SetBase<int> {
+  final List<int> _elements = [];
+
+  @override
+  bool add(int value) {
+    if (_elements.contains(value)) return false;
+    _elements.insert(0, value);
+    return true;
+  }
+
+  @override
+  bool contains(Object? element) => _elements.contains(element);
+
+  @override
+  Iterator<int> get iterator => _elements.iterator;
+
+  @override
+  int get length => _elements.length;
+
+  @override
+  int? lookup(Object? element) =>
+      _elements.contains(element) ? element! as int : null;
+
+  @override
+  bool remove(Object? value) => _elements.remove(value);
+
+  @override
+  Set<int> toSet() => _NewestFirstSet().._elements.addAll(_elements);
+}
+
+/// A [Random] that makes `List.shuffle` swap each element with itself.
+class _NoSwapRandom implements Random {
+  @override
+  int nextInt(int max) => max - 1;
+
+  @override
+  bool nextBool() => throw UnimplementedError();
+
+  @override
+  double nextDouble() => throw UnimplementedError();
 }

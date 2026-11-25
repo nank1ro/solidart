@@ -431,11 +431,13 @@ class SetSignal<E> extends Signal<Set<E>>
   @override
   Iterable<Object?> _identitiesOf(Set<E> set) => set;
 
-  /// `toSet` on the current set keeps its type and equality.
+  /// Copies the set before the mutation. `toSet` keeps its type, equality
+  /// and iteration order.
   @override
-  Set<E> _restore(List<Object?> identities) => _untrackedValue.toSet()
-    ..clear()
-    ..addAll(identities.cast<E>());
+  Set<E> Function() _savePrevious(Set<E> set, List<Object?> identities) {
+    final copy = set.toSet();
+    return () => copy;
+  }
 
   @override
   // ignore: overridden_fields
