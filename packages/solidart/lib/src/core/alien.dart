@@ -34,7 +34,9 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
   // Whether the getter runs from didUpdate(), not from the first get().
   bool updating = false;
 
-  // The number of evaluations that changed the stored value or error.
+  // The number of evaluations that changed the stored value or error and
+  // notified the observers. A run whose observer throws does not count, so
+  // its change is not taken as delivered to the subscribers.
   int changes = 0;
 
   @override
@@ -62,11 +64,11 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
     // are not retained.
     if (parent._deps.isNotEmpty) parent._recordInputs();
     final result = hadError ? changed : !parent._equalsPrevious;
-    if (result) changes++;
     final before = changes;
     // Committed: observers now read the new value, not the old error.
     parent._notifyEvaluated();
     final nested = changes != before;
+    if (result) changes++;
     return (
       changed: result || nested,
       notify: result && !nested,
