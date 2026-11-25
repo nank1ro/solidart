@@ -269,6 +269,37 @@ void main() {
       expect(source.disposed, isTrue);
     });
 
+    test('in a batch keeps the selector error of Computed.run() when an '
+        'effect onError throws', () {
+      var fail = false;
+      final c = Computed(() {
+        if (fail) throw StateError('selector');
+        return 0;
+      });
+      final effect = Effect(
+        () => c.value,
+        onError: (_) => throw StateError('handler'),
+      );
+      addTearDown(effect.dispose);
+
+      fail = true;
+      Object? thrown;
+      final zone = _runInZone(() {
+        try {
+          batch(c.run);
+        } catch (e) {
+          thrown = e;
+        }
+      });
+
+      expect(thrown, isA<SolidartCaughtException>());
+      expect(
+        _messageOf((thrown! as SolidartCaughtException).exception),
+        'selector',
+      );
+      expect(zone.reported.map(_messageOf), ['handler']);
+    });
+
     test('run by hand keeps its error when a queued effect also throws', () {
       final trigger = Signal(false);
       addTearDown(trigger.dispose);
