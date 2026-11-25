@@ -388,10 +388,10 @@ class Computed<T> extends ReadSignal<T> {
     if (_disposed) return;
     // The outcome of this run: a subscriber or an observer may run the
     // computed again, and that inner run would overwrite `_error`.
-    final (:changed, :error) = _internalComputed.update();
+    final (changed: _, :notify, :error) = _internalComputed.update();
     // Like a read: record the inputs so dispose() reaches them.
     if (autoDispose) _recordInputs(merge: error != null);
-    if (changed) {
+    if (notify) {
       try {
         reactiveSystem.notifySubscribers(_internalComputed);
       } catch (notifyError, notifyStackTrace) {
