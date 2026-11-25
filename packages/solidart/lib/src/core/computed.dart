@@ -89,6 +89,9 @@ class Computed<T> extends ReadSignal<T> {
           try {
             value = selector();
           } catch (e, s) {
+            // Record the inputs now: a nested evaluation in the drain at the
+            // end of this one can unlink them before the caller records.
+            _recordInputs(merge: true);
             throw _error = SolidartCaughtException(e, stackTrace: s);
           }
           _untrackedValue = value;
