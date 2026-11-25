@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:solidart/solidart.dart';
 import 'package:test/test.dart';
 
@@ -114,6 +115,53 @@ class _CountingList extends ListBase<int> {
   void operator []=(int index, int value) => _elements[index] = value;
 }
 
+class _CountingMap extends DelegatingMap<int, int> {
+  _CountingMap() : super({for (var i = 0; i < 100; i++) i: i});
+  int scans = 0;
+  int reads = 0;
+
+  @override
+  int? operator [](Object? key) {
+    reads++;
+    return super[key];
+  }
+
+  @override
+  Iterable<MapEntry<int, int>> get entries {
+    scans++;
+    return super.entries;
+  }
+
+  @override
+  Iterable<int> get keys {
+    scans++;
+    return super.keys;
+  }
+
+  @override
+  void forEach(void Function(int, int) action) {
+    scans++;
+    super.forEach(action);
+  }
+}
+
+class _CountingSet extends DelegatingSet<int> {
+  _CountingSet() : super({for (var i = 0; i < 100; i++) i});
+  int scans = 0;
+
+  @override
+  List<int> toList({bool growable = true}) {
+    scans++;
+    return super.toList(growable: growable);
+  }
+
+  @override
+  Iterator<int> get iterator {
+    scans++;
+    return super.iterator;
+  }
+}
+
 /// A list whose length cannot change. `ListBase.removeAt` moves the
 /// elements first, so it changes the list and then throws.
 class _FixedLengthList extends ListBase<int> {
@@ -135,6 +183,55 @@ class _FixedLengthList extends ListBase<int> {
 }
 
 void main() {
+  group('point mutation cost', () {
+    test('list slot write without history reads only the slot', () {
+      final backing = _CountingList(100);
+      final list = ListSignal<int>([], trackPreviousValue: false)
+        ..value = backing;
+      addTearDown(list.dispose);
+      backing.reads = 0;
+      list[50] = 1;
+      expect(backing.reads, lessThanOrEqualTo(2));
+    });
+
+    for (final history in [false, true]) {
+      final writes = <String, void Function(MapSignal<int, int>)>{
+        'update existing key': (s) => s[50] = -1,
+        'insert key': (s) => s[100] = -1,
+        'remove key': (s) => s.remove(50),
+      };
+      for (final MapEntry(key: name, value: write) in writes.entries) {
+        test('$name with history $history', () {
+          final backing = _CountingMap();
+          final s = MapSignal<int, int>({}, trackPreviousValue: history)
+            ..value = backing;
+          addTearDown(s.dispose);
+          backing
+            ..scans = 0
+            ..reads = 0;
+          write(s);
+          expect(backing.scans, lessThanOrEqualTo(history ? 1 : 0));
+          expect(backing.reads, lessThanOrEqualTo(2));
+        });
+      }
+    }
+    final setWrites = <String, void Function(SetSignal<int>)>{
+      'add': (s) => s.add(100),
+      'remove': (s) => s.remove(50),
+    };
+    for (final MapEntry(key: name, value: write) in setWrites.entries) {
+      test('set $name without history', () {
+        final backing = _CountingSet();
+        final s = SetSignal<int>({}, trackPreviousValue: false)
+          ..value = backing;
+        addTearDown(s.dispose);
+        backing.scans = 0;
+        write(s);
+        expect(backing.scans, 0);
+      });
+    }
+  });
+
   group('ListSignal', () {
     _Watch<List<T>> watch<T>(ListSignal<T> s) {
       addTearDown(s.dispose);
@@ -243,6 +340,19 @@ void main() {
       expect(w.calls, isEmpty);
       expect(w.effectReruns, 0);
       expect(s.untrackedHasPreviousValue, isFalse);
+    });
+
+    test('sort without history notifies only for the first reorder', () {
+      final s = ListSignal([2, 1], trackPreviousValue: false);
+      final w = watch(s);
+
+      s
+        ..sort()
+        ..sort();
+
+      expect(w.effectReruns, 1);
+      expect(s.untrackedValue, [1, 2]);
+      expect(s.untrackedPreviousValue, isNull);
     });
 
     test('shuffle that changes the order notifies once', () {
@@ -639,7 +749,7 @@ void main() {
       expect([result, s.untrackedValue['a'], runs - 1], [2, 2, 1]);
     });
 
-    test('history on: a failed previous value still notifies the change', () {
+    test('history on: a failed history copy prevents the mutation', () {
       final s = MapSignal<Object, int>(
         Map<Object, int>.identity()
           ..[_ThrowingHash()] = 0
@@ -655,9 +765,36 @@ void main() {
 
       expect(s.clear, throwsUnsupportedError);
 
-      expect(s.untrackedValue, isEmpty);
-      expect(runs, 2);
+      expect(s.untrackedValue.length, 2);
+      expect(s.untrackedValue.values, [0, 1]);
+      expect(runs, 1);
     });
+
+    test(
+      'bulk changes keep both identities when the history map merges keys',
+      () {
+        final a = _Same(1);
+        final b = _Same(2);
+        final backing = Map<_Same, int>.identity()
+          ..[a] = 1
+          ..[b] = 2;
+        final s = MapSignal(backing);
+        addTearDown(s.dispose);
+        var runs = 0;
+        final effect = Effect(() {
+          s.value;
+          runs++;
+        });
+        addTearDown(effect.dispose);
+
+        s.updateAll((key, value) => value);
+        expect(runs, 1);
+        s.update(a, (_) => 3);
+        expect(runs, 2);
+        expect(s.untrackedPreviousValue!.length, 1);
+        expect(s.untrackedPreviousValue![a], 2);
+      },
+    );
 
     test('history off: an assignment inside a mutation does not copy the '
         'map', () {
@@ -698,6 +835,19 @@ void main() {
         ],
       ]);
       expect(w.effectReruns, 1);
+    });
+
+    test('writing null notifies only when it adds a key', () {
+      final s = MapSignal<String, int?>({});
+      final w = watch(s);
+
+      s
+        ..['a'] = null
+        ..['a'] = null;
+
+      expect(w.effectReruns, 1);
+      expect(s.untrackedValue, {'a': null});
+      expect(s.untrackedPreviousValue, isEmpty);
     });
 
     test('update with ifAbsent notifies once with the old map', () {

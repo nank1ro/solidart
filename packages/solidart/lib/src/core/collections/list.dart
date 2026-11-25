@@ -141,7 +141,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// less than [length].
   @override
   void operator []=(int index, E value) {
-    _mutateUnless(_holds(index, value), (list) => list[index] = value);
+    _writeSlot(index, value, (list) => list[index] = value);
   }
 
   /// Adds [value] to the end of this list,
@@ -419,7 +419,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   set first(E value) {
-    _mutateUnless(_holds(0, value), (list) => list.first = value);
+    _writeSlot(0, value, (list) => list.first = value);
   }
 
   /// The last element of the list.
@@ -440,8 +440,9 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   set last(E value) {
-    _mutateUnless(
-      _holds(_untrackedValue.length - 1, value),
+    _writeSlot(
+      _untrackedValue.length - 1,
+      value,
       (list) => list.last = value,
     );
   }
@@ -777,21 +778,24 @@ class ListSignal<E> extends Signal<List<E>>
   int _lengthOf(List<E> list) => list.length;
 
   @override
-  Iterable<Object?> _identitiesOf(List<E> list) => list;
+  List<E> _copyPrevious(List<E> list) => List<E>.of(list);
 
-  /// [identities] is a `List<E>`, because `toList` on a `List<E>` returns
-  /// one, so it is the previous list without another copy.
   @override
-  List<E> Function() _savePrevious(
-    List<E> list,
-    List<Object?> identities,
-  ) =>
-      () => identities as List<E>;
+  bool Function() _bulkChangeCheck(List<E> list, List<E>? previous) {
+    final before = previous ?? List<E>.of(list);
+    return () =>
+        !const ListEquality<Object?>(IdentityEquality()).equals(before, list);
+  }
 
-  /// Whether the list has [element] at [index], compared with `identical`.
-  bool _holds(int index, E element) {
+  void _writeSlot(int index, E value, void Function(List<E>) write) {
     final list = _untrackedValue;
-    return index >= 0 && index < list.length && identical(list[index], element);
+    final valid = index >= 0 && index < list.length;
+    final old = valid ? list[index] : null;
+    _mutateUnless(
+      valid && identical(old, value),
+      write,
+      slotChanged: () => valid && !identical(old, list[index]),
+    );
   }
 
   /// Whether [elements] is an empty list. Only a list is checked, because

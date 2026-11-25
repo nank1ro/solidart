@@ -83,6 +83,7 @@ class SetSignal<E> extends Signal<Set<E>>
     return _mutateUnless(
       _untrackedValue.contains(value),
       (set) => set.add(value),
+      resizes: true,
     );
   }
 
@@ -193,6 +194,7 @@ class SetSignal<E> extends Signal<Set<E>>
     return _mutateUnless(
       !_untrackedValue.contains(value),
       (set) => set.remove(value),
+      resizes: true,
     );
   }
 
@@ -429,14 +431,15 @@ class SetSignal<E> extends Signal<Set<E>>
   int _lengthOf(Set<E> set) => set.length;
 
   @override
-  Iterable<Object?> _identitiesOf(Set<E> set) => set;
+  Set<E> _copyPrevious(Set<E> set) => set.toSet();
 
-  /// Copies the set before the mutation. `toSet` keeps its type, equality
-  /// and iteration order.
   @override
-  Set<E> Function() _savePrevious(Set<E> set, List<Object?> identities) {
-    final copy = set.toSet();
-    return () => copy;
+  bool Function() _bulkChangeCheck(Set<E> set, Set<E>? previous) {
+    // The history set can have a different iteration order.
+    final before = set.toList();
+    return () =>
+        !const IterableEquality<Object?>(IdentityEquality())
+            .equals(before, set);
   }
 
   @override

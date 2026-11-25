@@ -1,26 +1,20 @@
 part of '../core.dart';
 
 /// The mutation logic that [ListSignal], [MapSignal] and [SetSignal] share.
-///
-/// A collection changed when its length changed, or when an object of
-/// [_identitiesOf] is not `identical` to the object at the same position
-/// before.
-mixin _CollectionSignal<C> on Signal<C> {
+mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// The number of elements or entries in [collection].
   int _lengthOf(C collection);
 
-  /// The objects of [collection] that [_mutate] compares with `identical`,
-  /// in iteration order.
-  Iterable<Object?> _identitiesOf(C collection);
+  /// A detached copy of [collection], used as the previous value.
+  C _copyPrevious(C collection);
 
-  /// Saves the previous value of [collection] before a mutation.
-  ///
-  /// [identities] came from [_identitiesOf] on [collection]. Returns a
-  /// function that gives the previous value. [_mutate] calls it only after
-  /// a change.
-  C Function() _savePrevious(C collection, List<Object?> identities);
+  /// Saves what a bulk mutation of [collection] must compare. Returns a
+  /// function that tells, after the mutation, whether an element or entry
+  /// is no longer `identical` to the one at the same position before.
+  /// [previous] is the history copy, or null without history.
+  bool Function() _bulkChangeCheck(C collection, C? previous);
 
-  /// The collection that the outermost running [_mutate] copied.
+  /// The collection that the current [_mutate] is changing.
   C? _mutating;
 
   @override
@@ -31,11 +25,7 @@ mixin _CollectionSignal<C> on Signal<C> {
     }
     if (trackPreviousValue) {
       // An outer [_mutate] may still change the outgoing collection.
-      _setPreviousValue(
-        identical(old, _mutating)
-            ? _savePrevious(old, _identitiesOf(old).toList())()
-            : old,
-      );
+      _setPreviousValue(identical(old, _mutating) ? _copyPrevious(old) : old);
     }
     // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
     _value = newValue;
@@ -52,23 +42,26 @@ mixin _CollectionSignal<C> on Signal<C> {
   /// collection, the assignment notifies, so this one does not.
   ///
   /// Set [resizes] when [mutation] runs no code of the caller and changes
-  /// the collection only when it changes its length. Then, without history,
-  /// the length tells whether the collection changed, so the collection is
-  /// not copied.
+  /// the collection only when it changes its length. Set [slotChanged] when
+  /// [mutation] can change only one slot: it tells whether that slot
+  /// changed. Then no full comparison is made. Other mutations can run code
+  /// of the caller, so they use [_bulkChangeCheck].
   ///
   /// The error of [mutation] wins over an error of the notification, which
   /// goes to the current [Zone].
-  R _mutate<R>(R Function(C collection) mutation, {bool resizes = false}) {
+  R _mutate<R>(
+    R Function(C collection) mutation, {
+    bool resizes = false,
+    bool Function()? slotChanged,
+  }) {
     final collection = _untrackedValue;
     if (identical(collection, _mutating)) return mutation(collection);
     final outer = _mutating;
     final length = _lengthOf(collection);
-    final before = resizes && !trackPreviousValue
+    final previous = trackPreviousValue ? _copyPrevious(collection) : null;
+    final check = resizes
         ? null
-        : _identitiesOf(collection).toList();
-    final previous = trackPreviousValue
-        ? _savePrevious(collection, before!)
-        : null;
+        : slotChanged ?? _bulkChangeCheck(collection, previous);
     late final R result;
     _mutating = collection;
     final errors = _FirstError()..run(() => result = mutation(collection));
@@ -77,16 +70,16 @@ mixin _CollectionSignal<C> on Signal<C> {
     errors.run(() {
       if (!identical(_untrackedValue, collection)) return;
       changed = length != _lengthOf(collection);
-      if (before != null && !changed) {
-        var i = 0;
-        changed = _identitiesOf(
-          collection,
-        ).any((object) => !identical(object, before[i++]));
+      if (changed) return;
+      if (check != null) {
+        changed = check();
+      } else if (errors.hasError && previous != null && collection is List) {
+        // A failed list resize can shift elements before the length changes.
+        changed = _bulkChangeCheck(collection, previous)();
       }
     });
     if (changed) {
-      // The change is done, so it notifies even if [previous] throws.
-      if (previous != null) errors.run(() => _setPreviousValue(previous()));
+      if (previous != null) errors.run(() => _setPreviousValue(previous));
       errors.run(_notifyChanged);
     }
     errors.rethrowIfAny();
@@ -96,8 +89,14 @@ mixin _CollectionSignal<C> on Signal<C> {
   /// Runs [mutation] like [_mutate], or directly on the collection when
   /// [unchanged] is true, so the collection is not copied or compared. The
   /// collection still runs [mutation], so it throws like a plain collection.
-  R _mutateUnless<R>(bool unchanged, R Function(C collection) mutation) =>
-      unchanged ? mutation(_untrackedValue) : _mutate(mutation);
+  R _mutateUnless<R>(
+    bool unchanged,
+    R Function(C collection) mutation, {
+    bool resizes = false,
+    bool Function()? slotChanged,
+  }) => unchanged
+      ? mutation(_untrackedValue)
+      : _mutate(mutation, resizes: resizes, slotChanged: slotChanged);
 
   void _notifyChanged() {
     _reportChanged();

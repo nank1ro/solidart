@@ -74,10 +74,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// Otherwise the key/value pair is added to the map.
   @override
   void operator []=(K key, V value) {
+    final map = _untrackedValue;
+    final old = map[key];
     _mutateUnless(
-      _untrackedValue.containsKey(key) &&
-          identical(_untrackedValue[key], value),
+      identical(old, value) && (old != null || map.containsKey(key)),
       (map) => map[key] = value,
+      slotChanged: () => !identical(old, map[key]),
     );
   }
 
@@ -142,6 +144,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     return _mutateUnless(
       !_untrackedValue.containsKey(key),
       (map) => map.remove(key),
+      resizes: true,
     );
   }
 
@@ -364,26 +367,47 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   @override
   int _lengthOf(Map<K, V> map) => map.length;
 
-  /// The key and then the value of each entry.
   @override
-  Iterable<Object?> _identitiesOf(Map<K, V> map) sync* {
-    for (final entry in map.entries) {
-      yield entry.key;
-      yield entry.value;
-    }
-  }
+  Map<K, V> _copyPrevious(Map<K, V> map) => Map<K, V>.of(map);
 
-  /// Builds a plain [Map] only after a change, so it does not keep a custom
-  /// key equality.
   @override
-  Map<K, V> Function() _savePrevious(
-    Map<K, V> map,
-    List<Object?> identities,
-  ) =>
-      () => {
-        for (var i = 0; i < identities.length; i += 2)
-          identities[i] as K: identities[i + 1] as V,
+  bool Function() _bulkChangeCheck(Map<K, V> map, Map<K, V>? previous) {
+    if (previous != null && previous.length == map.length) {
+      return () {
+        final keys = previous.keys.iterator;
+        final values = previous.values.iterator;
+        var changed = false;
+        map.forEach((key, value) {
+          keys.moveNext();
+          values.moveNext();
+          if (!identical(key, keys.current) ||
+              !identical(value, values.current)) {
+            changed = true;
+          }
+        });
+        return changed;
       };
+    }
+
+    // A plain history map can merge distinct keys from an identity map.
+    final before = List<Object?>.filled(2 * map.length, null);
+    var i = 0;
+    map.forEach((key, value) {
+      before[i++] = key;
+      before[i++] = value;
+    });
+    return () {
+      var i = 0;
+      var changed = false;
+      map.forEach((key, value) {
+        if (!identical(key, before[i]) || !identical(value, before[i + 1])) {
+          changed = true;
+        }
+        i += 2;
+      });
+      return changed;
+    };
+  }
 
   @override
   // ignore: overridden_fields
