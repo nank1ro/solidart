@@ -1683,4 +1683,71 @@ void main() {
       expect(zone.reported.map(_messageOf), ['disposal']);
     });
   });
+
+  group('disposing the last input of a pending subscriber', () {
+    test('does not break the flush of a pending Effect', () {
+      final source = Signal(0);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(source.value));
+      addTearDown(effect.dispose);
+
+      // The net-zero writes leave the effect pending, not dirty.
+      expect(
+        () => batch(() {
+          source
+            ..value = 1
+            ..value = 0
+            ..dispose();
+        }),
+        returnsNormally,
+      );
+      expect(seen, [0]);
+    });
+
+    test('does not break a read of a pending Computed', () {
+      final source = Signal(0);
+      final computed = Computed(() => source.value);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(computed.value));
+      addTearDown(effect.dispose);
+
+      expect(
+        () => batch(() {
+          source
+            ..value = 1
+            ..value = 0
+            ..dispose();
+        }),
+        returnsNormally,
+      );
+      expect(computed.value, 0);
+      expect(seen, [0]);
+    });
+
+    test('does not break the flush of a delayed Effect with a pending '
+        'timer', () async {
+      const delay = Duration(milliseconds: 10);
+      final source = Signal(0);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(source.value), delay: delay);
+      addTearDown(effect.dispose);
+
+      await Future<void>.delayed(delay * 3);
+      source.value = 1;
+      await Future<void>.delayed(delay * 3);
+      // Starts a timer, then leaves the effect pending in the batch.
+      source.value = 2;
+      expect(
+        () => batch(() {
+          source
+            ..value = 3
+            ..value = 2
+            ..dispose();
+        }),
+        returnsNormally,
+      );
+      await Future<void>.delayed(delay * 3);
+      expect(seen, [0, 1, 2]);
+    });
+  });
 }
