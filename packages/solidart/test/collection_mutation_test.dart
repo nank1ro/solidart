@@ -2162,6 +2162,67 @@ void main() {
     });
   });
 
+  group('adversarial round 4', () {
+    test('fillRange without history keeps no per-slot buffer', () {
+      final backing = _CountingList(100);
+      final s = ListSignal<int>([], trackPreviousValue: false)..value = backing;
+      addTearDown(s.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        s.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+      backing.reads = 0;
+
+      s.fillRange(0, 100, 7);
+
+      // One read finds the first slot that changes, one read checks it.
+      expect(backing.reads, lessThanOrEqualTo(2));
+      expect(s.untrackedValue, List.filled(100, 7));
+      expect(runs, 2);
+    });
+
+    test('setRange without history reads only the range', () {
+      final backing = _CountingList(100);
+      final s = ListSignal<int>([], trackPreviousValue: false)..value = backing;
+      addTearDown(s.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        s.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+      backing.reads = 0;
+
+      s.setRange(10, 13, const [1, 2, 3]);
+
+      // The three slots before the write and the three slots after it.
+      expect(backing.reads, lessThanOrEqualTo(6));
+      expect(s.untrackedValue.sublist(10, 13), [1, 2, 3]);
+      expect(runs, 2);
+    });
+
+    test('fillRange with history that changes nothing makes no copy', () {
+      final backing = _CountingList(100);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      var runs = 0;
+      final effect = Effect(() {
+        s.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+      backing.reads = 0;
+
+      s.fillRange(0, 3, 0);
+
+      // Only the three slots of the range are read: no copy of the list.
+      expect(backing.reads, lessThanOrEqualTo(3));
+      expect(runs, 1);
+    });
+  });
+
   group('adversarial round 3', () {
     test('replaceRange with a shorter list reads no slot before the write', () {
       final plain = _CountingList(100)..replaceRange(0, 100, const [7]);

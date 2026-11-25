@@ -489,8 +489,28 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void fillRange(int start, int end, [E? fillValue]) {
-    if (start == end) return _untrackedValue.fillRange(start, end, fillValue);
-    _writeRange(start, end, (list) => list.fillRange(start, end, fillValue));
+    final list = _untrackedValue;
+    if (start == end) return list.fillRange(start, end, fillValue);
+    if (0 > start || start > end || end > list.length) {
+      // The backing list throws its own error for an invalid range.
+      return _writeRange(
+        start,
+        end,
+        (list) => list.fillRange(start, end, fillValue),
+      );
+    }
+    // Find the first slot that the fill changes. Without one, the call
+    // changes nothing, so it needs no copy and no check.
+    var index = start;
+    Object? old;
+    while (index < end && identical(old = _readSlot(list, index), fillValue)) {
+      index++;
+    }
+    if (index == end) return list.fillRange(start, end, fillValue);
+    _mutate(
+      (list) => list.fillRange(start, end, fillValue),
+      slotChanged: () => !identical(old, _readSlot(list, index)),
+    );
   }
 
   /// Inserts [element] at position [index] in this list.
