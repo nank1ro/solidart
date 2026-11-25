@@ -80,7 +80,7 @@ class Computed<T> extends ReadSignal<T> {
         // nullable T, the null passed before the first one is not.
         if (trackPreviousValue && _initialized) {
           _hasPreviousValue = true;
-          _untrackedPreviousValue = _previousValue = previousValue as T;
+          _previousValue = previousValue as T;
         }
 
         _evaluating = true;
@@ -151,8 +151,6 @@ class Computed<T> extends ReadSignal<T> {
   late T _untrackedValue;
 
   T? _previousValue;
-
-  T? _untrackedPreviousValue;
 
   // Whether or not there is a previous value
   bool _hasPreviousValue = false;
@@ -296,9 +294,7 @@ class Computed<T> extends ReadSignal<T> {
 
   /// Returns the untracked previous value of the computed.
   @override
-  T? get untrackedPreviousValue {
-    return _untrackedPreviousValue;
-  }
+  T? get untrackedPreviousValue => untracked(() => previousValue);
 
   // The real inputs, including child effects and scopes. Skips internal
   // nodes, such as the retry dependency that alien_signals links after a

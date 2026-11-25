@@ -13,7 +13,8 @@ part of '../core.dart';
 /// set[0] = 100; // the effect prints 100
 /// ```
 /// {@endtemplate}
-class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
+class SetSignal<E> extends Signal<Set<E>>
+    with SetMixin<E>, _CollectionSignal<Set<E>> {
   /// {@macro set-signal}
   SetSignal(
     Iterable<E> initialValue, {
@@ -38,20 +39,8 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   }) : super(initialValue.toSet());
 
   @override
-  Set<E> setValue(Set<E> newValue) {
-    if (_compare(_untrackedValue, newValue)) {
-      return newValue;
-    }
-    _setPreviousValue(Set<E>.of(_untrackedValue));
-    // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
-    _value = newValue;
-    _notifySignalUpdate();
-    return newValue;
-  }
-
-  @override
   Set<E> updateValue(Set<E> Function(Set<E> value) callback) =>
-      value = callback(Set<E>.of(_value));
+      value = callback(Set<E>.of(_untrackedValue));
 
   @override
   bool _compare(Set<E>? oldValue, Set<E>? newValue) {
@@ -91,10 +80,25 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   bool add(E value) {
-    _setPreviousValue(Set<E>.of(_value));
-    final result = _value.add(value);
-    if (result) _notifyChanged();
-    return result;
+    return _mutateUnless(
+      _untrackedValue.contains(value),
+      (set) => set.add(value),
+    );
+  }
+
+  /// Adds all [elements] to this set.
+  ///
+  /// Equivalent to adding each element in [elements] using [add],
+  /// but notifies only once.
+  /// ```dart
+  /// final characters = <String>{'A', 'B'};
+  /// characters.addAll({'A', 'B', 'C'});
+  /// print(characters); // {A, B, C}
+  /// ```
+  @override
+  void addAll(Iterable<E> elements) {
+    if (_isEmptyCollection(elements)) return _untrackedValue.addAll(elements);
+    _mutate((set) => set.addAll(elements));
   }
 
   /// Whether [value] is in the set.
@@ -187,16 +191,10 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   bool remove(Object? value) {
-    var didRemove = false;
-    final index = _value.toList(growable: false).indexOf(value as E);
-    if (index >= 0) {
-      _setPreviousValue(Set<E>.of(_value));
-      _value.remove(value);
-      _notifyChanged();
-      didRemove = true;
-    }
-
-    return didRemove;
+    return _mutateUnless(
+      !_untrackedValue.contains(value),
+      (set) => set.remove(value),
+    );
   }
 
   /// Removes each element of [elements] from this set.
@@ -207,16 +205,10 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   void removeAll(Iterable<Object?> elements) {
-    _setPreviousValue(Set<E>.of(_value));
-    var hasChanges = false;
-    for (final element in elements) {
-      final removed = _value.remove(element);
-      if (!hasChanges && removed) {
-        hasChanges = true;
-      }
+    if (_isEmptyCollection(elements)) {
+      return _untrackedValue.removeAll(elements);
     }
-
-    if (hasChanges) _notifyChanged();
+    _mutate((set) => set.removeAll(elements));
   }
 
   /// Removes all elements of this set that satisfy [test].
@@ -227,13 +219,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   void removeWhere(bool Function(E element) test) {
-    final toRemove = <E>[];
-    for (final element in this) {
-      if (test(element)) {
-        toRemove.add(element);
-      }
-    }
-    removeAll(toRemove);
+    _mutate((set) => set.removeWhere(test));
   }
 
   /// Creates a [Set] with the same elements and behavior as this `Set`.
@@ -276,11 +262,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   void clear() {
-    if (_value.isNotEmpty) {
-      _setPreviousValue(Set<E>.of(_value));
-      _value.clear();
-      _notifyChanged();
-    }
+    _mutate((set) => set.clear());
   }
 
   /// Removes all elements of this set that are not elements in [elements].
@@ -296,13 +278,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   void retainAll(Iterable<Object?> elements) {
-    // Create a copy of the set, remove all of elements from the copy,
-    // then remove all remaining elements in copy from this.
-    final toRemove = _value.toSet();
-    for (final e in elements) {
-      toRemove.remove(e);
-    }
-    removeAll(toRemove);
+    _mutate((set) => set.retainAll(elements));
   }
 
   /// Removes all elements of this set that fail to satisfy [test].
@@ -314,19 +290,7 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   /// ```
   @override
   void retainWhere(bool Function(E element) test) {
-    final removed = <E>[];
-    for (var i = _value.length - 1; i >= 0; --i) {
-      final element = _value.elementAt(i);
-      if (!test(element)) {
-        removed.add(element);
-      }
-    }
-    if (removed.isNotEmpty) {
-      _setPreviousValue(Set<E>.of(_value));
-      for (final item in removed) {
-        _value.remove(item);
-      }
-    }
+    _mutate((set) => set.retainWhere(test));
   }
 
   /// Creates a [List] containing the elements of this [Iterable].
@@ -465,10 +429,13 @@ class SetSignal<E> extends Signal<Set<E>> with SetMixin<E> {
   String toString() =>
       '''SetSignal<$E>(value: $_value, previousValue: $_previousValue)''';
 
-  void _notifyChanged() {
-    _reportChanged();
-    _notifySignalUpdate();
-  }
+  @override
+  int _lengthOf(Set<E> set) => set.length;
+
+  /// `toSet` keeps the type and equality of the set. A linked or sorted
+  /// set also keeps its order. A hash set has no defined order.
+  @override
+  Set<E> _copyPrevious(Set<E> set) => set.toSet();
 
   @override
   // ignore: overridden_fields

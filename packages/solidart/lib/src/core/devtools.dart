@@ -89,7 +89,7 @@ void _postSignalEvent(
   } else if (signal is Computed) {
     if (signal._initialized) {
       value = signal._untrackedValue;
-      previousValue = signal._untrackedPreviousValue;
+      previousValue = signal._previousValue;
     }
   } else if (signal.untrackedHasValue) {
     value = signal.value;
