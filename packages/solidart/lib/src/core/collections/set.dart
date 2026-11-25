@@ -83,7 +83,8 @@ class SetSignal<E> extends Signal<Set<E>>
     return _mutateUnless(
       _untrackedValue.contains(value),
       (set) => set.add(value),
-      undo: (copy) => copy.remove(value),
+      // NaN is not equal to itself, so `remove` cannot undo it.
+      undo: _isNaN(value) ? null : (set) => _copyPrevious(set)..remove(value),
     );
   }
 

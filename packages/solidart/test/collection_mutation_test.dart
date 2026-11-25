@@ -350,6 +350,84 @@ void main() {
       }
     });
 
+    test('an addListener listener does not build history', () {
+      final backing = _PointList(List.generate(100, (i) => i));
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      var calls = 0;
+      void listener() => calls++;
+      s.addListener(listener);
+      addTearDown(() => s.removeListener(listener));
+      final reads = backing.reads;
+      s[0] = -1;
+      expect(calls, 1);
+      // Only the slot write reads the list: no history copy.
+      expect(backing.reads, lessThanOrEqualTo(reads + 2));
+      final seen = <List<int>?>[];
+      final dispose = s.observe((prev, _) => seen.add(prev));
+      addTearDown(dispose);
+      s[1] = -2;
+      expect(calls, 2);
+      expect(
+        seen.single,
+        orderedEquals([-1, ...List.generate(99, (i) => i + 1)]),
+      );
+    });
+
+    for (final (name, write) in <(String, void Function(ListSignal<int>))>[
+      ('removeAt(0)', (s) => s.removeAt(0)),
+      ('removeAt(middle)', (s) => s.removeAt(50)),
+      ('removeAt(last)', (s) => s.removeAt(99)),
+      ('removeLast', (s) => s.removeLast()),
+    ]) {
+      test('$name rebuilds the previous list in order', () {
+        final before = List.generate(100, (i) => i);
+        final s = ListSignal(List.of(before));
+        addTearDown(s.dispose);
+        write(s);
+        final previous = s.previousValue!;
+        expect(previous, orderedEquals(before));
+        // The previous value is a growable list.
+        previous.add(100);
+        expect(previous.length, 101);
+      });
+    }
+
+    test('an overwrite through an equal mutable key keeps the old map', () {
+      final stored = _MutableKey(1);
+      final s = MapSignal<_MutableKey, int>({stored: 1});
+      addTearDown(s.dispose);
+      final lookup = _MutableKey(1);
+      s[lookup] = 2;
+      // The caller may change its lookup key after the write.
+      lookup.id = 2;
+      final previous = s.previousValue!;
+      expect(previous.length, 1);
+      expect(previous.keys.single, same(stored));
+      expect(previous[stored], 1);
+    });
+
+    test('an int key overwrite keeps the lazy history', () {
+      final backing = <int, int>{1: 1, 2: 2};
+      final s = MapSignal(backing);
+      addTearDown(s.dispose);
+      s[1] = 5;
+      // An external write is visible only if the copy is still pending.
+      backing[2] = 3;
+      expect(s.previousValue, {1: 1, 2: 3});
+    });
+
+    test('a NaN key or element is not undone lazily', () {
+      final map = MapSignal<double, int>({});
+      addTearDown(map.dispose);
+      map[double.nan] = 1;
+      expect(map.previousValue, isEmpty);
+      final set = SetSignal<double>({});
+      addTearDown(set.dispose);
+      set.add(double.nan);
+      expect(set.previousValue, isEmpty);
+    });
+
     test('list add answers hasPreviousValue without a copy', () {
       final backing = _PointList(List.generate(100, (i) => i));
       final s = ListSignal<int>([])..value = backing;
@@ -2670,4 +2748,20 @@ class _CountingObserver extends SolidartObserver {
 
   @override
   void didDisposeSignal(SignalBase<Object?> signal) {}
+}
+
+/// A key with value equality whose value can change after a write.
+class _MutableKey {
+  _MutableKey(this.id);
+
+  int id;
+
+  // The test needs a key whose equality changes.
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) => other is _MutableKey && other.id == id;
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => id.hashCode;
 }

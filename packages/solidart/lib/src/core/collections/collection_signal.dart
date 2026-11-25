@@ -5,6 +5,19 @@ part of '../core.dart';
 bool _isEmptyCollection(Iterable<Object?> elements) =>
     (elements is List || elements is Set) && elements.isEmpty;
 
+/// Whether [object] is a NaN double. NaN is not equal to itself, so a
+/// collection cannot find it again to undo a write.
+bool _isNaN(Object? object) => object is double && object.isNaN;
+
+/// Whether [key] is an immutable value, so a saved undo step can keep it:
+/// its equality cannot change after the write.
+bool _isValueKey(Object? key) =>
+    key == null ||
+    key is String ||
+    key is bool ||
+    key is Enum ||
+    (key is num && !key.isNaN);
+
 /// The mutation logic that [ListSignal], [MapSignal] and [SetSignal] share.
 mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// The number of elements or entries in [collection].
@@ -13,10 +26,10 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// A detached copy of [collection], used as the previous value.
   C _copyPrevious(C collection);
 
-  /// The undo step of the last lazy point write. Applied to a copy of the
-  /// current collection, it gives the previous value. Every replacement of
-  /// the value goes through [_setPreviousValue], which clears it.
-  void Function(C)? _pendingUndo;
+  /// The undo step of the last lazy point write. It builds the previous
+  /// value from the current collection. Every replacement of the value goes
+  /// through [_setPreviousValue], which clears it.
+  C Function(C)? _pendingUndo;
 
   @override
   void _settlePreviousValue() {
@@ -27,11 +40,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     final source = identical(_mutating, current)
         ? _mutatingPrevious ?? current
         : current;
-    final previous = untracked(() {
-      final copy = _copyPrevious(source);
-      undo(copy);
-      return copy;
-    });
+    final previous = untracked(() => undo(source));
     if (identical(_pendingUndo, undo)) _setPreviousValue(previous);
   }
 
@@ -96,7 +105,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     bool Function() Function(C, C?)? bulkCheck,
     bool Function()? slotChanged,
     bool Function(C, C)? failedResizeChanged,
-    void Function(C)? undo,
+    C Function(C)? undo,
     bool Function()? failedSlotChanged,
   }) {
     final collection = _untrackedValue;
@@ -158,7 +167,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     R Function(C collection) mutation, {
     bool Function() Function(C, C?)? bulkCheck,
     bool Function()? slotChanged,
-    void Function(C)? undo,
+    C Function(C)? undo,
   }) => unchanged
       ? mutation(_untrackedValue)
       : _mutate(

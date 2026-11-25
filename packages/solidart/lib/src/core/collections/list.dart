@@ -161,7 +161,10 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void add(E element) {
-    _mutate((list) => list.add(element), undo: (copy) => copy.removeLast());
+    _mutate(
+      (list) => list.add(element),
+      undo: (list) => _copyPrevious(list)..removeLast(),
+    );
   }
 
   /// Appends all objects of [iterable] to the end of this list.
@@ -860,8 +863,17 @@ class ListSignal<E> extends Signal<List<E>>
     return _mutate(
       write,
       undo: inserting
-          ? (copy) => copy.removeAt(index)
-          : (copy) => copy.insert(index, old as E),
+          ? (list) => _copyPrevious(list)..removeAt(index)
+          // Build the list at its final length in one pass: a copy and then
+          // an insert can grow the backing array to twice its size.
+          : (list) => List<E>.generate(
+              list.length + 1,
+              (i) => i < index
+                  ? list[i]
+                  : i == index
+                  ? old as E
+                  : list[i - 1],
+            ),
       failedSlotChanged: () =>
           valid &&
           list is! TypedData &&
@@ -939,7 +951,7 @@ class ListSignal<E> extends Signal<List<E>>
       // A typed list rejects a write before it changes the slot. Reading
       // a SIMD slot again would box the same value in a different object.
       failedSlotChanged: list is TypedData ? () => false : null,
-      undo: (copy) => copy[index] = old as E,
+      undo: (list) => _copyPrevious(list)..[index] = old as E,
     );
   }
 
