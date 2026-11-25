@@ -62,6 +62,19 @@ abstract class ReactionInterface {
 /// Any effect runs at least once immediately when is created with the current
 /// signals values.
 ///
+/// If the first run (the one that happens when the effect is created, unless
+/// `autorun` is false) throws and there is no `onError`, the effect is disposed
+/// and the error is rethrown. If `onError` itself throws during that first run,
+/// the effect is also disposed and the error from `onError` is rethrown.
+///
+/// An effect created with `autorun: false` (and run later by hand) or with a
+/// `delay` stays alive after a failed run. You already have the effect, so
+/// you can dispose it yourself. With `autoDispose`, such an effect is still
+/// disposed after a run that leaves it with no dependencies, for example a
+/// run that throws before it reads a signal.
+///
+/// Disposing an effect also disposes the effects created inside it.
+///
 /// > An effect is useless after it is disposed, you must not use it anymore.
 /// {@endtemplate}
 class Effect implements ReactionInterface {
@@ -103,30 +116,27 @@ class Effect implements ReactionInterface {
         );
       } else {
         final scheduler = createDelayedScheduler(delay);
-        var isScheduled = false;
-        Timer? timer;
+        var timerFired = false;
 
+        // A run caused by a change only starts the timer. When it fires, the
+        // effect runs again and tracks the reads of the callback.
         effect = Effect._internal(
           callback: () {
-            if (!isScheduled) {
-              isScheduled = true;
-
-              // coverage:ignore-start
-              timer?.cancel();
-              // coverage:ignore-end
-              timer = null;
-
-              timer = scheduler(() {
-                isScheduled = false;
-                if (!effect.disposed) {
-                  callback();
-                } else {
-                  // coverage:ignore-start
-                  timer?.cancel();
-                  // coverage:ignore-end
-                }
+            if (timerFired) {
+              // Consume the flag so a rerun queued by this callback's own
+              // writes starts a new timer instead of running at once.
+              timerFired = false;
+              return callback();
+            }
+            // A change while the timer is pending joins the pending run.
+            if (!(effect._timer?.isActive ?? false)) {
+              // dispose() cancels this timer.
+              effect._timer = scheduler(() {
+                timerFired = true;
+                effect._run(effect._rerun);
               });
             }
+            effect._keepDependencies();
           },
           onError: onError,
           name: effectiveName,
@@ -136,7 +146,18 @@ class Effect implements ReactionInterface {
       }
       return effect;
     } finally {
-      if (autorun ?? true) effect.run();
+      if (autorun ?? true) {
+        // The batch holds back the effects queued by the first run. A failed
+        // effect is disposed before they run, so it cannot run again. The
+        // caller gets the first error; later errors go to the zone.
+        reactiveSystem.startBatch();
+        final errors = _FirstError()..run(effect.run);
+        if (errors.hasError) errors.run(effect.dispose);
+        errors.run(reactiveSystem.endBatch);
+        // The caller gets no handle when this factory throws.
+        if (errors.hasError) errors.run(effect.dispose);
+        errors.rethrowIfAny();
+      }
     }
   }
 
@@ -161,6 +182,25 @@ class Effect implements ReactionInterface {
     } catch (error, stackTrace) {
       if (_onError == null) rethrow;
       _onError(SolidartCaughtException(error, stackTrace: stackTrace));
+    } finally {
+      _recordRunDependencies();
+    }
+  }
+
+  // alien_signals unlinks the dependencies of a nested effect before its
+  // cleanup disposes this effect, so dispose() uses this copy. Links after
+  // `depsTail` were not read in this run and are about to be purged. Only
+  // signals and computeds are kept: a child effect is also a dependency, and
+  // must not stay alive after it is disposed.
+  void _recordRunDependencies() {
+    _runDeps.clear();
+    final tail = _internalEffect.depsTail;
+    if (tail == null) return;
+    for (var link = _internalEffect.deps; link != null; link = link.nextDep) {
+      if (link.dep case alien.SignalNode() || alien.ComputedNode()) {
+        _runDeps.add(link.dep);
+      }
+      if (identical(link, tail)) break;
     }
   }
 
@@ -175,9 +215,15 @@ class Effect implements ReactionInterface {
 
   bool _disposed = false;
 
+  // The pending run of an effect created with a delay.
+  Timer? _timer;
+
   late final _AlienEffect _internalEffect;
 
   final _deps = <alien_system.ReactiveNode>{};
+
+  // The dependencies read by the latest run.
+  final _runDeps = <alien_system.ReactiveNode>{};
 
   /// The subscriber of the effect, do not use it directly.
   @protected
@@ -187,7 +233,9 @@ class Effect implements ReactionInterface {
   bool get disposed => _disposed;
 
   /// Runs the effect, tracking any signal read during the execution.
-  void run() {
+  void run() => _run(_internalEffect.run);
+
+  void _run(void Function() body) {
     final currentSub = reactiveSystem.activeSub;
     if (!SolidartConfig.detachEffects && currentSub != null) {
       if (currentSub is! _AlienEffect ||
@@ -199,16 +247,31 @@ class Effect implements ReactionInterface {
 
     final prevSub = reactiveSystem.setCurrentSub(_internalEffect);
     reactiveSystem.startBatch();
-    try {
-      _internalEffect.run();
-    } finally {
-      try {
-        reactiveSystem.endBatch();
-      } finally {
-        reactiveSystem.setCurrentSub(prevSub);
-        _mayDispose();
-      }
+    // An error from the run wins over one from the end of its batch.
+    reactiveSystem._runThen(body, () {
+      final errors = _FirstError()..run(reactiveSystem.endBatch);
+      reactiveSystem.setCurrentSub(prevSub);
+      errors
+        ..run(_mayDispose)
+        ..rethrowIfAny();
+    });
+  }
+
+  // Runs the effect as a change does: alien_signals tracks the reads again
+  // and unlinks the dependencies the run did not read.
+  void _rerun() {
+    _internalEffect.flags |= alien_system.ReactiveFlags.dirty;
+    reactiveSystem.runEffect(_internalEffect);
+  }
+
+  // Keeps every dependency linked after a run that reads none of them, so a
+  // delayed effect still hears changes while its timer is pending.
+  void _keepDependencies() {
+    var link = _internalEffect.deps;
+    while (link?.nextDep != null) {
+      link = link!.nextDep;
     }
+    _internalEffect.depsTail = link;
   }
 
   /// Sets the dependencies of the effect, do not use it directly.
@@ -231,10 +294,28 @@ class Effect implements ReactionInterface {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    _timer?.cancel();
 
-    final dependencies = {...subscriber.getDependencies(), ..._deps};
-    _internalEffect.dispose();
-    subscriber.mayDisposeDependencies(dependencies);
+    // Keep the reads of onDispose callbacks out of the running effect.
+    untracked(() {
+      final dependencies = {
+        ...subscriber.getDependencies(),
+        ..._deps,
+        ..._runDeps,
+      };
+      // A disposed effect must not keep its dependencies alive.
+      _deps.clear();
+      _runDeps.clear();
+      // The batch defers the auto-disposal until the work that disposed this
+      // effect ends, for example the rerun of its parent effect.
+      reactiveSystem.startBatch();
+      try {
+        _internalEffect.dispose();
+        reactiveSystem._pendingDisposals.addAll(dependencies);
+      } finally {
+        reactiveSystem.endBatch();
+      }
+    });
   }
 
   @override
@@ -242,6 +323,8 @@ class Effect implements ReactionInterface {
     // Gate on the per-instance `autoDispose` (defaulted from
     // SolidartConfig.autoDispose at creation), consistent with Signal/Computed.
     if (_disposed || !autoDispose) return;
+    // A delayed effect waits until its pending callback has run (see #203).
+    if (_timer?.isActive ?? false) return;
     if (subscriber.deps?.dep == null) {
       dispose();
     }

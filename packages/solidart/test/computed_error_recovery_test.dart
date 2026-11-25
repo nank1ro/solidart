@@ -857,5 +857,66 @@ void main() {
       c.run();
       expect(seen, [0, 1]);
     });
+
+    test('run() does not notify again a change that a run in the disposal '
+        'drain already stored', () {
+      var next = 0;
+      final queued = Signal(0, autoDispose: true);
+      final holder = Effect(() => queued.value);
+      late Computed<int> c;
+      // Runs in the drain at the end of the outer evaluation.
+      queued.onDispose(() {
+        next = 2;
+        c.run();
+      });
+      c = Computed(() {
+        if (next == 1) holder.dispose();
+        return next;
+      });
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(c.value));
+      addTearDown(effect.dispose);
+
+      next = 1;
+      c.run();
+      expect(queued.disposed, isTrue);
+      expect(seen, [0, 2]);
+    });
+
+    test('run() notifies a change that a run in the disposal drain stored '
+        'but did not deliver because an observer threw', () {
+      var next = 0;
+      final queued = Signal(0, autoDispose: true);
+      final holder = Effect(() => queued.value);
+      late Computed<int> c;
+      queued.onDispose(() {
+        next = 2;
+        c.run();
+      });
+      c = Computed(() {
+        if (next == 1) holder.dispose();
+        return next;
+      });
+      final observer = _ReadingObserver((computed) {
+        if (identical(computed, c) && next == 2) {
+          throw StateError('observer');
+        }
+      });
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(c.value));
+      addTearDown(effect.dispose);
+      SolidartConfig.observers.add(observer);
+      addTearDown(() => SolidartConfig.observers.remove(observer));
+
+      next = 1;
+      expect(
+        c.run,
+        throwsA(
+          isA<StateError>().having((e) => e.message, 'message', 'observer'),
+        ),
+      );
+      expect(c.value, 2);
+      expect(seen, [0, 2]);
+    });
   });
 }

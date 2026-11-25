@@ -6,7 +6,6 @@ void main() {
     test(
       'a failed observe() on an autoDispose Computed disposes its '
       'autoDispose source',
-      skip: 'Needs #194, which disposes the Effect of a failed observe()',
       () {
         final source = Signal(0, autoDispose: true);
         var disposals = 0;
@@ -224,6 +223,40 @@ void main() {
       expect((c.listenerCount, source.listenerCount, disposals), (0, 0, 1));
       expect(c.disposed, isTrue);
       expect(source.disposed, isTrue);
+    });
+
+    test('dispose reaches an input of a failed evaluation that a nested '
+        'evaluation during the disposal drain no longer reads', () {
+      final first = Signal(0, autoDispose: true);
+      final retry = Signal(false);
+      final second = Signal(0);
+      final queued = Signal(0, autoDispose: true);
+      final holder = Effect(() => queued.value);
+      late Computed<int> c;
+      // Runs in the drain at the end of the evaluation below. The nested
+      // evaluation reads `second` instead of `first`.
+      queued.onDispose(() {
+        retry.value = true;
+        expect(() => c.value, throwsA(isA<SolidartCaughtException>()));
+      });
+      c = Computed(() {
+        if (retry.value) {
+          second.value;
+          throw StateError('second');
+        }
+        first.value;
+        holder.dispose();
+        throw StateError('first');
+      });
+
+      addTearDown(retry.dispose);
+      addTearDown(second.dispose);
+
+      expect(() => c.value, throwsA(isA<SolidartCaughtException>()));
+      expect(queued.disposed, isTrue);
+
+      c.dispose();
+      expect(first.disposed, isTrue);
     });
   });
 

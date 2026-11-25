@@ -268,27 +268,34 @@ class ReadableSignal<T> implements ReadSignal<T> {
     // ignore if already disposed
     if (_disposed) return;
     _disposed = true;
+    // Keep the reads of onDispose callbacks out of the running effect.
+    untracked(_dispose);
+  }
 
+  void _dispose() {
     // This will dispose the signal
-    untracked(() {
-      reactiveSystem.getSignalValue(_internalSignal);
-    });
+    reactiveSystem.getSignalValue(_internalSignal);
+    _internalSignal.saved.node = null;
 
     // Fully unlink every subscriber from this signal — dispose means destroy,
     // so this runs regardless of `SolidartConfig.autoDispose` (matching
     // Effect.dispose and Computed.dispose). This removes each link from BOTH
     // sides, so a later write to the disposed signal can no longer propagate
     // into a subscriber whose deps were torn down.
-    _internalSignal.unlinkSubscribers();
-
-    for (final cb in _onDisposeCallbacks) {
-      cb();
-    }
-    _onDisposeCallbacks.clear();
-
-    _listeners.dispose();
-
-    _notifySignalDisposal();
+    // The batch defers the auto-disposal of the dependencies that the steps
+    // below release, so the onDispose callbacks and the observers can
+    // subscribe to them first. Every step runs in [errors], so the batch
+    // always ends.
+    final errors = _FirstError();
+    reactiveSystem.startBatch();
+    errors
+      ..run(_internalSignal.unlinkSubscribers)
+      ..runAll(_onDisposeCallbacks)
+      ..run(_listeners.dispose)
+      ..run(() => _notifySignalDisposal(errors))
+      ..runAll(_onDisposeCallbacks)
+      ..run(reactiveSystem.endBatch)
+      ..rethrowIfAny();
   }
 
   @override

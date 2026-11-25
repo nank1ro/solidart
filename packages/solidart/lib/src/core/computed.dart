@@ -89,6 +89,9 @@ class Computed<T> extends ReadSignal<T> {
           try {
             value = selector();
           } catch (e, s) {
+            // Record the inputs now: a nested evaluation in the drain at the
+            // end of this one can unlink them before the caller records.
+            _recordInputs(merge: true);
             throw _error = SolidartCaughtException(e, stackTrace: s);
           }
           _untrackedValue = value;
@@ -170,29 +173,38 @@ class Computed<T> extends ReadSignal<T> {
   @override
   bool get untrackedHasValue => true;
 
-  final _deps = <alien_system.ReactiveNode>{};
+  final _deps = <_SavedInput>{};
 
   @override
   void dispose() {
     if (_disposed) return;
-
-    _internalComputed.dispose();
+    // Set first: unlinking a subscriber can offer this computed disposal.
     _disposed = true;
-    for (final dep in _deps) {
-      if (dep is _AlienSignal) dep.parent._mayDispose();
-      if (dep is _AlienComputed) dep.parent._mayDispose();
-    }
+    // Keep the reads of onDispose callbacks out of the running effect.
+    untracked(_dispose);
+  }
 
+  void _dispose() {
+    // Like Effect.dispose, offer the inputs whatever this computed's own
+    // autoDispose is. Only an autoDispose computed records [_deps].
+    final dependencies = {..._inputs, for (final input in _deps) ?input.node};
     _deps.clear();
-
-    for (final cb in _onDisposeCallbacks) {
-      cb();
-    }
-    _onDisposeCallbacks.clear();
-
-    _listeners.dispose();
-
-    _notifySignalDisposal();
+    _internalComputed.saved.node = null;
+    // Like Effect.dispose: the auto-disposal of the dependencies waits for the
+    // running batch, flush or evaluation, and yields to queued effects. The
+    // batch also holds back the dependencies of the child effects, so the
+    // onDispose callbacks and the observers can subscribe to them first.
+    // Every step runs in [errors], so the batch always ends.
+    reactiveSystem.startBatch();
+    final errors = _FirstError()..run(_internalComputed.dispose);
+    reactiveSystem._pendingDisposals.addAll(dependencies);
+    errors
+      ..runAll(_onDisposeCallbacks)
+      ..run(_listeners.dispose)
+      ..run(() => _notifySignalDisposal(errors))
+      ..runAll(_onDisposeCallbacks)
+      ..run(reactiveSystem.endBatch)
+      ..rethrowIfAny();
   }
 
   @override
@@ -213,7 +225,7 @@ class Computed<T> extends ReadSignal<T> {
     } on Object {
       // A failed evaluation also reads inputs: record them so dispose()
       // reaches them. Do not dispose here, so later reads rethrow the error.
-      if (autoDispose) _recordInputs(merge: true);
+      _recordInputs(merge: true);
       rethrow;
     }
     // The first evaluation runs from get(), without didUpdate().
@@ -311,7 +323,9 @@ class Computed<T> extends ReadSignal<T> {
     if (!merge) _deps.clear();
     _deps.addAll([
       for (final input in inputs ?? _inputs)
-        if (input case alien.SignalNode() || alien.ComputedNode()) input,
+        if (input
+            case _AlienSignal(:final saved) || _AlienComputed(:final saved))
+          saved,
     ]);
   }
 
@@ -386,22 +400,57 @@ class Computed<T> extends ReadSignal<T> {
   /// However, in some cases, you may want to force an update.
   void run() {
     if (_disposed) return;
-    // The outcome of this run: a subscriber or an observer may run the
-    // computed again, and that inner run would overwrite `_error`.
-    final (changed: _, :notify, :error) = _internalComputed.update();
-    // Like a read: record the inputs so dispose() reaches them.
-    if (autoDispose) _recordInputs(merge: error != null);
+    // The error of this run. The cleanup that ends the evaluation, a
+    // subscriber notified below, or an observer can run this computed again
+    // and replace [_error].
+    SolidartCaughtException? error;
+    // Whether this run must notify the subscribers of its change.
+    var notify = false;
+    // The changes stored when this evaluation ended.
+    var changes = 0;
+    // A cleanup error after a committed change, rethrown after the
+    // subscribers are notified of the change.
+    final errors = _FirstError();
+    try {
+      reactiveSystem._evaluate(() {
+        (changed: _, :notify, :error) = _internalComputed.update();
+        changes = _internalComputed.changes;
+      });
+    } catch (e, s) {
+      // The selector error has priority over an error from the cleanup that
+      // ends the evaluation.
+      if (error != null) {
+        Zone.current.handleUncaughtError(e, s);
+      } else if (notify) {
+        errors.run(() => Error.throwWithStackTrace(e, s));
+      } else {
+        rethrow;
+      }
+    } finally {
+      // Like a read: record the inputs so dispose() reaches them.
+      _recordInputs(merge: error != null);
+    }
+    // A run in the drain at the end of the evaluation stored a newer change
+    // and notified the subscribers of it.
+    if (_internalComputed.changes != changes) notify = false;
     if (notify) {
-      try {
-        reactiveSystem.notifySubscribers(_internalComputed);
-      } catch (notifyError, notifyStackTrace) {
-        // Without a selector error, the notification error is the result.
-        if (error == null) rethrow;
-        // Otherwise the caller must still get the selector error.
-        Zone.current.handleUncaughtError(notifyError, notifyStackTrace);
+      if (error != null) {
+        // The caller must still get the selector error: a notification
+        // error goes to the zone.
+        try {
+          reactiveSystem.notifySubscribers(_internalComputed);
+        } catch (notifyError, notifyStackTrace) {
+          Zone.current.handleUncaughtError(notifyError, notifyStackTrace);
+        }
+      } else {
+        errors.run(() => reactiveSystem.notifySubscribers(_internalComputed));
       }
     }
-    if (error != null) Error.throwWithStackTrace(error, error.stackTrace!);
+    errors.rethrowIfAny();
+    final runError = error;
+    if (runError != null) {
+      Error.throwWithStackTrace(runError, runError.stackTrace!);
+    }
   }
 
   @override

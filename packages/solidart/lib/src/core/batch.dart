@@ -20,11 +20,10 @@ part of 'core.dart';
 /// As you can see, the effect is not executed until the batch is completed.
 /// So when `x` changes, the effect is paused and you never see it printing:
 /// "x = 11, y = 20".
+///
+/// When [fn] throws, the caller gets its error, and an error from the effects
+/// or disposals run at the end of the batch goes to the zone.
 T batch<T>(T Function() fn) {
   reactiveSystem.startBatch();
-  try {
-    return fn();
-  } finally {
-    reactiveSystem.endBatch();
-  }
+  return reactiveSystem._runThen(fn, reactiveSystem.endBatch);
 }

@@ -116,6 +116,10 @@ abstract class SignalBase<T> {
   bool get disposed;
 
   /// Fired when the signal is disposing
+  ///
+  /// A callback registered by another onDispose callback runs after the
+  /// callbacks registered before it.
+  /// The same holds for a callback registered by a disposal observer.
   void onDispose(VoidCallback cb);
 
   /// The total number of listeners subscribed to the signal.

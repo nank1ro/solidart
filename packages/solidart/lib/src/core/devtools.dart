@@ -51,12 +51,19 @@ extension DevToolsExt<T> on SignalBase<T> {
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
   }
 
-  void _notifySignalDisposal() {
+  // Each observer and the DevTools event is its own step of [errors], so a
+  // throwing observer does not skip the others.
+  void _notifySignalDisposal(_FirstError errors) {
     for (final obs in SolidartConfig.observers) {
-      obs.didDisposeSignal(this);
+      errors.run(() => obs.didDisposeSignal(this));
     }
     if (!trackInDevTools) return;
-    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.disposed);
+    errors.run(
+      () => _notifyDevToolsAboutSignal(
+        this,
+        eventType: DevToolsEventType.disposed,
+      ),
+    );
   }
 }
 

@@ -34,27 +34,62 @@ extension MayDisposeDependencies on alien_system.ReactiveNode {
   /// `_mayDispose` chance a disposed dependency triggers. Used when a signal or
   /// computed is disposed — `alien.stop` only unlinks the first subscriber.
   void unlinkSubscribers() {
+    final errors = _FirstError();
     var link = subs;
     while (link != null) {
       final next = link.nextSub;
       final sub = link.sub;
       alien.unlink(link, sub);
-      if (sub is _AlienEffect) sub.parent._mayDispose();
-      if (sub is _AlienComputed) sub.parent._mayDispose();
+      // alien_signals checks the dependencies of a pending subscriber before
+      // it runs or reads it. Without dependencies, nothing it read changed.
+      if (sub.deps == null) sub.flags &= ~alien_system.ReactiveFlags.pending;
+      // The saved dependencies of the subscriber must not retain this node.
+      if (sub is _AlienEffect) {
+        sub.parent
+          .._deps.remove(this)
+          .._runDeps.remove(this);
+        errors.run(sub.parent._mayDispose);
+      }
+      if (sub is _AlienComputed) errors.run(sub.parent._mayDispose);
       link = next;
+    }
+    errors.rethrowIfAny();
+  }
+}
+
+/// Lets a disposal finish when a step throws: [run] keeps the first error,
+/// reports later ones to [Zone.current], and [rethrowIfAny] rethrows the first.
+class _FirstError {
+  Object? _error;
+  StackTrace? _stackTrace;
+
+  bool get hasError => _error != null;
+
+  void run(void Function() step) {
+    try {
+      step();
+    } catch (error, stackTrace) {
+      if (_error == null) {
+        _error = error;
+        _stackTrace = stackTrace;
+      } else {
+        Zone.current.handleUncaughtError(error, stackTrace);
+      }
     }
   }
 
-  void mayDisposeDependencies([Iterable<alien_system.ReactiveNode>? include]) {
-    final dependencies = {...getDependencies(), ...?include};
-    for (final dep in dependencies) {
-      switch (dep) {
-        case _AlienSignal():
-          dep.parent._mayDispose();
-        case _AlienComputed():
-          dep.parent._mayDispose();
-      }
+  /// Runs every step of [steps], including the ones added while they run,
+  /// then clears [steps].
+  void runAll(List<void Function()> steps) {
+    for (var i = 0; i < steps.length; i++) {
+      run(steps[i]);
     }
+    steps.clear();
+  }
+
+  void rethrowIfAny() {
+    final error = _error;
+    if (error != null) Error.throwWithStackTrace(error, _stackTrace!);
   }
 }
 
@@ -118,7 +153,41 @@ class ReactiveSystem {
       'computed is pending while detached (deps == null) — a subscriber link '
       'was not fully unlinked',
     );
-    return computed.get();
+    return _evaluate(computed.get);
+  }
+
+  // The number of Computed evaluations running. Until the outermost one ends,
+  // the dependencies of the child effects it stops stay pending, so a
+  // recreated child subscribes to them first (see issue #202).
+  int _evaluationDepth = 0;
+
+  T _evaluate<T>(T Function() evaluation) {
+    _evaluationDepth++;
+    return _runThen(evaluation, () {
+      if (--_evaluationDepth == 0 &&
+          batchDepth == 0 &&
+          _pendingDisposals.isNotEmpty) {
+        flush();
+      }
+    });
+  }
+
+  /// Runs [body], then [after]. When [body] throws, its error reaches the
+  /// caller with its stack trace, and an error from [after] goes to the zone.
+  T _runThen<T>(T Function() body, void Function() after) {
+    final T result;
+    try {
+      result = body();
+    } catch (_) {
+      try {
+        after();
+      } catch (error, stackTrace) {
+        Zone.current.handleUncaughtError(error, stackTrace);
+      }
+      rethrow;
+    }
+    after();
+    return result;
   }
 
   Option<T> getSignalValue<T>(_AlienSignal<T> signal) {
@@ -170,6 +239,10 @@ class ReactiveSystem {
 
   bool _flushing = false;
 
+  // The dependencies of the effects and computeds disposed since the last
+  // drain.
+  final _pendingDisposals = <alien_system.ReactiveNode>{};
+
   /// Runs every queued effect, then rethrows the first error, if any.
   ///
   /// Replaces alien_signals' `flush`, which stops at the first throwing effect
@@ -177,29 +250,67 @@ class ReactiveSystem {
   ///
   /// Only one flush runs at a time. A write inside an effect only queues
   /// effects, and the running flush runs them after that effect ends.
+  ///
+  /// When the queue is empty and no Computed evaluation runs, the pending
+  /// dependencies of disposed effects and computeds get auto-disposal. A
+  /// parent that reruns has then subscribed its new children, so the
+  /// dependencies they read again stay alive (see issue #202).
   void flush() {
     if (_flushing) return;
     _flushing = true;
     Object? error;
     StackTrace? stackTrace;
     try {
-      while (alien.queuedEffects != null) {
-        final effect = alien.queuedEffects! as alien.EffectNode;
-        alien.queuedEffects = effect.nextEffect;
-        effect.nextEffect = null;
-        if (alien.queuedEffects == null) alien.queuedEffectsTail = null;
+      do {
+        while (alien.queuedEffects != null) {
+          final effect = alien.queuedEffects! as alien.EffectNode;
+          alien.queuedEffects = effect.nextEffect;
+          effect.nextEffect = null;
+          if (alien.queuedEffects == null) alien.queuedEffectsTail = null;
+          try {
+            alien.run(effect);
+          } catch (e, s) {
+            if (error == null) {
+              error = e;
+              stackTrace = s;
+            }
+          }
+        }
         try {
-          alien.run(effect);
+          if (_evaluationDepth == 0) _disposePending();
         } catch (e, s) {
           if (error == null) {
             error = e;
             stackTrace = s;
+          } else {
+            Zone.current.handleUncaughtError(e, s);
           }
         }
-      }
+        // An onDispose callback can write a signal and queue effects.
+      } while (alien.queuedEffects != null);
     } finally {
       _flushing = false;
     }
     if (error != null) Error.throwWithStackTrace(error, stackTrace!);
+  }
+
+  // Offers auto-disposal to the pending dependencies, untracked. Stops when an
+  // onDispose callback queues an effect: [flush] runs it, then resumes.
+  // Rethrows the first error; later ones go to the zone.
+  void _disposePending() {
+    final errors = _FirstError();
+    untracked(() {
+      while (_pendingDisposals.isNotEmpty && alien.queuedEffects == null) {
+        final dep = _pendingDisposals.first;
+        _pendingDisposals.remove(dep);
+        switch (dep) {
+          case _AlienSignal():
+            errors.run(dep.parent._mayDispose);
+          case _AlienComputed():
+            errors.run(dep.parent._mayDispose);
+        }
+      }
+    });
+    errors.rethrowIfAny();
   }
 }
