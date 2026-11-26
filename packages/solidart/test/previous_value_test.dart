@@ -2,6 +2,55 @@ import 'package:solidart/solidart.dart';
 import 'package:test/test.dart';
 
 void main() {
+  group('unsubscribed collection replacements', () {
+    for (final trackPreviousValue in [false, true]) {
+      test('a point write forces one update '
+          '(trackPreviousValue: $trackPreviousValue)', () {
+        final signal = ListSignal(
+          [1, 2, 3],
+          equals: true,
+          trackPreviousValue: trackPreviousValue,
+        );
+        addTearDown(signal.dispose);
+        final original = signal.untrackedValue;
+
+        batch(() {
+          signal.value = [0];
+          expect(
+            signal.untrackedPreviousValue,
+            trackPreviousValue ? same(original) : isNull,
+          );
+          signal[0] = 1;
+          expect(
+            signal.untrackedPreviousValue,
+            trackPreviousValue ? [0] : null,
+          );
+        });
+
+        expect(signal.shouldUpdate(), isTrue);
+        expect(signal.shouldUpdate(), isFalse);
+        expect(signal.value, [1]);
+        expect(signal.previousValue, trackPreviousValue ? [0] : null);
+      });
+    }
+
+    test('replacements alone still compare against the committed value', () {
+      final signal = ListSignal([1], equals: true, trackPreviousValue: false);
+      addTearDown(signal.dispose);
+
+      batch(() {
+        signal
+          ..value = [2]
+          ..value = [1];
+      });
+
+      expect(signal.shouldUpdate(), isFalse);
+      signal.value = [2];
+      expect(signal.shouldUpdate(), isTrue);
+      expect(signal.untrackedPreviousValue, isNull);
+    });
+  });
+
   group('untrackedPreviousValue', () {
     test('is null with trackPreviousValue: false and observe agrees', () {
       final s = Signal(1, trackPreviousValue: false);

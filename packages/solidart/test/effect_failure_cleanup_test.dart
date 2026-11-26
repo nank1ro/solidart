@@ -152,6 +152,21 @@ Signal<int>? _retained;
   return (computed, WeakReference(signal));
 }
 
+// Leave only a weak reference to the original backing before forcing GC.
+@pragma('vm:never-inline')
+(ListSignal<int>, WeakReference<List<int>>) _replaceAndMutateList({
+  required bool trackPreviousValue,
+}) {
+  final signal = ListSignal(
+    List.filled(1000000, 1),
+    trackPreviousValue: trackPreviousValue,
+  );
+  final retired = WeakReference(signal.untrackedValue);
+  signal.value = [0];
+  signal[0] = 1;
+  return (signal, retired);
+}
+
 /// Runs the garbage collector. Returns false when no VM service is available,
 /// for example under `flutter test` without `--coverage`.
 Effect? _child;
@@ -1317,6 +1332,26 @@ void main() {
       await expectReleased(signal);
       expect(computed.disposed, isFalse);
     });
+  });
+
+  group('released collection storage', () {
+    for (final trackPreviousValue in [false, true]) {
+      test('releases a retired list before a read '
+          '(trackPreviousValue: $trackPreviousValue)', () async {
+        final (signal, retired) = _replaceAndMutateList(
+          trackPreviousValue: trackPreviousValue,
+        );
+        addTearDown(signal.dispose);
+
+        if (!await _collectGarbage()) {
+          markTestSkipped('No VM service to run the garbage collector.');
+          return;
+        }
+
+        expect(retired.target, isNull);
+        expect(signal.value, [1]);
+      });
+    }
   });
 
   group('#203 a delayed autoDispose effect', () {

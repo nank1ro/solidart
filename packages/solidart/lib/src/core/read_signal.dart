@@ -342,7 +342,10 @@ class ReadableSignal<T> implements ReadSignal<T> {
     _internalSignal.flags =
         alien_system.ReactiveFlags.mutable | alien_system.ReactiveFlags.dirty;
     final subs = _internalSignal.subs;
-    if (subs != null) {
+    if (subs == null) {
+      // A forced update does not compare against the old committed value.
+      _internalSignal.currentValue = _internalSignal.pendingValue;
+    } else {
       // coverage:ignore-start
       reactiveSystem.propagate(subs);
       if (reactiveSystem.batchDepth == 0) {
