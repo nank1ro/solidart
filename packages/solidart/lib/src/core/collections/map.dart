@@ -53,6 +53,41 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     return comparator(oldValue, newValue);
   }
 
+  @override
+  void _setValueAndNotify(Map<K, V> newValue) {
+    final baselineIsIntact = _replacementBaselineIsIntact;
+    final old = _untrackedValue;
+    final committed = _internalSignal.currentValue;
+    if (baselineIsIntact != null &&
+        identical(old, _mutating) &&
+        identical(old, committed.safeUnwrap())) {
+      // The backing call can still write to the outgoing map. Keep its
+      // entries for the next comparison, which may run at the end of a
+      // batch. A read commits the pending replacement before returning it.
+      final snapshot = _copyForComparison(old, baselineIsIntact);
+      if (snapshot != null &&
+          identical(_internalSignal.currentValue, committed)) {
+        _internalSignal.currentValue = Some(snapshot);
+      }
+    }
+    super._setValueAndNotify(newValue);
+  }
+
+  Map<K, V>? _copyForComparison(
+    Map<K, V> map,
+    bool Function() baselineIsIntact,
+  ) {
+    try {
+      if (!baselineIsIntact()) return null;
+      // An identity map can hold distinct keys that compare equal.
+      return Map<K, V>.identity()..addAll(map);
+    } on Object {
+      // A cast view can reject a copy even if maps of different lengths
+      // can be compared. Let the replacement proceed in that case.
+      return null;
+    }
+  }
+
   /// The value for the given [key], or `null` if [key] is not in the map.
   ///
   /// Some maps allow `null` as a value.
@@ -378,6 +413,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     return _mutate(
       (map) => map.update(key, update, ifAbsent: ifAbsent),
       slotChanged: () => !identical(old, _readValue(map, key)),
+      preserveReplacementBaseline: equals,
     );
   }
 

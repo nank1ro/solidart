@@ -1,3 +1,7 @@
+## 3.0.0-dev.6
+
+- **FIX**: When a `MapSignal.update` callback replaces a map with `equals: true` inside a batch, the write to the outgoing map no longer hides the replacement from effects. A batch that restores equal contents still skips the notification ([#208](https://github.com/nank1ro/solidart/issues/208)).
+
 ## 3.0.0-dev.5
 
 - **CHORE**: Require `alien_signals` 2.5.0 or later. Disposing a `Computed` with child effects now stops those effects in reverse creation order, which can change the order in which their signals auto-dispose. When an effect stops itself during a rerun, it immediately unlinks dependencies it has yet to read in that run. Later reads in the stopped callback leave it unsubscribed.

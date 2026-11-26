@@ -66,6 +66,10 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// collection.
   bool _nestedChanged = false;
 
+  /// Whether the current map update still has its original contents in the
+  /// slot it checks and has no known nested changes.
+  bool Function()? _replacementBaselineIsIntact;
+
   /// The check of a nested list resize that threw. The outermost [_mutate]
   /// runs it with its history copy when it ends, because the collection can
   /// be in the middle of a change (for example a `sort`) while it runs.
@@ -117,6 +121,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     bool Function(C, C)? failedResizeChanged,
     C Function(C)? undo,
     bool Function()? failedSlotChanged,
+    bool preserveReplacementBaseline = false,
   }) {
     final collection = _untrackedValue;
     final outer = _mutating;
@@ -129,10 +134,20 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     final outerChanged = _nestedChanged;
     final outerPrevious = _mutatingPrevious;
     final outerResizeCheck = _nestedResizeCheck;
+    final outerBaseline = _replacementBaselineIsIntact;
     _nestedChanged = false;
     _nestedResizeCheck = null;
     _mutating = collection;
     if (!nested) _mutatingPrevious = previous;
+    _replacementBaselineIsIntact =
+        preserveReplacementBaseline &&
+            (!nested || !outerChanged && outerBaseline != null)
+        ? () =>
+              !_nestedChanged &&
+              length == _lengthOf(collection) &&
+              !(check?.call() ?? false) &&
+              (!nested || outerBaseline!())
+        : null;
     late final R result;
     final errors = _FirstError()..run(() => result = mutation(collection));
     final nestedChanged = _nestedChanged;
@@ -141,6 +156,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     _mutatingPrevious = outerPrevious;
     _nestedChanged = outerChanged;
     _nestedResizeCheck = outerResizeCheck;
+    _replacementBaselineIsIntact = outerBaseline;
     final resizeCheck =
         (errors.hasError ? failedResizeChanged : null) ?? nestedResizeCheck;
     var changed = false;

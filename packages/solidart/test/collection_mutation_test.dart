@@ -2036,6 +2036,158 @@ void main() {
       expect(w.effectReruns, 1);
     });
 
+    for (final history in [false, true]) {
+      test('batched update with an equal replacement notifies once, '
+          'history $history', () {
+        final backing = {'a': 1};
+        final s = MapSignal(backing, equals: true, trackPreviousValue: history);
+        addTearDown(s.dispose);
+        final changed = <int?>[];
+        final effect = Effect(() => changed.add(s.value['a']));
+        addTearDown(effect.dispose);
+        final replacement = {'a': 2};
+
+        batch(() {
+          s.update('a', (_) {
+            s.value = replacement;
+            return 2;
+          });
+          expect(changed, [1]);
+        });
+
+        expect(backing, {'a': 2});
+        expect(s.untrackedValue, same(replacement));
+        expect(changed, [1, 2]);
+        expect(s.untrackedPreviousValue, history ? {'a': 1} : null);
+
+        backing['a'] = 3;
+        expect(s.value, same(replacement));
+        expect(changed, [1, 2]);
+      });
+
+      test('batched update can restore equal contents, history $history', () {
+        final backing = {'a': 1};
+        final s = MapSignal(backing, equals: true, trackPreviousValue: history);
+        final w = watch(s);
+
+        batch(() {
+          s.update('a', (value) {
+            s.value = {'a': 1};
+            return value;
+          });
+        });
+        expect(s.untrackedValue, same(backing));
+        expect(s.untrackedHasPreviousValue, isFalse);
+
+        batch(() {
+          s.update('a', (_) {
+            s
+              ..value = {'a': 2}
+              ..value = {'a': 1};
+            return 2;
+          });
+        });
+
+        expect(backing, {'a': 2});
+        expect(s.untrackedValue, {'a': 1});
+        expect(w.effectReruns, 0);
+        expect(w.calls, isEmpty);
+      });
+    }
+
+    test(
+      'a computed can read a pending replacement before a batched update',
+      () {
+        final s = MapSignal({'a': 1}, equals: true, trackPreviousValue: false);
+        addTearDown(s.dispose);
+        final selected = Computed(() => s.value['a']);
+        addTearDown(selected.dispose);
+        final changed = <int?>[];
+        final effect = Effect(() => changed.add(selected.value));
+        addTearDown(effect.dispose);
+
+        final pending = {'a': 2};
+        batch(() {
+          s.value = pending;
+          expect(selected.value, 2);
+          s.update('a', (_) {
+            s.value = {'a': 3};
+            return 3;
+          });
+          expect(pending, {'a': 3});
+          expect(selected.value, 3);
+          expect(changed, [1]);
+        });
+
+        expect(changed, [1, 3]);
+      },
+    );
+
+    test(
+      'a batched replacement keeps the earlier committed map for comparison',
+      () {
+        final s = MapSignal({'a': 1}, equals: true, trackPreviousValue: false);
+        final w = watch(s);
+
+        batch(() {
+          s.value = {'a': 2};
+          s.update('a', (_) {
+            s.value = {'a': 1};
+            return 2;
+          });
+        });
+
+        expect(s.untrackedValue, {'a': 1});
+        expect(w.effectReruns, 0);
+      },
+    );
+
+    test('a batched replacement delivers a nested write made before it', () {
+      final s = MapSignal(
+        {'a': 1, 'b': 1},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      final w = watch(s);
+
+      batch(() {
+        s.update('a', (_) {
+          s
+            ..['b'] = 2
+            ..value = {'a': 3, 'b': 2}
+            ..value = {'a': 1, 'b': 2};
+          return 2;
+        });
+      });
+
+      expect(s.untrackedValue, {'a': 1, 'b': 2});
+      expect(w.effectReruns, 1);
+    });
+
+    test('a custom comparator compares the original backing map', () {
+      final backing = {'a': 1};
+      final equivalent = {'a': 3};
+      final s = MapSignal(
+        backing,
+        comparator: (old, next) =>
+            identical(old, backing) && identical(next, equivalent),
+        trackPreviousValue: false,
+      );
+      final w = watch(s);
+
+      batch(() {
+        s.update('a', (_) {
+          s
+            ..value = {'a': 2}
+            ..value = equivalent;
+          return 2;
+        });
+      });
+
+      expect(s.untrackedValue, same(equivalent));
+      expect(w.effectReruns, 0);
+    });
+
     test('update whose callback changes another key notifies once', () {
       final s = MapSignal({'a': 1, 'b': 2});
       final w = watch(s);
@@ -2165,6 +2317,24 @@ void main() {
     // A cast map throws a TypeError when it reads the value of 'unread'.
     Map<String, String> castMap() =>
         <String, Object>{'a': 'x', 'unread': 42}.cast<String, String>();
+
+    test('a batched update can replace a cast map with a shorter map', () {
+      final s = MapSignal(castMap(), equals: true, trackPreviousValue: false);
+      addTearDown(s.dispose);
+      final changed = <String?>[];
+      final effect = Effect(() => changed.add(s.value['a']));
+      addTearDown(effect.dispose);
+
+      batch(() {
+        s.update('a', (_) {
+          s.value = {'a': 'y'};
+          return 'y';
+        });
+      });
+
+      expect(s.untrackedValue, {'a': 'y'});
+      expect(changed, ['x', 'y']);
+    });
 
     test('remove of an absent key returns null without reading values', () {
       final s = MapSignal(castMap());
