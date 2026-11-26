@@ -41,25 +41,69 @@ class _ReplacementBaseline<C extends Object> {
   bool _useOriginal = false;
   bool _awaitingObservation = false;
   C? _snapshot;
+  ({int Function()? clock, int version})? _snapshotVersion;
   Map<Object?, _ReplacementSlot>? _rewinds;
   Set<alien_system.ReactiveNode>? _changedObservers;
+  Set<alien_system.ReactiveNode>? _anchorObservers;
+  Map<alien_system.ReactiveNode, C>? _alternateObservations;
+  C? _checkedObservation;
   bool _comparisonChanged = false;
   bool _comparing = false;
   bool _forceNotification = false;
   int writeVersion = 0;
 
-  bool needsNotification(alien_system.Link? subscriptions) {
-    if (_forceNotification || _comparing) return true;
+  ({C? snapshot, bool notify}) replacementComparison(
+    C? snapshot,
+    alien_system.Link? subscriptions,
+  ) {
+    if (_forceNotification || _comparing) return (snapshot: null, notify: true);
     final changed = _changedObservers;
-    if (changed == null) return false;
+    if (changed == null) return (snapshot: snapshot, notify: false);
+    C? alternate;
+    var anchorLive = false;
     for (var link = subscriptions; link != null; link = link.nextSub) {
-      if (changed.contains(link.sub)) return true;
+      if (changed.contains(link.sub)) {
+        final observed = _alternateObservations?[link.sub];
+        if (observed == null ||
+            (alternate != null && !identical(alternate, observed))) {
+          return (snapshot: null, notify: true);
+        }
+        alternate = observed;
+      } else if (_anchorObservers?.contains(link.sub) ?? false) {
+        anchorLive = true;
+      }
+      if (anchorLive && alternate != null) {
+        return (snapshot: null, notify: true);
+      }
     }
-    return false;
+    return (snapshot: alternate ?? snapshot, notify: false);
   }
 
-  void _recordChangedObserver(alien_system.ReactiveNode observer) {
+  void _recordChangedObserver(
+    alien_system.ReactiveNode observer,
+    _AlienSignal<C> signal, {
+    required bool stable,
+  }) {
     (_changedObservers ??= Set.identity()).add(observer);
+    final anchors = _anchorObservers;
+    if (!stable || anchors == null || anchors.contains(observer)) return;
+    final committed = signal.currentValue;
+    final writes = writeVersion;
+    final wasComparing = _comparing;
+    _comparing = true;
+    try {
+      final observed = _checkedObservation ?? untracked<C>(() => _copy(null));
+      if (identical(_committed, committed) &&
+          identical(signal.currentValue, committed) &&
+          writeVersion == writes) {
+        _checkedObservation = observed;
+        (_alternateObservations ??= Map.identity())[observer] = observed;
+      }
+    } on Object {
+      // When an observation cannot be copied, keep delivery for its reader.
+    } finally {
+      _comparing = wasComparing;
+    }
   }
 
   R runNested<R>(
@@ -92,8 +136,12 @@ class _ReplacementBaseline<C extends Object> {
       _useOriginal = _copyOriginal != null;
       _awaitingObservation = false;
       _snapshot = null;
+      _snapshotVersion = null;
       _rewinds = null;
       _changedObservers = null;
+      _anchorObservers = null;
+      _alternateObservations = null;
+      _checkedObservation = null;
       _forceNotification = false;
       try {
         final intact = check && (_useOriginal || untracked(_isIntact));
@@ -118,19 +166,24 @@ class _ReplacementBaseline<C extends Object> {
     }
     _checkedBulkVersion = null;
     if (slot != null) {
-      if (_prepare(committed) && !_captured) {
+      if (_prepare(committed) && (!_captured || _snapshotVersion != null)) {
         (_rewinds ??= {}).putIfAbsent(slot.key, () => slot);
       }
-    } else if (observed) {
-      capture(committed);
     } else {
-      _prepare(committed, check: false);
-      if (identical(_committed, committed) && !_captured) {
-        // An unobserved write can keep the raw comparison. If a subscriber
-        // reads later, that read establishes a new baseline.
-        _intact = false;
+      if (_captured) {
+        _snapshotVersion = null;
         _rewinds = null;
-        _awaitingObservation = true;
+      }
+      if (observed) {
+        capture(committed);
+      } else {
+        _prepare(committed, check: false);
+        if (identical(_committed, committed) && !_captured) {
+          // An unobserved write can keep the raw comparison until a read.
+          _intact = false;
+          _rewinds = null;
+          _awaitingObservation = true;
+        }
       }
     }
   }
@@ -188,12 +241,17 @@ class _ReplacementBaseline<C extends Object> {
     }
     if (firstObserver) {
       _changedObservers = null;
+      _anchorObservers = null;
+      _alternateObservations = null;
       _checkedBulkVersion = null;
+      _checkedObservation = null;
       _comparisonChanged = false;
       _forceNotification = false;
     }
+    final alternate = _alternateObservations?[observer];
     if (_forceNotification ||
-        (_changedObservers?.contains(observer) ?? false)) {
+        (alternate == null &&
+            (_changedObservers?.contains(observer) ?? false))) {
       return;
     }
     if (_awaitingObservation ||
@@ -205,28 +263,59 @@ class _ReplacementBaseline<C extends Object> {
       _captured = false;
       _useOriginal = false;
       _snapshot = null;
+      _snapshotVersion = null;
       _rewinds = null;
       // The bulk mutation can still write after the subscriber reads.
-      capture(committed);
+      final writes = writeVersion;
+      if (capture(committed) != null &&
+          writeVersion == writes &&
+          identical(signal.currentValue, committed)) {
+        _anchorObservers = Set.identity()..add(observer);
+        if (version != null) {
+          _snapshotVersion = (clock: bulkVersion, version: version);
+        }
+      }
       _checkedBulkVersion = version;
       return;
     }
     if (version != null && version == _checkedBulkVersion) {
-      if (_comparisonChanged) _recordChangedObserver(observer);
-      return;
+      if (alternate == null) {
+        if (_comparisonChanged) {
+          _recordChangedObserver(observer, signal, stable: true);
+        } else {
+          _anchorObservers?.add(observer);
+        }
+        return;
+      }
+      if (identical(alternate, _checkedObservation)) return;
     }
     final snapshot = _useOriginal && readOriginal
         ? capture(committed)
         : _snapshot;
-    final rewinds = _rewinds;
-    if (snapshot == null && rewinds == null) return;
+    final snapshotVersion = _snapshotVersion;
+    final compareSlots =
+        snapshotVersion != null &&
+        identical(snapshotVersion.clock, bulkVersion) &&
+        snapshotVersion.version == version;
+    if (alternate == null && _captured && !compareSlots) {
+      _snapshotVersion = null;
+      _rewinds = null;
+    }
+    final rewinds = alternate == null ? _rewinds : null;
+    if (alternate == null &&
+        rewinds == null &&
+        (snapshot == null || compareSlots)) {
+      _anchorObservers?.add(observer);
+      return;
+    }
     final rewindCount = rewinds?.length;
     final writes = writeVersion;
     _checkedBulkVersion = version;
+    _checkedObservation = null;
     _comparing = true;
     try {
       final unchanged = untracked(() {
-        if (rewinds == null) return equals(snapshot!, value);
+        if (rewinds == null) return equals(alternate ?? snapshot!, value);
         if (!firstObserver) return slotsEqual(value, rewinds.values);
         // Keep slots from writes still in progress, but compare them with
         // what the first subscriber actually read.
@@ -237,15 +326,35 @@ class _ReplacementBaseline<C extends Object> {
           !identical(signal.currentValue, committed)) {
         return;
       }
-      _comparisonChanged = !unchanged;
-      if (!unchanged) {
-        _recordChangedObserver(observer);
+      final stable = writeVersion == writes;
+      if (alternate != null) {
+        if (stable && unchanged) {
+          _comparisonChanged = true;
+          _checkedObservation = alternate;
+        } else {
+          _checkedBulkVersion = null;
+          _alternateObservations!.remove(observer);
+        }
+        return;
+      }
+      _comparisonChanged = !unchanged || !stable;
+      if (_comparisonChanged) {
+        if (!stable) _checkedBulkVersion = null;
+        _recordChangedObserver(observer, signal, stable: stable);
+        return;
+      }
+      if (firstObserver && rewinds != null) {
+        _anchorObservers = Set.identity()..add(observer);
+      } else {
+        _anchorObservers?.add(observer);
+      }
+      if (rewinds == null && version != null && !_forceNotification) {
+        _snapshotVersion = (clock: bulkVersion, version: version);
       } else if (!firstObserver &&
           !_forceNotification &&
           rewinds != null &&
           identical(_rewinds, rewinds) &&
-          rewinds.length == rewindCount &&
-          writeVersion == writes) {
+          rewinds.length == rewindCount) {
         // Future writes only need to remember slots that changed again.
         _rewinds = null;
       }

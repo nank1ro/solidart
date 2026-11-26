@@ -597,6 +597,75 @@ void main() {
       }
     }
 
+    for (final restore in [false, true]) {
+      test('native point writes reuse a captured bulk snapshot '
+          '(restored: $restore)', () {
+        const count = 128;
+        var hashes = 0;
+        _CountedMapValue valueOf(int key) =>
+            _CountedMapValue(key, () => hashes++);
+        final s = MapSignal(
+          {for (var i = 0; i < count; i++) i: valueOf(i)},
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        final effect = Effect(() {
+          s.updateAll((key, _) {
+            if (key == 0) return valueOf(-1);
+            final current = s[key]!;
+            if (restore) {
+              s
+                ..update(key, (_) => valueOf(-2))
+                ..update(key, (_) => current);
+            } else {
+              s[key] = valueOf(current.key);
+            }
+            return current;
+          });
+        });
+        addTearDown(effect.dispose);
+
+        expect(hashes, 0);
+      });
+    }
+
+    test('native point reads reuse a snapshot after a full match', () {
+      const count = 128;
+      var hashes = 0;
+      _CountedMapValue valueOf(int key) =>
+          _CountedMapValue(key, () => hashes++);
+      final s = MapSignal(
+        {for (var i = 0; i < count; i++) i: valueOf(i)},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      var hashesAfterMatch = 0;
+      final effect = Effect(() {
+        final original = s[1]!;
+        s.update(0, (current) {
+          s
+            ..addAll({1: valueOf(-1)})
+            ..addAll({1: original})
+            ..value;
+          hashesAfterMatch = hashes;
+          for (var key = 0; key < count; key++) {
+            final previous = s[key]!;
+            s
+              ..update(key, (_) => valueOf(-1))
+              ..update(key, (_) => previous)
+              ..value;
+          }
+          return current;
+        });
+      });
+      addTearDown(effect.dispose);
+
+      expect(hashesAfterMatch, greaterThan(0));
+      expect(hashes, hashesAfterMatch);
+    });
+
     test('tracked reads release slots restored by nested point callbacks', () {
       const count = 256;
       var comparisons = 0;
@@ -2757,6 +2826,107 @@ void main() {
           ]);
         });
       }
+    }
+
+    for (final history in [false, true]) {
+      for (final opaque in [false, true]) {
+        for (final (keepAnchor, reread) in [
+          (false, false),
+          (true, false),
+          (false, true),
+        ]) {
+          test('surviving observers keep their own observed contents '
+              '(history: $history, opaque: $opaque, anchor: $keepAnchor, '
+              'reread: $reread)', () {
+            final backing = {'x': 0};
+            final s = MapSignal(
+              opaque ? MapView(backing) : backing,
+              equals: true,
+              trackPreviousValue: history,
+            );
+            addTearDown(s.dispose);
+            final seen = <int>[];
+            final alsoSeen = <int>[];
+            final anchorValues = <int>[];
+
+            batch(() {
+              s.update('x', (current) {
+                s['x'] = 1;
+                final first = Effect(() => s['x']);
+                if (keepAnchor) {
+                  final anchor = Effect(() => anchorValues.add(s['x']!));
+                  addTearDown(anchor.dispose);
+                }
+                s['x'] = 0;
+                final survivor = Effect(() => seen.add(s['x']!));
+                addTearDown(survivor.dispose);
+                final alsoSurvives = Effect(() => alsoSeen.add(s['x']!));
+                addTearDown(alsoSurvives.dispose);
+                first.dispose();
+                if (reread) {
+                  s
+                    ..['x'] = 2
+                    ..['x'] = 0;
+                  survivor.run();
+                }
+                s['x'] = 2;
+                if (reread) survivor.run();
+                s.value = {'x': 0};
+                return current;
+              });
+            });
+
+            expect(seen, [
+              0,
+              if (reread) ...[0, 2],
+              if (keepAnchor || reread) 0,
+            ]);
+            expect(alsoSeen, [0, if (keepAnchor || reread) 0]);
+            expect(anchorValues, [
+              if (keepAnchor) ...[1, 0],
+            ]);
+          });
+        }
+      }
+
+      test('a tracked read sees writes made by its equality check '
+          '(history: $history)', () {
+        late final MapSignal<String, _CountedMapValue> s;
+        _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+        var write = false;
+        final original = _CountedMapValue(
+          0,
+          () {},
+          onEquals: () {
+            if (!write) return;
+            write = false;
+            s['x'] = valueOf(2);
+          },
+        );
+        s = MapSignal(
+          {'x': original},
+          equals: true,
+          trackPreviousValue: history,
+        );
+        addTearDown(s.dispose);
+        final seen = <int>[];
+        final effect = Effect(() => seen.add(s.value['x']!.key));
+        addTearDown(effect.dispose);
+
+        batch(() {
+          s.update('x', (current) {
+            s
+              ..['x'] = valueOf(1)
+              ..['x'] = valueOf(0);
+            write = true;
+            effect.run();
+            s.value = {'x': valueOf(0)};
+            return current;
+          });
+        });
+
+        expect(seen, [0, 2, 0]);
+      });
     }
 
     for (final reentrantRead in [false, true]) {

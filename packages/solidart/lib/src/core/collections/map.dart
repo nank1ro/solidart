@@ -97,12 +97,16 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       }
       final snapshot = baseline.capture(committed);
       if (!signal.forceDirty && identical(signal.currentValue, committed)) {
-        if (baseline.needsNotification(signal.subs)) {
+        final comparison = baseline.replacementComparison(
+          snapshot,
+          signal.subs,
+        );
+        if (comparison.notify) {
           // A subscriber read an intermediate change, or a nested write
           // changed a map whose original state could not be copied.
           signal.forceDirty = true;
-        } else if (snapshot != null) {
-          signal.currentValue = Some(snapshot);
+        } else if (comparison.snapshot case final observed?) {
+          signal.currentValue = Some(observed);
         }
       }
     });
