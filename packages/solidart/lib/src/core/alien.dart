@@ -145,11 +145,38 @@ class _AlienSignal<T> extends alien.SignalNode<Option<T>> {
   late final saved = _SavedInput(this);
 
   bool forceDirty = false;
+  bool _readingDirtyValue = false;
+
+  void forceNextUpdate() {
+    forceDirty = true;
+    flags =
+        alien_system.ReactiveFlags.mutable | alien_system.ReactiveFlags.dirty;
+    if (!_readingDirtyValue) currentValue = pendingValue;
+  }
+
+  @override
+  Option<T> get() {
+    if ((flags & alien_system.ReactiveFlags.dirty) ==
+            alien_system.ReactiveFlags.none ||
+        _readingDirtyValue) {
+      return super.get();
+    }
+
+    // A comparator can force another update before this read captures the
+    // committed value. Keep that value until the read has captured it.
+    _readingDirtyValue = true;
+    try {
+      return super.get();
+    } finally {
+      _readingDirtyValue = false;
+      if (forceDirty) currentValue = pendingValue;
+    }
+  }
 
   @override
   void set(Option<T> newValue) {
-    // While the forced update is pending, keep only the latest value.
-    if (forceDirty) currentValue = newValue;
+    // A pending forced update needs only the latest value outside a read.
+    if (forceDirty && !_readingDirtyValue) currentValue = newValue;
     super.set(newValue);
   }
 

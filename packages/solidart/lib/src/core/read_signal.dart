@@ -338,11 +338,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   // ignore: comment_references
   /// use [reactiveSystem.setSignalValue] instead.
   void _reportChanged() {
-    _internalSignal.forceDirty = true;
-    // A forced update skips the comparison with the old committed value.
-    _internalSignal.currentValue = _internalSignal.pendingValue;
-    _internalSignal.flags =
-        alien_system.ReactiveFlags.mutable | alien_system.ReactiveFlags.dirty;
+    _internalSignal.forceNextUpdate();
     final subs = _internalSignal.subs;
     if (subs != null) {
       // coverage:ignore-start

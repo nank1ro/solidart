@@ -39,4 +39,40 @@ void main() {
     expect(signal.shouldUpdate(), isTrue);
     expect(signal.shouldUpdate(), isFalse);
   });
+
+  for (final subscribed in [false, true]) {
+    test('a forced write during a comparison stays pending until the next '
+        'read (subscribed: $subscribed)', () {
+      late final Signal<int> signal;
+      var writeDuringComparison = false;
+      signal = Signal(
+        0,
+        equals: false,
+        comparator: (old, next) {
+          if (writeDuringComparison) {
+            writeDuringComparison = false;
+            signal
+              ..notifyListeners()
+              ..value = 2;
+          }
+          return old == next;
+        },
+      );
+      addTearDown(signal.dispose);
+      final seen = <int>[];
+      if (subscribed) {
+        addTearDown(Effect(() => seen.add(signal.value)).dispose);
+      }
+
+      batch(() {
+        signal.value = 1;
+        writeDuringComparison = true;
+
+        expect(signal.value, 1);
+        expect(signal.untrackedValue, 2);
+        expect(signal.value, 2);
+      });
+      expect(seen, subscribed ? [0, 2] : isEmpty);
+    });
+  }
 }
