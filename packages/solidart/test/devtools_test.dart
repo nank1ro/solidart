@@ -150,6 +150,41 @@ void main() {
       expect(other.disposed, isFalse);
     });
 
+    test('checking DevTools eligibility does not dispose a Computed', () {
+      var evaluations = 0;
+      final policy = Computed(() {
+        evaluations++;
+        return true;
+      }, autoDispose: true);
+      final tracked = _PolicyComputed()..policy = policy;
+      addTearDown(tracked.dispose);
+      addTearDown(policy.dispose);
+
+      expect(tracked.value, 3);
+      expect(evaluations, 1);
+      expect(policy.disposed, isFalse);
+      expect(policy.value, isTrue);
+      expect(policy.disposed, isTrue);
+    });
+
+    test('checking DevTools eligibility does not subscribe its reader', () {
+      final input = Signal(true);
+      final policy = Computed(() => input.value);
+      final tracked = _PolicyComputed()..policy = policy;
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(tracked.value));
+      addTearDown(() {
+        effect.dispose();
+        tracked.dispose();
+        policy.dispose();
+        input.dispose();
+      });
+
+      input.value = false;
+
+      expect(seen, [3]);
+    });
+
     test('a throwing serialization does not keep auto-disposal off', () {
       final other = Computed(() => 1, autoDispose: true);
       final holder = Computed(() => _ThrowingProbe(other));
@@ -161,6 +196,15 @@ void main() {
       expect(later.disposed, isTrue);
     });
   });
+}
+
+class _PolicyComputed extends Computed<int> {
+  _PolicyComputed() : super(() => 3);
+
+  Computed<bool>? policy;
+
+  @override
+  bool get trackInDevTools => policy?.value ?? false;
 }
 
 class _JsonProbe {

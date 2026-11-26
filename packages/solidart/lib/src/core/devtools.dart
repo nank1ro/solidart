@@ -45,7 +45,6 @@ extension DevToolsExt<T> on SignalBase<T> {
     for (final obs in SolidartConfig.observers) {
       obs.didCreateSignal(this);
     }
-    if (!trackInDevTools) return;
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.created);
   }
 
@@ -53,7 +52,7 @@ extension DevToolsExt<T> on SignalBase<T> {
     for (final obs in SolidartConfig.observers) {
       obs.didUpdateSignal(this);
     }
-    if (!trackInDevTools) return;
+    if (!SolidartConfig.devToolsEnabled) return;
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
   }
 
@@ -63,7 +62,7 @@ extension DevToolsExt<T> on SignalBase<T> {
     for (final obs in SolidartConfig.observers) {
       errors.run(() => obs.didDisposeSignal(this));
     }
-    if (!trackInDevTools) return;
+    if (!SolidartConfig.devToolsEnabled) return;
     errors.run(
       () => _notifyDevToolsAboutSignal(
         this,
@@ -77,11 +76,15 @@ void _notifyDevToolsAboutSignal(
   SignalBase<dynamic> signal, {
   required DevToolsEventType eventType,
 }) {
-  if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
+  if (!SolidartConfig.devToolsEnabled) return;
   // Keep event reads out of the active effect or computed.
   _devToolsEventDepth++;
   try {
-    untracked(() => _postSignalEvent(signal, eventType: eventType));
+    untracked(() {
+      if (signal.trackInDevTools) {
+        _postSignalEvent(signal, eventType: eventType);
+      }
+    });
   } finally {
     _devToolsEventDepth--;
   }
