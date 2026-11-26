@@ -338,6 +338,22 @@ void main() {
       expect(backing.scans, reference.scans);
     });
 
+    test('observed map removeWhere with equality adds no scans', () {
+      bool remove(int key, int _) => key.isEven;
+      final reference = _CountingMap()..removeWhere(remove);
+      final backing = _CountingMap();
+      final s = MapSignal(backing, equals: true, trackPreviousValue: false);
+      addTearDown(s.dispose);
+      var length = 0;
+      final effect = Effect(() => length = s.length);
+      addTearDown(effect.dispose);
+
+      s.removeWhere(remove);
+
+      expect(length, reference.length);
+      expect(backing.scans, reference.scans);
+    });
+
     test('list fillRange reads only the affected slots', () {
       final backing = _CountingList(100);
       final s = ListSignal<int>([], trackPreviousValue: false)..value = backing;
@@ -2593,6 +2609,211 @@ void main() {
           {'a': 2, 'b': 1},
         ],
       ]);
+    });
+
+    for (final history in [false, true]) {
+      for (final restores in [false, true]) {
+        for (final removes in [false, true]) {
+          test('nested update inside ${removes ? 'removeWhere' : 'updateAll'} '
+              'compares with the committed map (history: $history, '
+              'restores: $restores)', () {
+            final initial = {'a': 1, 'b': 1, 'c': 1};
+            final backing = Map.of(initial);
+            final s = MapSignal(
+              backing,
+              equals: true,
+              trackPreviousValue: history,
+            );
+            addTearDown(s.dispose);
+            final seen = <Map<String, int>>[];
+            final effect = Effect(() => seen.add(Map.of(s.value)));
+            addTearDown(effect.dispose);
+            final outgoing = removes ? {'b': 2} : {'a': 2, 'b': 2, 'c': 2};
+            final next = restores ? initial : outgoing;
+
+            void replace() {
+              s.update('b', (_) {
+                s.value = next;
+                return 2;
+              });
+            }
+
+            batch(() {
+              if (removes) {
+                s.removeWhere((key, _) {
+                  if (key == 'b') replace();
+                  return key != 'b';
+                });
+              } else {
+                s.updateAll((key, _) {
+                  if (key == 'b') replace();
+                  return 2;
+                });
+              }
+              expect(seen, [initial]);
+            });
+
+            expect(backing, outgoing);
+            expect(s.untrackedValue, next);
+            expect(seen, [initial, if (!restores) next]);
+            expect(s.untrackedPreviousValue, history ? initial : null);
+            expect(
+              s.untrackedPreviousValue?.keys,
+              history ? initial.keys : null,
+            );
+          });
+        }
+      }
+
+      test('nested update inside putIfAbsent compares with the committed '
+          'map (history: $history)', () {
+        final s = MapSignal(
+          {'a': 1},
+          equals: true,
+          trackPreviousValue: history,
+        );
+        final w = watch(s);
+
+        batch(() {
+          s.putIfAbsent('b', () {
+            s.update('a', (_) {
+              s.value = {'a': 2, 'b': 3};
+              return 2;
+            });
+            return 3;
+          });
+          expect(w.effectReruns, 0);
+        });
+
+        expect(s.untrackedValue, {'a': 2, 'b': 3});
+        expect(w.effectReruns, 1);
+      });
+
+      for (final alreadyObserved in [false, true]) {
+        test('a batch can restore the first observed stable write '
+            '(history: $history, already observed: $alreadyObserved)', () {
+          final s = MapSignal(
+            <String, int?>{'a': 1, 'b': 1},
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final seen = <(bool, int?)>[];
+          final earlier = <int?>[];
+          if (alreadyObserved) {
+            final effect = Effect(() => earlier.add(s.value['b']));
+            addTearDown(effect.dispose);
+          }
+
+          batch(() {
+            s.update('a', (a) {
+              s['b'] = null;
+              final effect = Effect(() {
+                final value = s.value;
+                seen.add((value.containsKey('b'), value['b']));
+              });
+              addTearDown(effect.dispose);
+              s
+                ..value = {'a': 3, 'b': null}
+                ..value = {'a': 1, 'b': null};
+              return a;
+            });
+            expect(seen, [(true, null)]);
+          });
+
+          expect(earlier, [
+            if (alreadyObserved) ...[1, null],
+          ]);
+          expect(seen, [(true, null), if (alreadyObserved) (true, null)]);
+        });
+      }
+    }
+
+    test('a subscriber during removeWhere sees a restored entry at flush', () {
+      final backing = {'a': 1, 'b': 1};
+      final s = MapSignal(backing, equals: true, trackPreviousValue: false);
+      addTearDown(s.dispose);
+      final earlier = Effect(() => s.value.length);
+      addTearDown(earlier.dispose);
+      final seen = <bool>[];
+      late bool presentDuringRemoval;
+
+      batch(() {
+        s.removeWhere((key, _) {
+          if (key == 'a') return true;
+          // The backing can remove 'a' now or after all predicates return.
+          presentDuringRemoval = backing.containsKey('a');
+          final observer = Effect(() => seen.add(s.value.containsKey('a')));
+          addTearDown(observer.dispose);
+          s.update('b', (value) {
+            s
+              ..value = {'a': 3, 'b': 1}
+              ..value = {'a': 1, 'b': 1};
+            return value;
+          });
+          return false;
+        });
+        expect(seen, [presentDuringRemoval]);
+      });
+
+      expect(backing, {'b': 1});
+      expect(s.untrackedValue, {'a': 1, 'b': 1});
+      expect(seen, [presentDuringRemoval, if (!presentDuringRemoval) true]);
+    });
+
+    for (final next in [1, 2]) {
+      test('first observation keeps the slot of an in-progress update '
+          '(final value: $next)', () {
+        final s = MapSignal(
+          {'a': 1, 'b': 1, 'c': 1},
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        final seen = <int?>[];
+
+        batch(() {
+          s.update('a', (a) {
+            s['c'] = 2;
+            s.update('b', (_) {
+              final effect = Effect(() => seen.add(s.value['b']));
+              addTearDown(effect.dispose);
+              s
+                ..value = {'a': 3, 'b': next, 'c': 2}
+                ..value = {'a': 1, 'b': next, 'c': 2};
+              return 2;
+            });
+            return a;
+          });
+        });
+
+        expect(seen, [1, if (next != 1) next]);
+      });
+    }
+
+    test('a replacement notifies after a nested write repairs a cast map', () {
+      final backing = <String, Object>{'a': 1, 'bad': 'x'};
+      final s = MapSignal(
+        backing.cast<String, int>(),
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      final seen = <int?>[];
+      final effect = Effect(() => seen.add(s.value['a']));
+      addTearDown(effect.dispose);
+
+      batch(() {
+        s.update('a', (_) {
+          s
+            ..addAll({'bad': 3})
+            ..value = {'a': 2, 'bad': 3};
+          return 2;
+        });
+        expect(seen, [1]);
+      });
+
+      expect(seen, [1, 2]);
     });
 
     test('a replacement in a nested update delivers an earlier ancestor '

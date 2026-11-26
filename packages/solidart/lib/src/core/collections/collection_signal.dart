@@ -19,15 +19,24 @@ bool _isValueKey(Object? key) =>
     (key is num && !key.isNaN);
 
 typedef _ReplacementSlot = ({Object? key, Object? value, bool present});
+typedef _CopyReplacement<C> = C Function(Map<Object?, _ReplacementSlot>?);
 
 class _ReplacementBaseline<C extends Object> {
-  _ReplacementBaseline(this._isIntact, this._copy);
+  _ReplacementBaseline(
+    this._isIntact,
+    this._copy,
+    this._copyOriginal,
+    this._originalMayHaveChanged,
+  );
 
   final bool Function() _isIntact;
-  final C Function(Map<Object?, _ReplacementSlot>?) _copy;
+  final _CopyReplacement<C> _copy;
+  final _CopyReplacement<C>? _copyOriginal;
+  final bool Function()? _originalMayHaveChanged;
   Option<C>? _committed;
   bool _intact = false;
   bool _captured = false;
+  bool _useOriginal = false;
   bool _awaitingObservation = false;
   C? _snapshot;
   Map<Object?, _ReplacementSlot>? _rewinds;
@@ -38,12 +47,13 @@ class _ReplacementBaseline<C extends Object> {
       _committed = committed;
       _intact = false;
       _captured = false;
+      _useOriginal = _copyOriginal != null;
       _awaitingObservation = false;
       _snapshot = null;
       _rewinds = null;
       observedChange = false;
       try {
-        final intact = check && untracked(_isIntact);
+        final intact = check && (_useOriginal || untracked(_isIntact));
         if (identical(_committed, committed)) _intact = intact;
       } on Object {
         // An unreadable cast view can still be replaced.
@@ -75,13 +85,21 @@ class _ReplacementBaseline<C extends Object> {
     }
   }
 
+  void recordWriteResult(Option<C> committed) {
+    if (identical(_committed, committed) && _captured && _snapshot == null) {
+      // A cast view can reject the copy before a nested write repairs it.
+      observedChange = true;
+    }
+  }
+
   C? capture(Option<C> committed) {
     if (_prepare(committed) && !_captured) {
       _captured = true;
       final rewinds = _rewinds;
       _rewinds = null;
       try {
-        final snapshot = untracked(() => _copy(rewinds));
+        final copy = _useOriginal ? _copyOriginal! : _copy;
+        final snapshot = untracked(() => copy(rewinds));
         if (identical(_committed, committed)) _snapshot = snapshot;
       } on Object {
         // A failed copy does not prevent the replacement.
@@ -95,26 +113,40 @@ class _ReplacementBaseline<C extends Object> {
     C value,
     bool Function(C, C) equals,
     bool Function(C, Iterable<_ReplacementSlot>) slotsEqual,
-  ) {
+    _ReplacementSlot Function(C, Object?) readSlot, {
+    required bool firstObserver,
+  }) {
+    final readOriginal =
+        _copyOriginal != null && (_originalMayHaveChanged?.call() ?? true);
+    if (readOriginal) _prepare(committed);
     if (observedChange || !identical(_committed, committed)) return;
-    if (_awaitingObservation) {
+    if (_awaitingObservation ||
+        (firstObserver && _useOriginal && readOriginal)) {
       _awaitingObservation = false;
       _intact = true;
+      _captured = false;
+      _useOriginal = false;
+      _rewinds = null;
       // The bulk mutation can still write after the subscriber reads.
       capture(committed);
       return;
     }
-    final snapshot = _snapshot;
+    final snapshot = _useOriginal && readOriginal
+        ? capture(committed)
+        : _snapshot;
     final rewinds = _rewinds;
     if (snapshot == null && rewinds == null) return;
     // A comparer can reenter this read. Keep the notification if it throws.
     observedChange = true;
     try {
-      final unchanged = untracked(
-        () => rewinds != null
-            ? slotsEqual(value, rewinds.values)
-            : equals(snapshot!, value),
-      );
+      final unchanged = untracked(() {
+        if (rewinds == null) return equals(snapshot!, value);
+        if (!firstObserver) return slotsEqual(value, rewinds.values);
+        // Keep slots from writes still in progress, but compare them with
+        // what the first subscriber actually read.
+        rewinds.updateAll((key, _) => readSlot(value, key));
+        return true;
+      });
       if (identical(_committed, committed)) observedChange = !unchanged;
     } on Object {
       // Reading a map can succeed even if comparing it throws.
@@ -173,6 +205,19 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// Saves the committed map while an update can still write to it.
   _ReplacementBaseline<C>? _replacementBaseline;
 
+  void _rememberReplacementWrite(C collection, _ReplacementSlot? slot) {
+    final baseline = _replacementBaseline;
+    if (baseline == null || _internalSignal.forceDirty) return;
+    final committed = _internalSignal.currentValue;
+    if (identical(collection, committed.safeUnwrap())) {
+      baseline.rememberWrite(
+        committed,
+        slot,
+        observed: _internalSignal.subs != null,
+      );
+    }
+  }
+
   /// The check of a nested list resize that threw. The outermost [_mutate]
   /// runs it with its history copy when it ends, because the collection can
   /// be in the middle of a change (for example a `sort`) while it runs.
@@ -225,22 +270,15 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     C Function(C)? undo,
     bool Function()? failedSlotChanged,
     C Function(C, Map<Object?, _ReplacementSlot>?)? copyReplacementBaseline,
+    _CopyReplacement<C>? copyOriginalReplacementBaseline,
+    bool Function()? originalMayHaveChanged,
     _ReplacementSlot? replacementSlot,
   }) {
     final collection = _untrackedValue;
     final outer = _mutating;
     final nested = identical(collection, outer);
     final outerBaseline = _replacementBaseline;
-    if (nested && outerBaseline != null && !_internalSignal.forceDirty) {
-      final committed = _internalSignal.currentValue;
-      if (identical(collection, committed.safeUnwrap())) {
-        outerBaseline.rememberWrite(
-          committed,
-          replacementSlot,
-          observed: _internalSignal.subs != null,
-        );
-      }
-    }
+    if (nested) _rememberReplacementWrite(collection, replacementSlot);
     final length = _lengthOf(collection);
     final previous = !nested && trackPreviousValue && undo == null
         ? _copyPrevious(collection)
@@ -260,6 +298,8 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
               () =>
                   length == _lengthOf(collection) && !(check?.call() ?? false),
               (slots) => copyReplacementBaseline(collection, slots),
+              copyOriginalReplacementBaseline,
+              originalMayHaveChanged,
             );
     }
     late final R result;
@@ -286,6 +326,9 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
               (resizeCheck?.call(collection, previous) ?? false));
     });
     if (nested) {
+      if (changed) {
+        outerBaseline?.recordWriteResult(_internalSignal.currentValue);
+      }
       _nestedChanged |= changed;
       // Leave a failed resize to the outermost mutation that has a copy.
       if (outerPrevious != null) _nestedResizeCheck ??= resizeCheck;

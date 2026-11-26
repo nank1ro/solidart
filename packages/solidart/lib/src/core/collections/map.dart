@@ -55,8 +55,9 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
 
   @override
   Map<K, V> get _value {
-    final value = super._value;
     final baseline = _replacementBaseline;
+    final firstObserver = baseline != null && _internalSignal.subs == null;
+    final value = super._value;
     if (baseline != null &&
         reactiveSystem.activeSub != null &&
         identical(value, _mutating) &&
@@ -66,6 +67,8 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
         value,
         _compare,
         _replacementSlotsMatch,
+        _readReplacementSlot,
+        firstObserver: firstObserver,
       );
     }
     return value;
@@ -91,13 +94,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
         return;
       }
       final snapshot = baseline.capture(committed);
-      if (snapshot != null &&
-          !signal.forceDirty &&
-          identical(signal.currentValue, committed)) {
+      if (!signal.forceDirty && identical(signal.currentValue, committed)) {
         if (baseline.observedChange) {
-          // At least one subscriber read an intermediate in-place change.
+          // A subscriber read an intermediate change, or a nested write
+          // changed a map whose original state could not be copied.
           signal.forceDirty = true;
-        } else {
+        } else if (snapshot != null) {
           signal.currentValue = Some(snapshot);
         }
       }
@@ -346,7 +348,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     }
     // Even a list can run code each time it is read (for example a view
     // over a lazy iterable), so read [newEntries] only once.
-    _mutate((map) => map.addEntries(newEntries), bulkCheck: _bulkChangeCheck);
+    _mutateBulk((map) => map.addEntries(newEntries));
   }
 
   /// Adds all key/value pairs of [other] to this map.
@@ -396,11 +398,11 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   V putIfAbsent(K key, V Function() ifAbsent) {
     // A new key changes the length.
     final map = _untrackedValue;
-    final present = map.containsKey(key);
-    return _mutateUnless(
-      present,
+    if (map.containsKey(key)) return map.putIfAbsent(key, ifAbsent);
+    return _mutate(
       (map) => map.putIfAbsent(key, ifAbsent),
-      replacementSlot: !present && _canRewindSlot(map, key)
+      copyReplacementBaseline: equals ? _copyReplacementMap : null,
+      replacementSlot: _canRewindSlot(map, key)
           ? (key: key, value: null, present: false)
           : null,
     );
@@ -414,7 +416,34 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// ```
   @override
   void removeWhere(bool Function(K key, V value) test) {
-    _mutate((map) => map.removeWhere(test));
+    final backing = _untrackedValue;
+    if (!equals || identical(backing, _mutating)) {
+      return _mutate((map) => map.removeWhere(test));
+    }
+    // The backing can remove an entry before calling the next predicate.
+    // Keep the accepted entries until a read or replacement needs them.
+    final removed = <Object?>[];
+    _mutate(
+      (map) => map.removeWhere((key, value) {
+        final remove = test(key, value);
+        if (remove) {
+          removed
+            ..add(key)
+            ..add(value);
+        }
+        return remove;
+      }),
+      copyReplacementBaseline: _copyReplacementMap,
+      copyOriginalReplacementBaseline: (slots) {
+        if (removed.isEmpty) return _copyReplacementMap(backing, slots);
+        final original = _copyReplacementMap(backing, null);
+        for (var i = 0; i < removed.length; i += 2) {
+          original[removed[i] as K] = removed[i + 1] as V;
+        }
+        return slots == null ? original : _copyReplacementMap(original, slots);
+      },
+      originalMayHaveChanged: () => removed.isNotEmpty,
+    );
   }
 
   /// Updates the value for the provided [key].
@@ -473,7 +502,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// ```
   @override
   void updateAll(V Function(K key, V value) update) {
-    _mutate((map) => map.updateAll(update), bulkCheck: _bulkChangeCheck);
+    _mutateBulk((map) => map.updateAll(update));
   }
 
   @override
@@ -504,7 +533,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// Runs [write], which can change only the values of [keys]. Without
   /// [keys], compares the whole map.
   R _writeKeys<R>(List<K>? keys, R Function(Map<K, V>) write) {
-    if (keys == null) return _mutate(write, bulkCheck: _bulkChangeCheck);
+    if (keys == null) return _mutateBulk(write);
     final map = _untrackedValue;
     final before = List<Object?>.filled(keys.length, null);
     for (var i = 0; i < keys.length; i++) {
@@ -526,6 +555,15 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
 
   @override
   Map<K, V> _copyPrevious(Map<K, V> map) => Map<K, V>.of(map);
+
+  _ReplacementSlot _readReplacementSlot(Map<K, V> map, Object? key) {
+    final value = map[key];
+    return (
+      key: key,
+      value: value,
+      present: value != null || map.containsKey(key),
+    );
+  }
 
   bool _replacementSlotsMatch(
     Map<K, V> map,
@@ -561,8 +599,28 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     return copy;
   }
 
-  bool Function() _bulkChangeCheck(Map<K, V> map, Map<K, V>? previous) {
+  R _mutateBulk<R>(R Function(Map<K, V>) write) {
+    if (!equals) return _mutate(write, bulkCheck: _bulkChangeCheck);
+    late Map<K, V> Function() copyOriginal;
+    return _mutate(
+      write,
+      bulkCheck: (map, previous) => _bulkChangeCheck(
+        map,
+        previous,
+        saveOriginal: (copy) => copyOriginal = copy,
+      ),
+      copyReplacementBaseline: _copyReplacementMap,
+      copyOriginalReplacementBaseline: (_) => copyOriginal(),
+    );
+  }
+
+  bool Function() _bulkChangeCheck(
+    Map<K, V> map,
+    Map<K, V>? previous, {
+    void Function(Map<K, V> Function())? saveOriginal,
+  }) {
     if (previous != null && previous.length == map.length) {
+      saveOriginal?.call(() => Map<K, V>.identity()..addAll(previous));
       return () {
         final keys = previous.keys.iterator;
         final values = previous.values.iterator;
@@ -585,6 +643,13 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     map.forEach((key, value) {
       before[i++] = key;
       before[i++] = value;
+    });
+    saveOriginal?.call(() {
+      final snapshot = Map<K, V>.identity();
+      for (var i = 0; i < before.length; i += 2) {
+        snapshot[before[i] as K] = before[i + 1] as V;
+      }
+      return snapshot;
     });
     return () {
       var i = 0;
