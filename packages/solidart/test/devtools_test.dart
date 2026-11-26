@@ -86,6 +86,36 @@ void main() {
       expect(computed.value.source, 1);
       expect(runs, runsBefore);
     });
+
+    test('toJson reading an autoDispose Computed does not dispose it', () {
+      final other = Computed(() => 1, autoDispose: true);
+      final holder = Computed(() => _ReadingJsonProbe(other));
+      expect(holder.value.other, same(other));
+      expect(other.disposed, isFalse);
+      // A read by the user still runs the auto-dispose check.
+      expect(other.value, 1);
+      expect(other.disposed, isTrue);
+    });
+
+    test('toString reading an autoDispose Computed does not dispose it', () {
+      final other = Computed(() => 1, autoDispose: true);
+      final holder = Computed(() => _ReadingStringProbe(other));
+      expect(holder.value.other, same(other));
+      expect(other.disposed, isFalse);
+      expect(other.value, 1);
+      expect(other.disposed, isTrue);
+    });
+
+    test('a throwing serialization does not keep auto-disposal off', () {
+      final other = Computed(() => 1, autoDispose: true);
+      final holder = Computed(() => _ThrowingProbe(other));
+      expect(() => holder.value, throwsStateError);
+      expect(other.disposed, isFalse);
+
+      final later = Computed(() => 2, autoDispose: true);
+      expect(later.value, 2);
+      expect(later.disposed, isTrue);
+    });
   });
 }
 
@@ -108,5 +138,42 @@ class _SentProbe {
   Object? toJson() {
     sent.add(id);
     return id;
+  }
+}
+
+/// Reads an autoDispose Computed while DevTools serializes it.
+class _ReadingJsonProbe {
+  _ReadingJsonProbe(this.other);
+
+  final Computed<int> other;
+
+  Object? toJson() => other.value;
+}
+
+/// Has no toJson, so DevTools falls back to toString.
+class _ReadingStringProbe {
+  _ReadingStringProbe(this.other);
+
+  final Computed<int> other;
+
+  @override
+  String toString() => 'value: ${other.value}';
+}
+
+/// Reads an autoDispose Computed, then fails in both toJson and toString.
+class _ThrowingProbe {
+  _ThrowingProbe(this.other);
+
+  final Computed<int> other;
+
+  Object? toJson() {
+    other.value;
+    throw StateError('toJson');
+  }
+
+  @override
+  String toString() {
+    other.value;
+    throw StateError('toString');
   }
 }

@@ -228,7 +228,8 @@ class Computed<T> extends ReadSignal<T> {
     }
     // The first evaluation runs from get(), without didUpdate().
     _notifyEvaluated();
-    if (autoDispose) {
+    // A read made by DevTools serialization must not dispose the computed.
+    if (autoDispose && !_isSerializing) {
       _mayDispose();
     }
 

@@ -14,6 +14,22 @@ enum DevToolsEventType {
   disposed,
 }
 
+// Nesting depth of the DevTools serialization. While it is above zero, a read
+// of a Computed skips its auto-disposal check: the user code that
+// serialization runs (toJson, toString) must not change which signals live.
+var _serializationDepth = 0;
+
+bool get _isSerializing => _serializationDepth > 0;
+
+T _serializing<T>(T Function() body) {
+  _serializationDepth++;
+  try {
+    return body();
+  } finally {
+    _serializationDepth--;
+  }
+}
+
 dynamic _toJson(Object? obj) {
   try {
     return jsonEncode(obj);
@@ -96,8 +112,9 @@ void _postSignalEvent(
     previousValue = signal.previousValue;
   }
   final hasPreviousValue = signal.untrackedHasPreviousValue;
-  final jsonValue = _toJson(value);
-  final jsonPreviousValue = _toJson(previousValue);
+  final (jsonValue, jsonPreviousValue) = _serializing(
+    () => (_toJson(value), _toJson(previousValue)),
+  );
 
   dev.postEvent(eventName, {
     '_id': signal._id,
