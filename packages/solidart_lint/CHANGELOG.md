@@ -1,3 +1,7 @@
+## 3.1.0-dev.3
+
+- **CHORE**: Remove the `Wrap with ProviderScope` assist for Disco's `ProviderScope` widget ([#159](https://github.com/nank1ro/solidart/issues/159)).
+
 ## 3.1.0-dev.2
 
 - **CHORE**: Upgrade `analyzer` to `^14.7.0`, `analyzer_plugin` to `^0.14.20` and `analysis_server_plugin` to `^0.3.26`. Flutter 3.50's `flutter_test` needs a `test` version that requires `analyzer` 13 or later, so the old `analyzer: ^8.0.0` pin stopped the workspace from resolving.

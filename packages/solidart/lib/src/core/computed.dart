@@ -229,7 +229,7 @@ class Computed<T> extends ReadSignal<T> {
     // The first evaluation runs from get(), without didUpdate().
     _notifyEvaluated();
     if (autoDispose) {
-      _mayDispose();
+      _mayDispose(allowDisposal: !_isBuildingDevToolsEvent);
     }
 
     return value;
@@ -250,8 +250,13 @@ class Computed<T> extends ReadSignal<T> {
     if (!_notifyPending) return;
     _notifyPending = false;
     if (_notifiedOnce) {
+      if (SolidartConfig.observers.isEmpty && !SolidartConfig.devToolsEnabled) {
+        return;
+      }
       // Observers must not subscribe the effect or computed that reads this.
-      untracked(_notifySignalUpdate);
+      final errors = _FirstError();
+      untracked(() => _notifySignalUpdate(errors));
+      errors.rethrowIfAny();
     } else {
       _notifiedOnce = true;
       // The creation event had no value yet: send the first one.
@@ -326,11 +331,11 @@ class Computed<T> extends ReadSignal<T> {
   }
 
   @override
-  void _mayDispose() {
+  void _mayDispose({bool allowDisposal = true}) {
     if (_disposed || !autoDispose) return;
     final inputs = _inputs;
     if (inputs.isEmpty && _internalComputed.subs == null) {
-      dispose();
+      if (allowDisposal) dispose();
     } else {
       _recordInputs(inputs: inputs);
     }

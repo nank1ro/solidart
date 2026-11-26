@@ -402,6 +402,162 @@ void main() {
     });
   });
 
+  test('a self-disposed effect does not resubscribe during its rerun', () {
+    var disposals = 0;
+    final trigger = Signal(0, autoDispose: true)..onDispose(() => disposals++);
+    final other = Signal(0);
+    addTearDown(trigger.dispose);
+    addTearDown(other.dispose);
+    late final Effect effect;
+    effect = Effect(() {
+      if (trigger.value == 0) {
+        other.value;
+        return;
+      }
+      effect.dispose();
+      trigger.value;
+    });
+    addTearDown(effect.dispose);
+
+    trigger.value = 1;
+
+    expect(effect.disposed, isTrue);
+    expect(trigger.listenerCount, 0);
+    expect(trigger.disposed, isTrue);
+    expect(disposals, 1);
+  });
+
+  test('a Computed that disposes its observing effect stays unobserved', () {
+    final trigger = Signal(0, autoDispose: true);
+    final input = Signal(1);
+    addTearDown(trigger.dispose);
+    addTearDown(input.dispose);
+    late final Effect effect;
+    final computed = Computed(() {
+      effect.dispose();
+      return input.value;
+    });
+    addTearDown(computed.dispose);
+    effect = Effect(() {
+      if (trigger.value == 0) return;
+      computed.value;
+      trigger.value;
+    });
+    addTearDown(effect.dispose);
+
+    trigger.value = 1;
+
+    expect(computed.listenerCount, 0);
+    expect(trigger.disposed, isTrue);
+    expect(input.listenerCount, 1);
+  });
+
+  test('a Computed run does not restore an effect its selector disposes', () {
+    final trigger = Signal(0, autoDispose: true);
+    addTearDown(trigger.dispose);
+    late final Effect effect;
+    final computed = Computed(() {
+      effect.dispose();
+      return 0;
+    });
+    addTearDown(computed.dispose);
+    effect = Effect(() {
+      if (trigger.value == 0) return;
+      computed.run();
+      trigger.value;
+    });
+    addTearDown(effect.dispose);
+
+    trigger.value = 1;
+
+    expect(trigger.listenerCount, 0);
+    expect(trigger.disposed, isTrue);
+  });
+
+  for (final throwsAfterDisposal in [false, true]) {
+    test(
+      'queued effects do not restore a stopped delayed effect '
+      'with throwsAfterDisposal=$throwsAfterDisposal',
+      () async {
+        final trigger = Signal(0, autoDispose: true);
+        final startDrain = Signal(false);
+        var disposedInDrain = false;
+        final pending = Signal(
+          0,
+          comparator: (old, next) {
+            if (disposedInDrain) trigger.value;
+            return old == next;
+          },
+        );
+        addTearDown(trigger.dispose);
+        addTearDown(startDrain.dispose);
+        addTearDown(pending.dispose);
+        late final Effect parent;
+        final stopParent = Effect(() {
+          if (!startDrain.value) return;
+          parent.dispose();
+          disposedInDrain = true;
+          if (throwsAfterDisposal) throw StateError('queued effect');
+        });
+        addTearDown(stopParent.dispose);
+        final readPending = Effect(() => pending.value);
+        addTearDown(readPending.dispose);
+        parent = Effect(() {
+          if (trigger.value == 0) return;
+          startDrain.value = true;
+          pending.value = 1;
+        }, delay: Duration.zero);
+        addTearDown(parent.dispose);
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+
+        final zone = _runInZone(() => trigger.value = 1);
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+
+        expect(parent.disposed, isTrue);
+        expect(trigger.listenerCount, 0);
+        expect(trigger.disposed, isTrue);
+        expect(zone.reported.map(_messageOf), [
+          if (throwsAfterDisposal) 'queued effect',
+        ]);
+      },
+    );
+  }
+
+  test(
+    'a delayed effect that stops itself is cleared before its drain',
+    () async {
+      final trigger = Signal(0, autoDispose: true);
+      var disposedInRun = false;
+      final pending = Signal(
+        0,
+        comparator: (old, next) {
+          if (disposedInRun) trigger.value;
+          return old == next;
+        },
+      );
+      addTearDown(trigger.dispose);
+      addTearDown(pending.dispose);
+      final reader = Effect(() => pending.value);
+      addTearDown(reader.dispose);
+      late final Effect parent;
+      parent = Effect(() {
+        if (trigger.value == 0) return;
+        pending.value = 1;
+        parent.dispose();
+        disposedInRun = true;
+      }, delay: Duration.zero);
+      addTearDown(parent.dispose);
+      await Future<void>.delayed(const Duration(milliseconds: 25));
+
+      trigger.value = 1;
+      await Future<void>.delayed(const Duration(milliseconds: 25));
+
+      expect(parent.disposed, isTrue);
+      expect(trigger.listenerCount, 0);
+      expect(trigger.disposed, isTrue);
+    },
+  );
+
   group('#199 disposal with a throwing onDispose', () {
     test('an Effect disposes every dependency, then rethrows', () {
       final first = Signal(0, autoDispose: true)

@@ -14,6 +14,10 @@ abstract class SolidartConfig {
   static bool autoDispose = false;
 
   /// Whether to enable the DevTools extension, defaults to false.
+  ///
+  /// Building an event may run user code such as `toJson()`. If that code
+  /// reevaluates a computed, normal reactive cleanup can dispose its child
+  /// effects and their dependencies.
   static bool devToolsEnabled = false;
 
   /// Whether to track the previous value of the signal, defaults to true.
