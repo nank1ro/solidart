@@ -155,13 +155,17 @@ class _AlienSignal<T> extends alien.SignalNode<Option<T>> {
   }
 
   @override
+  @pragma('vm:prefer-inline')
   Option<T> get() {
-    if ((flags & alien_system.ReactiveFlags.dirty) ==
-            alien_system.ReactiveFlags.none ||
-        _readingDirtyValue) {
-      return super.get();
+    if ((flags & alien_system.ReactiveFlags.dirty) !=
+            alien_system.ReactiveFlags.none &&
+        !_readingDirtyValue) {
+      return _getDirtyValue();
     }
+    return super.get();
+  }
 
+  Option<T> _getDirtyValue() {
     // A comparator can force another update before this read captures the
     // committed value. Keep that value until the read has captured it.
     _readingDirtyValue = true;
