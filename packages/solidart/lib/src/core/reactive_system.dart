@@ -268,7 +268,7 @@ class ReactiveSystem {
           effect.nextEffect = null;
           if (alien.queuedEffects == null) alien.queuedEffectsTail = null;
           try {
-            alien.run(effect);
+            _AlienEffect.runQueued(effect);
           } catch (e, s) {
             if (error == null) {
               error = e;

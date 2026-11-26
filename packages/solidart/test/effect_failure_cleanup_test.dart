@@ -1362,6 +1362,161 @@ void main() {
     });
   });
 
+  group('#209 the child effects of a delayed effect', () {
+    const delay = Duration(milliseconds: 5);
+    Future<void> afterDelay() =>
+        Future<void>.delayed(const Duration(milliseconds: 30));
+
+    test('keep an autoDispose signal alive across the rerun', () async {
+      final trigger = Signal(0);
+      addTearDown(trigger.dispose);
+      final x = Signal(0, autoDispose: true);
+      final seen = <int>[];
+      final parent = Effect(() {
+        trigger.value;
+        Effect(() => seen.add(x.value));
+      }, delay: delay);
+      addTearDown(parent.dispose);
+      await afterDelay();
+
+      trigger.value = 1;
+      expect(x.disposed, isFalse);
+      await afterDelay();
+      x.value = 5;
+
+      expect(x.disposed, isFalse);
+      expect(seen, [0, 0, 5]);
+    });
+
+    test('stay subscribed while the rerun is pending', () async {
+      final trigger = Signal(0);
+      addTearDown(trigger.dispose);
+      final x = Signal(0, autoDispose: true);
+      final seen = <int>[];
+      late Effect child;
+      final parent = Effect(() {
+        trigger.value;
+        child = Effect(() => seen.add(x.value));
+      }, delay: delay);
+      addTearDown(parent.dispose);
+      await afterDelay();
+      final firstChild = child;
+
+      trigger.value = 1;
+      x.value = 5;
+
+      expect(seen, [0, 5]);
+      expect(firstChild.disposed, isFalse);
+      expect(x.disposed, isFalse);
+    });
+
+    test('stop when the replacement callback starts', () async {
+      final trigger = Signal(0);
+      addTearDown(trigger.dispose);
+      final x = Signal(0);
+      addTearDown(x.dispose);
+      final seen = <String>[];
+      final children = <Effect>[];
+      final parent = Effect(() {
+        final run = trigger.value;
+        children.add(Effect(() => seen.add('$run:${x.value}')));
+      }, delay: delay);
+      addTearDown(parent.dispose);
+      await afterDelay();
+
+      trigger.value = 1;
+      expect(children.first.disposed, isFalse);
+      await afterDelay();
+      expect(children.map((child) => child.disposed), [true, false]);
+      seen.clear();
+      x.value = 7;
+
+      expect(seen, ['1:7']);
+    });
+
+    test('of a coalesced rerun stay until the single timer fires', () async {
+      final trigger = Signal(0);
+      addTearDown(trigger.dispose);
+      final x = Signal(0, autoDispose: true);
+      var created = 0;
+      var childRuns = 0;
+      final parent = Effect(() {
+        trigger.value;
+        Effect(() {
+          x.value;
+          childRuns++;
+        });
+        created++;
+      }, delay: delay);
+      addTearDown(parent.dispose);
+      await afterDelay();
+
+      trigger
+        ..value = 1
+        ..value = 2;
+      expect(x.disposed, isFalse);
+      await afterDelay();
+
+      expect(created, 2);
+      expect(x.disposed, isFalse);
+      childRuns = 0;
+      x.value = 1;
+      expect(childRuns, 1);
+    });
+
+    test('follow the dependencies of the parent that reruns by itself '
+        'after the delay', () async {
+      final trigger = Signal(0);
+      addTearDown(trigger.dispose);
+      final x = Signal(0, autoDispose: true);
+      final seen = <int>[];
+      final parent = Effect(() {
+        trigger.value;
+        Effect(() => seen.add(x.value));
+      }, delay: delay);
+      addTearDown(parent.dispose);
+      await afterDelay();
+
+      for (var i = 1; i <= 3; i++) {
+        trigger.value = i;
+        await afterDelay();
+      }
+      x.value = 9;
+
+      expect(seen, [0, 0, 0, 0, 9]);
+    });
+
+    test(
+      'are disposed at once when the parent is disposed during the delay',
+      () async {
+        final trigger = Signal(0);
+        addTearDown(trigger.dispose);
+        final x = Signal(0, autoDispose: true);
+        late Effect child;
+        late Effect parent;
+        var runs = 0;
+        _runInZone(() {
+          parent = Effect(() {
+            trigger.value;
+            runs++;
+            child = Effect(() => x.value);
+          }, delay: delay);
+        });
+        await afterDelay();
+        final zone = _runInZone(() => trigger.value = 1);
+        expect(child.disposed, isFalse);
+
+        parent.dispose();
+
+        expect(zone.timers.single.isActive, isFalse);
+        expect(child.disposed, isTrue);
+        expect(x.disposed, isTrue);
+        await afterDelay();
+        expect(runs, 1);
+      },
+    );
+  });
+
   group('cleanup inside a running effect', () {
     // Each case disposes a node whose cleanup reads `audit`. The read must not
     // subscribe the running effect.
