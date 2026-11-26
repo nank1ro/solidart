@@ -91,6 +91,26 @@ class _AlienEffect extends alien.EffectNode<void> {
 
   void run() => fn();
 
+  // A delayed effect can only have children after its first timer starts.
+  // Keep them during the queued scheduling pass. The timer then calls
+  // alien.run directly to stop them before running the callback again.
+  static void runQueued(alien.EffectNode<dynamic> effect) {
+    if ((effect.flags & _hasChildEffect) == alien_system.ReactiveFlags.none ||
+        effect is! _AlienEffect ||
+        effect.parent._timer == null) {
+      return alien.run(effect);
+    }
+    effect.flags &= ~_hasChildEffect;
+    try {
+      alien.run(effect);
+    } finally {
+      // A stopped effect has no flags and no children.
+      if (effect.flags != alien_system.ReactiveFlags.none) {
+        effect.flags |= _hasChildEffect;
+      }
+    }
+  }
+
   // alien_signals runs the cleanup before each rerun, and when it stops the
   // effect, for example because its parent effect is disposed or reruns. Only
   // a stop clears the flags, and then the solidart effect is disposed too.
