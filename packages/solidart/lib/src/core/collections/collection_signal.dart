@@ -91,7 +91,13 @@ class _ReplacementBaseline<C extends Object> {
     Option<C> committed,
     _ReplacementSlot? slot, {
     required bool observed,
+    required bool equivalent,
   }) {
+    if (equivalent) {
+      // Establish the baseline before the raw write changes slot identity.
+      _prepare(committed);
+      return;
+    }
     _checkedBulkVersion = null;
     if (slot != null) {
       if (_prepare(committed) && !_captured) {
@@ -112,8 +118,9 @@ class _ReplacementBaseline<C extends Object> {
   }
 
   void recordWriteResult(Option<C> committed) {
+    // Identity writes can matter to the surrounding callback even when the
+    // replacement comparison is still valid.
     writeVersion++;
-    _checkedBulkVersion = null;
     if (identical(_committed, committed) && _captured && _snapshot == null) {
       // A cast view can reject the copy before a nested write repairs it.
       observedChange = true;
@@ -250,7 +257,11 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// Saves the committed map while an update can still write to it.
   _ReplacementBaseline<C>? _replacementBaseline;
 
-  void _rememberReplacementWrite(C collection, _ReplacementSlot? slot) {
+  void _rememberReplacementWrite(
+    C collection,
+    _ReplacementSlot? slot, {
+    bool equivalent = false,
+  }) {
     final baseline = _replacementBaseline;
     if (baseline == null || _internalSignal.forceDirty) return;
     final committed = _internalSignal.currentValue;
@@ -259,6 +270,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
         committed,
         slot,
         observed: _internalSignal.subs != null,
+        equivalent: equivalent,
       );
     }
   }

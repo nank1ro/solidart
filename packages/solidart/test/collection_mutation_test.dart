@@ -469,6 +469,92 @@ void main() {
       }
     }
 
+    for (final firstValueBeforeRead in [false, true]) {
+      for (final opaque in [false, true]) {
+        test('equal updateAll results keep reads bounded '
+            '(first value before read: $firstValueBeforeRead, '
+            'opaque: $opaque)', () {
+          const count = 128;
+          var comparisons = 0;
+          _CountedMapValue valueOf(int key) => _CountedMapValue(
+            key,
+            () => comparisons++,
+            onEquals: () => comparisons++,
+          );
+          final backing = {for (var i = 0; i < count; i++) i: valueOf(i)};
+          final s = MapSignal(
+            opaque ? MapView(backing) : backing,
+            equals: true,
+            trackPreviousValue: false,
+          );
+          addTearDown(s.dispose);
+          _CountedMapValue replace(int key) =>
+              s.update(key, (_) => valueOf(s[key]!.key));
+          final effect = Effect(() {
+            s.value;
+            if (firstValueBeforeRead) {
+              s.updateAll(
+                (key, value) => key == 0 ? valueOf(value.key) : replace(key),
+              );
+            } else {
+              s.update(count - 1, (value) {
+                s.updateAll((key, old) {
+                  replace(key);
+                  return old;
+                });
+                return value;
+              });
+            }
+          });
+          addTearDown(effect.dispose);
+
+          expect(comparisons, lessThanOrEqualTo(8 * count));
+        });
+      }
+    }
+
+    for (final bulk in [false, true]) {
+      test(
+        'equal point writes reuse a first observer snapshot (bulk: $bulk)',
+        () {
+          const count = 128;
+          var hashes = 0;
+          _CountedMapValue valueOf(int key) =>
+              _CountedMapValue(key, () => hashes++);
+          final s = MapSignal(
+            {for (var i = 0; i < count; i++) i: valueOf(i)},
+            equals: true,
+            trackPreviousValue: false,
+          );
+          addTearDown(s.dispose);
+          if (bulk) {
+            final effect = Effect(() {
+              s.updateAll((key, value) {
+                if (key == 0) return valueOf(-1);
+                return s.update(key, (_) => valueOf(s[key]!.key));
+              });
+            });
+            addTearDown(effect.dispose);
+          } else {
+            s.update(0, (value) {
+              s.addAll({1: valueOf(-1)});
+              final effect = Effect(() => s[0]);
+              addTearDown(effect.dispose);
+              for (var key = 0; key < count; key++) {
+                s.update(key, (current) {
+                  effect.run();
+                  return valueOf(current.key);
+                });
+              }
+              return value;
+            });
+          }
+
+          expect(hashes, 0);
+        },
+      );
+    }
+
     for (final useSameValue in [true, false]) {
       for (final history in [false, true]) {
         test('tracked reads from equal updateAll callbacks do not hash the '
@@ -2785,6 +2871,38 @@ void main() {
       expect(s.previousValue!['b'], same(old));
       expect(s.value['b'], same(next));
     });
+
+    for (final history in [false, true]) {
+      for (final opaque in [false, true]) {
+        test('an equivalent nested point write preserves a later replacement '
+            '(history: $history, opaque: $opaque)', () {
+          _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+          final backing = {'a': valueOf(0)};
+          final s = MapSignal(
+            opaque ? MapView(backing) : backing,
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final seen = <int>[];
+          final effect = Effect(() => seen.add(s.value['a']!.key));
+          addTearDown(effect.dispose);
+
+          batch(() {
+            s.update('a', (value) {
+              s
+                ..update('a', (current) => valueOf(current.key))
+                ..value = {'a': valueOf(1)};
+              return valueOf(1);
+            });
+            expect(seen, [0]);
+          });
+
+          expect(seen, [0, 1]);
+          expect(s.untrackedPreviousValue?['a']?.key, history ? 0 : null);
+        });
+      }
+    }
 
     test('a deferred replacement outside a batch updates a computed', () {
       final s = MapSignal({'a': 1}, equals: true, trackPreviousValue: false);

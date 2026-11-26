@@ -125,12 +125,14 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   // Its type arguments must match the signal's.
   late final Type _defaultMapType = <K, V>{}.runtimeType;
 
+  bool _hasStableSlot(Map<K, V> map, K key) =>
+      map.runtimeType == _defaultMapType && _isValueKey(key);
+
   bool _canRewindSlot(Map<K, V> map, K key) =>
       _replacementBaseline != null &&
       identical(_mutating, map) &&
       !_internalSignal.forceDirty &&
-      map.runtimeType == _defaultMapType &&
-      _isValueKey(key);
+      _hasStableSlot(map, key);
 
   /// Associates the [key] with the given [value].
   ///
@@ -409,6 +411,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
             : ifAbsent,
       ),
       copyReplacementBaseline: equals ? _copyReplacementMap : null,
+      bulkVersion: _pointCallbackVersion(map, key),
       deferReplacementWrite: deferWrite,
       keepBulkVersion: rewindable,
     );
@@ -513,6 +516,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       ),
       slotChanged: () => !identical(old, _readValue(map, key)),
       copyReplacementBaseline: equals ? _copyReplacementMap : null,
+      bulkVersion: _pointCallbackVersion(map, key),
       deferReplacementWrite: deferWrite,
       keepBulkVersion: rewindable,
     );
@@ -520,6 +524,13 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
 
   bool _deferCallbackWrite(Map<K, V> map) =>
       _replacementBaseline != null && identical(map, _mutating);
+
+  // A native point callback returns before the backing writes its slot.
+  // Nested writes that can change the comparison invalidate it separately.
+  int Function(int)? _pointCallbackVersion(Map<K, V> map, K key) =>
+      equals && !identical(map, _mutating) && _hasStableSlot(map, key)
+      ? (_) => 0
+      : null;
 
   V _beforeCallbackWrite(Map<K, V> map, K key, V next, bool rewindable) {
     // The callback may already have replaced the backing map.
@@ -532,9 +543,15 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     }
     if (previous == null ||
         !previous.present ||
-        (!identical(previous.value, next) &&
-            !_sameReplacementValue(previous.value, next))) {
-      _rememberReplacementWrite(map, rewindable ? previous : null);
+        !identical(previous.value, next)) {
+      _rememberReplacementWrite(
+        map,
+        rewindable ? previous : null,
+        equivalent:
+            previous != null &&
+            previous.present &&
+            _sameReplacementValue(previous.value, next),
+      );
     }
     return next;
   }
@@ -560,8 +577,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     final nested = identical(_untrackedValue, _mutating);
     late Map<K, V> Function() copyOriginal;
     var version = 0;
-    var hasRead = false;
-    var wrote = false;
+    var savedBaseline = false;
     _mutate(
       (map) => map.updateAll((key, value) {
         final baseline = _replacementBaseline;
@@ -573,11 +589,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
             ? value
             : untracked(() => _readValue(map, key));
         if (!identical(before, next)) {
-          if (nested && !wrote) {
-            wrote = true;
-            _rememberReplacementWrite(map, null);
+          final equivalent = _sameReplacementValue(before, next);
+          if (nested && !savedBaseline) {
+            _rememberReplacementWrite(map, null, equivalent: equivalent);
+            savedBaseline = !equivalent;
           }
-          if (!hasRead || !_sameReplacementValue(before, next)) version++;
+          if (!equivalent) version++;
         }
         return next;
       }),
@@ -590,10 +607,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
             ),
       copyReplacementBaseline: _copyReplacementMap,
       copyOriginalReplacementBaseline: (_) => copyOriginal(),
-      bulkVersion: (_) {
-        hasRead = true;
-        return version;
-      },
+      bulkVersion: (_) => version,
       deferReplacementWrite: true,
     );
   }
