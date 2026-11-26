@@ -354,6 +354,100 @@ void main() {
       expect(backing.scans, reference.scans);
     });
 
+    test(
+      'tracked reads after one map removal do not compare the whole map',
+      () {
+        var hashes = 0;
+        final s = MapSignal(
+          {
+            for (var i = 0; i < 128; i++)
+              i: _CountedMapValue(i, () => hashes++),
+          },
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        final effect = Effect(() {
+          s.removeWhere((key, value) {
+            if (key != 0) expect(s[key], same(value));
+            return key == 0;
+          });
+        });
+        addTearDown(effect.dispose);
+
+        expect(s.untrackedValue.length, 127);
+        expect(hashes, 0);
+      },
+    );
+
+    for (final removes in [false, true]) {
+      test(
+        'tracked reads from a nested no-op '
+        '${removes ? 'removeWhere' : 'updateAll'} do bounded comparisons',
+        () {
+          const count = 128;
+          var hashes = 0;
+          final s = MapSignal(
+            {
+              for (var i = 0; i < count; i++)
+                i: _CountedMapValue(i, () => hashes++),
+            },
+            equals: true,
+            trackPreviousValue: false,
+          );
+          addTearDown(s.dispose);
+          final effect = Effect(() {
+            s.value;
+            s.update(0, (current) {
+              if (removes) {
+                s.removeWhere((key, value) {
+                  expect(s[key], same(value));
+                  return false;
+                });
+              } else {
+                s.updateAll((key, value) => s[key]!);
+              }
+              return current;
+            });
+          });
+          addTearDown(effect.dispose);
+
+          expect(hashes, lessThanOrEqualTo(8 * count));
+        },
+      );
+    }
+
+    for (final useSameValue in [true, false]) {
+      for (final history in [false, true]) {
+        test('tracked reads from equal updateAll callbacks do not hash the '
+            'map (identical: $useSameValue, history: $history)', () {
+          var hashes = 0;
+          _CountedMapValue valueOf(int key) =>
+              _CountedMapValue(key, () => hashes++);
+          final s = MapSignal(
+            {for (var i = 0; i < 128; i++) i: valueOf(i)},
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          var runs = 0;
+          final effect = Effect(() {
+            runs++;
+            s.updateAll((key, value) {
+              final observed = s[key]!;
+              return useSameValue ? observed : valueOf(observed.key);
+            });
+          });
+          addTearDown(effect.dispose);
+
+          expect(hashes, 0);
+          final previousRuns = runs;
+          s[0] = valueOf(-1);
+          expect(runs, greaterThan(previousRuns));
+        });
+      }
+    }
+
     test('list fillRange reads only the affected slots', () {
       final backing = _CountingList(100);
       final s = ListSignal<int>([], trackPreviousValue: false)..value = backing;
@@ -2500,6 +2594,37 @@ void main() {
       expect(seen, [1]);
     });
 
+    for (final readIntermediate in [false, true]) {
+      test('the first subscriber uses the current map after an incumbent '
+          'detaches (read intermediate: $readIntermediate)', () {
+        final s = MapSignal(
+          {'a': 1, 'b': 1},
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        final incumbent = Effect(() => s.value['b']);
+        addTearDown(incumbent.dispose);
+        final seen = <int?>[];
+
+        batch(() {
+          s.update('a', (a) {
+            s.addAll({'b': 2});
+            if (readIntermediate) incumbent.run();
+            incumbent.dispose();
+            final successor = Effect(() => seen.add(s.value['b']));
+            addTearDown(successor.dispose);
+            s
+              ..value = {'a': 3, 'b': 2}
+              ..value = {'a': 1, 'b': 2};
+            return a;
+          });
+        });
+
+        expect(seen, [2]);
+      });
+    }
+
     test('a synchronous replacement does not scan the outgoing map', () {
       final backing = _CountingMap(100000);
       final s = MapSignal(backing, equals: true, trackPreviousValue: false);
@@ -2516,6 +2641,44 @@ void main() {
       expect(lengths, [100000, 1]);
       expect(backing.scans, scans);
     });
+
+    for (final nested in ['update', 'putIfAbsent', 'update ifAbsent']) {
+      test('a synchronous replacement inside a nested $nested does not scan '
+          'the outgoing map', () {
+        final backing = _CountingMap(100000);
+        final s = MapSignal(backing, equals: true, trackPreviousValue: false);
+        addTearDown(s.dispose);
+        final lengths = <int>[];
+        final effect = Effect(() => lengths.add(s.value.length));
+        addTearDown(effect.dispose);
+
+        int replace() {
+          s.value = {0: 1};
+          return 1;
+        }
+
+        switch (nested) {
+          case 'putIfAbsent':
+            s.update(0, (value) {
+              s.putIfAbsent(-1, replace);
+              return value;
+            });
+          case 'update ifAbsent':
+            s.update(0, (value) {
+              s.update(-1, (value) => value, ifAbsent: replace);
+              return value;
+            });
+          default:
+            s.putIfAbsent(-1, () {
+              s.update(0, (_) => replace());
+              return -1;
+            });
+        }
+
+        expect(lengths, [100000, 1]);
+        expect(backing.scans, 0);
+      });
+    }
 
     test('a deferred replacement outside a batch updates a computed', () {
       final s = MapSignal({'a': 1}, equals: true, trackPreviousValue: false);
@@ -2612,6 +2775,55 @@ void main() {
     });
 
     for (final history in [false, true]) {
+      for (final removes in [false, true]) {
+        final operation = removes ? 'removeWhere' : 'updateAll';
+        test(
+          'a nested update read sees earlier $operation '
+          'writes (history: $history)',
+          () {
+            final original = {'a': 1, 'b': 1, 'c': 1};
+            final backing = Map.of(original);
+            final s = MapSignal(
+              backing,
+              equals: true,
+              trackPreviousValue: history,
+            );
+            watch(s);
+            final seen = <int?>[];
+            final observer = Effect(() => seen.add(s.value['a']));
+            addTearDown(observer.dispose);
+            int? intermediate;
+
+            int readAndRestore(int value) {
+              intermediate = backing['a'];
+              observer.run();
+              s
+                ..value = {...original, 'a': 3}
+                ..value = original;
+              return value;
+            }
+
+            batch(() {
+              if (removes) {
+                s.removeWhere((key, value) {
+                  if (key == 'b') s.update(key, readAndRestore);
+                  return key == 'a';
+                });
+              } else {
+                s.updateAll((key, value) {
+                  if (key == 'b') return s.update(key, readAndRestore);
+                  return key == 'a' ? 2 : value;
+                });
+              }
+            });
+
+            expect(s.untrackedValue, original);
+            // Some backings apply accepted removals after all predicates run.
+            expect(seen, [1, intermediate, if (intermediate != 1) 1]);
+          },
+        );
+      }
+
       for (final restores in [false, true]) {
         for (final removes in [false, true]) {
           test('nested update inside ${removes ? 'removeWhere' : 'updateAll'} '
@@ -3963,6 +4175,25 @@ class _HashKey {
   @override
   // ignore: hash_and_equals, avoid_equals_and_hash_code_on_mutable_classes
   int get hashCode => hash();
+}
+
+class _CountedMapValue {
+  _CountedMapValue(this.key, this.onHash);
+
+  final int key;
+  final void Function() onHash;
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode {
+    onHash();
+    return key;
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) =>
+      other is _CountedMapValue && key == other.key;
 }
 
 class _ThrowingHash {

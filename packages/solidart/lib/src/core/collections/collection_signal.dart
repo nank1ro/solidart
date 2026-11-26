@@ -26,14 +26,16 @@ class _ReplacementBaseline<C extends Object> {
     this._isIntact,
     this._copy,
     this._copyOriginal,
-    this._originalMayHaveChanged,
-  );
+    this._originalBulkVersion,
+  ) : _activeBulkVersion = _originalBulkVersion;
 
   final bool Function() _isIntact;
   final _CopyReplacement<C> _copy;
   final _CopyReplacement<C>? _copyOriginal;
-  final bool Function()? _originalMayHaveChanged;
+  final int Function()? _originalBulkVersion;
+  int Function()? _activeBulkVersion;
   Option<C>? _committed;
+  int? _checkedBulkVersion;
   bool _intact = false;
   bool _captured = false;
   bool _useOriginal = false;
@@ -42,9 +44,31 @@ class _ReplacementBaseline<C extends Object> {
   Map<Object?, _ReplacementSlot>? _rewinds;
   bool observedChange = false;
 
+  R runNested<R>(
+    R Function(C) mutation,
+    C collection,
+    int Function()? bulkVersion,
+  ) {
+    final outerVersion = _activeBulkVersion;
+    if (outerVersion == null && bulkVersion == null) {
+      return mutation(collection);
+    }
+    _activeBulkVersion = bulkVersion;
+    _checkedBulkVersion = null;
+    try {
+      return mutation(collection);
+    } finally {
+      // A nested write may have changed the map without advancing the outer
+      // callback's version.
+      _activeBulkVersion = outerVersion;
+      _checkedBulkVersion = null;
+    }
+  }
+
   bool _prepare(Option<C> committed, {bool check = true}) {
     if (!identical(_committed, committed)) {
       _committed = committed;
+      _checkedBulkVersion = null;
       _intact = false;
       _captured = false;
       _useOriginal = _copyOriginal != null;
@@ -116,19 +140,33 @@ class _ReplacementBaseline<C extends Object> {
     _ReplacementSlot Function(C, Object?) readSlot, {
     required bool firstObserver,
   }) {
-    final readOriginal =
-        _copyOriginal != null && (_originalMayHaveChanged?.call() ?? true);
+    final bulkVersion = _activeBulkVersion;
+    final version = bulkVersion == null ? null : untracked(bulkVersion);
+    final originalBulkVersion = _originalBulkVersion;
+    final originalVersion = identical(bulkVersion, originalBulkVersion)
+        ? version
+        : originalBulkVersion == null
+        ? null
+        : untracked(originalBulkVersion);
+    final readOriginal = originalVersion != null && originalVersion != 0;
     if (readOriginal) _prepare(committed);
-    if (observedChange || !identical(_committed, committed)) return;
+    if (!identical(_committed, committed)) return;
+    if (firstObserver) observedChange = false;
+    if (observedChange) return;
     if (_awaitingObservation ||
-        (firstObserver && _useOriginal && readOriginal)) {
+        (firstObserver && (_captured || (_useOriginal && readOriginal)))) {
       _awaitingObservation = false;
       _intact = true;
       _captured = false;
       _useOriginal = false;
+      _snapshot = null;
       _rewinds = null;
       // The bulk mutation can still write after the subscriber reads.
       capture(committed);
+      _checkedBulkVersion = version;
+      return;
+    }
+    if (!firstObserver && version != null && version == _checkedBulkVersion) {
       return;
     }
     final snapshot = _useOriginal && readOriginal
@@ -136,6 +174,7 @@ class _ReplacementBaseline<C extends Object> {
         : _snapshot;
     final rewinds = _rewinds;
     if (snapshot == null && rewinds == null) return;
+    _checkedBulkVersion = version;
     // A comparer can reenter this read. Keep the notification if it throws.
     observedChange = true;
     try {
@@ -271,15 +310,21 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     bool Function()? failedSlotChanged,
     C Function(C, Map<Object?, _ReplacementSlot>?)? copyReplacementBaseline,
     _CopyReplacement<C>? copyOriginalReplacementBaseline,
-    bool Function()? originalMayHaveChanged,
+    int Function(int)? bulkVersion,
     _ReplacementSlot? replacementSlot,
+    bool deferReplacementWrite = false,
   }) {
     final collection = _untrackedValue;
     final outer = _mutating;
     final nested = identical(collection, outer);
     final outerBaseline = _replacementBaseline;
-    if (nested) _rememberReplacementWrite(collection, replacementSlot);
+    if (nested && !deferReplacementWrite) {
+      _rememberReplacementWrite(collection, replacementSlot);
+    }
     final length = _lengthOf(collection);
+    final readBulkVersion = bulkVersion == null
+        ? null
+        : () => bulkVersion(length);
     final previous = !nested && trackPreviousValue && undo == null
         ? _copyPrevious(collection)
         : null;
@@ -299,11 +344,16 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
                   length == _lengthOf(collection) && !(check?.call() ?? false),
               (slots) => copyReplacementBaseline(collection, slots),
               copyOriginalReplacementBaseline,
-              originalMayHaveChanged,
+              readBulkVersion,
             );
     }
     late final R result;
-    final errors = _FirstError()..run(() => result = mutation(collection));
+    final errors = _FirstError()
+      ..run(() {
+        result = nested && outerBaseline != null
+            ? outerBaseline.runNested(mutation, collection, readBulkVersion)
+            : mutation(collection);
+      });
     final nestedChanged = _nestedChanged;
     final nestedResizeCheck = _nestedResizeCheck;
     _mutating = outer;

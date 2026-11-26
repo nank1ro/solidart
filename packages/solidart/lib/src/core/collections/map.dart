@@ -348,7 +348,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     }
     // Even a list can run code each time it is read (for example a view
     // over a lazy iterable), so read [newEntries] only once.
-    _mutateBulk((map) => map.addEntries(newEntries));
+    _mutate((map) => map.addEntries(newEntries), bulkCheck: _bulkChangeCheck);
   }
 
   /// Adds all key/value pairs of [other] to this map.
@@ -399,12 +399,18 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     // A new key changes the length.
     final map = _untrackedValue;
     if (map.containsKey(key)) return map.putIfAbsent(key, ifAbsent);
+    final slot = _canRewindSlot(map, key)
+        ? (key: key, value: null, present: false)
+        : null;
+    final deferWrite = _deferCallbackWrite(map, slot);
     return _mutate(
-      (map) => map.putIfAbsent(key, ifAbsent),
+      (map) => map.putIfAbsent(
+        key,
+        deferWrite ? () => _beforeCallbackWrite(map, ifAbsent()) : ifAbsent,
+      ),
       copyReplacementBaseline: equals ? _copyReplacementMap : null,
-      replacementSlot: _canRewindSlot(map, key)
-          ? (key: key, value: null, present: false)
-          : null,
+      replacementSlot: slot,
+      deferReplacementWrite: deferWrite,
     );
   }
 
@@ -417,8 +423,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   @override
   void removeWhere(bool Function(K key, V value) test) {
     final backing = _untrackedValue;
-    if (!equals || identical(backing, _mutating)) {
-      return _mutate((map) => map.removeWhere(test));
+    if (!equals) return _mutate((map) => map.removeWhere(test));
+    if (identical(backing, _mutating)) {
+      return _mutate(
+        (map) => map.removeWhere(test),
+        bulkVersion: (length) => length - backing.length,
+      );
     }
     // The backing can remove an entry before calling the next predicate.
     // Keep the accepted entries until a read or replacement needs them.
@@ -442,7 +452,8 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
         }
         return slots == null ? original : _copyReplacementMap(original, slots);
       },
-      originalMayHaveChanged: () => removed.isNotEmpty,
+      // Some maps apply their removals only after the last predicate.
+      bulkVersion: (length) => removed.isEmpty ? 0 : length - backing.length,
     );
   }
 
@@ -477,18 +488,36 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       return map.update(key, update);
     }
     final old = _readValue(map, key);
+    final slot = _canRewindSlot(map, key) && !identical(old, _unreadable)
+        ? (key: key, value: old, present: old != null || map.containsKey(key))
+        : null;
+    final deferWrite = _deferCallbackWrite(map, slot);
+
     return _mutate(
-      (map) => map.update(key, update, ifAbsent: ifAbsent),
+      (map) => map.update(
+        key,
+        deferWrite
+            ? (value) => _beforeCallbackWrite(map, update(value))
+            : update,
+        ifAbsent: deferWrite && ifAbsent != null
+            ? () => _beforeCallbackWrite(map, ifAbsent())
+            : ifAbsent,
+      ),
       slotChanged: () => !identical(old, _readValue(map, key)),
       copyReplacementBaseline: equals ? _copyReplacementMap : null,
-      replacementSlot: _canRewindSlot(map, key) && !identical(old, _unreadable)
-          ? (
-              key: key,
-              value: old,
-              present: old != null || map.containsKey(key),
-            )
-          : null,
+      replacementSlot: slot,
+      deferReplacementWrite: deferWrite,
     );
+  }
+
+  bool _deferCallbackWrite(Map<K, V> map, _ReplacementSlot? slot) =>
+      slot == null && _replacementBaseline != null && identical(map, _mutating);
+
+  V _beforeCallbackWrite(Map<K, V> map, V next) {
+    // A replacement made by the callback can commit before the backing
+    // writes this slot. In that case, there is no outgoing map to copy.
+    if (identical(map, _untrackedValue)) _rememberReplacementWrite(map, null);
+    return next;
   }
 
   /// Updates all values.
@@ -502,7 +531,49 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// ```
   @override
   void updateAll(V Function(K key, V value) update) {
-    _mutateBulk((map) => map.updateAll(update));
+    if (!equals) {
+      return _mutate(
+        (map) => map.updateAll(update),
+        bulkCheck: _bulkChangeCheck,
+      );
+    }
+
+    final nested = identical(_untrackedValue, _mutating);
+    late Map<K, V> Function() copyOriginal;
+    var version = 0;
+    var hasRead = false;
+    _mutate(
+      (map) => map.updateAll((key, value) {
+        final next = update(key, value);
+        if (!identical(value, next) &&
+            (!hasRead || !_sameReplacementValue(value, next))) {
+          version++;
+        }
+        return next;
+      }),
+      bulkCheck: nested
+          ? _bulkChangeCheck
+          : (map, previous) => _bulkChangeCheck(
+              map,
+              previous,
+              saveOriginal: (copy) => copyOriginal = copy,
+            ),
+      copyReplacementBaseline: _copyReplacementMap,
+      copyOriginalReplacementBaseline: (_) => copyOriginal(),
+      bulkVersion: (_) {
+        hasRead = true;
+        return version;
+      },
+    );
+  }
+
+  bool _sameReplacementValue(V before, V after) {
+    try {
+      return untracked(() => before == after);
+    } on Object {
+      // Comparing an intermediate value must not interrupt the backing write.
+      return false;
+    }
   }
 
   @override
@@ -533,7 +604,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// Runs [write], which can change only the values of [keys]. Without
   /// [keys], compares the whole map.
   R _writeKeys<R>(List<K>? keys, R Function(Map<K, V>) write) {
-    if (keys == null) return _mutateBulk(write);
+    if (keys == null) return _mutate(write, bulkCheck: _bulkChangeCheck);
     final map = _untrackedValue;
     final before = List<Object?>.filled(keys.length, null);
     for (var i = 0; i < keys.length; i++) {
@@ -597,21 +668,6 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       if (original.present) copy[original.key as K] = original.value as V;
     }
     return copy;
-  }
-
-  R _mutateBulk<R>(R Function(Map<K, V>) write) {
-    if (!equals) return _mutate(write, bulkCheck: _bulkChangeCheck);
-    late Map<K, V> Function() copyOriginal;
-    return _mutate(
-      write,
-      bulkCheck: (map, previous) => _bulkChangeCheck(
-        map,
-        previous,
-        saveOriginal: (copy) => copyOriginal = copy,
-      ),
-      copyReplacementBaseline: _copyReplacementMap,
-      copyOriginalReplacementBaseline: (_) => copyOriginal(),
-    );
   }
 
   bool Function() _bulkChangeCheck(
