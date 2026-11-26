@@ -86,7 +86,16 @@ class Effect implements ReactionInterface {
     /// The name of the effect, useful for logging
     String? name,
 
-    /// Delay each effect reaction
+    /// Delay the first run and later reactions.
+    ///
+    /// The old child effects stay subscribed while a rerun is pending.
+    /// When the parent reruns, a replacement child that reads a signal
+    /// synchronously can keep that signal alive. A replacement child with
+    /// its own delay can read the signal after it has auto-disposed.
+    ///
+    /// Use Solidart's [batch] for batched writes. An outer
+    /// `alien_signals` batch can stop the old children when it flushes,
+    /// before the timer fires.
     Duration? delay,
 
     /// Whether to automatically dispose the effect (defaults to true).
