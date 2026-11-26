@@ -695,6 +695,95 @@ void main() {
       expect(hashes, 0);
     });
 
+    for (final history in [false, true]) {
+      test('a sparse reader releases restored slots outside its observation '
+          '(history: $history)', () {
+        const count = 512;
+        var comparisons = 0;
+        _CountedMapValue valueOf(int key) => _CountedMapValue(
+          key,
+          () => comparisons++,
+          onEquals: () => comparisons++,
+        );
+        final initial = {for (var i = 0; i <= count; i++) i: valueOf(0)};
+        final s = MapSignal(
+          Map.of(initial),
+          equals: true,
+          trackPreviousValue: history,
+        );
+        addTearDown(s.dispose);
+        final incumbentValues = <int>[];
+        final incumbent = Effect(() => incumbentValues.add(s.value[0]!.key));
+        addTearDown(incumbent.dispose);
+        final laterValues = <int>[];
+        late int comparisonsDuringReads;
+
+        batch(() {
+          s.update(0, (current) {
+            s[0] = valueOf(1);
+            final reader = Effect(() => s.value[0]);
+            comparisons = 0;
+            for (var key = 1; key <= count; key++) {
+              s
+                ..update(key, (_) => valueOf(2))
+                ..update(key, (_) => valueOf(0));
+              reader.run();
+            }
+            comparisonsDuringReads = comparisons;
+            reader.dispose();
+            s[0] = current;
+            final later = Effect(() => laterValues.add(s.value[0]!.key));
+            addTearDown(later.dispose);
+            s
+              ..[0] = valueOf(2)
+              ..value = initial;
+            return current;
+          });
+        });
+
+        expect(comparisonsDuringReads, lessThanOrEqualTo(8 * count));
+        expect(incumbentValues, [0]);
+        expect(laterValues, [0]);
+      });
+
+      for (final opaque in [false, true]) {
+        test('equal slot assignments keep tracked rereads bounded '
+            '(history: $history, opaque: $opaque)', () {
+          const count = 128;
+          var hashes = 0;
+          _CountedMapValue valueOf(int key) =>
+              _CountedMapValue(key, () => hashes++);
+          final backing = {for (var i = 0; i < count; i++) i: valueOf(i)};
+          final original = backing[1];
+          final s = MapSignal(
+            opaque ? MapView(backing) : backing,
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          var runs = 0;
+          final incumbent = Effect(() {
+            s.value;
+            runs++;
+          });
+          addTearDown(incumbent.dispose);
+
+          s.update(0, (current) {
+            for (var key = 1; key < count; key++) {
+              s[key] = valueOf(key);
+              incumbent.run();
+            }
+            return current;
+          });
+
+          expect(hashes, 0);
+          expect(runs, count + 1);
+          expect(s.untrackedValue[1], isNot(same(original)));
+          expect(s.untrackedPreviousValue?[1], same(history ? original : null));
+        });
+      }
+    }
+
     test('tracked reads release slots restored by nested point callbacks', () {
       const count = 256;
       var comparisons = 0;
@@ -3502,6 +3591,98 @@ void main() {
           expect(s.untrackedPreviousValue?['a']?.key, history ? 0 : null);
         });
       }
+
+      for (final finalValue in [0, 2]) {
+        test('reentrant equality keeps the point write visible '
+            '(history: $history, final value: $finalValue)', () {
+          _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+          late final MapSignal<String, _CountedMapValue> s;
+          late Effect temporary;
+          var reenter = false;
+          final temporaryValues = <int>[];
+          final original = _CountedMapValue(
+            0,
+            () {},
+            onEquals: () {
+              if (!reenter) return;
+              reenter = false;
+              s['x'] = valueOf(2);
+              temporary = Effect(() => temporaryValues.add(s.value['x']!.key));
+            },
+          );
+          s = MapSignal(
+            {'x': original},
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final incumbent = Effect(() => s.value['x']);
+          addTearDown(incumbent.dispose);
+          final seen = <int>[];
+
+          batch(() {
+            s.update('x', (current) {
+              reenter = true;
+              s.update('x', (_) => valueOf(0));
+              final survivor = Effect(() => seen.add(s.value['x']!.key));
+              addTearDown(survivor.dispose);
+              incumbent.dispose();
+              temporary.dispose();
+              s
+                ..['x'] = valueOf(3)
+                ..value = {'x': valueOf(finalValue)};
+              return current;
+            });
+          });
+
+          expect(temporaryValues, [2]);
+          expect(seen, [0, if (finalValue != 0) finalValue]);
+        });
+      }
+
+      test('a slot assignment follows the backing selected by equality '
+          '(history: $history)', () {
+        _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+        late final MapSignal<String, _CountedMapValue> s;
+        var reenter = false;
+        final replacementValue = valueOf(2);
+        final replacement = {'outer': valueOf(0), 'key': replacementValue};
+        final original = _CountedMapValue(
+          0,
+          () {},
+          onEquals: () {
+            if (!reenter) return;
+            reenter = false;
+            s.value = replacement;
+          },
+        );
+        s = MapSignal(
+          {'outer': valueOf(0), 'key': original},
+          equals: true,
+          trackPreviousValue: history,
+        );
+        addTearDown(s.dispose);
+        final seen = <int>[];
+        final effect = Effect(() => seen.add(s.value['key']!.key));
+        addTearDown(effect.dispose);
+        final assigned = valueOf(0);
+
+        batch(() {
+          s.update('outer', (current) {
+            reenter = true;
+            s['key'] = assigned;
+            return current;
+          });
+        });
+
+        expect(s.untrackedValue, same(replacement));
+        expect(s.untrackedValue['key'], same(assigned));
+        expect(
+          s.untrackedPreviousValue?['key'],
+          same(history ? replacementValue : null),
+        );
+        expect(seen, [0, 0]);
+      });
     }
 
     test('a deferred replacement outside a batch updates a computed', () {

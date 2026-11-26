@@ -427,6 +427,9 @@ class _ReplacementBaseline<C extends Object> {
       _rewinds = null;
     }
     final rewinds = _rewinds;
+    final alternateSlots = alternate?.slots;
+    final compareAlternateSlots =
+        alternateSlots != null && (!_captured || compareSlots);
     if (alternate == null &&
         rewinds == null &&
         (snapshot == null || compareSlots)) {
@@ -441,14 +444,13 @@ class _ReplacementBaseline<C extends Object> {
     try {
       final unchanged = untracked(() {
         if (alternate != null) {
-          final slots = alternate.slots;
-          if (slots != null && (!_captured || compareSlots)) {
-            return slotsEqual(value, slots.values) &&
+          if (compareAlternateSlots) {
+            return slotsEqual(value, alternateSlots.values) &&
                 (rewinds == null ||
                     slotsEqual(
                       value,
                       rewinds.values.where(
-                        (slot) => !slots.containsKey(slot.key),
+                        (slot) => !alternateSlots.containsKey(slot.key),
                       ),
                     ));
           }
@@ -467,10 +469,21 @@ class _ReplacementBaseline<C extends Object> {
         return;
       }
       final stable = writeVersion == writes;
+      final canPruneRewinds =
+          stable &&
+          unchanged &&
+          !_forceNotification &&
+          rewinds != null &&
+          identical(_rewinds, rewinds) &&
+          rewinds.length == rewindCount;
       if (alternate != null) {
         if (stable && unchanged) {
           _comparisonChanged = true;
           _checkedObservation = alternate;
+          if (compareAlternateSlots && canPruneRewinds) {
+            // Keep the original slots needed to reconstruct the observation.
+            rewinds.removeWhere((key, _) => !alternateSlots.containsKey(key));
+          }
         } else {
           _checkedBulkVersion = null;
           _alternateObservations!.remove(observer);
@@ -497,11 +510,7 @@ class _ReplacementBaseline<C extends Object> {
       }
       if (rewinds == null && version != null && !_forceNotification) {
         _snapshotVersion = (clock: bulkVersion, version: version);
-      } else if (!firstObserver &&
-          !_forceNotification &&
-          rewinds != null &&
-          identical(_rewinds, rewinds) &&
-          rewinds.length == rewindCount) {
+      } else if (!firstObserver && canPruneRewinds) {
         // Future writes only need to remember slots that changed again.
         _rewinds = null;
       }
@@ -640,6 +649,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     int Function(int)? bulkVersion,
     _ReplacementSlot? replacementSlot,
     bool deferReplacementWrite = false,
+    bool equivalentReplacementWrite = false,
     bool keepBulkVersion = false,
   }) {
     final collection = _untrackedValue;
@@ -647,7 +657,11 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     final nested = identical(collection, outer);
     final outerBaseline = _replacementBaseline;
     if (nested && !deferReplacementWrite) {
-      _rememberReplacementWrite(collection, replacementSlot);
+      _rememberReplacementWrite(
+        collection,
+        replacementSlot,
+        equivalent: equivalentReplacementWrite,
+      );
     }
     final length = _lengthOf(collection);
     final readBulkVersion = bulkVersion == null
@@ -741,6 +755,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     bool Function()? slotChanged,
     C Function(C)? undo,
     _ReplacementSlot? replacementSlot,
+    bool equivalentReplacementWrite = false,
   }) => unchanged
       ? mutation(_untrackedValue)
       : _mutate(
@@ -749,5 +764,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
           slotChanged: slotChanged,
           undo: undo,
           replacementSlot: replacementSlot,
+          equivalentReplacementWrite: equivalentReplacementWrite,
+          keepBulkVersion: equivalentReplacementWrite,
         );
 }

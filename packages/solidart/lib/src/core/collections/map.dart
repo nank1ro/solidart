@@ -167,6 +167,17 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     final present =
         old != null ||
         ((defaultMap || sameValue || rewindable) && map.containsKey(key));
+    final checkEquivalent =
+        !sameValue &&
+        present &&
+        _replacementBaseline != null &&
+        identical(_mutating, map);
+    final equivalent = checkEquivalent && _sameReplacementValue(old, value);
+    if (checkEquivalent && !identical(map, _untrackedValue)) {
+      // Equality replaced the backing. Read the new slot before assigning it.
+      this[key] = value;
+      return;
+    }
     // An overwrite keeps the caller's key in the undo step. The caller can
     // change a mutable key later, so only an immutable value key is lazy.
     // A new key is stored as it is, so only NaN cannot be undone.
@@ -178,6 +189,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       replacementSlot: rewindable
           ? (key: key, value: old, present: present)
           : null,
+      equivalentReplacementWrite: equivalent,
       undo: lazy
           ? (map) {
               if (present) return _copyPrevious(map)..[key] = old as V;
@@ -630,8 +642,14 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   }
 
   bool _sameReplacementValue(Object? before, V after) {
+    final baseline = _replacementBaseline;
+    final map = _untrackedValue;
+    final writes = baseline?.writeVersion;
     try {
-      return untracked(() => before == after);
+      return untracked(() => before == after) &&
+          identical(_replacementBaseline, baseline) &&
+          identical(_untrackedValue, map) &&
+          baseline?.writeVersion == writes;
     } on Object {
       // Comparing an intermediate value must not interrupt the backing write.
       return false;
