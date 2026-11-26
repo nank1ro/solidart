@@ -170,9 +170,20 @@ class ReadableSignal<T> implements ReadSignal<T> {
     return _untrackedValue;
   }
 
-  set _value(T newValue) {
+  void _setValueAndNotify(T newValue) {
     _untrackedValue = newValue;
-    reactiveSystem.setSignalValue(_internalSignal, Some(newValue));
+    _FirstError? errors;
+    try {
+      reactiveSystem.setSignalValue(_internalSignal, Some(newValue));
+    } catch (error, stackTrace) {
+      errors = _FirstError.caught(error, stackTrace);
+    }
+    // A running effect can register observers or enable DevTools.
+    if (SolidartConfig.observers.isNotEmpty ||
+        (SolidartConfig.devToolsEnabled && trackInDevTools)) {
+      _notifySignalUpdate(errors ??= _FirstError());
+    }
+    errors?.rethrowIfAny();
   }
 
   @override
@@ -215,11 +226,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
     // store the previous value
     _setPreviousValue(_untrackedValue);
 
-    // notify with the new value
-    // Separate steps, so a throwing effect does not skip the observers.
-    final errors = _FirstError()..run(() => _value = newValue);
-    _notifySignalUpdate(errors);
-    errors.rethrowIfAny();
+    _setValueAndNotify(newValue);
     return newValue;
   }
 

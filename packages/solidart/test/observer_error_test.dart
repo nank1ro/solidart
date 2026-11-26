@@ -19,11 +19,18 @@ import 'package:test/test.dart';
 }
 
 class _Observer extends SolidartObserver {
-  _Observer(this.log, this.name, {this.fails = false, this.where});
+  _Observer(
+    this.log,
+    this.name, {
+    this.fails = false,
+    this.removeOnUpdate = false,
+    this.where,
+  });
 
   final List<String> log;
   final String name;
   final bool fails;
+  final bool removeOnUpdate;
   final bool Function(SignalBase<Object?> signal)? where;
 
   @override
@@ -33,6 +40,7 @@ class _Observer extends SolidartObserver {
   void didUpdateSignal(SignalBase<Object?> signal) {
     if (where != null && !where!(signal)) return;
     log.add(name);
+    if (removeOnUpdate) SolidartConfig.observers.remove(this);
     if (fails) throw StateError(name);
   }
 
@@ -127,6 +135,51 @@ void main() {
   });
 
   group('a throwing observer', () {
+    test('can unregister itself without skipping later updates', () {
+      final first = _Observer(log, 'first', fails: true, removeOnUpdate: true);
+      observe(first);
+      observe(_Observer(log, 'second'));
+      final s = Signal(_Probe([]));
+      addTearDown(s.dispose);
+
+      final result = _guarded(() => s.value = _Probe(log));
+
+      expect(
+        result.error,
+        isA<StateError>().having((e) => e.message, 'message', 'first'),
+      );
+      expect(result.reported, isEmpty);
+      expect(log, ['first', 'second', 'devtools']);
+      expect(SolidartConfig.observers, isNot(contains(first)));
+    });
+
+    test(
+      'can unregister itself after a throwing effect enables delivery',
+      () {
+        SolidartConfig.devToolsEnabled = false;
+        final initial = _Probe([]);
+        final s = Signal(initial, trackInDevTools: true);
+        addTearDown(s.dispose);
+        final effect = Effect(() {
+          if (identical(s.value, initial)) return;
+          observe(_Observer(log, 'first', fails: true, removeOnUpdate: true));
+          observe(_Observer(log, 'second'));
+          SolidartConfig.devToolsEnabled = true;
+          throw StateError('effect');
+        });
+        addTearDown(effect.dispose);
+
+        final result = _guarded(() => s.value = _Probe(log));
+
+        expect(
+          result.error,
+          isA<StateError>().having((e) => e.message, 'message', 'effect'),
+        );
+        expect(result.reported, ['first']);
+        expect(log, ['first', 'second', 'devtools']);
+      },
+    );
+
     test('does not skip later observers and DevTools', () {
       observe(_Observer(log, 'first', fails: true));
       observe(_Observer(log, 'second', fails: true));

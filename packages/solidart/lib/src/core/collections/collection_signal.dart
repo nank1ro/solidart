@@ -86,10 +86,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
             : old,
       );
     }
-    // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
-    final errors = _FirstError()..run(() => _value = newValue);
-    _notifySignalUpdate(errors);
-    errors.rethrowIfAny();
+    _setValueAndNotify(newValue);
     return newValue;
   }
 

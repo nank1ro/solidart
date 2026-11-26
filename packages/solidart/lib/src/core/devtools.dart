@@ -46,8 +46,12 @@ extension DevToolsExt<T> on SignalBase<T> {
   // Each observer and the DevTools event is its own step of [errors], so a
   // throwing observer does not skip the others.
   void _notifySignalUpdate(_FirstError errors) {
-    for (final obs in SolidartConfig.observers) {
-      errors.run(() => obs.didUpdateSignal(this));
+    final observers = SolidartConfig.observers;
+    if (observers.isNotEmpty) {
+      // Registration changes apply to later updates.
+      for (final obs in observers.toList(growable: false)) {
+        errors.run(() => obs.didUpdateSignal(this));
+      }
     }
     if (!trackInDevTools) return;
     errors.run(
