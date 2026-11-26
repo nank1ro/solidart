@@ -100,6 +100,8 @@ class _ReplacementBaseline<C extends Object> {
     if (_awaitingObservation) {
       _awaitingObservation = false;
       _intact = true;
+      // The bulk mutation can still write after the subscriber reads.
+      capture(committed);
       return;
     }
     final snapshot = _snapshot;

@@ -137,7 +137,8 @@ class _PointList extends DelegatingList<int> {
 }
 
 class _CountingMap extends DelegatingMap<int, int> {
-  _CountingMap() : super({for (var i = 0; i < 100; i++) i: i});
+  _CountingMap([int entryCount = 100])
+    : super({for (var i = 0; i < entryCount; i++) i: i});
   int scans = 0;
   int reads = 0;
 
@@ -160,23 +161,15 @@ class _CountingMap extends DelegatingMap<int, int> {
   }
 
   @override
-  void forEach(void Function(int, int) action) {
+  Iterable<int> get values {
     scans++;
-    super.forEach(action);
+    return super.values;
   }
-}
-
-class _CountingMapView extends MapView<int, int> {
-  _CountingMapView(super.map);
-
-  int visits = 0;
 
   @override
   void forEach(void Function(int, int) action) {
-    super.forEach((key, value) {
-      visits++;
-      action(key, value);
-    });
+    scans++;
+    super.forEach(action);
   }
 }
 
@@ -2393,6 +2386,52 @@ void main() {
       }
     }
 
+    for (final opaque in [false, true]) {
+      for (final history in [false, true]) {
+        test('a first subscriber during a nested bulk write sees the final '
+            'map (opaque: $opaque, history: $history)', () {
+          final initial = {'a': 1, 'b': 1, 'c': 1};
+          final s = MapSignal(
+            opaque ? MapView(initial) : initial,
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final seen = <int?>[];
+          final next = opaque ? {'a': 1, 'c': 1} : {'a': 2, 'b': 2, 'c': 2};
+
+          void subscribe() {
+            final effect = Effect(() => seen.add(s.value['b']));
+            addTearDown(effect.dispose);
+          }
+
+          batch(() {
+            s.update('a', (_) {
+              if (opaque) {
+                s.removeWhere((key, value) {
+                  if (key != 'b') return false;
+                  subscribe();
+                  return true;
+                });
+              } else {
+                s.updateAll((key, value) {
+                  if (key == 'b') subscribe();
+                  return 2;
+                });
+              }
+              s
+                ..value = {...next, 'a': 3}
+                ..value = next;
+              return next['a']!;
+            });
+            expect(seen, [1]);
+          });
+
+          expect(seen, [1, next['b']]);
+        });
+      }
+    }
+
     test('a tracked point read after a nested write does not scan the map', () {
       var hashCalls = 0;
       _HashKey value(int hash) => _HashKey(() {
@@ -2446,11 +2485,12 @@ void main() {
     });
 
     test('a synchronous replacement does not scan the outgoing map', () {
-      final backing = _CountingMapView({for (var i = 0; i < 100000; i++) i: 0});
+      final backing = _CountingMap(100000);
       final s = MapSignal(backing, equals: true, trackPreviousValue: false);
       final lengths = <int>[];
       final effect = Effect(() => lengths.add(s.value.length));
       addTearDown(effect.dispose);
+      final scans = backing.scans;
 
       s.update(0, (_) {
         s.value = {0: 1};
@@ -2458,7 +2498,7 @@ void main() {
       });
 
       expect(lengths, [100000, 1]);
-      expect(backing.visits, 0);
+      expect(backing.scans, scans);
     });
 
     test('a deferred replacement outside a batch updates a computed', () {
@@ -2565,8 +2605,10 @@ void main() {
           s['b'] = 2;
           s.update('b', (b) {
             s.update('a', (_) {
-              s.value = {'a': 2, 'b': 2, 'c': 1};
-              return 2;
+              s
+                ..value = {'a': 2, 'b': 2, 'c': 1}
+                ..value = {'a': 1, 'b': 2, 'c': 1};
+              return 1;
             });
             return b;
           });
@@ -2577,8 +2619,8 @@ void main() {
       expect(w.effectReruns, 1);
       expect(w.calls, [
         [
-          {'a': 1, 'b': 1, 'c': 1},
           {'a': 2, 'b': 2, 'c': 1},
+          {'a': 1, 'b': 2, 'c': 1},
         ],
       ]);
     });
