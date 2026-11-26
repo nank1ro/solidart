@@ -417,6 +417,58 @@ void main() {
       );
     }
 
+    for (final (name, outer, bulk, sameValue) in [
+      ('updateAll', false, true, true),
+      ('a point update', true, false, true),
+      ('a nested updateAll', true, true, true),
+      ('updateAll', false, true, false),
+      ('a point update', true, false, false),
+    ]) {
+      for (final opaque in [false, true]) {
+        test('equal point callbacks in $name do bounded comparisons '
+            '(identical: $sameValue, opaque: $opaque)', () {
+          const count = 128;
+          var comparisons = 0;
+          _CountedMapValue valueOf(int key) => _CountedMapValue(
+            key,
+            () => comparisons++,
+            onEquals: () => comparisons++,
+          );
+          final backing = {for (var i = 0; i < count; i++) i: valueOf(i)};
+          final original = backing[1];
+          final s = MapSignal(
+            opaque ? MapView(backing) : backing,
+            equals: true,
+            trackPreviousValue: false,
+          );
+          addTearDown(s.dispose);
+          _CountedMapValue read(int key) => s.update(key, (_) {
+            final observed = s[key]!;
+            return sameValue ? observed : valueOf(observed.key);
+          });
+          void updateAll() => s.updateAll((key, _) => read(key));
+          final effect = Effect(() {
+            s.value;
+            if (!outer) return updateAll();
+            s.update(0, (value) {
+              if (bulk) {
+                updateAll();
+              } else {
+                for (var key = 0; key < count; key++) {
+                  read(key);
+                }
+              }
+              return value;
+            });
+          });
+          addTearDown(effect.dispose);
+
+          expect(comparisons, lessThanOrEqualTo(8 * count));
+          expect(identical(backing[1], original), sameValue);
+        });
+      }
+    }
+
     for (final useSameValue in [true, false]) {
       for (final history in [false, true]) {
         test('tracked reads from equal updateAll callbacks do not hash the '
@@ -2680,6 +2732,60 @@ void main() {
       });
     }
 
+    for (final removes in [false, true]) {
+      final operation = removes ? 'removeWhere' : 'updateAll';
+      test('synchronous replacement in nested $operation adds no scan', () {
+        final backing = _CountingMap(100000);
+        final s = MapSignal(backing, equals: true, trackPreviousValue: false);
+        addTearDown(s.dispose);
+        final lengths = <int>[];
+        final effect = Effect(() => lengths.add(s.value.length));
+        addTearDown(effect.dispose);
+
+        void replace(int key) {
+          if (key != 0) return;
+          s.update(0, (value) {
+            s.value = {0: 1};
+            return value;
+          });
+        }
+
+        s.update(0, (value) {
+          if (removes) {
+            s.removeWhere((key, value) {
+              replace(key);
+              return false;
+            });
+          } else {
+            s.updateAll((key, value) {
+              replace(key);
+              return value;
+            });
+          }
+          return value;
+        });
+
+        expect(lengths, [100000, 1]);
+        expect(backing.scans, removes ? 0 : 1);
+      });
+    }
+
+    test('an equal nested update stores the new value and notifies', () {
+      final old = _CountedMapValue(2, () {});
+      final next = _CountedMapValue(2, () {});
+      final s = MapSignal({'a': old, 'b': old}, equals: true);
+      final w = watch(s);
+
+      s.update('a', (value) {
+        s.update('b', (_) => next);
+        return value;
+      });
+
+      expect(w.effectReruns, 1);
+      expect(s.previousValue!['b'], same(old));
+      expect(s.value['b'], same(next));
+    });
+
     test('a deferred replacement outside a batch updates a computed', () {
       final s = MapSignal({'a': 1}, equals: true, trackPreviousValue: false);
       final selected = Computed(() => s.value['a']);
@@ -2824,6 +2930,73 @@ void main() {
         );
       }
 
+      for (final restored in [1, 2]) {
+        test('a first observer in updateAll sees the final point value '
+            '(history: $history, final: $restored)', () {
+          final s = MapSignal(
+            {'a': 1, 'b': 1},
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final seen = <int?>[];
+
+          batch(() {
+            s.updateAll((key, value) {
+              if (key == 'a') {
+                s['b'] = 2;
+                final observer = Effect(() => seen.add(s.value['b']));
+                addTearDown(observer.dispose);
+                s.update(key, (value) {
+                  s
+                    ..value = {'a': 3, 'b': restored}
+                    ..value = {'a': 1, 'b': restored};
+                  return value;
+                });
+              }
+              return value;
+            });
+          });
+
+          expect(seen, [2, if (restored != 2) restored]);
+        });
+      }
+
+      test('updateAll tracks a return that overwrites a nested same-key '
+          'write (history: $history)', () {
+        final s = MapSignal(
+          {'a': 2, 'b': 1},
+          equals: true,
+          trackPreviousValue: history,
+        );
+        addTearDown(s.dispose);
+        final seen = <int?>[];
+        final observer = Effect(() => seen.add(s.value['a']));
+        addTearDown(observer.dispose);
+
+        batch(() {
+          s.update('b', (value) {
+            s['a'] = 1;
+            s.updateAll((key, value) {
+              if (key == 'a') {
+                s['a'] = 2;
+                observer.run();
+              } else {
+                observer.run();
+                s.update(key, (value) {
+                  s.value = {'a': 2, 'b': 1};
+                  return value;
+                });
+              }
+              return value;
+            });
+            return value;
+          });
+        });
+
+        expect(seen, [2, 2, 1, 2]);
+      });
+
       for (final restores in [false, true]) {
         for (final removes in [false, true]) {
           test('nested update inside ${removes ? 'removeWhere' : 'updateAll'} '
@@ -2853,7 +3026,10 @@ void main() {
             batch(() {
               if (removes) {
                 s.removeWhere((key, _) {
-                  if (key == 'b') replace();
+                  if (key == 'b') {
+                    s['c'] = 2;
+                    replace();
+                  }
                   return key != 'b';
                 });
               } else {
@@ -4178,10 +4354,11 @@ class _HashKey {
 }
 
 class _CountedMapValue {
-  _CountedMapValue(this.key, this.onHash);
+  _CountedMapValue(this.key, this.onHash, {this.onEquals});
 
   final int key;
   final void Function() onHash;
+  final void Function()? onEquals;
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
@@ -4192,8 +4369,10 @@ class _CountedMapValue {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  bool operator ==(Object other) =>
-      other is _CountedMapValue && key == other.key;
+  bool operator ==(Object other) {
+    onEquals?.call();
+    return other is _CountedMapValue && key == other.key;
+  }
 }
 
 class _ThrowingHash {

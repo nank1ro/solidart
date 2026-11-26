@@ -43,6 +43,7 @@ class _ReplacementBaseline<C extends Object> {
   C? _snapshot;
   Map<Object?, _ReplacementSlot>? _rewinds;
   bool observedChange = false;
+  int writeVersion = 0;
 
   R runNested<R>(
     R Function(C) mutation,
@@ -91,6 +92,7 @@ class _ReplacementBaseline<C extends Object> {
     _ReplacementSlot? slot, {
     required bool observed,
   }) {
+    _checkedBulkVersion = null;
     if (slot != null) {
       if (_prepare(committed) && !_captured) {
         (_rewinds ??= {}).putIfAbsent(slot.key, () => slot);
@@ -110,6 +112,8 @@ class _ReplacementBaseline<C extends Object> {
   }
 
   void recordWriteResult(Option<C> committed) {
+    writeVersion++;
+    _checkedBulkVersion = null;
     if (identical(_committed, committed) && _captured && _snapshot == null) {
       // A cast view can reject the copy before a nested write repairs it.
       observedChange = true;
@@ -154,7 +158,9 @@ class _ReplacementBaseline<C extends Object> {
     if (firstObserver) observedChange = false;
     if (observedChange) return;
     if (_awaitingObservation ||
-        (firstObserver && (_captured || (_useOriginal && readOriginal)))) {
+        (firstObserver &&
+            (_captured ||
+                (_useOriginal && (readOriginal || _rewinds != null))))) {
       _awaitingObservation = false;
       _intact = true;
       _captured = false;
@@ -313,6 +319,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     int Function(int)? bulkVersion,
     _ReplacementSlot? replacementSlot,
     bool deferReplacementWrite = false,
+    bool keepBulkVersion = false,
   }) {
     final collection = _untrackedValue;
     final outer = _mutating;
@@ -350,7 +357,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     late final R result;
     final errors = _FirstError()
       ..run(() {
-        result = nested && outerBaseline != null
+        result = nested && outerBaseline != null && !keepBulkVersion
             ? outerBaseline.runNested(mutation, collection, readBulkVersion)
             : mutation(collection);
       });

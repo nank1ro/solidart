@@ -399,18 +399,18 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     // A new key changes the length.
     final map = _untrackedValue;
     if (map.containsKey(key)) return map.putIfAbsent(key, ifAbsent);
-    final slot = _canRewindSlot(map, key)
-        ? (key: key, value: null, present: false)
-        : null;
-    final deferWrite = _deferCallbackWrite(map, slot);
+    final deferWrite = _deferCallbackWrite(map);
+    final rewindable = deferWrite && _canRewindSlot(map, key);
     return _mutate(
       (map) => map.putIfAbsent(
         key,
-        deferWrite ? () => _beforeCallbackWrite(map, ifAbsent()) : ifAbsent,
+        deferWrite
+            ? () => _beforeCallbackWrite(map, key, ifAbsent(), rewindable)
+            : ifAbsent,
       ),
       copyReplacementBaseline: equals ? _copyReplacementMap : null,
-      replacementSlot: slot,
       deferReplacementWrite: deferWrite,
+      keepBulkVersion: rewindable,
     );
   }
 
@@ -425,9 +425,18 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     final backing = _untrackedValue;
     if (!equals) return _mutate((map) => map.removeWhere(test));
     if (identical(backing, _mutating)) {
+      var accepted = false;
       return _mutate(
-        (map) => map.removeWhere(test),
+        (map) => map.removeWhere((key, value) {
+          final remove = test(key, value);
+          if (remove && !accepted && identical(map, _untrackedValue)) {
+            accepted = true;
+            _rememberReplacementWrite(map, null);
+          }
+          return remove;
+        }),
         bulkVersion: (length) => length - backing.length,
+        deferReplacementWrite: true,
       );
     }
     // The backing can remove an entry before calling the next predicate.
@@ -488,35 +497,45 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       return map.update(key, update);
     }
     final old = _readValue(map, key);
-    final slot = _canRewindSlot(map, key) && !identical(old, _unreadable)
-        ? (key: key, value: old, present: old != null || map.containsKey(key))
-        : null;
-    final deferWrite = _deferCallbackWrite(map, slot);
+    final deferWrite = _deferCallbackWrite(map);
+    final rewindable = deferWrite && _canRewindSlot(map, key);
 
     return _mutate(
       (map) => map.update(
         key,
         deferWrite
-            ? (value) => _beforeCallbackWrite(map, update(value))
+            ? (value) =>
+                  _beforeCallbackWrite(map, key, update(value), rewindable)
             : update,
         ifAbsent: deferWrite && ifAbsent != null
-            ? () => _beforeCallbackWrite(map, ifAbsent())
+            ? () => _beforeCallbackWrite(map, key, ifAbsent(), rewindable)
             : ifAbsent,
       ),
       slotChanged: () => !identical(old, _readValue(map, key)),
       copyReplacementBaseline: equals ? _copyReplacementMap : null,
-      replacementSlot: slot,
       deferReplacementWrite: deferWrite,
+      keepBulkVersion: rewindable,
     );
   }
 
-  bool _deferCallbackWrite(Map<K, V> map, _ReplacementSlot? slot) =>
-      slot == null && _replacementBaseline != null && identical(map, _mutating);
+  bool _deferCallbackWrite(Map<K, V> map) =>
+      _replacementBaseline != null && identical(map, _mutating);
 
-  V _beforeCallbackWrite(Map<K, V> map, V next) {
-    // A replacement made by the callback can commit before the backing
-    // writes this slot. In that case, there is no outgoing map to copy.
-    if (identical(map, _untrackedValue)) _rememberReplacementWrite(map, null);
+  V _beforeCallbackWrite(Map<K, V> map, K key, V next, bool rewindable) {
+    // The callback may already have replaced the backing map.
+    if (!identical(map, _untrackedValue)) return next;
+    _ReplacementSlot? previous;
+    try {
+      previous = untracked(() => _readReplacementSlot(map, key));
+    } on Object {
+      // An unreadable slot still needs the normal fallback before a write.
+    }
+    if (previous == null ||
+        !previous.present ||
+        (!identical(previous.value, next) &&
+            !_sameReplacementValue(previous.value, next))) {
+      _rememberReplacementWrite(map, rewindable ? previous : null);
+    }
     return next;
   }
 
@@ -542,12 +561,23 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     late Map<K, V> Function() copyOriginal;
     var version = 0;
     var hasRead = false;
+    var wrote = false;
     _mutate(
       (map) => map.updateAll((key, value) {
+        final baseline = _replacementBaseline;
+        final writeVersion = baseline?.writeVersion;
         final next = update(key, value);
-        if (!identical(value, next) &&
-            (!hasRead || !_sameReplacementValue(value, next))) {
-          version++;
+        if (!identical(map, _untrackedValue)) return next;
+        // A nested write can overwrite this key before the callback returns.
+        final before = writeVersion == baseline?.writeVersion
+            ? value
+            : untracked(() => _readValue(map, key));
+        if (!identical(before, next)) {
+          if (nested && !wrote) {
+            wrote = true;
+            _rememberReplacementWrite(map, null);
+          }
+          if (!hasRead || !_sameReplacementValue(before, next)) version++;
         }
         return next;
       }),
@@ -564,10 +594,11 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
         hasRead = true;
         return version;
       },
+      deferReplacementWrite: true,
     );
   }
 
-  bool _sameReplacementValue(V before, V after) {
+  bool _sameReplacementValue(Object? before, V after) {
     try {
       return untracked(() => before == after);
     } on Object {
