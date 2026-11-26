@@ -53,7 +53,7 @@ extension DevToolsExt<T> on SignalBase<T> {
         errors.run(() => obs.didUpdateSignal(this));
       }
     }
-    if (!trackInDevTools) return;
+    if (!SolidartConfig.devToolsEnabled) return;
     errors.run(
       () => _notifyDevToolsAboutSignal(
         this,

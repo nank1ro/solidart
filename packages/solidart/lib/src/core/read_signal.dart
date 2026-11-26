@@ -179,8 +179,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
       errors = _FirstError.caught(error, stackTrace);
     }
     // A running effect can register observers or enable DevTools.
-    if (SolidartConfig.observers.isNotEmpty ||
-        (SolidartConfig.devToolsEnabled && trackInDevTools)) {
+    if (SolidartConfig.observers.isNotEmpty || SolidartConfig.devToolsEnabled) {
       _notifySignalUpdate(errors ??= _FirstError());
     }
     errors?.rethrowIfAny();

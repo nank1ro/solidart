@@ -60,6 +60,18 @@ class _Probe {
   }
 }
 
+class _ThrowingTrackingSignal extends Signal<int> {
+  _ThrowingTrackingSignal() : super(0);
+
+  bool failTracking = false;
+
+  @override
+  bool get trackInDevTools {
+    if (failTracking) throw StateError('tracking metadata');
+    return true;
+  }
+}
+
 void main() {
   late List<String> log;
 
@@ -73,6 +85,51 @@ void main() {
     final devToolsEnabled = SolidartConfig.devToolsEnabled;
     addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
     SolidartConfig.devToolsEnabled = true;
+  });
+
+  group('a throwing DevTools eligibility check', () {
+    late _ThrowingTrackingSignal signal;
+
+    setUp(() {
+      signal = _ThrowingTrackingSignal();
+      addTearDown(() {
+        signal
+          ..failTracking = false
+          ..dispose();
+      });
+    });
+
+    test('keeps an earlier effect error', () {
+      final effect = Effect(() {
+        if (signal.value == 0) return;
+        signal.failTracking = true;
+        throw StateError('effect');
+      });
+      addTearDown(effect.dispose);
+
+      final result = _guarded(() => signal.value = 1);
+
+      expect(
+        result.error,
+        isA<StateError>().having((e) => e.message, 'message', 'effect'),
+      );
+      expect(result.reported, ['tracking metadata']);
+    });
+
+    test('keeps an earlier observer error', () {
+      observe(_Observer(log, 'first', fails: true, removeOnUpdate: true));
+      observe(_Observer(log, 'second'));
+      signal.failTracking = true;
+
+      final result = _guarded(() => signal.value = 1);
+
+      expect(
+        result.error,
+        isA<StateError>().having((e) => e.message, 'message', 'first'),
+      );
+      expect(result.reported, ['tracking metadata']);
+      expect(log, ['first', 'second']);
+    });
   });
 
   group('a throwing effect', () {
