@@ -54,6 +54,8 @@ class _AlienComputed<T> extends alien.ComputedNode<T> {
       changed = super.didUpdate();
     } finally {
       updating = false;
+      // alien_signals restores the caller even if the selector disposed it.
+      reactiveSystem._clearDisposedActiveEffect();
     }
     final error = parent._error;
     if (error != null) {
