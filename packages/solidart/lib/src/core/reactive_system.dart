@@ -130,6 +130,13 @@ class ReactiveSystem {
     return alien.setActiveSub(sub);
   }
 
+  void _clearDisposedActiveEffect() {
+    final sub = activeSub;
+    if (sub is _AlienEffect && sub.parent.disposed) {
+      alien.setActiveSub();
+    }
+  }
+
   void startBatch() => alien.startBatch();
 
   /// Like `alien.endBatch()`, but runs this class's [flush], so an effect
@@ -236,7 +243,11 @@ class ReactiveSystem {
       effect is _AlienEffect,
       'runEffect must be called with an _AlienEffect',
     );
-    alien.run(effect as _AlienEffect);
+    try {
+      alien.run(effect as _AlienEffect);
+    } finally {
+      _clearDisposedActiveEffect();
+    }
   }
 
   void propagate(alien_system.Link link) {
@@ -291,6 +302,9 @@ class ReactiveSystem {
               error = e;
               stackTrace = s;
             }
+          } finally {
+            // An upstream run can restore an effect that its callback stopped.
+            _clearDisposedActiveEffect();
           }
         }
         try {
