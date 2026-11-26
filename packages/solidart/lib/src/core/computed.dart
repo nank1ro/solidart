@@ -229,7 +229,7 @@ class Computed<T> extends ReadSignal<T> {
     // The first evaluation runs from get(), without didUpdate().
     _notifyEvaluated();
     if (autoDispose) {
-      _mayDispose();
+      _mayDispose(allowDisposal: !_isBuildingDevToolsEvent);
     }
 
     return value;
@@ -331,11 +331,11 @@ class Computed<T> extends ReadSignal<T> {
   }
 
   @override
-  void _mayDispose() {
+  void _mayDispose({bool allowDisposal = true}) {
     if (_disposed || !autoDispose) return;
     final inputs = _inputs;
     if (inputs.isEmpty && _internalComputed.subs == null) {
-      dispose();
+      if (allowDisposal) dispose();
     } else {
       _recordInputs(inputs: inputs);
     }
