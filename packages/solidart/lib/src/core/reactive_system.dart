@@ -60,6 +60,12 @@ extension MayDisposeDependencies on alien_system.ReactiveNode {
 /// Lets a disposal finish when a step throws: [run] keeps the first error,
 /// reports later ones to [Zone.current], and [rethrowIfAny] rethrows the first.
 class _FirstError {
+  _FirstError();
+
+  _FirstError.caught(Object error, StackTrace stackTrace)
+    : _error = error,
+      _stackTrace = stackTrace;
+
   Object? _error;
   StackTrace? _stackTrace;
 
@@ -123,7 +129,18 @@ class ReactiveSystem {
   // Use setCurrentSub when you need save/restore (returns previous sub).
   // The getter above is provided for read-only inspection.
   alien_system.ReactiveNode? setCurrentSub(alien_system.ReactiveNode? sub) {
+    // A nested callback can dispose the effect it was about to restore.
+    if (sub is _AlienEffect && sub.parent.disposed) {
+      return alien.setActiveSub();
+    }
     return alien.setActiveSub(sub);
+  }
+
+  void _clearDisposedActiveEffect() {
+    final sub = activeSub;
+    if (sub is _AlienEffect && sub.parent.disposed) {
+      alien.setActiveSub();
+    }
   }
 
   void startBatch() => alien.startBatch();
@@ -153,6 +170,19 @@ class ReactiveSystem {
       'computed is pending while detached (deps == null) — a subscriber link '
       'was not fully unlinked',
     );
+    if (computed.flags == alien_system.ReactiveFlags.none) {
+      if (activeSub case final _AlienEffect effect) {
+        // On the first read, alien_signals would restore and link the effect
+        // even if the selector disposed it. Subscribe only if it is alive.
+        return _evaluate(() {
+          try {
+            return untracked(computed.get);
+          } finally {
+            if (!effect.parent.disposed) link(computed, effect);
+          }
+        });
+      }
+    }
     return _evaluate(computed.get);
   }
 
@@ -219,7 +249,11 @@ class ReactiveSystem {
       effect is _AlienEffect,
       'runEffect must be called with an _AlienEffect',
     );
-    alien.run(effect as _AlienEffect);
+    try {
+      alien.run(effect as _AlienEffect);
+    } finally {
+      _clearDisposedActiveEffect();
+    }
   }
 
   void propagate(alien_system.Link link) {
@@ -274,6 +308,9 @@ class ReactiveSystem {
               error = e;
               stackTrace = s;
             }
+          } finally {
+            // An upstream run can restore an effect that its callback stopped.
+            _clearDisposedActiveEffect();
           }
         }
         try {
