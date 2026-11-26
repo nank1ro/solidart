@@ -158,7 +158,10 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// If the key was already in the map, its associated value is changed.
   /// Otherwise the key/value pair is added to the map.
   @override
-  void operator []=(K key, V value) {
+  void operator []=(K key, V value) =>
+      _assignSlot(key, value, checkEquality: true);
+
+  void _assignSlot(K key, V value, {required bool checkEquality}) {
     final map = _untrackedValue;
     final old = map[key];
     final defaultMap = trackPreviousValue && map.runtimeType == _defaultMapType;
@@ -168,15 +171,20 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
         old != null ||
         ((defaultMap || sameValue || rewindable) && map.containsKey(key));
     final checkEquivalent =
+        checkEquality &&
         !sameValue &&
         present &&
         _replacementBaseline != null &&
         identical(_mutating, map);
-    final equivalent = checkEquivalent && _sameReplacementValue(old, value);
-    if (checkEquivalent && !identical(map, _untrackedValue)) {
-      // Equality replaced the backing. Read the new slot before assigning it.
-      this[key] = value;
-      return;
+    var equivalent = false;
+    if (checkEquivalent) {
+      final comparison = _compareReplacementValue(old, value);
+      if (comparison.changed) {
+        // Equality can change the slot or replace the backing before the write.
+        _assignSlot(key, value, checkEquality: false);
+        return;
+      }
+      equivalent = comparison.equivalent;
     }
     // An overwrite keeps the caller's key in the undo step. The caller can
     // change a mutable key later, so only an immutable value key is lazy.
@@ -564,11 +572,17 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   V _beforeCallbackWrite(Map<K, V> map, K key, V next, bool rewindable) {
     // The callback may already have replaced the backing map.
     if (!identical(map, _untrackedValue)) return next;
-    _ReplacementSlot? previous;
-    try {
-      previous = untracked(() => _readReplacementSlot(map, key));
-    } on Object {
-      // An unreadable slot still needs the normal fallback before a write.
+    var previous = _readSlotForWrite(map, key);
+    var equivalent = false;
+    if (previous != null &&
+        previous.present &&
+        !identical(previous.value, next)) {
+      final comparison = _compareReplacementValue(previous.value, next);
+      if (comparison.changed) {
+        if (!identical(map, _untrackedValue)) return next;
+        previous = _readSlotForWrite(map, key);
+      }
+      equivalent = comparison.equivalent;
     }
     if (previous == null ||
         !previous.present ||
@@ -576,13 +590,19 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       _rememberReplacementWrite(
         map,
         rewindable ? previous : null,
-        equivalent:
-            previous != null &&
-            previous.present &&
-            _sameReplacementValue(previous.value, next),
+        equivalent: equivalent,
       );
     }
     return next;
+  }
+
+  _ReplacementSlot? _readSlotForWrite(Map<K, V> map, K key) {
+    try {
+      return untracked(() => _readReplacementSlot(map, key));
+    } on Object {
+      // An unreadable slot still needs the normal fallback before a write.
+      return null;
+    }
   }
 
   /// Updates all values.
@@ -618,7 +638,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
             ? value
             : untracked(() => _readValue(map, key));
         if (!identical(before, next)) {
-          final equivalent = _sameReplacementValue(before, next);
+          final equivalent = _compareReplacementValue(before, next).equivalent;
           if (nested && !savedBaseline) {
             _rememberReplacementWrite(map, null, equivalent: equivalent);
             savedBaseline = !equivalent;
@@ -641,19 +661,24 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     );
   }
 
-  bool _sameReplacementValue(Object? before, V after) {
+  ({bool equivalent, bool changed}) _compareReplacementValue(
+    Object? before,
+    V after,
+  ) {
     final baseline = _replacementBaseline;
     final map = _untrackedValue;
     final writes = baseline?.writeVersion;
+    var equal = false;
     try {
-      return untracked(() => before == after) &&
-          identical(_replacementBaseline, baseline) &&
-          identical(_untrackedValue, map) &&
-          baseline?.writeVersion == writes;
+      equal = untracked(() => before == after);
     } on Object {
       // Comparing an intermediate value must not interrupt the backing write.
-      return false;
     }
+    final changed =
+        !identical(_replacementBaseline, baseline) ||
+        !identical(_untrackedValue, map) ||
+        baseline?.writeVersion != writes;
+    return (equivalent: equal && !changed, changed: changed);
   }
 
   @override

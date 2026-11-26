@@ -3640,6 +3640,75 @@ void main() {
         });
       }
 
+      for (final callback in [false, true]) {
+        test('a point write refreshes its slot after reentrant equality '
+            '(history: $history, callback: $callback)', () {
+          _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+          late final MapSignal<String, _CountedMapValue> s;
+          var reenter = false;
+          var assigning = false;
+          var repeatedComparisons = 0;
+          var updateCalls = 0;
+          final first = <int>[];
+          final second = <int>[];
+          final restored = _CountedMapValue(
+            0,
+            () {},
+            onEquals: () {
+              if (assigning) repeatedComparisons++;
+            },
+          );
+          final original = _CountedMapValue(
+            2,
+            () {},
+            onEquals: () {
+              if (!reenter) return;
+              reenter = false;
+              s.updateAll((_, _) => restored);
+              final effect = Effect(() => first.add(s.value['x']!.key));
+              addTearDown(effect.dispose);
+            },
+          );
+          s = MapSignal(
+            {'x': original},
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+
+          batch(() {
+            s.update('x', (current) {
+              reenter = true;
+              assigning = true;
+              if (callback) {
+                s.update('x', (_) {
+                  updateCalls++;
+                  return valueOf(2);
+                });
+              } else {
+                s['x'] = valueOf(2);
+              }
+              assigning = false;
+              final effect = Effect(() => second.add(s.value['x']!.key));
+              addTearDown(effect.dispose);
+              s
+                ..['x'] = valueOf(3)
+                ..value = {'x': valueOf(0)};
+              return current;
+            });
+          });
+
+          expect(first, [0, 0]);
+          expect(second, [2, 0]);
+          expect(repeatedComparisons, 0);
+          expect(updateCalls, callback ? 1 : 0);
+          expect(
+            s.untrackedPreviousValue?['x'],
+            same(history ? original : null),
+          );
+        });
+      }
+
       test('a slot assignment follows the backing selected by equality '
           '(history: $history)', () {
         _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
