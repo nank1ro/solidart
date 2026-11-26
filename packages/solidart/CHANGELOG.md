@@ -1,6 +1,6 @@
 ## 3.0.0-dev.6
 
-- **FIX**: An in-place change to an unsubscribed collection signal releases the replaced backing collection once it is no longer needed for history ([#211](https://github.com/nank1ro/solidart/issues/211)).
+- **FIX**: An in-place change releases a replaced backing collection once it is no longer needed for history, including when the last subscriber leaves during a batch ([#211](https://github.com/nank1ro/solidart/issues/211)).
 
 ## 3.0.0-dev.5
 

@@ -167,6 +167,41 @@ Signal<int>? _retained;
   return (signal, retired);
 }
 
+@pragma('vm:never-inline')
+(ListSignal<int>, WeakReference<List<int>>) _replacePointUpdatedList({
+  required bool trackPreviousValue,
+}) {
+  final signal = ListSignal([0], trackPreviousValue: trackPreviousValue);
+  final large = List.filled(1000000, 1);
+  final retired = WeakReference(large);
+  signal
+    ..value = large
+    ..[0] = 2
+    ..value = [3]
+    ..value = [4];
+  return (signal, retired);
+}
+
+@pragma('vm:never-inline')
+(ListSignal<int>, WeakReference<List<int>>) _retireListBeforeBatchFlush({
+  required bool trackPreviousValue,
+}) {
+  final signal = ListSignal(
+    List.filled(1000000, 1),
+    autoDispose: false,
+    trackPreviousValue: trackPreviousValue,
+  );
+  final retired = WeakReference(signal.untrackedValue);
+  final effect = Effect(() => signal.value);
+  batch(() {
+    signal
+      ..value = [0]
+      ..[0] = 1;
+    effect.dispose();
+  });
+  return (signal, retired);
+}
+
 /// Runs the garbage collector. Returns false when no VM service is available,
 /// for example under `flutter test` without `--coverage`.
 Effect? _child;
@@ -1335,22 +1370,37 @@ void main() {
   });
 
   group('released collection storage', () {
-    for (final trackPreviousValue in [false, true]) {
-      test('releases a retired list before a read '
-          '(trackPreviousValue: $trackPreviousValue)', () async {
-        final (signal, retired) = _replaceAndMutateList(
-          trackPreviousValue: trackPreviousValue,
-        );
-        addTearDown(signal.dispose);
+    for (final (description, retire, current, previous) in [
+      ('before a read', _replaceAndMutateList, 1, 0),
+      ('after later replacements', _replacePointUpdatedList, 4, 3),
+      (
+        'after its last subscriber leaves a batch',
+        _retireListBeforeBatchFlush,
+        1,
+        0,
+      ),
+    ]) {
+      for (final trackPreviousValue in [false, true]) {
+        test('releases a retired list $description '
+            '(trackPreviousValue: $trackPreviousValue)', () async {
+          final (signal, retired) = retire(
+            trackPreviousValue: trackPreviousValue,
+          );
+          addTearDown(signal.dispose);
 
-        if (!await _collectGarbage()) {
-          markTestSkipped('No VM service to run the garbage collector.');
-          return;
-        }
+          if (!await _collectGarbage()) {
+            markTestSkipped('No VM service to run the garbage collector.');
+            return;
+          }
 
-        expect(retired.target, isNull);
-        expect(signal.value, [1]);
-      });
+          expect(retired.target, isNull);
+          expect(
+            signal.untrackedPreviousValue,
+            trackPreviousValue ? [previous] : null,
+          );
+          expect(signal.value, [current]);
+        });
+      }
     }
   });
 

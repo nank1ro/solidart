@@ -147,6 +147,13 @@ class _AlienSignal<T> extends alien.SignalNode<Option<T>> {
   bool forceDirty = false;
 
   @override
+  void set(Option<T> newValue) {
+    // While the forced update is pending, keep only the latest value.
+    if (forceDirty) currentValue = newValue;
+    super.set(newValue);
+  }
+
+  @override
   bool didUpdate() {
     final previousValue = currentValue;
     currentValue = pendingValue;

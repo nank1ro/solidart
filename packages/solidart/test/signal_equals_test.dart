@@ -19,4 +19,24 @@ void main() {
     signal.value = BigInt.from(2);
     expect(runs, 2);
   });
+
+  test('a comparator can force an update during a signal read', () {
+    late final Signal<int> signal;
+    var comparisons = 0;
+    signal = Signal(
+      0,
+      equals: false,
+      comparator: (old, next) {
+        if (++comparisons == 2) signal.notifyListeners();
+        return old == next;
+      },
+    );
+    addTearDown(signal.dispose);
+
+    signal.value = 1;
+
+    expect(signal.value, 1);
+    expect(signal.shouldUpdate(), isTrue);
+    expect(signal.shouldUpdate(), isFalse);
+  });
 }
