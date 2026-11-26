@@ -250,6 +250,9 @@ class Computed<T> extends ReadSignal<T> {
     if (!_notifyPending) return;
     _notifyPending = false;
     if (_notifiedOnce) {
+      if (SolidartConfig.observers.isEmpty && !SolidartConfig.devToolsEnabled) {
+        return;
+      }
       // Observers must not subscribe the effect or computed that reads this.
       final errors = _FirstError();
       untracked(() => _notifySignalUpdate(errors));
