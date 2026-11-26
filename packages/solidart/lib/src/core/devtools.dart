@@ -14,6 +14,12 @@ enum DevToolsEventType {
   disposed,
 }
 
+// Event construction can run user code while reading values and metadata.
+// Keep direct reads from disposing dependency-free computeds.
+var _devToolsEventDepth = 0;
+
+bool get _isBuildingDevToolsEvent => _devToolsEventDepth > 0;
+
 dynamic _toJson(Object? obj) {
   try {
     return jsonEncode(obj);
@@ -39,25 +45,34 @@ extension DevToolsExt<T> on SignalBase<T> {
     for (final obs in SolidartConfig.observers) {
       obs.didCreateSignal(this);
     }
-    if (!trackInDevTools) return;
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.created);
-  }
-
-  void _notifySignalUpdate() {
-    for (final obs in SolidartConfig.observers) {
-      obs.didUpdateSignal(this);
-    }
-    if (!trackInDevTools) return;
-    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
   }
 
   // Each observer and the DevTools event is its own step of [errors], so a
   // throwing observer does not skip the others.
+  void _notifySignalUpdate(_FirstError errors) {
+    final observers = SolidartConfig.observers;
+    if (observers.isNotEmpty) {
+      // Registration changes apply to later updates.
+      for (final obs in observers.toList(growable: false)) {
+        errors.run(() => obs.didUpdateSignal(this));
+      }
+    }
+    if (!SolidartConfig.devToolsEnabled) return;
+    errors.run(
+      () => _notifyDevToolsAboutSignal(
+        this,
+        eventType: DevToolsEventType.updated,
+      ),
+    );
+  }
+
+  // Like [_notifySignalUpdate].
   void _notifySignalDisposal(_FirstError errors) {
     for (final obs in SolidartConfig.observers) {
       errors.run(() => obs.didDisposeSignal(this));
     }
-    if (!trackInDevTools) return;
+    if (!SolidartConfig.devToolsEnabled) return;
     errors.run(
       () => _notifyDevToolsAboutSignal(
         this,
@@ -71,9 +86,18 @@ void _notifyDevToolsAboutSignal(
   SignalBase<dynamic> signal, {
   required DevToolsEventType eventType,
 }) {
-  if (!SolidartConfig.devToolsEnabled || !signal.trackInDevTools) return;
-  // Peek: inspecting must not track, resolve a lazy signal, or auto-dispose.
-  untracked(() => _postSignalEvent(signal, eventType: eventType));
+  if (!SolidartConfig.devToolsEnabled) return;
+  // Keep event reads out of the active effect or computed.
+  _devToolsEventDepth++;
+  try {
+    untracked(() {
+      if (signal.trackInDevTools) {
+        _postSignalEvent(signal, eventType: eventType);
+      }
+    });
+  } finally {
+    _devToolsEventDepth--;
+  }
 }
 
 void _postSignalEvent(
