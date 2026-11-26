@@ -28,6 +28,7 @@ class _ReplacementBaseline<C extends Object> {
   Option<C>? _committed;
   bool _intact = false;
   bool _captured = false;
+  bool _awaitingObservation = false;
   C? _snapshot;
   Map<Object?, _ReplacementSlot>? _rewinds;
   bool observedChange = false;
@@ -37,6 +38,7 @@ class _ReplacementBaseline<C extends Object> {
       _committed = committed;
       _intact = false;
       _captured = false;
+      _awaitingObservation = false;
       _snapshot = null;
       _rewinds = null;
       observedChange = false;
@@ -61,11 +63,15 @@ class _ReplacementBaseline<C extends Object> {
       }
     } else if (observed) {
       capture(committed);
-    } else if (_prepare(committed, check: false) && !_captured) {
-      // Keep the raw comparison when there is no observer and this write
-      // cannot be reconstructed from a slot.
-      _intact = false;
-      _rewinds = null;
+    } else {
+      _prepare(committed, check: false);
+      if (identical(_committed, committed) && !_captured) {
+        // An unobserved write can keep the raw comparison. If a subscriber
+        // reads later, that read establishes a new baseline.
+        _intact = false;
+        _rewinds = null;
+        _awaitingObservation = true;
+      }
     }
   }
 
@@ -84,14 +90,29 @@ class _ReplacementBaseline<C extends Object> {
     return identical(_committed, committed) ? _snapshot : null;
   }
 
-  void recordRead(Option<C> committed, C value, bool Function(C, C) equals) {
+  void recordRead(
+    Option<C> committed,
+    C value,
+    bool Function(C, C) equals,
+    bool Function(C, Iterable<_ReplacementSlot>) slotsEqual,
+  ) {
     if (observedChange || !identical(_committed, committed)) return;
-    final snapshot = capture(committed);
-    if (snapshot == null) return;
+    if (_awaitingObservation) {
+      _awaitingObservation = false;
+      _intact = true;
+      return;
+    }
+    final snapshot = _snapshot;
+    final rewinds = _rewinds;
+    if (snapshot == null && rewinds == null) return;
     // A comparer can reenter this read. Keep the notification if it throws.
     observedChange = true;
     try {
-      final unchanged = untracked(() => equals(snapshot, value));
+      final unchanged = untracked(
+        () => rewinds != null
+            ? slotsEqual(value, rewinds.values)
+            : equals(snapshot!, value),
+      );
       if (identical(_committed, committed)) observedChange = !unchanged;
     } on Object {
       // Reading a map can succeed even if comparing it throws.

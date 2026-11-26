@@ -2320,11 +2320,16 @@ void main() {
       expect(runs, 1);
     });
 
-    for (final restoresInitial in [false, true]) {
+    for (final (opaque, restoresInitial) in [
+      (false, false),
+      (false, true),
+      (true, true),
+    ]) {
       test('a subscriber added during a nested write sees the replacement, '
-          'restores initial: $restoresInitial', () {
+          'opaque: $opaque, restores initial: $restoresInitial', () {
+        final initial = {'a': 1, 'b': 1};
         final s = MapSignal(
-          {'a': 1, 'b': 1},
+          opaque ? MapView(initial) : initial,
           equals: true,
           trackPreviousValue: false,
         );
@@ -2351,6 +2356,67 @@ void main() {
         ]);
       });
     }
+
+    for (final opaque in [false, true]) {
+      for (final history in [false, true]) {
+        test('a first subscriber after an unobserved nested write sees the '
+            'replacement (opaque: $opaque, history: $history)', () {
+          final initial = {'a': 1, 'b': 1};
+          final s = MapSignal(
+            opaque ? MapView(initial) : initial,
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final seen = <int?>[];
+
+          batch(() {
+            s.update('a', (_) {
+              if (opaque) {
+                s['b'] = 2;
+              } else {
+                s.addAll({'b': 2});
+              }
+              final effect = Effect(() => seen.add(s.value['b']));
+              addTearDown(effect.dispose);
+              s
+                ..['b'] = 3
+                ..value = {'a': 2, 'b': 3};
+              return 2;
+            });
+            expect(seen, [2]);
+          });
+
+          expect(seen, [2, 3]);
+          expect(s.previousValue, history ? {'a': 1, 'b': 1} : null);
+        });
+      }
+    }
+
+    test('a tracked point read after a nested write does not scan the map', () {
+      var hashCalls = 0;
+      _HashKey value(int hash) => _HashKey(() {
+        hashCalls++;
+        return hash;
+      });
+
+      final s = MapSignal(
+        {for (var i = 0; i < 10000; i++) i: value(i)},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      final next = value(-1);
+      s.update(0, (old) {
+        s[1] = next;
+        final effect = Effect(() => s.value[1]);
+        addTearDown(effect.dispose);
+        return old;
+      });
+
+      expect(s.value[1], same(next));
+      expect(hashCalls, 0);
+    });
 
     test('a subscriber added after a nested restoration sees one value', () {
       final s = MapSignal(

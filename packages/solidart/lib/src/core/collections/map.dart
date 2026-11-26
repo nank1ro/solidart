@@ -61,7 +61,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
         reactiveSystem.activeSub != null &&
         identical(value, _mutating) &&
         !disposed) {
-      baseline.recordRead(_internalSignal.currentValue, value, _compare);
+      baseline.recordRead(
+        _internalSignal.currentValue,
+        value,
+        _compare,
+        _replacementSlotsMatch,
+      );
     }
     return value;
   }
@@ -521,6 +526,19 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
 
   @override
   Map<K, V> _copyPrevious(Map<K, V> map) => Map<K, V>.of(map);
+
+  bool _replacementSlotsMatch(
+    Map<K, V> map,
+    Iterable<_ReplacementSlot> slots,
+  ) {
+    for (final slot in slots) {
+      final present = map.containsKey(slot.key);
+      if (present != slot.present || (present && slot.value != map[slot.key])) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   Map<K, V> _copyReplacementMap(
     Map<K, V> map,
