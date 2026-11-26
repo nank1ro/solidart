@@ -18,6 +18,87 @@ bool _isValueKey(Object? key) =>
     key is Enum ||
     (key is num && !key.isNaN);
 
+typedef _ReplacementSlot = ({Object? key, Object? value, bool present});
+
+class _ReplacementBaseline<C extends Object> {
+  _ReplacementBaseline(this._isIntact, this._copy);
+
+  final bool Function() _isIntact;
+  final C Function(Map<Object?, _ReplacementSlot>?) _copy;
+  Option<C>? _committed;
+  bool _intact = false;
+  bool _captured = false;
+  C? _snapshot;
+  Map<Object?, _ReplacementSlot>? _rewinds;
+  bool observedChange = false;
+
+  bool _prepare(Option<C> committed, {bool check = true}) {
+    if (!identical(_committed, committed)) {
+      _committed = committed;
+      _intact = false;
+      _captured = false;
+      _snapshot = null;
+      _rewinds = null;
+      observedChange = false;
+      try {
+        final intact = check && untracked(_isIntact);
+        if (identical(_committed, committed)) _intact = intact;
+      } on Object {
+        // An unreadable cast view can still be replaced.
+      }
+    }
+    return identical(_committed, committed) && _intact;
+  }
+
+  void rememberWrite(
+    Option<C> committed,
+    _ReplacementSlot? slot, {
+    required bool observed,
+  }) {
+    if (slot != null) {
+      if (_prepare(committed) && !_captured) {
+        (_rewinds ??= {}).putIfAbsent(slot.key, () => slot);
+      }
+    } else if (observed) {
+      capture(committed);
+    } else if (_prepare(committed, check: false) && !_captured) {
+      // Keep the raw comparison when there is no observer and this write
+      // cannot be reconstructed from a slot.
+      _intact = false;
+      _rewinds = null;
+    }
+  }
+
+  C? capture(Option<C> committed) {
+    if (_prepare(committed) && !_captured) {
+      _captured = true;
+      final rewinds = _rewinds;
+      _rewinds = null;
+      try {
+        final snapshot = untracked(() => _copy(rewinds));
+        if (identical(_committed, committed)) _snapshot = snapshot;
+      } on Object {
+        // A failed copy does not prevent the replacement.
+      }
+    }
+    return identical(_committed, committed) ? _snapshot : null;
+  }
+
+  void recordRead(Option<C> committed, C value, bool Function(C, C) equals) {
+    if (observedChange || !identical(_committed, committed)) return;
+    final snapshot = capture(committed);
+    if (snapshot == null) return;
+    // A comparer can reenter this read. Keep the notification if it throws.
+    observedChange = true;
+    try {
+      final unchanged = untracked(() => equals(snapshot, value));
+      if (identical(_committed, committed)) observedChange = !unchanged;
+    } on Object {
+      // Reading a map can succeed even if comparing it throws.
+    }
+  }
+}
+
 /// The mutation logic that [ListSignal], [MapSignal] and [SetSignal] share.
 mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// The number of elements or entries in [collection].
@@ -66,9 +147,8 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// collection.
   bool _nestedChanged = false;
 
-  /// Whether the current map update still has its original contents in the
-  /// slot it checks and has no known nested changes.
-  bool Function()? _replacementBaselineIsIntact;
+  /// Saves the committed map while an update can still write to it.
+  _ReplacementBaseline<C>? _replacementBaseline;
 
   /// The check of a nested list resize that threw. The outermost [_mutate]
   /// runs it with its history copy when it ends, because the collection can
@@ -121,11 +201,23 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     bool Function(C, C)? failedResizeChanged,
     C Function(C)? undo,
     bool Function()? failedSlotChanged,
-    bool preserveReplacementBaseline = false,
+    C Function(C, Map<Object?, _ReplacementSlot>?)? copyReplacementBaseline,
+    _ReplacementSlot? replacementSlot,
   }) {
     final collection = _untrackedValue;
     final outer = _mutating;
     final nested = identical(collection, outer);
+    final outerBaseline = _replacementBaseline;
+    if (nested && outerBaseline != null && !_internalSignal.forceDirty) {
+      final committed = _internalSignal.currentValue;
+      if (identical(collection, committed.safeUnwrap())) {
+        outerBaseline.rememberWrite(
+          committed,
+          replacementSlot,
+          observed: _internalSignal.subs != null,
+        );
+      }
+    }
     final length = _lengthOf(collection);
     final previous = !nested && trackPreviousValue && undo == null
         ? _copyPrevious(collection)
@@ -134,20 +226,19 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     final outerChanged = _nestedChanged;
     final outerPrevious = _mutatingPrevious;
     final outerResizeCheck = _nestedResizeCheck;
-    final outerBaseline = _replacementBaselineIsIntact;
     _nestedChanged = false;
     _nestedResizeCheck = null;
     _mutating = collection;
-    if (!nested) _mutatingPrevious = previous;
-    _replacementBaselineIsIntact =
-        preserveReplacementBaseline &&
-            (!nested || !outerChanged && outerBaseline != null)
-        ? () =>
-              !_nestedChanged &&
-              length == _lengthOf(collection) &&
-              !(check?.call() ?? false) &&
-              (!nested || outerBaseline!())
-        : null;
+    if (!nested) {
+      _mutatingPrevious = previous;
+      _replacementBaseline = copyReplacementBaseline == null
+          ? null
+          : _ReplacementBaseline(
+              () =>
+                  length == _lengthOf(collection) && !(check?.call() ?? false),
+              (slots) => copyReplacementBaseline(collection, slots),
+            );
+    }
     late final R result;
     final errors = _FirstError()..run(() => result = mutation(collection));
     final nestedChanged = _nestedChanged;
@@ -156,7 +247,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     _mutatingPrevious = outerPrevious;
     _nestedChanged = outerChanged;
     _nestedResizeCheck = outerResizeCheck;
-    _replacementBaselineIsIntact = outerBaseline;
+    _replacementBaseline = outerBaseline;
     final resizeCheck =
         (errors.hasError ? failedResizeChanged : null) ?? nestedResizeCheck;
     var changed = false;
@@ -204,6 +295,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     bool Function() Function(C, C?)? bulkCheck,
     bool Function()? slotChanged,
     C Function(C)? undo,
+    _ReplacementSlot? replacementSlot,
   }) => unchanged
       ? mutation(_untrackedValue)
       : _mutate(
@@ -211,5 +303,6 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
           bulkCheck: bulkCheck,
           slotChanged: slotChanged,
           undo: undo,
+          replacementSlot: replacementSlot,
         );
 }

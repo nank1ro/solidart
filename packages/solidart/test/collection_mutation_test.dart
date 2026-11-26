@@ -166,6 +166,38 @@ class _CountingMap extends DelegatingMap<int, int> {
   }
 }
 
+class _CountingMapView extends MapView<int, int> {
+  _CountingMapView(super.map);
+
+  int visits = 0;
+
+  @override
+  void forEach(void Function(int, int) action) {
+    super.forEach((key, value) {
+      visits++;
+      action(key, value);
+    });
+  }
+}
+
+class _ReactiveMapView extends MapView<String, int> {
+  _ReactiveMapView(super.map, this.dependency);
+
+  final Signal<int> dependency;
+
+  @override
+  Iterable<String> get keys {
+    dependency.value;
+    return super.keys;
+  }
+
+  @override
+  void forEach(void Function(String, int) action) {
+    dependency.value;
+    super.forEach(action);
+  }
+}
+
 class _CountingSet extends DelegatingSet<int> {
   _CountingSet() : super({for (var i = 0; i < 100; i++) i});
   int scans = 0;
@@ -2037,6 +2069,35 @@ void main() {
     });
 
     for (final history in [false, true]) {
+      test('a replacement matching the retired map still delivers a nested '
+          'write at batch flush, history $history', () {
+        final s = MapSignal(
+          {'a': 1, 'b': 1},
+          equals: true,
+          trackPreviousValue: history,
+        );
+        final w = watch(s);
+
+        batch(() {
+          s.update('a', (_) {
+            s['b'] = 2;
+            s.value = {'a': 2, 'b': 2};
+            return 2;
+          });
+          expect(w.effectReruns, 0);
+          expect(w.calls, isEmpty);
+        });
+
+        expect(w.effectReruns, 1);
+        final previous = history ? {'a': 1, 'b': 1} : null;
+        expect(w.calls, [
+          [
+            previous,
+            {'a': 2, 'b': 2},
+          ],
+        ]);
+      });
+
       test('batched update with an equal replacement notifies once, '
           'history $history', () {
         final backing = {'a': 1};
@@ -2093,6 +2154,286 @@ void main() {
         expect(w.effectReruns, 0);
         expect(w.calls, isEmpty);
       });
+
+      test('batched update can restore equal contents after nested writes, '
+          'history $history', () {
+        final s = MapSignal(
+          {'a': 1, 'b': 1},
+          equals: true,
+          trackPreviousValue: history,
+        );
+        final w = watch(s);
+
+        batch(() {
+          s.update('a', (value) {
+            s
+              ..['b'] = 2
+              ..['b'] = 1
+              ..value = {'a': 2, 'b': 1}
+              ..value = {'a': 1, 'b': 1};
+            return value;
+          });
+        });
+
+        expect(s.untrackedValue, {'a': 1, 'b': 1});
+        expect(w.effectReruns, 0);
+        expect(w.calls, isEmpty);
+      });
+    }
+
+    test(
+      'a nested replacement rewinds the first value of each written slot',
+      () {
+        final initial = <String, int?>{'a': 1, 'b': null, 'f': 9};
+        final s = MapSignal(
+          Map.of(initial),
+          equals: true,
+          trackPreviousValue: false,
+        );
+        final w = watch(s);
+
+        batch(() {
+          s.update('a', (value) {
+            s
+              ..remove('b')
+              ..putIfAbsent('b', () => 2)
+              ..putIfAbsent('c', () => 3)
+              ..update('c', (_) => 4)
+              ..update('d', (_) => 5, ifAbsent: () => 5)
+              ..['e'] = null
+              ..remove('f')
+              ..value = initial;
+            return value;
+          });
+        });
+
+        expect(s.untrackedValue, initial);
+        expect(w.effectReruns, 0);
+        expect(w.calls, isEmpty);
+      },
+    );
+
+    test('a nested replacement rewinds equal keys in a default map', () {
+      final initial = <num, int>{0: 1, 1.0: 7};
+      final s = MapSignal(
+        Map.of(initial),
+        equals: true,
+        trackPreviousValue: false,
+      );
+      final w = watch(s);
+
+      batch(() {
+        s.update(0, (value) {
+          s
+            ..remove(1.0)
+            ..[1] = 2
+            ..value = initial;
+          return value;
+        });
+      });
+
+      expect(w.effectReruns, 0);
+      expect(w.calls, isEmpty);
+    });
+
+    for (final opaque in [false, true]) {
+      for (final history in [false, true]) {
+        test('shouldUpdate sees a nested write before a replacement without '
+            'subscribers (opaque: $opaque, history: $history)', () {
+          final initial = {'a': 1, 'b': 1};
+          final s = MapSignal(
+            opaque ? MapView(initial) : initial,
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+
+          batch(() {
+            s.update('a', (_) {
+              s
+                ..['b'] = 2
+                ..value = {'a': 3, 'b': 2}
+                ..value = {'a': 1, 'b': 2};
+              return 2;
+            });
+          });
+
+          expect(s.listenerCount, 0);
+          expect(s.shouldUpdate(), isTrue);
+          expect(s.value, {'a': 1, 'b': 2});
+        });
+      }
+    }
+
+    test('an unobserved bulk write after a nested slot write keeps the raw '
+        'replacement comparison', () {
+      final s = MapSignal(
+        {'a': 1, 'b': 1, 'c': 1},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+
+      batch(() {
+        s.update('a', (_) {
+          s
+            ..['b'] = 2
+            ..updateAll((key, value) => key == 'c' ? 3 : value)
+            ..value = {'a': 1, 'b': 1, 'c': 3};
+          return 2;
+        });
+      });
+
+      expect(s.shouldUpdate(), isTrue);
+      expect(s.value, {'a': 1, 'b': 1, 'c': 3});
+    });
+
+    test('a nested replacement preserves distinct equal identity keys', () {
+      final first = _Same(1);
+      final second = _Same(2);
+      final initial = Map<_Same, int>.identity()
+        ..[first] = 1
+        ..[second] = 2;
+      final s = MapSignal(
+        Map<_Same, int>.identity()..addAll(initial),
+        equals: true,
+        trackPreviousValue: false,
+      );
+      var runs = 0;
+      final effect = Effect(() {
+        s.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+      addTearDown(s.dispose);
+
+      batch(() {
+        s.update(first, (value) {
+          s
+            ..[second] = 3
+            ..value = initial;
+          return value;
+        });
+      });
+
+      expect(s.untrackedValue.length, 2);
+      expect(runs, 1);
+    });
+
+    for (final restoresInitial in [false, true]) {
+      test('a subscriber added during a nested write sees the replacement, '
+          'restores initial: $restoresInitial', () {
+        final s = MapSignal(
+          {'a': 1, 'b': 1},
+          equals: true,
+          trackPreviousValue: false,
+        );
+        watch(s);
+        final seen = <Map<String, int>>[];
+        final next = restoresInitial ? {'a': 1, 'b': 1} : {'a': 2, 'b': 2};
+
+        batch(() {
+          s.update('a', (_) {
+            s['b'] = 2;
+            final effect = Effect(() => seen.add(Map.of(s.value)));
+            addTearDown(effect.dispose);
+            s.value = next;
+            return next['a']!;
+          });
+          expect(seen, [
+            {'a': 1, 'b': 2},
+          ]);
+        });
+
+        expect(seen, [
+          {'a': 1, 'b': 2},
+          next,
+        ]);
+      });
+    }
+
+    test('a subscriber added after a nested restoration sees one value', () {
+      final s = MapSignal(
+        {'a': 1, 'b': 1},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      final w = watch(s);
+      final seen = <int?>[];
+
+      batch(() {
+        s.update('a', (value) {
+          s
+            ..['b'] = 2
+            ..['b'] = 1;
+          final effect = Effect(() => seen.add(s.value['b']));
+          addTearDown(effect.dispose);
+          s
+            ..value = {'a': 2, 'b': 1}
+            ..value = {'a': 1, 'b': 1};
+          return value;
+        });
+      });
+
+      expect(w.effectReruns, 0);
+      expect(seen, [1]);
+    });
+
+    test('a synchronous replacement does not scan the outgoing map', () {
+      final backing = _CountingMapView({for (var i = 0; i < 100000; i++) i: 0});
+      final s = MapSignal(backing, equals: true, trackPreviousValue: false);
+      final lengths = <int>[];
+      final effect = Effect(() => lengths.add(s.value.length));
+      addTearDown(effect.dispose);
+
+      s.update(0, (_) {
+        s.value = {0: 1};
+        return 1;
+      });
+
+      expect(lengths, [100000, 1]);
+      expect(backing.visits, 0);
+    });
+
+    test('a deferred replacement outside a batch updates a computed', () {
+      final s = MapSignal({'a': 1}, equals: true, trackPreviousValue: false);
+      final selected = Computed(() => s.value['a']);
+      addTearDown(selected.dispose);
+      expect(selected.value, 1);
+
+      s.update('a', (_) {
+        s.value = {'a': 2};
+        return 2;
+      });
+
+      expect(selected.value, 2);
+    });
+
+    for (final key in ['a', 'absent']) {
+      test('replacement bookkeeping does not track map reads for $key', () {
+        final mapDependency = Signal(0, autoDispose: false);
+        final callbackDependency = Signal(2, autoDispose: false);
+        final backing = _ReactiveMapView({'a': 1}, mapDependency);
+        final s = MapSignal(backing, equals: true, trackPreviousValue: false);
+        var runs = 0;
+        final effect = Effect(() {
+          if (++runs != 1) return;
+
+          int replace() {
+            final next = callbackDependency.value;
+            s.value = {'a': next, 'b': 3};
+            return next;
+          }
+
+          s.update(key, (_) => replace(), ifAbsent: replace);
+        });
+        addTearDown(effect.dispose);
+
+        mapDependency.value++;
+        expect(runs, 1);
+        callbackDependency.value++;
+        expect(runs, 2);
+      });
     }
 
     test(
@@ -2144,6 +2485,34 @@ void main() {
         [
           {'a': 1, 'b': 1},
           {'a': 2, 'b': 1},
+        ],
+      ]);
+    });
+
+    test('a replacement in a nested update delivers an earlier ancestor '
+        'write', () {
+      final s = MapSignal({'a': 1, 'b': 1, 'c': 1}, equals: true);
+      final w = watch(s);
+
+      batch(() {
+        s.update('c', (c) {
+          s['b'] = 2;
+          s.update('b', (b) {
+            s.update('a', (_) {
+              s.value = {'a': 2, 'b': 2, 'c': 1};
+              return 2;
+            });
+            return b;
+          });
+          return c;
+        });
+      });
+
+      expect(w.effectReruns, 1);
+      expect(w.calls, [
+        [
+          {'a': 1, 'b': 1, 'c': 1},
+          {'a': 2, 'b': 2, 'c': 1},
         ],
       ]);
     });
