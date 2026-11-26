@@ -60,6 +60,12 @@ extension MayDisposeDependencies on alien_system.ReactiveNode {
 /// Lets a disposal finish when a step throws: [run] keeps the first error,
 /// reports later ones to [Zone.current], and [rethrowIfAny] rethrows the first.
 class _FirstError {
+  _FirstError();
+
+  _FirstError.caught(Object error, StackTrace stackTrace)
+    : _error = error,
+      _stackTrace = stackTrace;
+
   Object? _error;
   StackTrace? _stackTrace;
 

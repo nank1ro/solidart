@@ -43,16 +43,26 @@ extension DevToolsExt<T> on SignalBase<T> {
     _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.created);
   }
 
-  void _notifySignalUpdate() {
-    for (final obs in SolidartConfig.observers) {
-      obs.didUpdateSignal(this);
-    }
-    if (!trackInDevTools) return;
-    _notifyDevToolsAboutSignal(this, eventType: DevToolsEventType.updated);
-  }
-
   // Each observer and the DevTools event is its own step of [errors], so a
   // throwing observer does not skip the others.
+  void _notifySignalUpdate(_FirstError errors) {
+    final observers = SolidartConfig.observers;
+    if (observers.isNotEmpty) {
+      // Registration changes apply to later updates.
+      for (final obs in observers.toList(growable: false)) {
+        errors.run(() => obs.didUpdateSignal(this));
+      }
+    }
+    if (!SolidartConfig.devToolsEnabled) return;
+    errors.run(
+      () => _notifyDevToolsAboutSignal(
+        this,
+        eventType: DevToolsEventType.updated,
+      ),
+    );
+  }
+
+  // Like [_notifySignalUpdate].
   void _notifySignalDisposal(_FirstError errors) {
     for (final obs in SolidartConfig.observers) {
       errors.run(() => obs.didDisposeSignal(this));
