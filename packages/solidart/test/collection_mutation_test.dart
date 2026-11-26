@@ -2123,6 +2123,31 @@ void main() {
       },
     );
 
+    test('a replacement in a nested update notifies at batch flush', () {
+      final s = MapSignal({'a': 1, 'b': 1}, equals: true);
+      final w = watch(s);
+
+      batch(() {
+        s.update('b', (value) {
+          s.update('a', (_) {
+            s.value = {'a': 2, 'b': 1};
+            return 2;
+          });
+          return value;
+        });
+
+        expect(w.effectReruns, 0);
+      });
+
+      expect(w.effectReruns, 1);
+      expect(w.calls, [
+        [
+          {'a': 1, 'b': 1},
+          {'a': 2, 'b': 1},
+        ],
+      ]);
+    });
+
     test(
       'a batched replacement keeps the earlier committed map for comparison',
       () {
