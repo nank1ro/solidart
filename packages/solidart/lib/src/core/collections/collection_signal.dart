@@ -20,17 +20,31 @@ bool _isValueKey(Object? key) =>
 
 typedef _ReplacementSlot = ({Object? key, Object? value, bool present});
 typedef _CopyReplacement<C> = C Function(Map<Object?, _ReplacementSlot>?);
+typedef _CopyReplacementFrom<C> = C Function(
+  C,
+  Map<Object?, _ReplacementSlot>?,
+);
+
+class _ReplacementObservation<C extends Object> {
+  _ReplacementObservation.full(this.snapshot) : slots = null;
+  _ReplacementObservation.slots(this.slots) : snapshot = null;
+
+  C? snapshot;
+  final Map<Object?, _ReplacementSlot>? slots;
+}
 
 class _ReplacementBaseline<C extends Object> {
   _ReplacementBaseline(
     this._isIntact,
+    this._collection,
     this._copy,
     this._copyOriginal,
     this._originalBulkVersion,
   ) : _activeBulkVersion = _originalBulkVersion;
 
   final bool Function() _isIntact;
-  final _CopyReplacement<C> _copy;
+  final C _collection;
+  final _CopyReplacementFrom<C> _copy;
   final _CopyReplacement<C>? _copyOriginal;
   final int Function()? _originalBulkVersion;
   int Function()? _activeBulkVersion;
@@ -45,8 +59,9 @@ class _ReplacementBaseline<C extends Object> {
   Map<Object?, _ReplacementSlot>? _rewinds;
   Set<alien_system.ReactiveNode>? _changedObservers;
   Set<alien_system.ReactiveNode>? _anchorObservers;
-  Map<alien_system.ReactiveNode, C>? _alternateObservations;
-  C? _checkedObservation;
+  Map<alien_system.ReactiveNode, _ReplacementObservation<C>>?
+  _alternateObservations;
+  _ReplacementObservation<C>? _checkedObservation;
   bool _comparisonChanged = false;
   bool _comparing = false;
   bool _forceNotification = false;
@@ -60,8 +75,8 @@ class _ReplacementBaseline<C extends Object> {
     if (_forceNotification || _comparing) return (snapshot: null, notify: true);
     final changed = _changedObservers;
     if (changed == null) return (snapshot: snapshot, notify: false);
-    C? alternate;
-    Set<C>? otherObservations;
+    _ReplacementObservation<C>? alternate;
+    Set<_ReplacementObservation<C>>? otherObservations;
     var anchorLive = false;
     for (var link = signal.subs; link != null; link = link.nextSub) {
       if (changed.contains(link.sub)) {
@@ -79,16 +94,27 @@ class _ReplacementBaseline<C extends Object> {
         return (snapshot: null, notify: true);
       }
     }
-    if (otherObservations != null &&
-        !_observationsMatch(alternate!, otherObservations, signal, equals)) {
-      return (snapshot: null, notify: true);
-    }
-    return (snapshot: alternate ?? snapshot, notify: false);
+    if (alternate == null) return (snapshot: snapshot, notify: false);
+    final observed = _resolveObservation(
+      alternate,
+      otherObservations,
+      snapshot,
+      signal,
+      equals,
+    );
+    return (snapshot: observed, notify: observed == null);
   }
 
-  bool _observationsMatch(
-    C alternate,
-    Iterable<C> otherObservations,
+  C? _materializeObservation(_ReplacementObservation<C> observed, C? anchor) {
+    final snapshot = observed.snapshot;
+    if (snapshot != null || anchor == null) return snapshot;
+    return observed.snapshot = _copy(anchor, Map.of(observed.slots!));
+  }
+
+  C? _resolveObservation(
+    _ReplacementObservation<C> alternate,
+    Iterable<_ReplacementObservation<C>>? otherObservations,
+    C? anchor,
     _AlienSignal<C> signal,
     bool Function(C, C) equals,
   ) {
@@ -99,18 +125,27 @@ class _ReplacementBaseline<C extends Object> {
     final writes = writeVersion;
     _comparing = true;
     try {
-      return untracked(
-            () => otherObservations.every((map) => equals(alternate, map)),
-          ) &&
-          !_forceNotification &&
+      final snapshot = untracked<C?>(() {
+        final observed = _materializeObservation(alternate, anchor);
+        if (observed == null || otherObservations == null) return observed;
+        for (final other in otherObservations) {
+          final next = _materializeObservation(other, anchor);
+          if (next == null || !equals(observed, next)) return null;
+        }
+        return observed;
+      });
+      if (!_forceNotification &&
           identical(signal.currentValue, committed) &&
           identical(signal.pendingValue, pending) &&
           identical(signal.subs, first) &&
           identical(signal.subsTail, last) &&
-          writeVersion == writes;
+          writeVersion == writes) {
+        return snapshot;
+      }
+      return null;
     } on Object {
       // A failed comparison cannot establish that the observers agree.
-      return false;
+      return null;
     } finally {
       _comparing = false;
     }
@@ -121,6 +156,8 @@ class _ReplacementBaseline<C extends Object> {
     _AlienSignal<C> signal, {
     required bool stable,
     required alien_system.Link? newSubscription,
+    required Map<Object?, _ReplacementSlot>? rewinds,
+    required _ReplacementSlot Function(C, Object?) readSlot,
   }) {
     (_changedObservers ??= Set.identity()).add(observer);
     if (!stable) return;
@@ -138,7 +175,16 @@ class _ReplacementBaseline<C extends Object> {
     final wasComparing = _comparing;
     _comparing = true;
     try {
-      final observed = _checkedObservation ?? untracked<C>(() => _copy(null));
+      final observed =
+          _checkedObservation ??
+          untracked<_ReplacementObservation<C>>(() {
+            if (rewinds == null) {
+              return _ReplacementObservation.full(_copy(_collection, null));
+            }
+            return _ReplacementObservation<C>.slots({
+              for (final key in rewinds.keys) key: readSlot(_collection, key),
+            });
+          });
       if (identical(_committed, committed) &&
           identical(signal.currentValue, committed) &&
           writeVersion == writes) {
@@ -150,6 +196,25 @@ class _ReplacementBaseline<C extends Object> {
     } finally {
       _comparing = wasComparing;
     }
+  }
+
+  void _forgetDetachedObservation(
+    alien_system.ReactiveNode observer,
+    alien_system.Link newSubscription,
+    _AlienSignal<C> signal,
+  ) {
+    if (!(_anchorObservers?.contains(observer) ?? false) &&
+        !(_changedObservers?.contains(observer) ?? false)) {
+      return;
+    }
+    for (var link = signal.subs; link != null; link = link.nextSub) {
+      if (!identical(link, newSubscription) && identical(link.sub, observer)) {
+        return;
+      }
+    }
+    _anchorObservers?.remove(observer);
+    _changedObservers?.remove(observer);
+    _alternateObservations?.remove(observer);
   }
 
   R runNested<R>(
@@ -250,8 +315,11 @@ class _ReplacementBaseline<C extends Object> {
       final rewinds = _rewinds;
       _rewinds = null;
       try {
-        final copy = _useOriginal ? _copyOriginal! : _copy;
-        final snapshot = untracked(() => copy(rewinds));
+        final snapshot = untracked(
+          () => _useOriginal
+              ? _copyOriginal!(rewinds)
+              : _copy(_collection, rewinds),
+        );
         if (identical(_committed, committed)) _snapshot = snapshot;
       } on Object {
         // A failed copy does not prevent the replacement.
@@ -295,6 +363,9 @@ class _ReplacementBaseline<C extends Object> {
       _comparisonChanged = false;
       _forceNotification = false;
     }
+    if (newSubscription != null) {
+      _forgetDetachedObservation(observer, newSubscription, signal);
+    }
     final alternate = _alternateObservations?[observer];
     if (_forceNotification ||
         (alternate == null &&
@@ -333,6 +404,8 @@ class _ReplacementBaseline<C extends Object> {
             signal,
             stable: true,
             newSubscription: newSubscription,
+            rewinds: _rewinds,
+            readSlot: readSlot,
           );
         } else {
           _anchorObservers?.add(observer);
@@ -353,7 +426,7 @@ class _ReplacementBaseline<C extends Object> {
       _snapshotVersion = null;
       _rewinds = null;
     }
-    final rewinds = alternate == null ? _rewinds : null;
+    final rewinds = _rewinds;
     if (alternate == null &&
         rewinds == null &&
         (snapshot == null || compareSlots)) {
@@ -367,7 +440,22 @@ class _ReplacementBaseline<C extends Object> {
     _comparing = true;
     try {
       final unchanged = untracked(() {
-        if (rewinds == null) return equals(alternate ?? snapshot!, value);
+        if (alternate != null) {
+          final slots = alternate.slots;
+          if (slots != null && (!_captured || compareSlots)) {
+            return slotsEqual(value, slots.values) &&
+                (rewinds == null ||
+                    slotsEqual(
+                      value,
+                      rewinds.values.where(
+                        (slot) => !slots.containsKey(slot.key),
+                      ),
+                    ));
+          }
+          final observed = _materializeObservation(alternate, snapshot);
+          return observed != null && equals(observed, value);
+        }
+        if (rewinds == null) return equals(snapshot!, value);
         if (!firstObserver) return slotsEqual(value, rewinds.values);
         // Keep slots from writes still in progress, but compare them with
         // what the first subscriber actually read.
@@ -397,6 +485,8 @@ class _ReplacementBaseline<C extends Object> {
           signal,
           stable: stable,
           newSubscription: newSubscription,
+          rewinds: rewinds,
+          readSlot: readSlot,
         );
         return;
       }
@@ -545,7 +635,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     bool Function(C, C)? failedResizeChanged,
     C Function(C)? undo,
     bool Function()? failedSlotChanged,
-    C Function(C, Map<Object?, _ReplacementSlot>?)? copyReplacementBaseline,
+    _CopyReplacementFrom<C>? copyReplacementBaseline,
     _CopyReplacement<C>? copyOriginalReplacementBaseline,
     int Function(int)? bulkVersion,
     _ReplacementSlot? replacementSlot,
@@ -580,7 +670,8 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
           : _ReplacementBaseline(
               () =>
                   length == _lengthOf(collection) && !(check?.call() ?? false),
-              (slots) => copyReplacementBaseline(collection, slots),
+              collection,
+              copyReplacementBaseline,
               copyOriginalReplacementBaseline,
               readBulkVersion,
             );

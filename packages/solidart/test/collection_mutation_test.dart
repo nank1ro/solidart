@@ -666,6 +666,35 @@ void main() {
       expect(hashes, hashesAfterMatch);
     });
 
+    test('a divergent native reader rechecks only journaled slots', () {
+      var hashes = 0;
+      _CountedMapValue valueOf(int key) =>
+          _CountedMapValue(key, () => hashes++);
+      final original = valueOf(0);
+      final s = MapSignal(
+        {for (var i = 0; i < 10000; i++) i: original},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      final incumbent = Effect(() => s.value[0]);
+      addTearDown(incumbent.dispose);
+
+      s.update(0, (current) {
+        s[1] = valueOf(1);
+        final reader = Effect(() => s.value[1]);
+        s
+          ..[2] = valueOf(2)
+          ..[2] = original;
+        reader
+          ..run()
+          ..dispose();
+        return current;
+      });
+
+      expect(hashes, 0);
+    });
+
     test('tracked reads release slots restored by nested point callbacks', () {
       const count = 256;
       var comparisons = 0;
@@ -2830,6 +2859,48 @@ void main() {
 
     for (final history in [false, true]) {
       for (final opaque in [false, true]) {
+        test('a computed establishes a new observation after reattaching '
+            '(history: $history, opaque: $opaque)', () {
+          final backing = {'x': 0};
+          final s = MapSignal(
+            opaque ? MapView(backing) : backing,
+            equals: true,
+            trackPreviousValue: history,
+            autoDispose: false,
+          );
+          addTearDown(s.dispose);
+          final gate = Signal(true, autoDispose: false);
+          addTearDown(gate.dispose);
+          final computed = Computed(
+            () => gate.value ? s.value['x']! : -1,
+            autoDispose: false,
+          );
+          addTearDown(computed.dispose);
+          expect(computed.value, 0);
+          final seen = <int>[];
+
+          batch(() {
+            s.update('x', (current) {
+              s['x'] = 1;
+              final survivor = Effect(() => seen.add(s.value['x']!));
+              addTearDown(survivor.dispose);
+              gate.value = false;
+              expect(computed.value, -1);
+              expect(s.listenerCount, 1);
+              gate.value = true;
+              expect(computed.value, 1);
+              expect(s.listenerCount, 2);
+              s
+                ..['x'] = 2
+                ..value = {'x': 1};
+              return current;
+            });
+          });
+
+          expect(seen, [1]);
+          expect(computed.value, 1);
+        });
+
         for (final (incumbent, repeat, distinct) in [
           (true, false, false),
           (false, true, false),
@@ -2979,6 +3050,76 @@ void main() {
         expect(seen, [0, 2, 0]);
       });
     }
+
+    for (final restore in [false, true]) {
+      test('an opaque write can invalidate a saved slot comparison '
+          '(restored: $restore)', () {
+        final s = MapSignal(
+          {'x': 0, 'y': 0},
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        final incumbent = Effect(() => s.value['x']);
+        addTearDown(incumbent.dispose);
+        final seen = <(int, int)>[];
+
+        batch(() {
+          s.update('x', (current) {
+            s['x'] = 1;
+            final survivor = Effect(() {
+              final map = s.value;
+              seen.add((map['x']!, map['y']!));
+            });
+            addTearDown(survivor.dispose);
+            incumbent.dispose();
+            s.addAll({'y': 2});
+            if (restore) s.addAll({'y': 0});
+            survivor.run();
+            s
+              ..['x'] = 2
+              ..value = {'x': 1, 'y': 0};
+            return current;
+          });
+        });
+
+        final reread = restore ? 0 : 2;
+        expect(seen, [(1, 0), (1, reread), if (!restore) (1, 0)]);
+      });
+    }
+
+    test('a replacement preserves the observed presence of nullable slots', () {
+      final s = MapSignal(
+        <String, int?>{'outer': 0, 'removed': 1},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      final incumbent = Effect(() => s.value['outer']);
+      addTearDown(incumbent.dispose);
+      final seen = <(bool, bool)>[];
+
+      batch(() {
+        s.update('outer', (current) {
+          s
+            ..['added'] = null
+            ..remove('removed');
+          final survivor = Effect(() {
+            final map = s.value;
+            seen.add((map.containsKey('added'), map.containsKey('removed')));
+          });
+          addTearDown(survivor.dispose);
+          incumbent.dispose();
+          s
+            ..remove('added')
+            ..['removed'] = 1
+            ..value = {'outer': 0, 'added': null};
+          return current;
+        });
+      });
+
+      expect(seen, [(true, false)]);
+    });
 
     test('an incumbent that reorders its dependencies keeps delivery', () {
       final s = MapSignal({'x': 0}, equals: true, trackPreviousValue: false);
