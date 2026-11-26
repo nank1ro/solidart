@@ -2,6 +2,8 @@
 
 - **CHORE**: Require `alien_signals` 2.5.0 or later. Disposing a `Computed` with child effects now stops those effects in reverse creation order, which can change the order in which their signals auto-dispose. When an effect stops itself during a rerun, it immediately unlinks dependencies it has yet to read in that run. Later reads in the stopped callback leave it unsubscribed.
 - **FIX**: Signal updates continue notifying observers and DevTools when an effect or observer throws. The first error is rethrown, and later errors go to the current `Zone` ([#212](https://github.com/nank1ro/solidart/issues/212)).
+- **FIX**: Reading a dependency-free `Computed` while building a DevTools event no longer auto-disposes it. Normal reactive cleanup can still run when the read reevaluates a computed ([#191](https://github.com/nank1ro/solidart/issues/191)).
+- **FIX**: A delayed effect keeps its old child effects subscribed until the rerun starts. A replacement child that reads a signal synchronously can keep that signal alive. Use Solidart's `batch()` for batched writes ([#209](https://github.com/nank1ro/solidart/issues/209)).
 
 ## 3.0.0-dev.4
 
