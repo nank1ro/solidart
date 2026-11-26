@@ -251,7 +251,9 @@ class Computed<T> extends ReadSignal<T> {
     _notifyPending = false;
     if (_notifiedOnce) {
       // Observers must not subscribe the effect or computed that reads this.
-      untracked(_notifySignalUpdate);
+      final errors = _FirstError();
+      untracked(() => _notifySignalUpdate(errors));
+      errors.rethrowIfAny();
     } else {
       _notifiedOnce = true;
       // The creation event had no value yet: send the first one.

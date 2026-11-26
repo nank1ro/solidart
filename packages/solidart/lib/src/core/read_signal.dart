@@ -216,9 +216,10 @@ class ReadableSignal<T> implements ReadSignal<T> {
     _setPreviousValue(_untrackedValue);
 
     // notify with the new value
-    _value = newValue;
-
-    _notifySignalUpdate();
+    // Separate steps, so a throwing effect does not skip the observers.
+    final errors = _FirstError()..run(() => _value = newValue);
+    _notifySignalUpdate(errors);
+    errors.rethrowIfAny();
     return newValue;
   }
 

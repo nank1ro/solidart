@@ -87,8 +87,9 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
       );
     }
     // Like `Signal.setValue`: assigning `_value` notifies subscribers once.
-    _value = newValue;
-    _notifySignalUpdate();
+    final errors = _FirstError()..run(() => _value = newValue);
+    _notifySignalUpdate(errors);
+    errors.rethrowIfAny();
     return newValue;
   }
 
@@ -175,7 +176,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
       // Separate steps, so a throwing effect does not skip the observers.
       errors
         ..run(_reportChanged)
-        ..run(_notifySignalUpdate);
+        ..run(() => _notifySignalUpdate(errors));
     }
     errors.rethrowIfAny();
     return result;
