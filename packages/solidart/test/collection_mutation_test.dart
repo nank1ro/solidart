@@ -513,25 +513,36 @@ void main() {
       }
     }
 
-    for (final bulk in [false, true]) {
+    for (final (bulk, opaque, history, identicalValue) in [
+      (false, false, false, false),
+      (true, false, false, false),
+      (false, true, false, false),
+      (true, true, false, false),
+      (true, true, true, true),
+    ]) {
       test(
-        'equal point writes reuse a first observer snapshot (bulk: $bulk)',
+        'equal point writes reuse a first observer snapshot (bulk: $bulk, '
+        'opaque: $opaque, history: $history, identical: $identicalValue)',
         () {
           const count = 128;
           var hashes = 0;
           _CountedMapValue valueOf(int key) =>
               _CountedMapValue(key, () => hashes++);
+          final backing = {for (var i = 0; i < count; i++) i: valueOf(i)};
           final s = MapSignal(
-            {for (var i = 0; i < count; i++) i: valueOf(i)},
+            opaque ? MapView(backing) : backing,
             equals: true,
-            trackPreviousValue: false,
+            trackPreviousValue: history,
           );
           addTearDown(s.dispose);
           if (bulk) {
             final effect = Effect(() {
               s.updateAll((key, value) {
                 if (key == 0) return valueOf(-1);
-                return s.update(key, (_) => valueOf(s[key]!.key));
+                return s.update(key, (_) {
+                  final current = s[key]!;
+                  return identicalValue ? current : valueOf(current.key);
+                });
               });
             });
             addTearDown(effect.dispose);
@@ -585,6 +596,37 @@ void main() {
         });
       }
     }
+
+    test('tracked reads release slots restored by nested point callbacks', () {
+      const count = 256;
+      var comparisons = 0;
+      _CountedMapValue valueOf(int key) => _CountedMapValue(
+        key,
+        () => comparisons++,
+        onEquals: () => comparisons++,
+      );
+      final s = MapSignal(
+        {for (var i = 0; i < count; i++) i: valueOf(0)},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      final effect = Effect(() {
+        s.value;
+        s.update(0, (current) {
+          for (var key = 0; key < count; key++) {
+            s
+              ..update(key, (_) => valueOf(1))
+              ..update(key, (_) => valueOf(0))
+              ..value;
+          }
+          return current;
+        });
+      });
+      addTearDown(effect.dispose);
+
+      expect(comparisons, lessThanOrEqualTo(8 * count));
+    });
 
     test('list fillRange reads only the affected slots', () {
       final backing = _CountingList(100);
@@ -2679,6 +2721,124 @@ void main() {
         });
       }
     }
+
+    for (final history in [false, true]) {
+      for (final keepReader in [false, true]) {
+        test('a restored replacement updates a live intermediate reader '
+            '(history: $history, live: $keepReader)', () {
+          final s = MapSignal(
+            {'x': 0},
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final incumbentValues = <int>[];
+          final incumbent = Effect(() => incumbentValues.add(s['x']!));
+          addTearDown(incumbent.dispose);
+          final readerValues = <int>[];
+
+          batch(() {
+            s.update('x', (current) {
+              s['x'] = 1;
+              final transient = Effect(() => s['x']);
+              if (keepReader) {
+                final reader = Effect(() => readerValues.add(s['x']!));
+                addTearDown(reader.dispose);
+              }
+              transient.dispose();
+              s.value = {'x': 0};
+              return current;
+            });
+          });
+
+          expect(incumbentValues, [0, if (keepReader) 0]);
+          expect(readerValues, [
+            if (keepReader) ...[1, 0],
+          ]);
+        });
+      }
+    }
+
+    for (final reentrantRead in [false, true]) {
+      test('a comparison can replace a map during a tracked read '
+          '(reentrant read: $reentrantRead)', () {
+        _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+        late final MapSignal<String, _CountedMapValue> s;
+        late final Effect incumbent;
+        var replace = false;
+        final original = _CountedMapValue(
+          0,
+          () {},
+          onEquals: () {
+            if (!replace) return;
+            replace = false;
+            if (reentrantRead) incumbent.run();
+            s.value = {'x': valueOf(0)};
+          },
+        );
+        s = MapSignal(
+          {'x': original},
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        final seen = <int>[];
+        incumbent = Effect(() => seen.add(s.value['x']!.key));
+        addTearDown(incumbent.dispose);
+
+        batch(() {
+          s.update('x', (current) {
+            s['x'] = valueOf(1);
+            replace = true;
+            if (reentrantRead) {
+              Effect(() => s.value['x']).dispose();
+            } else {
+              incumbent.run();
+            }
+            return current;
+          });
+        });
+
+        expect(seen, [0, 1, 0]);
+      });
+    }
+
+    test('a failed observation comparison keeps deferred delivery', () {
+      var failHash = false;
+      final original = _CountedMapValue(0, () {
+        if (!failHash) return;
+        failHash = false;
+        throw StateError('cannot compare the intermediate map');
+      });
+      final intermediate = _CountedMapValue(1, () {});
+      final s = MapSignal(
+        {'x': original},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      final seen = <int>[];
+      final incumbent = Effect(() => seen.add(s.value['x']!.key));
+      addTearDown(incumbent.dispose);
+
+      Iterable<MapEntry<String, _CountedMapValue>> writes() sync* {
+        s['x'] = intermediate;
+        yield MapEntry('x', intermediate);
+      }
+
+      batch(() {
+        s.update('x', (current) {
+          s.addEntries(writes());
+          failHash = true;
+          Effect(() => s.value['x']).dispose();
+          s.value = {'x': original};
+          return current;
+        });
+      });
+
+      expect(failHash, isFalse);
+      expect(seen, [0, 0]);
+    });
 
     test('a tracked point read after a nested write does not scan the map', () {
       var hashCalls = 0;

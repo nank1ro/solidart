@@ -58,17 +58,19 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     final baseline = _replacementBaseline;
     final firstObserver = baseline != null && _internalSignal.subs == null;
     final value = super._value;
+    final observer = baseline == null ? null : reactiveSystem.activeSub;
     if (baseline != null &&
-        reactiveSystem.activeSub != null &&
+        observer != null &&
         identical(value, _mutating) &&
         !disposed) {
       baseline.recordRead(
-        _internalSignal.currentValue,
+        _internalSignal,
         value,
         _compare,
         _replacementSlotsMatch,
         _readReplacementSlot,
         firstObserver: firstObserver,
+        observer: observer,
       );
     }
     return value;
@@ -95,7 +97,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       }
       final snapshot = baseline.capture(committed);
       if (!signal.forceDirty && identical(signal.currentValue, committed)) {
-        if (baseline.observedChange) {
+        if (baseline.needsNotification(signal.subs)) {
           // A subscriber read an intermediate change, or a nested write
           // changed a map whose original state could not be copied.
           signal.forceDirty = true;
@@ -411,9 +413,9 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
             : ifAbsent,
       ),
       copyReplacementBaseline: equals ? _copyReplacementMap : null,
-      bulkVersion: _pointCallbackVersion(map, key),
+      bulkVersion: _pointCallbackVersion(map),
       deferReplacementWrite: deferWrite,
-      keepBulkVersion: rewindable,
+      keepBulkVersion: deferWrite,
     );
   }
 
@@ -516,21 +518,19 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       ),
       slotChanged: () => !identical(old, _readValue(map, key)),
       copyReplacementBaseline: equals ? _copyReplacementMap : null,
-      bulkVersion: _pointCallbackVersion(map, key),
+      bulkVersion: _pointCallbackVersion(map),
       deferReplacementWrite: deferWrite,
-      keepBulkVersion: rewindable,
+      keepBulkVersion: deferWrite,
     );
   }
 
   bool _deferCallbackWrite(Map<K, V> map) =>
       _replacementBaseline != null && identical(map, _mutating);
 
-  // A native point callback returns before the backing writes its slot.
+  // A point callback returns before the backing writes its slot.
   // Nested writes that can change the comparison invalidate it separately.
-  int Function(int)? _pointCallbackVersion(Map<K, V> map, K key) =>
-      equals && !identical(map, _mutating) && _hasStableSlot(map, key)
-      ? (_) => 0
-      : null;
+  int Function(int)? _pointCallbackVersion(Map<K, V> map) =>
+      equals && !identical(map, _mutating) ? (_) => 0 : null;
 
   V _beforeCallbackWrite(Map<K, V> map, K key, V next, bool rewindable) {
     // The callback may already have replaced the backing map.

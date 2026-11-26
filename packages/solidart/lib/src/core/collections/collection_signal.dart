@@ -42,8 +42,25 @@ class _ReplacementBaseline<C extends Object> {
   bool _awaitingObservation = false;
   C? _snapshot;
   Map<Object?, _ReplacementSlot>? _rewinds;
-  bool observedChange = false;
+  Set<alien_system.ReactiveNode>? _changedObservers;
+  bool _comparisonChanged = false;
+  bool _comparing = false;
+  bool _forceNotification = false;
   int writeVersion = 0;
+
+  bool needsNotification(alien_system.Link? subscriptions) {
+    if (_forceNotification || _comparing) return true;
+    final changed = _changedObservers;
+    if (changed == null) return false;
+    for (var link = subscriptions; link != null; link = link.nextSub) {
+      if (changed.contains(link.sub)) return true;
+    }
+    return false;
+  }
+
+  void _recordChangedObserver(alien_system.ReactiveNode observer) {
+    (_changedObservers ??= Set.identity()).add(observer);
+  }
 
   R runNested<R>(
     R Function(C) mutation,
@@ -76,7 +93,8 @@ class _ReplacementBaseline<C extends Object> {
       _awaitingObservation = false;
       _snapshot = null;
       _rewinds = null;
-      observedChange = false;
+      _changedObservers = null;
+      _forceNotification = false;
       try {
         final intact = check && (_useOriginal || untracked(_isIntact));
         if (identical(_committed, committed)) _intact = intact;
@@ -123,7 +141,7 @@ class _ReplacementBaseline<C extends Object> {
     writeVersion++;
     if (identical(_committed, committed) && _captured && _snapshot == null) {
       // A cast view can reject the copy before a nested write repairs it.
-      observedChange = true;
+      _forceNotification = true;
     }
   }
 
@@ -144,13 +162,15 @@ class _ReplacementBaseline<C extends Object> {
   }
 
   void recordRead(
-    Option<C> committed,
+    _AlienSignal<C> signal,
     C value,
     bool Function(C, C) equals,
     bool Function(C, Iterable<_ReplacementSlot>) slotsEqual,
     _ReplacementSlot Function(C, Object?) readSlot, {
     required bool firstObserver,
+    required alien_system.ReactiveNode observer,
   }) {
+    final committed = signal.currentValue;
     final bulkVersion = _activeBulkVersion;
     final version = bulkVersion == null ? null : untracked(bulkVersion);
     final originalBulkVersion = _originalBulkVersion;
@@ -162,8 +182,20 @@ class _ReplacementBaseline<C extends Object> {
     final readOriginal = originalVersion != null && originalVersion != 0;
     if (readOriginal) _prepare(committed);
     if (!identical(_committed, committed)) return;
-    if (firstObserver) observedChange = false;
-    if (observedChange) return;
+    if (_comparing) {
+      _forceNotification = true;
+      return;
+    }
+    if (firstObserver) {
+      _changedObservers = null;
+      _checkedBulkVersion = null;
+      _comparisonChanged = false;
+      _forceNotification = false;
+    }
+    if (_forceNotification ||
+        (_changedObservers?.contains(observer) ?? false)) {
+      return;
+    }
     if (_awaitingObservation ||
         (firstObserver &&
             (_captured ||
@@ -179,7 +211,8 @@ class _ReplacementBaseline<C extends Object> {
       _checkedBulkVersion = version;
       return;
     }
-    if (!firstObserver && version != null && version == _checkedBulkVersion) {
+    if (version != null && version == _checkedBulkVersion) {
+      if (_comparisonChanged) _recordChangedObserver(observer);
       return;
     }
     final snapshot = _useOriginal && readOriginal
@@ -187,9 +220,10 @@ class _ReplacementBaseline<C extends Object> {
         : _snapshot;
     final rewinds = _rewinds;
     if (snapshot == null && rewinds == null) return;
+    final rewindCount = rewinds?.length;
+    final writes = writeVersion;
     _checkedBulkVersion = version;
-    // A comparer can reenter this read. Keep the notification if it throws.
-    observedChange = true;
+    _comparing = true;
     try {
       final unchanged = untracked(() {
         if (rewinds == null) return equals(snapshot!, value);
@@ -199,9 +233,28 @@ class _ReplacementBaseline<C extends Object> {
         rewinds.updateAll((key, _) => readSlot(value, key));
         return true;
       });
-      if (identical(_committed, committed)) observedChange = !unchanged;
+      if (!identical(_committed, committed) ||
+          !identical(signal.currentValue, committed)) {
+        return;
+      }
+      _comparisonChanged = !unchanged;
+      if (!unchanged) {
+        _recordChangedObserver(observer);
+      } else if (!firstObserver &&
+          !_forceNotification &&
+          rewinds != null &&
+          identical(_rewinds, rewinds) &&
+          rewinds.length == rewindCount &&
+          writeVersion == writes) {
+        // Future writes only need to remember slots that changed again.
+        _rewinds = null;
+      }
     } on Object {
-      // Reading a map can succeed even if comparing it throws.
+      // Reading a map can succeed even if comparing it throws. Keep delivery
+      // in that case, since we cannot tell what the subscriber observed.
+      if (identical(_committed, committed)) _forceNotification = true;
+    } finally {
+      _comparing = false;
     }
   }
 }
