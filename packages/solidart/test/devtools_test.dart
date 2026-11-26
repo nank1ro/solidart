@@ -1,3 +1,4 @@
+import 'package:meta/meta.dart';
 import 'package:solidart/solidart.dart';
 import 'package:test/test.dart';
 
@@ -106,6 +107,49 @@ void main() {
       expect(other.disposed, isTrue);
     });
 
+    test('a Computed read by toJson keeps track of inputs for disposal', () {
+      final source = Signal(42, autoDispose: true);
+      final inner = Computed(() => source.value, autoDispose: true);
+      final outer = Computed(() => inner.value);
+      final holder = Signal(_ReadingJsonProbe(outer));
+      addTearDown(holder.dispose);
+
+      expect(outer.value, 42);
+      outer.dispose();
+
+      expect(inner.disposed, isTrue);
+      expect(source.disposed, isTrue);
+    });
+
+    test('reading map history for an event does not dispose a Computed', () {
+      final other = Computed(() => 1, autoDispose: true);
+      var readComputed = false;
+      var reads = 0;
+      final key = _ReadingMapKey(() {
+        if (readComputed) {
+          reads++;
+          other.value;
+        }
+      });
+      final map = MapSignal<Object, int>({key: 1});
+      readComputed = true;
+
+      map['new'] = 2;
+
+      expect(reads, greaterThan(0));
+      expect(other.disposed, isFalse);
+    });
+
+    test('reading the event value type does not dispose a Computed', () {
+      final other = Computed(() => 1, autoDispose: true);
+      final probe = _ReadingTypeProbe(other);
+      final holder = Signal(probe);
+      addTearDown(holder.dispose);
+
+      expect(probe.reads, greaterThan(0));
+      expect(other.disposed, isFalse);
+    });
+
     test('a throwing serialization does not keep auto-disposal off', () {
       final other = Computed(() => 1, autoDispose: true);
       final holder = Computed(() => _ThrowingProbe(other));
@@ -158,6 +202,38 @@ class _ReadingStringProbe {
 
   @override
   String toString() => 'value: ${other.value}';
+}
+
+@immutable
+class _ReadingMapKey {
+  const _ReadingMapKey(this.onHash);
+
+  final void Function() onHash;
+
+  @override
+  int get hashCode {
+    onHash();
+    return identityHashCode(this);
+  }
+
+  @override
+  bool operator ==(Object other) => identical(this, other);
+}
+
+class _ReadingTypeProbe {
+  _ReadingTypeProbe(this.other);
+
+  final Computed<int> other;
+  int reads = 0;
+
+  Object? toJson() => 0;
+
+  @override
+  Type get runtimeType {
+    reads++;
+    other.value;
+    return _ReadingTypeProbe;
+  }
 }
 
 /// Reads an autoDispose Computed, then fails in both toJson and toString.
