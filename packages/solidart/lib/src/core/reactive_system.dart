@@ -123,6 +123,10 @@ class ReactiveSystem {
   // Use setCurrentSub when you need save/restore (returns previous sub).
   // The getter above is provided for read-only inspection.
   alien_system.ReactiveNode? setCurrentSub(alien_system.ReactiveNode? sub) {
+    // A nested callback can dispose the effect it was about to restore.
+    if (sub is _AlienEffect && sub.parent.disposed) {
+      return alien.setActiveSub();
+    }
     return alien.setActiveSub(sub);
   }
 
@@ -153,6 +157,19 @@ class ReactiveSystem {
       'computed is pending while detached (deps == null) — a subscriber link '
       'was not fully unlinked',
     );
+    if (computed.flags == alien_system.ReactiveFlags.none) {
+      if (activeSub case final _AlienEffect effect) {
+        // On the first read, alien_signals would restore and link the effect
+        // even if the selector disposed it. Subscribe only if it is alive.
+        return _evaluate(() {
+          try {
+            return untracked(computed.get);
+          } finally {
+            if (!effect.parent.disposed) link(computed, effect);
+          }
+        });
+      }
+    }
     return _evaluate(computed.get);
   }
 

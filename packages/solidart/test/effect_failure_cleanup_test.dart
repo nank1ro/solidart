@@ -402,6 +402,78 @@ void main() {
     });
   });
 
+  test('a self-disposed effect does not resubscribe during its rerun', () {
+    var disposals = 0;
+    final trigger = Signal(0, autoDispose: true)..onDispose(() => disposals++);
+    final other = Signal(0);
+    addTearDown(trigger.dispose);
+    addTearDown(other.dispose);
+    late final Effect effect;
+    effect = Effect(() {
+      if (trigger.value == 0) {
+        other.value;
+        return;
+      }
+      effect.dispose();
+      trigger.value;
+    });
+    addTearDown(effect.dispose);
+
+    trigger.value = 1;
+
+    expect(effect.disposed, isTrue);
+    expect(trigger.listenerCount, 0);
+    expect(trigger.disposed, isTrue);
+    expect(disposals, 1);
+  });
+
+  test('a Computed that disposes its observing effect stays unobserved', () {
+    final trigger = Signal(0, autoDispose: true);
+    final input = Signal(1);
+    addTearDown(trigger.dispose);
+    addTearDown(input.dispose);
+    late final Effect effect;
+    final computed = Computed(() {
+      effect.dispose();
+      return input.value;
+    });
+    addTearDown(computed.dispose);
+    effect = Effect(() {
+      if (trigger.value == 0) return;
+      computed.value;
+      trigger.value;
+    });
+    addTearDown(effect.dispose);
+
+    trigger.value = 1;
+
+    expect(computed.listenerCount, 0);
+    expect(trigger.disposed, isTrue);
+    expect(input.listenerCount, 1);
+  });
+
+  test('a Computed run does not restore an effect its selector disposes', () {
+    final trigger = Signal(0, autoDispose: true);
+    addTearDown(trigger.dispose);
+    late final Effect effect;
+    final computed = Computed(() {
+      effect.dispose();
+      return 0;
+    });
+    addTearDown(computed.dispose);
+    effect = Effect(() {
+      if (trigger.value == 0) return;
+      computed.run();
+      trigger.value;
+    });
+    addTearDown(effect.dispose);
+
+    trigger.value = 1;
+
+    expect(trigger.listenerCount, 0);
+    expect(trigger.disposed, isTrue);
+  });
+
   group('#199 disposal with a throwing onDispose', () {
     test('an Effect disposes every dependency, then rethrows', () {
       final first = Signal(0, autoDispose: true)
