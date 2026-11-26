@@ -12,6 +12,17 @@ extension ObserveSignal<T> on SignalBase<T> {
   DisposeObservation observe(
     ObserveCallback<T> listener, {
     bool fireImmediately = false,
+  }) => _observeChanges(
+    () => listener(untrackedPreviousValue, untrackedValue),
+    fireImmediately: fireImmediately,
+  );
+
+  /// Calls [onChange] untracked every time the value changes. Unlike
+  /// [observe], it reads no previous value, so a collection signal does not
+  /// build its history for it.
+  DisposeObservation _observeChanges(
+    void Function() onChange, {
+    bool fireImmediately = false,
   }) {
     var skipped = false;
     final disposeEffect = Effect(() {
@@ -26,9 +37,7 @@ extension ObserveSignal<T> on SignalBase<T> {
         skipped = true;
         return;
       }
-      untracked(() {
-        listener(untrackedPreviousValue, untrackedValue);
-      });
+      untracked(onChange);
     });
 
     return () {

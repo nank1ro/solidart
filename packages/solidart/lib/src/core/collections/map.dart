@@ -68,6 +68,10 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     return _value[(key as K?)];
   }
 
+  // Only the default map shares key equality with the plain history copy.
+  // Its type arguments must match the signal's.
+  late final Type _defaultMapType = <K, V>{}.runtimeType;
+
   /// Associates the [key] with the given [value].
   ///
   /// If the key was already in the map, its associated value is changed.
@@ -76,10 +80,30 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   void operator []=(K key, V value) {
     final map = _untrackedValue;
     final old = map[key];
+    final defaultMap = trackPreviousValue && map.runtimeType == _defaultMapType;
+    final sameValue = identical(old, value);
+    final present =
+        old != null || ((defaultMap || sameValue) && map.containsKey(key));
+    // An overwrite keeps the caller's key in the undo step. The caller can
+    // change a mutable key later, so only an immutable value key is lazy.
+    // A new key is stored as it is, so only NaN cannot be undone.
+    final lazy = defaultMap && (present ? _isValueKey(key) : !_isNaN(key));
     _mutateUnless(
-      identical(old, value) && (old != null || map.containsKey(key)),
+      sameValue && present,
       (map) => map[key] = value,
       slotChanged: () => !identical(old, map[key]),
+      undo: lazy
+          ? (map) {
+              if (present) return _copyPrevious(map)..[key] = old as V;
+              // Build the map without the new key. A copy of the map would
+              // be sized for a table that may have grown for that key.
+              final copy = <K, V>{};
+              map.forEach((k, v) {
+                if (!identical(k, key)) copy[k] = v;
+              });
+              return copy;
+            }
+          : null,
     );
   }
 

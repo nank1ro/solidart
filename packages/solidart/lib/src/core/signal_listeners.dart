@@ -6,10 +6,11 @@ part of 'core.dart';
 /// [remove] call removes one registration. Listener errors are reported to
 /// [Listenable.onError] instead of being thrown.
 ///
-/// Each registration is bridged to its own solidart [ObserveSignal.observe]
-/// observation, so listeners participate in auto-disposal exactly like any
-/// other observer: adding one keeps the signal alive, and removing the last one
-/// lets the signal dispose itself when [SignalBase.autoDispose] is enabled.
+/// Each registration is bridged to its own solidart observation (like
+/// [ObserveSignal.observe], but without reading the previous value), so
+/// listeners participate in auto-disposal exactly like any other observer:
+/// adding one keeps the signal alive, and removing the last one lets the
+/// signal dispose itself when [SignalBase.autoDispose] is enabled.
 ///
 /// A listener that writes the signal it listens to is not notified of its own
 /// write, following solidart's effect re-entrancy rule. Writes inside a
@@ -35,7 +36,8 @@ class _SignalListeners<T> {
   void add(VoidCallback listener) {
     if (_signal.disposed) return;
     final observation = untracked(
-      () => _signal.observe((_, _) {
+      // A listener takes no arguments, so it must not build the history.
+      () => _signal._observeChanges(() {
         try {
           listener();
         } catch (error, stack) {

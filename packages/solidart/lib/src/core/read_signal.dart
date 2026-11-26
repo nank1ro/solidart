@@ -129,7 +129,14 @@ class ReadableSignal<T> implements ReadSignal<T> {
   bool _hasValue = false;
 
   // Tracks the internal previous value
-  T? _previousValue;
+  T? _storedPreviousValue;
+
+  void _settlePreviousValue() {}
+
+  T? get _previousValue {
+    _settlePreviousValue();
+    return _storedPreviousValue;
+  }
 
   // Whether or not there is a previous value
   bool _hasPreviousValue = false;
@@ -220,7 +227,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
     if (!trackPreviousValue) return false;
     // cause observation
     value;
-    return _hasPreviousValue;
+    return untrackedHasPreviousValue;
   }
 
   @override
@@ -238,7 +245,7 @@ class ReadableSignal<T> implements ReadSignal<T> {
   /// Sets the previous signal value to [value].
   void _setPreviousValue(T value) {
     if (!trackPreviousValue) return;
-    _previousValue = value;
+    _storedPreviousValue = value;
     _hasPreviousValue = true;
   }
 

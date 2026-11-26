@@ -160,9 +160,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// print(numbers); // [1, 2, 3, 4]
   /// ```
   @override
-  void add(E element) {
-    _resize((list) => list.add(element));
-  }
+  void add(E element) => _append((list) => list.add(element));
 
   /// Appends all objects of [iterable] to the end of this list.
   ///
@@ -490,17 +488,12 @@ class ListSignal<E> extends Signal<List<E>>
   @override
   void fillRange(int start, int end, [E? fillValue]) {
     final list = _untrackedValue;
-    if (start == end) return list.fillRange(start, end, fillValue);
-    if (0 > start || start > end || end > list.length) {
-      // The backing list throws its own error for an invalid range.
-      return _writeRange(
-        start,
-        end,
-        (list) => list.fillRange(start, end, fillValue),
-      );
+    if (start == end || 0 > start || start > end || end > list.length) {
+      // For an invalid range, the backing list throws its own error.
+      return list.fillRange(start, end, fillValue);
     }
-    // Find the first slot that the fill changes. Without one, the call
-    // changes nothing, so it needs no copy and no check.
+    // Find the first slot that differs from [fillValue]. Without one, the
+    // call changes nothing, so it needs no copy.
     var index = start;
     Object? old;
     while (index < end && identical(old = _readSlot(list, index), fillValue)) {
@@ -509,7 +502,19 @@ class ListSignal<E> extends Signal<List<E>>
     if (index == end) return list.fillRange(start, end, fillValue);
     _mutate(
       (list) => list.fillRange(start, end, fillValue),
-      slotChanged: () => !identical(old, _readSlot(list, index)),
+      // With history, compare the range with the copy. That is exact also
+      // for a list that converts the value on write (a Uint8List stores 256
+      // as 0). Without history, check only the first slot that differed.
+      bulkCheck: (list, previous) => previous == null
+          ? () => !identical(old, _readSlot(list, index))
+          : () => _rangeChanged(list, start, end - start, previous, start),
+      // A fill writes in order from its first changed slot. So after an
+      // error, that slot tells whether the fill wrote anything. A typed
+      // list rejects a fill before it writes, and reading a SIMD slot again
+      // boxes a new object.
+      failedSlotChanged: list is TypedData
+          ? () => false
+          : () => !identical(old, _readSlot(list, index)),
     );
   }
 
@@ -529,7 +534,15 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   void insert(int index, E element) {
-    _resize((list) => list.insert(index, element));
+    if (!trackPreviousValue) {
+      return _mutate((list) => list.insert(index, element));
+    }
+    final list = _untrackedValue;
+    // At the end, an insert is an add, so it can use the cheaper undo step.
+    if (index == list.length && list.runtimeType == _defaultListType) {
+      return _append((list) => list.insert(index, element));
+    }
+    _resizeAt(index, (list) => list.insert(index, element), inserting: true);
   }
 
   /// Inserts all objects of [iterable] at position [index] in this list.
@@ -591,7 +604,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   E removeAt(int index) {
-    return _resize((list) => list.removeAt(index));
+    return _resizeAt(index, (list) => list.removeAt(index));
   }
 
   /// Removes and returns the last object in this list.
@@ -604,7 +617,11 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   E removeLast() {
-    return _resize((list) => list.removeLast());
+    return _resizeAt(
+      _untrackedValue.length - 1,
+      (list) => list.removeLast(),
+      last: true,
+    );
   }
 
   /// Removes a range of elements from the list.
@@ -845,8 +862,81 @@ class ListSignal<E> extends Signal<List<E>>
   bool _elementsDiffer(List<E> list, List<E> before) =>
       !const ListEquality<Object?>(IdentityEquality()).equals(before, list);
 
+  /// Runs [write], which adds one element at the end, with the undo step
+  /// that removes it. Private, so an override of [add] is not called.
+  void _append(void Function(List<E>) write) {
+    _mutate(
+      write,
+      undo: trackPreviousValue
+          ? (list) => _copyPrevious(list)..removeLast()
+          : null,
+    );
+  }
+
   R _resize<R>(R Function(List<E>) write) =>
       _mutate(write, failedResizeChanged: _elementsDiffer);
+
+  /// Set [last] when [index] is the last slot, so the slot is read with
+  /// `last`, which a sequential backing list reads in O(1).
+  R _resizeAt<R>(
+    int index,
+    R Function(List<E>) write, {
+    bool inserting = false,
+    bool last = false,
+  }) {
+    if (!trackPreviousValue) return _mutate(write);
+    final list = _untrackedValue;
+    final valid = index >= 0 && index < list.length;
+    Object? read() => last ? _readLast(list) : _readSlot(list, index);
+    final old = valid ? read() : null;
+    return _mutate(
+      write,
+      undo: inserting
+          ? (list) => _withoutSlot(list, index)
+          : (list) => _withElementAt(list, index, old as E),
+      failedSlotChanged: () =>
+          valid && list is! TypedData && !identical(old, read()),
+    );
+  }
+
+  // A default growable list, which reads any slot in O(1).
+  late final Type _defaultListType = <E>[].runtimeType;
+
+  /// [list] with [element] back at [index]. It is built at its final length:
+  /// a copy and then an insert can grow the backing array to twice its size.
+  /// A default list is built in one pass by index. Another list is read once
+  /// with one iterator, because its indexed reads can be slow.
+  List<E> _withElementAt(List<E> list, int index, E element) {
+    if (list.runtimeType == _defaultListType) {
+      return List<E>.generate(
+        list.length + 1,
+        (i) => i < index ? list[i] : (i == index ? element : list[i - 1]),
+      );
+    }
+    final elements = list.iterator;
+    // `List.generate` calls its generator in increasing index order.
+    return List<E>.generate(list.length + 1, (i) {
+      if (i == index) return element;
+      elements.moveNext();
+      return elements.current;
+    });
+  }
+
+  /// [list] without the slot at [index], built like [_withElementAt].
+  List<E> _withoutSlot(List<E> list, int index) {
+    if (list.runtimeType == _defaultListType) {
+      return List<E>.generate(
+        list.length - 1,
+        (i) => i < index ? list[i] : list[i + 1],
+      );
+    }
+    final elements = list.iterator;
+    return List<E>.generate(list.length - 1, (i) {
+      elements.moveNext();
+      if (i == index) elements.moveNext();
+      return elements.current;
+    });
+  }
 
   // A cast view can reject a read even when the backing write is valid.
   static final _unreadable = Object();
@@ -854,6 +944,14 @@ class ListSignal<E> extends Signal<List<E>>
   Object? _readSlot(List<E> list, int index) {
     try {
       return list[index];
+    } on Object {
+      return _unreadable;
+    }
+  }
+
+  Object? _readLast(List<E> list) {
+    try {
+      return list.last;
     } on Object {
       return _unreadable;
     }
@@ -911,10 +1009,16 @@ class ListSignal<E> extends Signal<List<E>>
     final list = _untrackedValue;
     final valid = index >= 0 && index < list.length;
     final old = valid ? list[index] : null;
-    _mutateUnless(
-      valid && identical(old, value),
+    if (valid && identical(old, value)) return write(list);
+    _mutate(
       write,
       slotChanged: () => valid && !identical(old, list[index]),
+      // A typed list rejects a write before it changes the slot. Reading
+      // a SIMD slot again would box the same value in a different object.
+      failedSlotChanged: list is TypedData ? () => false : null,
+      undo: trackPreviousValue
+          ? (list) => _copyPrevious(list)..[index] = old as E
+          : null,
     );
   }
 
