@@ -56,21 +56,30 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   @override
   Map<K, V> get _value {
     final baseline = _replacementBaseline;
-    final firstObserver = baseline != null && _internalSignal.subs == null;
+    final previousTail = baseline == null ? null : _internalSignal.subsTail;
     final value = super._value;
     final observer = baseline == null ? null : reactiveSystem.activeSub;
     if (baseline != null &&
         observer != null &&
         identical(value, _mutating) &&
         !disposed) {
+      final tail = _internalSignal.subsTail;
+      final newSubscription =
+          previousTail != null &&
+              tail != null &&
+              identical(tail.prevSub, previousTail) &&
+              identical(tail.sub, observer)
+          ? tail
+          : null;
       baseline.recordRead(
         _internalSignal,
         value,
         _compare,
         _replacementSlotsMatch,
         _readReplacementSlot,
-        firstObserver: firstObserver,
+        firstObserver: previousTail == null,
         observer: observer,
+        newSubscription: newSubscription,
       );
     }
     return value;
@@ -99,8 +108,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       if (!signal.forceDirty && identical(signal.currentValue, committed)) {
         final comparison = baseline.replacementComparison(
           snapshot,
-          signal.subs,
+          signal,
+          _compare,
         );
+        if (signal.forceDirty || !identical(signal.currentValue, committed)) {
+          return;
+        }
         if (comparison.notify) {
           // A subscriber read an intermediate change, or a nested write
           // changed a map whose original state could not be copied.

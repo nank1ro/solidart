@@ -2830,6 +2830,57 @@ void main() {
 
     for (final history in [false, true]) {
       for (final opaque in [false, true]) {
+        for (final (incumbent, repeat, distinct) in [
+          (true, false, false),
+          (false, true, false),
+          (false, true, true),
+        ]) {
+          test(
+            'surviving maps agree by contents (history: $history, '
+            'opaque: $opaque, incumbent: $incumbent, distinct: $distinct)',
+            () {
+              final backing = {'x': 0};
+              final s = MapSignal(
+                opaque ? MapView(backing) : backing,
+                equals: true,
+                trackPreviousValue: history,
+              );
+              addTearDown(s.dispose);
+              var first = incumbent ? Effect(() => s['x']) : null;
+              final seen = <int>[];
+              final later = <int>[];
+              final laterValue = distinct ? 4 : 1;
+
+              batch(() {
+                s.update('x', (current) {
+                  if (!incumbent) {
+                    s['x'] = 2;
+                    first = Effect(() => s['x']);
+                  }
+                  s['x'] = 1;
+                  final survivor = Effect(() => seen.add(s['x']!));
+                  addTearDown(survivor.dispose);
+                  if (repeat) {
+                    s
+                      ..['x'] = 3
+                      ..['x'] = laterValue;
+                    final another = Effect(() => later.add(s['x']!));
+                    addTearDown(another.dispose);
+                  }
+                  first!.dispose();
+                  s
+                    ..['x'] = 2
+                    ..value = {'x': 1};
+                  return current;
+                });
+              });
+
+              expect(seen, [1, if (distinct) 1]);
+              expect(later, [if (repeat) laterValue, if (distinct) 1]);
+            },
+          );
+        }
+
         for (final (keepAnchor, reread) in [
           (false, false),
           (true, false),
@@ -2926,6 +2977,84 @@ void main() {
         });
 
         expect(seen, [0, 2, 0]);
+      });
+    }
+
+    test('an incumbent that reorders its dependencies keeps delivery', () {
+      final s = MapSignal({'x': 0}, equals: true, trackPreviousValue: false);
+      addTearDown(s.dispose);
+      final other = Signal(0);
+      addTearDown(other.dispose);
+      var mapFirst = false;
+      final seen = <int>[];
+      final incumbent = Effect(() {
+        if (!mapFirst) other.value;
+        seen.add(s.value['x']!);
+        if (mapFirst) other.value;
+      });
+      addTearDown(incumbent.dispose);
+
+      batch(() {
+        s.update('x', (current) {
+          s['x'] = 1;
+          mapFirst = true;
+          incumbent.run();
+          s
+            ..['x'] = 2
+            ..value = {'x': 1};
+          return current;
+        });
+      });
+
+      expect(seen, [0, 1, 1]);
+    });
+
+    for (final reenter in [false, true]) {
+      test('surviving map comparison handles a user hash callback '
+          '(reentrant: $reenter)', () {
+        _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+        final s = MapSignal(
+          {'x': valueOf(0)},
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        var check = false;
+        final observed = _CountedMapValue(1, () {
+          if (!check) return;
+          check = false;
+          if (!reenter) throw StateError('cannot compare observed maps');
+          s
+            ..value = {'x': valueOf(9)}
+            ..value;
+        });
+        final first = Effect(() => s.value['x']);
+        final seen = <int>[];
+        final later = <int>[];
+
+        batch(() {
+          s.update('x', (current) {
+            s['x'] = observed;
+            final survivor = Effect(() => seen.add(s.value['x']!.key));
+            addTearDown(survivor.dispose);
+            s
+              ..['x'] = valueOf(3)
+              ..['x'] = valueOf(1);
+            final another = Effect(() => later.add(s.value['x']!.key));
+            addTearDown(another.dispose);
+            first.dispose();
+            s['x'] = valueOf(2);
+            check = true;
+            s.value = {'x': valueOf(1)};
+            if (reenter) expect(s.shouldUpdate(), isFalse);
+            return current;
+          });
+        });
+
+        expect(check, isFalse);
+        final finalValue = reenter ? 9 : 1;
+        expect(seen, [1, finalValue]);
+        expect(later, seen);
       });
     }
 

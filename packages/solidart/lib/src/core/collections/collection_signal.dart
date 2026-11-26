@@ -54,21 +54,24 @@ class _ReplacementBaseline<C extends Object> {
 
   ({C? snapshot, bool notify}) replacementComparison(
     C? snapshot,
-    alien_system.Link? subscriptions,
+    _AlienSignal<C> signal,
+    bool Function(C, C) equals,
   ) {
     if (_forceNotification || _comparing) return (snapshot: null, notify: true);
     final changed = _changedObservers;
     if (changed == null) return (snapshot: snapshot, notify: false);
     C? alternate;
+    Set<C>? otherObservations;
     var anchorLive = false;
-    for (var link = subscriptions; link != null; link = link.nextSub) {
+    for (var link = signal.subs; link != null; link = link.nextSub) {
       if (changed.contains(link.sub)) {
         final observed = _alternateObservations?[link.sub];
-        if (observed == null ||
-            (alternate != null && !identical(alternate, observed))) {
-          return (snapshot: null, notify: true);
+        if (observed == null) return (snapshot: null, notify: true);
+        if (alternate == null) {
+          alternate = observed;
+        } else if (!identical(alternate, observed)) {
+          (otherObservations ??= Set.identity()).add(observed);
         }
-        alternate = observed;
       } else if (_anchorObservers?.contains(link.sub) ?? false) {
         anchorLive = true;
       }
@@ -76,17 +79,60 @@ class _ReplacementBaseline<C extends Object> {
         return (snapshot: null, notify: true);
       }
     }
+    if (otherObservations != null &&
+        !_observationsMatch(alternate!, otherObservations, signal, equals)) {
+      return (snapshot: null, notify: true);
+    }
     return (snapshot: alternate ?? snapshot, notify: false);
+  }
+
+  bool _observationsMatch(
+    C alternate,
+    Iterable<C> otherObservations,
+    _AlienSignal<C> signal,
+    bool Function(C, C) equals,
+  ) {
+    final committed = signal.currentValue;
+    final pending = signal.pendingValue;
+    final first = signal.subs;
+    final last = signal.subsTail;
+    final writes = writeVersion;
+    _comparing = true;
+    try {
+      return untracked(
+            () => otherObservations.every((map) => equals(alternate, map)),
+          ) &&
+          !_forceNotification &&
+          identical(signal.currentValue, committed) &&
+          identical(signal.pendingValue, pending) &&
+          identical(signal.subs, first) &&
+          identical(signal.subsTail, last) &&
+          writeVersion == writes;
+    } on Object {
+      // A failed comparison cannot establish that the observers agree.
+      return false;
+    } finally {
+      _comparing = false;
+    }
   }
 
   void _recordChangedObserver(
     alien_system.ReactiveNode observer,
     _AlienSignal<C> signal, {
     required bool stable,
+    required alien_system.Link? newSubscription,
   }) {
     (_changedObservers ??= Set.identity()).add(observer);
+    if (!stable) return;
+    if (_anchorObservers == null && newSubscription != null) {
+      final anchors = _anchorObservers = Set.identity();
+      for (var link = signal.subs; link != null; link = link.nextSub) {
+        // An incumbent can get a second link when its dependencies reorder.
+        if (!identical(link, newSubscription)) anchors.add(link.sub);
+      }
+    }
     final anchors = _anchorObservers;
-    if (!stable || anchors == null || anchors.contains(observer)) return;
+    if (anchors == null || anchors.contains(observer)) return;
     final committed = signal.currentValue;
     final writes = writeVersion;
     final wasComparing = _comparing;
@@ -222,6 +268,7 @@ class _ReplacementBaseline<C extends Object> {
     _ReplacementSlot Function(C, Object?) readSlot, {
     required bool firstObserver,
     required alien_system.ReactiveNode observer,
+    required alien_system.Link? newSubscription,
   }) {
     final committed = signal.currentValue;
     final bulkVersion = _activeBulkVersion;
@@ -281,7 +328,12 @@ class _ReplacementBaseline<C extends Object> {
     if (version != null && version == _checkedBulkVersion) {
       if (alternate == null) {
         if (_comparisonChanged) {
-          _recordChangedObserver(observer, signal, stable: true);
+          _recordChangedObserver(
+            observer,
+            signal,
+            stable: true,
+            newSubscription: newSubscription,
+          );
         } else {
           _anchorObservers?.add(observer);
         }
@@ -340,7 +392,12 @@ class _ReplacementBaseline<C extends Object> {
       _comparisonChanged = !unchanged || !stable;
       if (_comparisonChanged) {
         if (!stable) _checkedBulkVersion = null;
-        _recordChangedObserver(observer, signal, stable: stable);
+        _recordChangedObserver(
+          observer,
+          signal,
+          stable: stable,
+          newSubscription: newSubscription,
+        );
         return;
       }
       if (firstObserver && rewinds != null) {
