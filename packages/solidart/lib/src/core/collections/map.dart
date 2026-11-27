@@ -1125,13 +1125,30 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     final keys = before.keys.iterator;
     final values = before.values.iterator;
     var changed = false;
-    map.forEach((key, value) {
-      keys.moveNext();
-      values.moveNext();
-      if (!identical(key, keys.current) || !identical(value, values.current)) {
-        changed = true;
-      }
-    });
+    try {
+      map.forEach((key, value) {
+        keys.moveNext();
+        values.moveNext();
+        if (!identical(key, keys.current) ||
+            !identical(value, values.current)) {
+          changed = true;
+        }
+      });
+      // ignore: avoid_catching_errors
+    } on TypeError {
+      if (changed) return true;
+      // A cast map may still expose its keys when a value is unreadable.
+      final sameKeys = const IterableEquality<Object?>(
+        IdentityEquality(),
+      ).equals(before.keys, map.keys);
+      return !sameKeys ||
+          before.entries.any(
+            (entry) => !identical(_readValue(map, entry.key), entry.value),
+          );
+    } on Object {
+      // A comparison failure cannot erase a mismatch already observed.
+      return changed;
+    }
     return changed;
   }
 

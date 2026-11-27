@@ -215,6 +215,18 @@ class _ReactiveMapView extends MapView<String, int> {
   }
 }
 
+class _LateTraversalErrorView extends MapView<String, int> {
+  _LateTraversalErrorView(super.map);
+
+  bool fail = false;
+
+  @override
+  void forEach(void Function(String, int) action) {
+    super.forEach(action);
+    if (fail) throw StateError('late traversal error');
+  }
+}
+
 class _CountingSet extends DelegatingSet<int> {
   _CountingSet() : super({for (var i = 0; i < 100; i++) i});
   int scans = 0;
@@ -324,6 +336,27 @@ class _ReentrantList extends ListBase<int> {
     final callback = onWrite;
     onWrite = null;
     callback?.call();
+  }
+}
+
+class _NestedRemoveList extends _ReentrantList {
+  _NestedRemoveList(super._elements, {required this.failure});
+
+  final bool failure;
+  void Function()? onRemove;
+  void Function()? onRemoveAt;
+
+  @override
+  bool remove(Object? value) {
+    onRemove?.call();
+    if (failure) throw StateError('remove failed');
+    return _elements.remove(value);
+  }
+
+  @override
+  int removeAt(int index) {
+    onRemoveAt?.call();
+    return _elements.removeAt(index);
   }
 }
 
@@ -893,6 +926,77 @@ void main() {
   });
 
   group('lazy collection history', () {
+    test('a shrinking nested setter write leaves no lazy history', () {
+      final backing = _ReentrantList([1, 2]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      s[0] = 3;
+      final watch = _Watch<List<int>>(s, List.of);
+      List<int>? insideSetter;
+      backing.onWrite = () {
+        s.removeLast();
+        insideSetter = s.previousValue;
+      };
+
+      s[1] = 9;
+
+      expect(insideSetter, isNull);
+      expect(s.untrackedHasPreviousValue, isFalse);
+      expect(watch.effectReruns, 1);
+      expect(watch.calls, [
+        [
+          null,
+          [3],
+        ],
+      ]);
+    });
+
+    test('a second nested setter cannot rebuild invalidated lazy history', () {
+      final backing = _ReentrantList([1, 2]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      s[1] = 3;
+      final watch = _Watch<List<int>>(s, List.of);
+      backing.onWrite = () {
+        s.removeLast();
+        backing.onWrite = () {
+          expect(s.previousValue, isNull);
+          expect(s.untrackedHasPreviousValue, isFalse);
+        };
+        s[0] = 5;
+      };
+
+      s[0] = 4;
+
+      expect(watch.effectReruns, 1);
+      expect(watch.calls, [
+        [
+          null,
+          [5],
+        ],
+      ]);
+    });
+
+    test('a custom append cannot invent history for a repaired slot', () {
+      final elements = <Object>[1, 'unread'];
+      final backing = _ReentrantList(elements.cast<int>());
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      final watch = _Watch<List<int>>(s, List.of);
+      backing.beforeAdd = () => elements[1] = 7;
+
+      s.add(3);
+
+      expect(s.untrackedHasPreviousValue, isFalse);
+      expect(watch.effectReruns, 1);
+      expect(watch.calls, [
+        [
+          null,
+          [1, 7, 3],
+        ],
+      ]);
+    });
+
     test('a custom append keeps history when it changes an existing slot', () {
       final backing = _ReentrantList([1]);
       final s = ListSignal<int>([])..value = backing;
@@ -1850,6 +1954,125 @@ void main() {
       addTearDown(s.dispose);
       return _Watch<List<T>>(s, List<T>.of);
     }
+
+    test('restoration comparison preserves a replacement from a getter', () {
+      final backing = _ReentrantList([1]);
+      final s = ListSignal<int>([])..value = backing;
+      final w = watch(s);
+      final replacement = [8];
+      backing.afterAdd = () {
+        s
+          ..value = [9]
+          ..value = backing;
+        backing._elements[0] = 7;
+        backing.onRead = (_) {
+          backing.onRead = null;
+          s.value = replacement;
+        };
+      };
+
+      s.add(2);
+
+      expect(s.untrackedValue, same(replacement));
+      expect(s.untrackedPreviousValue, same(backing));
+      expect(w.effectReruns, 3);
+      expect(w.calls.map((call) => call[1]), [
+        [9],
+        [1, 2],
+        [8],
+      ]);
+    });
+
+    for (final failure in [false, true]) {
+      test(
+        'nested resize bookkeeping does not track reads, failure $failure',
+        () {
+          final dependency = Signal(0);
+          final backing = _NestedRemoveList([1], failure: failure);
+          final s = ListSignal<int>([], trackPreviousValue: false)
+            ..value = backing;
+          addTearDown(dependency.dispose);
+          addTearDown(s.dispose);
+          var duringComparison = false;
+          backing
+            ..onRead = (_) {
+              if (duringComparison == failure) dependency.value;
+            }
+            ..onRemove = () {
+              duringComparison = true;
+            }
+            ..afterAdd = () {
+              if (failure) {
+                expect(() => s.remove(9), throwsStateError);
+              } else {
+                expect(s.remove(9), isFalse);
+              }
+            };
+          var runs = 0;
+          final effect = Effect(() {
+            runs++;
+            s.add(2);
+          });
+          addTearDown(effect.dispose);
+
+          dependency.value++;
+
+          expect(runs, 1);
+        },
+      );
+    }
+
+    test('nested resize uses the backing captured before its snapshot', () {
+      final backing = _NestedRemoveList([1], failure: false);
+      final s = ListSignal<int>([], trackPreviousValue: false)..value = backing;
+      final w = watch(s);
+      final replacement = [1, 9];
+      backing.afterAdd = () {
+        backing.onRead = (_) {
+          backing.onRead = null;
+          s.value = replacement;
+        };
+        s.remove(1);
+      };
+
+      s.add(2);
+
+      expect(backing, [2]);
+      expect(s.untrackedValue, same(replacement));
+      expect(replacement, [1, 9]);
+      expect(w.effectReruns, 1);
+    });
+
+    test('deferred nested resize comparison does not track reads', () {
+      final dependency = Signal(0);
+      final backing = _NestedRemoveList([1, 2], failure: false);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(dependency.dispose);
+      addTearDown(s.dispose);
+      var comparing = false;
+      backing
+        ..onRead = (_) {
+          if (comparing) dependency.value;
+        }
+        ..onRemove = () {
+          expect(() => s.removeAt(0), throwsStateError);
+        }
+        ..onRemoveAt = () {
+          comparing = true;
+          throw StateError('removeAt failed');
+        };
+      var runs = 0;
+      final effect = Effect(() {
+        runs++;
+        comparing = false;
+        expect(s.remove(9), isFalse);
+      });
+      addTearDown(effect.dispose);
+
+      dependency.value++;
+
+      expect(runs, 1);
+    });
 
     test('a callback that assigns a value keeps the old list as previous', () {
       final s = ListSignal([1, 2]);
@@ -6094,6 +6317,59 @@ void main() {
   });
 
   group('edge cases of typed lists and cast maps (#208)', () {
+    for (final changed in [false, true]) {
+      test(
+        'shared map traversal preserves a known mismatch, changed $changed',
+        () {
+          final raw = {'a': 1, 'b': 2};
+          final view = _LateTraversalErrorView(raw);
+          final s = MapSignal(raw);
+          addTearDown(s.dispose);
+          final seen = <int?>[];
+          final effect = Effect(() => seen.add(s.value['a']));
+          addTearDown(effect.dispose);
+
+          s.updateAll((key, value) {
+            if (key != 'a') return value;
+            s.value = view;
+            view.fail = true;
+            return changed ? 3 : value;
+          });
+
+          expect(seen, [1, 1, if (changed) 3]);
+        },
+      );
+    }
+
+    for (final (history, unreadableFirst) in [
+      (false, false),
+      (true, false),
+      (false, true),
+      (true, true),
+    ]) {
+      test('a shared map replacement reports a mismatch with a cast error, '
+          'history $history, unreadable first $unreadableFirst', () {
+        final raw = unreadableFirst
+            ? <String, Object?>{'b': 2, 'a': 1}
+            : <String, Object?>{'a': 1, 'b': 2};
+        final s = MapSignal(raw, trackPreviousValue: history);
+        addTearDown(s.dispose);
+        final seen = <Object?>[];
+        final effect = Effect(() => seen.add(s.value['a']));
+        addTearDown(effect.dispose);
+
+        s.updateAll((key, value) {
+          if (key != 'a') return value;
+          s.value = raw.cast<String, int>();
+          raw['b'] = 'unreadable';
+          return 3;
+        });
+
+        expect(seen, [1, 1, 3]);
+        expect(s.untrackedPreviousValue, history ? {'a': 1, 'b': 2} : null);
+      });
+    }
+
     final unmodifiableMaps = <String, Map<Object, num>>{
       'view': UnmodifiableMapView({Object(): 1}),
       'factory': Map<Object, int>.unmodifiable({Object(): 1}),

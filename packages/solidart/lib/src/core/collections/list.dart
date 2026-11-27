@@ -911,17 +911,20 @@ class ListSignal<E> extends Signal<List<E>>
   }
 
   R _resize<R>(R Function(List<E>) write) {
-    final list = _mutating;
+    final list = _untrackedValue;
     // Without an enclosing copy, a nested resize checks its own changes.
     final needsCheck =
-        list != null &&
+        identical(list, _mutating) &&
         _mutatingPrevious == null &&
-        identical(list, _untrackedValue) &&
         _backingOf(list) == _ListBacking.opaque;
+    final changed = needsCheck
+        ? untracked(() => _saveRange(list, 0, list.length))
+        : null;
     return _mutate(
       write,
+      backing: list,
       failedResizeChanged: _elementsDiffer,
-      failedSlotChanged: needsCheck ? _saveRange(list, 0, list.length) : null,
+      failedSlotChanged: changed == null ? null : () => untracked(changed),
     );
   }
 
@@ -936,13 +939,12 @@ class ListSignal<E> extends Signal<List<E>>
         (!trackPreviousValue && _castListTypes.contains(list.runtimeType))) {
       return _mutate(write, backing: list, undo: undo);
     }
-    return _opaquePointResize(list, write, undo, savePreviousOnNestedWrite);
+    return _opaquePointResize(list, write, savePreviousOnNestedWrite);
   }
 
   R _opaquePointResize<R>(
     List<E> list,
     R Function(List<E>) write,
-    List<E> Function(List<E>)? undo,
     bool savePreviousOnNestedWrite,
   ) {
     if (identical(_mutating, list) && _mutatingPrevious != null) {
@@ -950,7 +952,6 @@ class ListSignal<E> extends Signal<List<E>>
       return _mutate(
         write,
         backing: list,
-        undo: undo,
         failedResizeChanged: _elementsDiffer,
       );
     }
@@ -962,7 +963,8 @@ class ListSignal<E> extends Signal<List<E>>
     return _mutate(
       write,
       backing: list,
-      undo: restore ?? undo,
+      undo: restore,
+      copyPrevious: readable ? null : (_) => null,
       slotChanged: () =>
           untracked(() => _rangeChanged(list, 0, before.length, before, 0)),
       undoDuringWrite: restore,

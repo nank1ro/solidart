@@ -125,7 +125,7 @@ SolidartConfig.trackPreviousValue = false;
 
 Some point writes on collection signals save only the information needed to rebuild the previous value. The first history read can then visit all entries to build that value. `toString()` summarizes a large previous collection and can leave a large lazy snapshot pending.
 
-For `ListSignal<T>`, point resizes use bounded checks for native backings with matching type arguments and for growable numeric lists assigned to a wider signal. Other backings may require an element comparison to detect partial writes. `ListSignal<T>(values)` creates a native backing with the signal's type arguments.
+For `ListSignal<T>`, point resizes use bounded checks for native backings with matching type arguments and for growable numeric lists assigned to a wider signal. Other backings may require an element comparison to detect partial writes. The constructor uses `values.toList()`, which may preserve an element type narrower than `T`.
 
 For `fillRange`, SDK `UnmodifiableListView<T>` backings with matching element types take a path that reads no elements. Subclasses and views with narrower element types use the element comparison path. Reads that create a new object each time can report a change on that path even when a write throws.
 

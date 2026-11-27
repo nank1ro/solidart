@@ -839,24 +839,34 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
         changedAfterRestore = untracked(
           () => _restoredContentsDiffer!(collection, restoration.snapshot),
         );
+        if (!identical(_untrackedValue, collection)) return;
         if (changedAfterRestore || !restoration.mayCoalesce) {
           changed = changedAfterRestore;
           return;
         }
       }
       final slotCheck = errors.hasError ? failedSlotChanged ?? check : check;
+      final before = previous;
       changed =
           nestedChanged ||
           length != _lengthOf(collection) ||
           (slotCheck?.call() ?? false) ||
           (!nested &&
               !comparesAllElements &&
-              previous != null &&
-              (resizeCheck?.call(collection, previous) ?? false));
+              before != null &&
+              resizeCheck != null &&
+              untracked(() => resizeCheck(collection, before)));
     });
     if (nested) {
       if (changed) {
         outerBaseline?.recordWriteResult(_internalSignal.currentValue);
+        // With no pre-write copy, an effective nested write invalidates
+        // the old undo before another callback can try to apply it.
+        if (_mutatingPrevious == null && _pendingUndo != null) {
+          _hasPreviousValue = false;
+          _pendingUndo = null;
+          _pendingPreviousLength = null;
+        }
       }
       _nestedChanged |= changed;
       // Leave a failed resize to the outermost mutation that has a copy.
