@@ -1025,6 +1025,57 @@ void main() {
       expect(runs, 1);
     });
 
+    test('a recursive history read does not rebuild the same map again', () {
+      late final MapSignal<Object, int> s;
+      var hashes = 0;
+      Map<Object, int>? recursiveValue;
+      bool? recursiveHasPreviousValue;
+      final key = _HashKey(() {
+        if (++hashes == 1) {
+          recursiveHasPreviousValue = s.untrackedHasPreviousValue;
+          recursiveValue = s.untrackedPreviousValue;
+        }
+        return 1;
+      });
+      // Prevent reentry while building the initial map.
+      hashes = 1;
+      s = MapSignal({key: 0});
+      addTearDown(s.dispose);
+      s['new'] = 1;
+      hashes = 0;
+
+      final history = s.untrackedPreviousValue;
+
+      expect(hashes, 1);
+      expect(recursiveHasPreviousValue, isFalse);
+      expect(recursiveValue, isNull);
+      expect(history, {key: 0});
+      expect(s.untrackedPreviousValue, same(history));
+    });
+
+    test('a history read settles a newer write made during the rebuild', () {
+      late final MapSignal<Object, int> s;
+      var writeDuringRebuild = false;
+      final key = _HashKey(() {
+        if (writeDuringRebuild) {
+          writeDuringRebuild = false;
+          s['old'] = 2;
+        }
+        return 1;
+      });
+      s = MapSignal({'old': 1, key: 0});
+      addTearDown(s.dispose);
+      s['new'] = 3;
+      writeDuringRebuild = true;
+
+      final history = s.untrackedPreviousValue;
+
+      expect(s.untrackedValue, {'old': 2, key: 0, 'new': 3});
+      expect(s.untrackedHasPreviousValue, isTrue);
+      expect(history, {'old': 1, key: 0, 'new': 3});
+      expect(s.untrackedPreviousValue, same(history));
+    });
+
     test('custom and identity maps copy history before the write', () {
       final maps = [
         LinkedHashMap<String, int>(
