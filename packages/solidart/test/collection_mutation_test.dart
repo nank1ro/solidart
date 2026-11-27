@@ -358,6 +358,70 @@ class _ReentrantList extends ListBase<int> {
   }
 }
 
+class _ReentrantLengthList extends DelegatingList<int> {
+  _ReentrantLengthList(super.base);
+
+  void Function()? onLength;
+
+  @override
+  int get length {
+    final callback = onLength;
+    onLength = null;
+    callback?.call();
+    return super.length;
+  }
+}
+
+class _RejectingRemovalList extends _ReentrantList {
+  _RejectingRemovalList(super._elements, {required this.changesSlot});
+
+  final bool changesSlot;
+  final error = UnsupportedError('removal rejected');
+
+  @override
+  int removeAt(int index) {
+    if (changesSlot) _elements[index] = 9;
+    throw error;
+  }
+
+  @override
+  int removeLast() => removeAt(length - 1);
+}
+
+class _UnstableLengthRemovalList extends _RejectingRemovalList {
+  _UnstableLengthRemovalList(super._elements) : super(changesSlot: false);
+
+  var _readsAfterRejection = 0;
+  bool rejected = false;
+
+  @override
+  int get length => rejected && ++_readsAfterRejection > 1 ? 1 : super.length;
+
+  @override
+  int removeLast() {
+    rejected = true;
+    throw error;
+  }
+}
+
+class _RegeneratingRemovalList extends _RegeneratingObjects {
+  var _first = _Same(1);
+  void Function()? onRead;
+
+  @override
+  _Same operator [](int index) {
+    if (index == 0) return _first;
+    onRead?.call();
+    return super[index];
+  }
+
+  @override
+  void operator []=(int index, _Same value) => _first = value;
+
+  @override
+  _Same removeAt(int index) => throw UnsupportedError('removal rejected');
+}
+
 class _NestedRemoveList extends _ReentrantList {
   _NestedRemoveList(super._elements, {required this.failure});
 
@@ -1035,6 +1099,136 @@ void main() {
 
       expect(() => s.add(3), throwsUnsupportedError);
       backing.onRead = null;
+
+      expect(seen, [1, 7, 8]);
+      expect(s.untrackedPreviousValue, [7, 2]);
+    });
+
+    for (final history in [false, true]) {
+      test('removeLast keeps its backing when a length getter replaces it, '
+          'history $history', () {
+        final original = [1, 2];
+        final backing = _ReentrantLengthList(original);
+        final replacement = [9, 10, 11];
+        final s = ListSignal<int>([], trackPreviousValue: history)
+          ..value = backing;
+        addTearDown(s.dispose);
+        final w = _Watch<List<int>>(s, List.of);
+        backing.onLength = () => s.value = replacement;
+
+        expect(s.removeLast(), 2);
+
+        expect(original, [1]);
+        expect(s.untrackedValue, same(replacement));
+        expect(replacement, [9, 10, 11]);
+        expect(w.effectReruns, 1);
+        expect(s.untrackedPreviousValue, same(history ? backing : null));
+      });
+
+      for (final last in [false, true]) {
+        for (final changesSlot in [false, true]) {
+          test('a rejected removal after interrupted snapshots, '
+              'history $history, last $last, changed $changesSlot', () {
+            final backing = _RejectingRemovalList([
+              1,
+              2,
+            ], changesSlot: changesSlot);
+            final s = ListSignal<int>([], trackPreviousValue: history)
+              ..value = backing;
+            addTearDown(s.dispose);
+            final seen = <List<int>>[];
+            final effect = Effect(() {
+              s.value;
+              seen.add(List.of(backing._elements));
+            });
+            addTearDown(effect.dispose);
+            var writes = 0;
+            backing.onRead = (index) {
+              if (index == 1 && writes < 2) s[0] = 7 + writes++;
+            };
+
+            expect(
+              () => last ? s.removeLast() : s.removeAt(1),
+              throwsA(same(backing.error)),
+            );
+            backing.onRead = null;
+
+            expect(s.untrackedValue, changesSlot ? [8, 9] : [8, 2]);
+            expect(seen, [
+              [1, 2],
+              [7, 2],
+              [8, 2],
+              if (changesSlot) [8, 9],
+            ]);
+            expect(
+              s.untrackedPreviousValue,
+              history && !changesSlot ? [7, 2] : null,
+            );
+          });
+        }
+      }
+    }
+
+    for (final index in [1, 2]) {
+      test('an unavailable target slot preserves the original removal error, '
+          'index $index', () {
+        final backing = _RejectingRemovalList([1, 2], changesSlot: false);
+        final s = ListSignal<int>([])..value = backing;
+        addTearDown(s.dispose);
+        final seen = <int>[];
+        final effect = Effect(() => seen.add(s.value[0]));
+        addTearDown(effect.dispose);
+        var writes = 0;
+        backing.onRead = (readIndex) {
+          if (readIndex == 1 && writes < 3) s[0] = 7 + writes++;
+        };
+
+        expect(() => s.removeAt(index), throwsA(same(backing.error)));
+        backing.onRead = null;
+
+        expect(seen, [1, 7, 8, if (index == 1) 9]);
+        expect(s.untrackedPreviousValue, index == 1 ? [8, 2] : [7, 2]);
+      });
+    }
+
+    test(
+      'regenerated slot reads do not turn a rejected removal into a write',
+      () {
+        final backing = _RegeneratingRemovalList();
+        final s = ListSignal<_Same>([])..value = backing;
+        addTearDown(s.dispose);
+        final seen = <int>[];
+        final effect = Effect(() => seen.add(s.value[0].order));
+        addTearDown(effect.dispose);
+        var writes = 0;
+        backing.onRead = () {
+          if (writes < 2) s[0] = _Same(7 + writes++);
+        };
+
+        expect(() => s.removeAt(1), throwsUnsupportedError);
+        backing.onRead = null;
+
+        expect(seen, [1, 7, 8]);
+        expect(s.untrackedPreviousValue?.first.order, 7);
+      },
+    );
+
+    test('a rejected removeLast never compares two different target slots', () {
+      final backing = _UnstableLengthRemovalList([1, 2]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(s.value[0]));
+      addTearDown(effect.dispose);
+      var writes = 0;
+      backing.onRead = (index) {
+        if (index == 1 && writes < 2) s[0] = 7 + writes++;
+      };
+
+      expect(s.removeLast, throwsA(same(backing.error)));
+      backing
+        ..onRead = null
+        ..rejected = false;
 
       expect(seen, [1, 7, 8]);
       expect(s.untrackedPreviousValue, [7, 2]);

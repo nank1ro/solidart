@@ -180,7 +180,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// print(numbers); // [1, 2, 3, 4]
   /// ```
   @override
-  void add(E element) => _append((list) => list.add(element));
+  void add(E element) => _append(_untrackedValue, (list) => list.add(element));
 
   /// Appends all objects of [iterable] to the end of this list.
   ///
@@ -567,9 +567,10 @@ class ListSignal<E> extends Signal<List<E>>
     if (trackPreviousValue &&
         index == list.length &&
         list.runtimeType == _defaultListType) {
-      return _append((list) => list.insert(index, element));
+      return _append(list, (list) => list.insert(index, element));
     }
     _pointResize(
+      list,
       (list) => list.insert(index, element),
       undo: trackPreviousValue ? (list) => _withoutSlot(list, index) : null,
     );
@@ -634,7 +635,7 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   E removeAt(int index) {
-    return _removeSlot(index, (list) => list.removeAt(index));
+    return _removeSlot(_untrackedValue, index, (list) => list.removeAt(index));
   }
 
   /// Removes and returns the last object in this list.
@@ -647,7 +648,13 @@ class ListSignal<E> extends Signal<List<E>>
   /// ```
   @override
   E removeLast() {
-    return _removeSlot(_untrackedValue.length - 1, (list) => list.removeLast());
+    final list = _untrackedValue;
+    return _removeSlot(
+      list,
+      list.length - 1,
+      (list) => list.removeLast(),
+      last: true,
+    );
   }
 
   /// Removes a range of elements from the list.
@@ -900,8 +907,9 @@ class ListSignal<E> extends Signal<List<E>>
 
   /// Runs [write], which adds one element at the end, with the undo step
   /// that removes it. Private, so an override of [add] is not called.
-  void _append(void Function(List<E>) write) {
+  void _append(List<E> list, void Function(List<E>) write) {
     _pointResize(
+      list,
       write,
       undo: trackPreviousValue
           ? (list) => _copyPrevious(list)..removeLast()
@@ -930,23 +938,33 @@ class ListSignal<E> extends Signal<List<E>>
 
   @pragma('vm:prefer-inline')
   R _pointResize<R>(
+    List<E> list,
     R Function(List<E>) write, {
     List<E> Function(List<E>)? undo,
     bool savePreviousOnNestedWrite = false,
+    int? removalIndex,
+    bool removesLast = false,
   }) {
-    final list = _untrackedValue;
-    if ((_backing ?? _backingOf(list)) != _ListBacking.opaque ||
+    if (_backingOf(list) != _ListBacking.opaque ||
         (!trackPreviousValue && _castListTypes.contains(list.runtimeType))) {
       return _mutate(write, backing: list, undo: undo);
     }
-    return _opaquePointResize(list, write, savePreviousOnNestedWrite);
+    return _opaquePointResize(
+      list,
+      write,
+      savePreviousOnNestedWrite,
+      removalIndex: removalIndex,
+      removesLast: removesLast,
+    );
   }
 
   R _opaquePointResize<R>(
     List<E> list,
     R Function(List<E>) write,
-    bool savePreviousOnNestedWrite,
-  ) {
+    bool savePreviousOnNestedWrite, {
+    required int? removalIndex,
+    required bool removesLast,
+  }) {
     if (identical(_mutating, list) && _mutatingPrevious != null) {
       // The enclosing mutation checks its copy against the final contents.
       return _mutate(
@@ -968,6 +986,37 @@ class ListSignal<E> extends Signal<List<E>>
     final restore = trackPreviousValue && readable && stable
         ? restorePrevious
         : null;
+    bool Function()? failedSlotChanged;
+    if (!stable && removalIndex != null && identical(list, _untrackedValue)) {
+      // A fresh read can still establish whether a rejected removal wrote
+      // its target slot. Use the current length for removeLast.
+      ({int index, E value})? readSlot() {
+        try {
+          final index = removesLast ? list.length - 1 : removalIndex;
+          final value = list[index];
+          if (removesLast && list.length - 1 != index) return null;
+          // Some views create a fresh object each time they read a slot.
+          return identical(value, list[index])
+              ? (index: index, value: value)
+              : null;
+        } on Object {
+          return null;
+        }
+      }
+
+      final slotVersion = _mutationVersion;
+      final oldSlot = untracked(readSlot);
+      if (slotVersion == _mutationVersion && oldSlot != null) {
+        failedSlotChanged = () => untracked(() {
+          if (slotVersion != _mutationVersion) return false;
+          final newSlot = readSlot();
+          return slotVersion == _mutationVersion &&
+              newSlot != null &&
+              newSlot.index == oldSlot.index &&
+              !identical(newSlot.value, oldSlot.value);
+        });
+      }
+    }
     return _mutate(
       write,
       backing: list,
@@ -978,17 +1027,28 @@ class ListSignal<E> extends Signal<List<E>>
               () => _rangeChanged(list, 0, before.length, before, 0),
             )
           : null,
+      failedSlotChanged: failedSlotChanged,
       undoDuringWrite: restore,
       copyPreviousOnNestedWrite: savePreviousOnNestedWrite ? restore : null,
     );
   }
 
-  E _removeSlot(int index, E Function(List<E>) write) {
-    if (!trackPreviousValue) return _pointResize(write);
+  E _removeSlot(
+    List<E> list,
+    int index,
+    E Function(List<E>) write, {
+    bool last = false,
+  }) {
+    if (!trackPreviousValue) {
+      return _pointResize(list, write, removalIndex: index, removesLast: last);
+    }
     late E removed;
     return _pointResize(
+      list,
       (list) => removed = write(list),
       undo: (list) => _withElementAt(list, index, removed),
+      removalIndex: index,
+      removesLast: last,
     );
   }
 
