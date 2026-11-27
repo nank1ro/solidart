@@ -1,9 +1,9 @@
 ## 3.0.0-dev.6
 
-- **PERF**: DevTools builds events only while the Extension stream has a listener. Map values preserve distinct entries with identical serialized keys ([#211](https://github.com/nank1ro/solidart/issues/211)).
-
 - **FIX**: An in-place change releases a replaced backing collection once it is no longer needed for history, including when the last subscriber leaves during a batch ([#211](https://github.com/nank1ro/solidart/issues/211)).
 - **FIX**: When a `MapSignal.update` callback replaces a map with `equals: true` inside a batch, the write to the outgoing map no longer hides the replacement from effects. A batch that restores equal contents still skips the notification ([#208](https://github.com/nank1ro/solidart/issues/208)).
+
+- **PERF**: DevTools builds events only while the Extension stream has a listener. Map values preserve distinct entries with identical serialized keys ([#211](https://github.com/nank1ro/solidart/issues/211)).
 
 ## 3.0.0-dev.5
 
