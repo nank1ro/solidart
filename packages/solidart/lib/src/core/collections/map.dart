@@ -46,12 +46,43 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   bool _compare(Map<K, V>? oldValue, Map<K, V>? newValue) {
     // skip if the value are equals
     if (equals) {
+      if (identical(oldValue, newValue)) return true;
+      if (oldValue is LinkedHashMap<K, V> &&
+          newValue is LinkedHashMap<K, V> &&
+          oldValue.runtimeType == _defaultMapType &&
+          newValue.runtimeType == _defaultMapType &&
+          oldValue.length == newValue.length &&
+          _orderedEntriesMatch(oldValue, newValue)) {
+        return true;
+      }
       return MapEquality<K, V>().equals(oldValue, newValue);
     }
 
     // return the [comparator] result
     return comparator(oldValue, newValue);
   }
+
+  // Match ordinary entries without hashing. Differently ordered maps and
+  // entries with user-defined equality still use MapEquality.
+  bool _orderedEntriesMatch(Map<K, V> oldValue, Map<K, V> newValue) {
+    final oldKeys = oldValue.keys.iterator;
+    final newKeys = newValue.keys.iterator;
+    final oldValues = oldValue.values.iterator;
+    final newValues = newValue.values.iterator;
+    while (oldKeys.moveNext()) {
+      newKeys.moveNext();
+      oldValues.moveNext();
+      newValues.moveNext();
+      if (!_samePrimitiveValue(oldKeys.current, newKeys.current) ||
+          !_samePrimitiveValue(oldValues.current, newValues.current)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool _samePrimitiveValue(Object? oldValue, Object? newValue) =>
+      _isValueKey(oldValue) && _isValueKey(newValue) && oldValue == newValue;
 
   @override
   Map<K, V> get _value {
@@ -256,6 +287,10 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     value;
     return _value.values;
   }
+
+  /// Applies [action] to each key/value pair in the map.
+  @override
+  void forEach(void Function(K key, V value) action) => _value.forEach(action);
 
   /// Removes [key] and its associated value, if present, from the map.
   ///

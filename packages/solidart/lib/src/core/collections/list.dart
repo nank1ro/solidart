@@ -139,6 +139,18 @@ class ListSignal<E> extends Signal<List<E>>
     return _value[index];
   }
 
+  /// Whether the list contains an element equal to [element].
+  @override
+  bool contains(Object? element) => _value.contains(element);
+
+  /// The first index at or after [start] with an element equal to [element],
+  /// or -1 if no element matches.
+  @override
+  int indexOf(Object? element, [int start = 0]) {
+    // A backing List<E>.indexOf can reject queries outside its element type.
+    return _value.indexWhere((item) => item == element, start);
+  }
+
   /// Sets the value at the given [index] in the list to [value].
   ///
   /// The [index] must be a valid index of this list,
