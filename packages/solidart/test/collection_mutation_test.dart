@@ -239,6 +239,7 @@ class _ReentrantList extends ListBase<int> {
   _ReentrantList(this._elements);
 
   final List<int> _elements;
+  void Function(int)? onRead;
   void Function()? onWrite;
 
   @override
@@ -248,7 +249,10 @@ class _ReentrantList extends ListBase<int> {
   set length(int newLength) => _elements.length = newLength;
 
   @override
-  int operator [](int index) => _elements[index];
+  int operator [](int index) {
+    onRead?.call(index);
+    return _elements[index];
+  }
 
   @override
   void operator []=(int index, int value) {
@@ -1023,6 +1027,77 @@ void main() {
       addTearDown(effect.dispose);
       dependency.value++;
       expect(runs, 1);
+    });
+
+    test('a recursive history read does not rebuild the same map again', () {
+      late final MapSignal<Object, int> s;
+      var hashes = 0;
+      Map<Object, int>? recursiveValue;
+      bool? recursiveHasPreviousValue;
+      final key = _HashKey(() {
+        if (++hashes == 1) {
+          recursiveHasPreviousValue = s.untrackedHasPreviousValue;
+          recursiveValue = s.untrackedPreviousValue;
+        }
+        return 1;
+      });
+      // Prevent reentry while building the initial map.
+      hashes = 1;
+      s = MapSignal({key: 0});
+      addTearDown(s.dispose);
+      s['new'] = 1;
+      hashes = 0;
+
+      final history = s.untrackedPreviousValue;
+
+      expect(hashes, 1);
+      expect(recursiveHasPreviousValue, isFalse);
+      expect(recursiveValue, isNull);
+      expect(history, {key: 0});
+      expect(s.untrackedPreviousValue, same(history));
+    });
+
+    test('a history read settles a newer write made during the rebuild', () {
+      late final MapSignal<Object, int> s;
+      var writeDuringRebuild = false;
+      final key = _HashKey(() {
+        if (writeDuringRebuild) {
+          writeDuringRebuild = false;
+          s['old'] = 2;
+        }
+        return 1;
+      });
+      s = MapSignal({'old': 1, key: 0});
+      addTearDown(s.dispose);
+      s['new'] = 3;
+      writeDuringRebuild = true;
+
+      final history = s.untrackedPreviousValue;
+
+      expect(s.untrackedValue, {'old': 2, key: 0, 'new': 3});
+      expect(s.untrackedHasPreviousValue, isTrue);
+      expect(history, {'old': 1, key: 0, 'new': 3});
+      expect(s.untrackedPreviousValue, same(history));
+    });
+
+    test('a history read retries at most one superseding write', () {
+      final backing = _ReentrantList([0, 1]);
+      final s = ListSignal<int>([])
+        ..value = backing
+        ..[1] = 2;
+      addTearDown(s.dispose);
+      var writes = 0;
+      backing.onRead = (index) {
+        // Cap the fixture so the regression also finishes before the fix.
+        if (index == 0 && writes < 3) s[1] = 3 + writes++;
+      };
+
+      final previous = s.untrackedPreviousValue;
+
+      expect(writes, 2);
+      expect(previous, isNull);
+      backing.onRead = null;
+      expect(s.untrackedPreviousValue, [0, 3]);
     });
 
     test('custom and identity maps copy history before the write', () {

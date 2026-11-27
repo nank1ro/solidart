@@ -2,6 +2,7 @@
 
 - **FIX**: An in-place change releases a replaced backing collection once it is no longer needed for history, including when the last subscriber leaves during a batch ([#211](https://github.com/nank1ro/solidart/issues/211)).
 - **FIX**: When a `MapSignal.update` callback replaces a map with `equals: true` inside a batch, the write to the outgoing map no longer hides the replacement from effects. A batch that restores equal contents still skips the notification ([#208](https://github.com/nank1ro/solidart/issues/208)).
+- **FIX**: Rebuilding lazy collection history skips recursive reads of the same previous value. A recursive read reports no history until the copy is ready. When a write replaces history during a rebuild, the original read returns the new history ([#208](https://github.com/nank1ro/solidart/issues/208), [#211](https://github.com/nank1ro/solidart/issues/211)).
 
 ## 3.0.0-dev.5
 

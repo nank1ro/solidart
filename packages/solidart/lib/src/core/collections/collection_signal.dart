@@ -537,22 +537,52 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// through [_setPreviousValue], which clears it.
   C Function(C)? _pendingUndo;
 
+  /// The undo step currently building history on this call stack.
+  C Function(C)? _settlingUndo;
+
+  @override
+  bool get untrackedHasPreviousValue {
+    final settling = _settlingUndo;
+    return (settling == null || !identical(_pendingUndo, settling)) &&
+        super.untrackedHasPreviousValue;
+  }
+
   @override
   void _settlePreviousValue() {
     final undo = _pendingUndo;
     // A separate method, so a read with nothing pending allocates no
     // closure.
-    if (undo != null) _applyPendingUndo(undo);
+    if (undo != null && !identical(undo, _settlingUndo)) {
+      _applyPendingUndo(undo);
+    }
   }
 
   void _applyPendingUndo(C Function(C) undo) {
-    final current = _untrackedValue;
-    // A callback can read history while its outer mutation is in progress.
-    final source = identical(_mutating, current)
-        ? _mutatingPrevious ?? current
-        : current;
-    final previous = untracked(() => undo(source));
-    if (identical(_pendingUndo, undo)) _setPreviousValue(previous);
+    final outerUndo = _settlingUndo;
+    try {
+      var step = undo;
+      // One retry settles a superseding write. Repeated writes leave the
+      // newest undo available to a later history read.
+      for (var attempt = 0; attempt < 2; attempt++) {
+        _settlingUndo = step;
+        final current = _untrackedValue;
+        // A callback can read history while its outer mutation is in progress.
+        final source = identical(_mutating, current)
+            ? _mutatingPrevious ?? current
+            : current;
+        final previous = untracked(() => step(source));
+        final pending = _pendingUndo;
+        if (identical(pending, step)) {
+          _setPreviousValue(previous);
+          return;
+        }
+        // A write during the rebuild can install a newer undo step.
+        if (pending == null) return;
+        step = pending;
+      }
+    } finally {
+      _settlingUndo = outerUndo;
+    }
   }
 
   @override
