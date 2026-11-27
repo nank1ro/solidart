@@ -49,6 +49,65 @@ String _toJson(Object? obj) {
   }
 }
 
+// jsonEncode accepts distinct String keys with equal text in an identity map.
+// Quote the affected objects before the extension decodes the JSON and loses
+// entries. Scan the encoded text so user serialization callbacks run as usual.
+String _preserveDuplicateJsonKeys(String json) {
+  if (!json.contains('{')) return json;
+
+  final objects = <_JsonObjectKeys>[];
+  final collisions = <({int start, int end})>[];
+  for (var i = 0; i < json.length; i++) {
+    switch (json[i]) {
+      case '{':
+        objects.add(_JsonObjectKeys(i, collisions.length));
+      case '}':
+        final object = objects.removeLast();
+        if (object.hasDuplicateKey) {
+          // The display text already includes any nested duplicate entries.
+          collisions
+            ..length = object.firstNestedCollision
+            ..add((start: object.start, end: i + 1));
+        }
+      case '"':
+        final start = i++;
+        while (json[i] != '"') {
+          i += json[i] == r'\' ? 2 : 1;
+        }
+        // Both JSON writers put the colon immediately after a key.
+        if (i + 1 < json.length && json[i + 1] == ':') {
+          final object = objects.last;
+          if (!object.hasDuplicateKey) {
+            object.hasDuplicateKey = !object.keys.add(
+              json.substring(start, i + 1),
+            );
+          }
+        }
+    }
+  }
+
+  if (collisions.isEmpty) return json;
+  final result = StringBuffer();
+  var offset = 0;
+  for (final (:start, :end) in collisions) {
+    result
+      ..write(json.substring(offset, start))
+      ..write(jsonEncode(json.substring(start, end)));
+    offset = end;
+  }
+  result.write(json.substring(offset));
+  return result.toString();
+}
+
+class _JsonObjectKeys {
+  _JsonObjectKeys(this.start, this.firstNestedCollision);
+
+  final int start;
+  final int firstNestedCollision;
+  final keys = <String>{};
+  bool hasDuplicateKey = false;
+}
+
 /// Extension for the devtools
 extension DevToolsExt<T> on SignalBase<T> {
   void _notifySignalCreation() {
@@ -132,8 +191,8 @@ void _postSignalEvent(
     previousValue = signal.previousValue;
   }
   final hasPreviousValue = signal.untrackedHasPreviousValue;
-  final jsonValue = _toJson(value);
-  final jsonPreviousValue = _toJson(previousValue);
+  final jsonValue = _preserveDuplicateJsonKeys(_toJson(value));
+  final jsonPreviousValue = _preserveDuplicateJsonKeys(_toJson(previousValue));
 
   dev.postEvent(eventName, {
     '_id': signal._id,

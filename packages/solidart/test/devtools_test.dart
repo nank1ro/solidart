@@ -72,6 +72,60 @@ void main() {
     });
   }
 
+  testWithDevTools('a map event keeps distinct keys with equal strings', (
+    service,
+  ) async {
+    const name = 'map with equal string keys';
+    final updated = _nextUpdate(service, name);
+    final map = MapSignal(_identityMap(10, 20), name: name);
+    addTearDown(map.dispose);
+
+    map.value = _identityMap(10, 20)..['added'] = 30;
+
+    final data = await updated;
+    expect(data['hasPreviousValue'], isTrue);
+    expect(jsonDecode(data['previousValue'] as String), '{"a":10,"a":20}');
+    expect(
+      jsonDecode(data['value'] as String),
+      '{"a":10,"a":20,"added":30}',
+    );
+  });
+
+  testWithDevTools('nested map events keep distinct keys with equal strings', (
+    service,
+  ) async {
+    const name = 'nested map with equal string keys';
+    const text = r'{"a":"\"\\{}", "a":20}';
+    final updated = _nextUpdate(service, name);
+    final sent = <int>[];
+    final signal = Signal([
+      {
+        'nested': _identityMap(10, 20),
+        'probe': _SentProbe(1, sent),
+        'text': text,
+      },
+    ], name: name);
+    addTearDown(signal.dispose);
+
+    sent.clear();
+    signal.value = [
+      {
+        'nested': _identityMap(30, 40),
+        'probe': _SentProbe(2, sent),
+        'text': text,
+      },
+    ];
+
+    final data = await updated;
+    expect(jsonDecode(data['previousValue'] as String), [
+      {'nested': '{"a":10,"a":20}', 'probe': 1, 'text': text},
+    ]);
+    expect(jsonDecode(data['value'] as String), [
+      {'nested': '{"a":30,"a":40}', 'probe': 2, 'text': text},
+    ]);
+    expect(sent, [2, 1]);
+  });
+
   testWithDevTools('map events keep unique string keys in a JSON object', (
     service,
   ) async {
@@ -314,6 +368,11 @@ void main() {
     );
   });
 }
+
+Map<String, int> _identityMap(int first, int second) =>
+    Map<String, int>.identity()
+      ..[String.fromCharCodes([97])] = first
+      ..[String.fromCharCodes([97])] = second;
 
 class _SameTextKey {
   String toJson() => 'same';

@@ -2618,6 +2618,7 @@ void main() {
 
           s.add(element);
           expect(s.removeLast(), element);
+          s.insert(0, element);
 
           expect(s.untrackedValue, same(backing));
           expect(w.calls, [
@@ -2628,6 +2629,10 @@ void main() {
             [
               [old, element],
               [old],
+            ],
+            [
+              [old],
+              [element, old],
             ],
           ]);
         },
