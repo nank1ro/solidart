@@ -46,6 +46,8 @@ class SetSignal<E> extends Signal<Set<E>>
   bool _compare(Set<E>? oldValue, Set<E>? newValue) {
     // skip if the value are equals
     if (equals) {
+      if (identical(oldValue, newValue)) return true;
+      if (oldValue?.length != newValue?.length) return false;
       return SetEquality<E>().equals(oldValue, newValue);
     }
 

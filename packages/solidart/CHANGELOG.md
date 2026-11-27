@@ -1,5 +1,7 @@
 ## 3.0.0-dev.6
 
+- **PERF**: Set equality checks unequal lengths before hashing elements. Bulk mutation checks for large default maps stop after the first changed entry ([#211](https://github.com/nank1ro/solidart/issues/211)).
+- **PERF**: List searches and map traversal read the backing collection once. Default maps with equal primitive entries in the same order compare without hashing ([#211](https://github.com/nank1ro/solidart/issues/211)).
 - **FIX**: An in-place change releases a replaced backing collection once it is no longer needed for history, including when the last subscriber leaves during a batch ([#211](https://github.com/nank1ro/solidart/issues/211)).
 - **FIX**: When a `MapSignal.update` callback replaces a map with `equals: true` inside a batch, the write to the outgoing map no longer hides the replacement from effects. A batch that restores equal contents still skips the notification ([#208](https://github.com/nank1ro/solidart/issues/208)).
 
