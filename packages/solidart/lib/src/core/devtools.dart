@@ -20,7 +20,7 @@ var _devToolsEventDepth = 0;
 
 bool get _isBuildingDevToolsEvent => _devToolsEventDepth > 0;
 
-dynamic _toJson(Object? obj) {
+String _toJson(Object? obj) {
   try {
     return jsonEncode(obj);
   } catch (e) {
@@ -31,9 +31,19 @@ dynamic _toJson(Object? obj) {
       return obj.map(_toJson).toList().toString();
     }
     if (obj is Map) {
-      return obj
-          .map((key, value) => MapEntry(_toJson(key), _toJson(value)))
-          .toString();
+      final entries = <String>[];
+      final keys = <String>{};
+      var canEncodeAsObject = true;
+      for (final entry in obj.entries) {
+        final key = _toJson(entry.key);
+        canEncodeAsObject =
+            canEncodeAsObject && key.startsWith('"') && keys.add(key);
+        entries.add('$key: ${_toJson(entry.value)}');
+      }
+      final rendered = '{${entries.join(', ')}}';
+      // JSON objects need unique string keys. Keep every entry in the display
+      // text when the rendered keys cannot form an object.
+      return canEncodeAsObject ? rendered : jsonEncode(rendered);
     }
     return jsonEncode(obj.toString());
   }
@@ -86,7 +96,9 @@ void _notifyDevToolsAboutSignal(
   SignalBase<dynamic> signal, {
   required DevToolsEventType eventType,
 }) {
-  if (!SolidartConfig.devToolsEnabled) return;
+  if (!SolidartConfig.devToolsEnabled || !dev.extensionStreamHasListener) {
+    return;
+  }
   // Keep event reads out of the active effect or computed.
   _devToolsEventDepth++;
   try {

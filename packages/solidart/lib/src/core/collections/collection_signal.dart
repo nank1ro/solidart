@@ -18,6 +18,15 @@ bool _isValueKey(Object? key) =>
     key is Enum ||
     (key is num && !key.isNaN);
 
+/// Whether every key of type [T] uses built-in equality and hashing.
+bool _hasValueKeyType<T>() {
+  final keys = <T>[];
+  return keys is List<num?> ||
+      keys is List<String?> ||
+      keys is List<bool?> ||
+      keys is List<Enum?>;
+}
+
 typedef _ReplacementSlot = ({Object? key, Object? value, bool present});
 typedef _CopyReplacement<C> = C Function(Map<Object?, _ReplacementSlot>?);
 typedef _CopyReplacementFrom<C> = C Function(
@@ -532,32 +541,80 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// A detached copy of [collection], used as the previous value.
   C _copyPrevious(C collection);
 
+  /// A replacement changed during a mutation, with its previous value if
+  /// it could be copied.
+  ({C? previous})? _changedReplacement(C collection) => null;
+
   /// The undo step of the last lazy point write. It builds the previous
   /// value from the current collection. Every replacement of the value goes
   /// through [_setPreviousValue], which clears it.
   C Function(C)? _pendingUndo;
+
+  /// Whether a read is already rebuilding this signal's history.
+  bool _settlingPreviousValue = false;
+
+  @override
+  bool get untrackedHasPreviousValue =>
+      (!_settlingPreviousValue || _pendingUndo == null) &&
+      super.untrackedHasPreviousValue;
+
+  /// The collection length before the pending write.
+  int? _pendingPreviousLength;
+
+  String get _previousDescription {
+    const previewLimit = 20;
+    if ((_pendingPreviousLength ?? 0) > previewLimit) {
+      return '<lazy collection history>';
+    }
+    final previous = _previousValue;
+    if (previous == null) return 'null';
+    final length = _lengthOf(previous);
+    return length > previewLimit ? '<$length elements>' : '$previous';
+  }
 
   @override
   void _settlePreviousValue() {
     final undo = _pendingUndo;
     // A separate method, so a read with nothing pending allocates no
     // closure.
-    if (undo != null) _applyPendingUndo(undo);
+    if (undo != null && !_settlingPreviousValue) {
+      _applyPendingUndo(undo);
+    }
   }
 
   void _applyPendingUndo(C Function(C) undo) {
-    final current = _untrackedValue;
-    // A callback can read history while its outer mutation is in progress.
-    final source = identical(_mutating, current)
-        ? _mutatingPrevious ?? current
-        : current;
-    final previous = untracked(() => undo(source));
-    if (identical(_pendingUndo, undo)) _setPreviousValue(previous);
+    _settlingPreviousValue = true;
+    try {
+      var step = undo;
+      // One retry settles a superseding write. Repeated writes leave the
+      // newest undo available to a later history read.
+      for (var attempt = 0; attempt < 2; attempt++) {
+        final current = _untrackedValue;
+        final previous = untracked(() {
+          // A callback can read history after its current write has started.
+          final source = identical(_mutating, current)
+              ? _mutatingPrevious ?? _mutatingUndo?.call(current) ?? current
+              : current;
+          return step(source);
+        });
+        final pending = _pendingUndo;
+        if (identical(pending, step)) {
+          _setPreviousValue(previous);
+          return;
+        }
+        // A write during the rebuild can install a newer undo step.
+        if (pending == null) return;
+        step = pending;
+      }
+    } finally {
+      _settlingPreviousValue = false;
+    }
   }
 
   @override
   void _setPreviousValue(C value) {
     _pendingUndo = null;
+    _pendingPreviousLength = null;
     super._setPreviousValue(value);
   }
 
@@ -567,6 +624,28 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// The history copy that the outermost [_mutate] took of [_mutating]
   /// before it changed, or null without history.
   C? _mutatingPrevious;
+
+  /// The state of [_mutating] when an assignment restored it.
+  ({C snapshot, bool mayCoalesce})? _restoration;
+
+  bool Function(C, C)? get _restoredContentsDiffer => null;
+
+  /// Restores the contents before the current point write.
+  C Function(C)? _mutatingUndo;
+
+  /// Captures the original elements of an append before a nested write.
+  C Function(C)? _copyPreviousOnNestedWrite;
+
+  void _capturePreviousForNestedWrite(C collection) {
+    final copy = _copyPreviousOnNestedWrite;
+    if (copy == null) return;
+    _copyPreviousOnNestedWrite = null;
+    try {
+      _mutatingPrevious = untracked(() => copy(collection));
+    } on Object {
+      // A view with unreadable elements can still be written through.
+    }
+  }
 
   /// Whether a mutation nested in the current [_mutate] changed the
   /// collection.
@@ -609,9 +688,26 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
       // collection, and may still change it. So use its copy from before.
       _setPreviousValue(
         identical(old, _mutating)
-            ? _mutatingPrevious ?? _copyPrevious(old)
+            ? _restoration?.snapshot ?? _mutatingPrevious ?? _copyPrevious(old)
             : old,
       );
+    }
+    if (identical(newValue, _mutating) &&
+        !identical(newValue, old) &&
+        _restoredContentsDiffer != null) {
+      _restoration = null;
+      try {
+        final snapshot = untracked(() => _copyPrevious(newValue));
+        final signal = _internalSignal;
+        _restoration = (
+          snapshot: snapshot,
+          mayCoalesce:
+              !signal.forceDirty &&
+              identical(signal.currentValue.safeUnwrap(), newValue),
+        );
+      } on Object {
+        // An unreadable cast view can still be restored.
+      }
     }
     _setValueAndNotify(newValue);
     return newValue;
@@ -622,15 +718,20 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// If the collection changed, even when [mutation] throws, updates the
   /// previous value and notifies once. A point write saves [undo] until
   /// a reader asks for history. If that write throws after a change, or a
-  /// write through the signal runs inside it, the signal drops history,
-  /// because [undo] describes only one completed write.
+  /// write through the signal runs inside it, the signal drops history
+  /// unless [copyPreviousOnNestedWrite] captured the original contents.
+  /// [undoDuringWrite] restores the contents before an in-progress write
+  /// so a callback can read history from the preceding write.
   /// A [_mutate] inside [mutation] on the same collection does not notify:
   /// this one notifies once for both. If [mutation] assigns a new
-  /// collection, the assignment notifies, so this one does not.
+  /// collection, the assignment notifies. A later change to the replacement
+  /// can notify separately. A restored list compares from the point at
+  /// which the assignment restored it.
   ///
   /// Length and nested writes are always checked. Use [slotChanged] for
   /// bounded writes or [bulkCheck] for a full comparison. A list mutation
   /// that can change the length can also move elements and then throw.
+  /// Set [comparesAllElements] if the bulk check also covers nested resizes.
   /// In that case, [failedResizeChanged] compares the elements with the
   /// history copy, if one exists. A nested mutation leaves that check to the
   /// outermost one, which runs it on the final collection.
@@ -643,6 +744,8 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     bool Function()? slotChanged,
     bool Function(C, C)? failedResizeChanged,
     C Function(C)? undo,
+    C Function(C)? undoDuringWrite,
+    C Function(C)? copyPreviousOnNestedWrite,
     bool Function()? failedSlotChanged,
     _CopyReplacementFrom<C>? copyReplacementBaseline,
     _CopyReplacement<C>? copyOriginalReplacementBaseline,
@@ -651,11 +754,13 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     bool deferReplacementWrite = false,
     bool equivalentReplacementWrite = false,
     bool keepBulkVersion = false,
+    bool comparesAllElements = false,
   }) {
     final collection = _untrackedValue;
     final outer = _mutating;
     final nested = identical(collection, outer);
     final outerBaseline = _replacementBaseline;
+    if (nested) _capturePreviousForNestedWrite(collection);
     if (nested && !deferReplacementWrite) {
       _rememberReplacementWrite(
         collection,
@@ -667,18 +772,24 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     final readBulkVersion = bulkVersion == null
         ? null
         : () => bulkVersion(length);
-    final previous = !nested && trackPreviousValue && undo == null
+    var previous = !nested && trackPreviousValue && undo == null
         ? _copyPrevious(collection)
         : null;
     final check = slotChanged ?? bulkCheck?.call(collection, previous);
     final outerChanged = _nestedChanged;
     final outerPrevious = _mutatingPrevious;
+    final outerRestoration = _restoration;
+    final outerUndo = _mutatingUndo;
+    final outerCopy = _copyPreviousOnNestedWrite;
     final outerResizeCheck = _nestedResizeCheck;
     _nestedChanged = false;
     _nestedResizeCheck = null;
     _mutating = collection;
     if (!nested) {
       _mutatingPrevious = previous;
+      _restoration = null;
+      _mutatingUndo = undoDuringWrite;
+      _copyPreviousOnNestedWrite = copyPreviousOnNestedWrite;
       _replacementBaseline = copyReplacementBaseline == null
           ? null
           : _ReplacementBaseline(
@@ -699,22 +810,42 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
       });
     final nestedChanged = _nestedChanged;
     final nestedResizeCheck = _nestedResizeCheck;
+    final restoration = nested ? null : _restoration;
     _mutating = outer;
-    _mutatingPrevious = outerPrevious;
+    if (!nested) {
+      previous = _mutatingPrevious;
+      _mutatingPrevious = outerPrevious;
+      _mutatingUndo = outerUndo;
+      _copyPreviousOnNestedWrite = outerCopy;
+    }
     _nestedChanged = outerChanged;
     _nestedResizeCheck = outerResizeCheck;
     _replacementBaseline = outerBaseline;
+    if (!nested) _restoration = outerRestoration;
     final resizeCheck =
         (errors.hasError ? failedResizeChanged : null) ?? nestedResizeCheck;
     var changed = false;
+    ({C? previous})? replacementChange;
+    var changedAfterRestore = false;
     errors.run(() {
+      if (!nested) replacementChange = _changedReplacement(collection);
       if (!identical(_untrackedValue, collection)) return;
+      if (restoration != null) {
+        changedAfterRestore = untracked(
+          () => _restoredContentsDiffer!(collection, restoration.snapshot),
+        );
+        if (changedAfterRestore || !restoration.mayCoalesce) {
+          changed = changedAfterRestore;
+          return;
+        }
+      }
       final slotCheck = errors.hasError ? failedSlotChanged ?? check : check;
       changed =
           nestedChanged ||
           length != _lengthOf(collection) ||
           (slotCheck?.call() ?? false) ||
           (!nested &&
+              !comparesAllElements &&
               previous != null &&
               (resizeCheck?.call(collection, previous) ?? false));
     });
@@ -725,16 +856,25 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
       _nestedChanged |= changed;
       // Leave a failed resize to the outermost mutation that has a copy.
       if (outerPrevious != null) _nestedResizeCheck ??= resizeCheck;
-    } else if (changed) {
-      if (undo != null && trackPreviousValue) {
+    } else if (changed && restoration != null && !changedAfterRestore) {
+      // A deferred restoration can compare equal to the committed backing.
+      // Deliver the earlier write without replacing the assignment's history.
+      errors.run(_reportChanged);
+    } else if (changed || replacementChange != null) {
+      if (replacementChange case final replacement?) {
+        if (replacement.previous case final before?) _setPreviousValue(before);
+      } else if (restoration != null) {
+        _setPreviousValue(restoration.snapshot);
+      } else if (previous != null) {
+        _setPreviousValue(previous);
+      } else if (undo != null && trackPreviousValue) {
         // After an error or a nested write through the signal, [undo] no
         // longer describes the change, so keep no previous value.
         final exact = !errors.hasError && !nestedChanged;
         _storedPreviousValue = null;
         _hasPreviousValue = exact;
         _pendingUndo = exact ? undo : null;
-      } else if (previous != null) {
-        _setPreviousValue(previous);
+        _pendingPreviousLength = exact ? length : null;
       }
       // Separate steps, so a throwing effect does not skip the observers.
       errors

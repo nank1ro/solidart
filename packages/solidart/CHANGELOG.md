@@ -2,6 +2,11 @@
 
 - **FIX**: An in-place change releases a replaced backing collection once it is no longer needed for history, including when the last subscriber leaves during a batch ([#211](https://github.com/nank1ro/solidart/issues/211)).
 - **FIX**: When a `MapSignal.update` callback replaces a map with `equals: true` inside a batch, the write to the outgoing map no longer hides the replacement from effects. A batch that restores equal contents still skips the notification ([#208](https://github.com/nank1ro/solidart/issues/208)).
+- **FIX**: Collection signals report mutations that change shared map views, insert nullable entries, or partially write to custom lists. List callbacks can restore, append to, or inspect previous history during a write. Cast identity sets preserve distinct equal entries in history ([#208](https://github.com/nank1ro/solidart/issues/208)).
+- **FIX**: Lazy history skips recursive reads of the same snapshot and retries one newer write without blocking on repeated supersession ([#208](https://github.com/nank1ro/solidart/issues/208), [#211](https://github.com/nank1ro/solidart/issues/211)).
+- **PERF**: List searches and map traversal read the backing once. Set comparisons check lengths before hashing, and ordered default maps can compare primitive entries without hashing. Bulk map checks can stop at the first change on large default maps ([#211](https://github.com/nank1ro/solidart/issues/211)).
+- **PERF**: Singleton no-op writes can skip history copies. `MapSignal.addAll` reads lazy inputs through the backing and sizes comparisons to the smaller collection when possible. Whole-list comparisons cover nested resize failures, and `toString()` summarizes large history ([#208](https://github.com/nank1ro/solidart/issues/208), [#211](https://github.com/nank1ro/solidart/issues/211)).
+- **PERF**: DevTools builds events only while the Extension stream has a listener. Map values preserve distinct entries with identical serialized keys ([#211](https://github.com/nank1ro/solidart/issues/211)).
 
 ## 3.0.0-dev.5
 

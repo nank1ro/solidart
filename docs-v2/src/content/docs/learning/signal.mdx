@@ -121,6 +121,16 @@ SolidartConfig.trackPreviousValue = false;
 // do it before runApp()
 ```
 
+### Collection history
+
+Some point writes on collection signals save only the information needed to rebuild the previous value. The first history read can then visit all entries to build that value. `toString()` summarizes a large previous collection and can leave a large lazy snapshot pending.
+
+For `ListSignal<T>`, the point-write fast path uses a native backing with matching type arguments. A list assigned with narrower type arguments can take the custom-backing path. That path may need to inspect elements to detect partial writes. `ListSignal<T>(values)` creates a native backing with the signal's type arguments.
+
+On the Dart VM, a map or set can keep storage from entries you deleted. A history copy may visit that storage even when the collection now holds few entries. A lazy snapshot after an insertion rebuilds a compact table. That can hash the live keys or elements again. Keep their equality and hash codes stable while they belong to the collection. A hash callback that throws can also make a history read throw.
+
+With `equals: true`, assigning a replacement can compare the collections again when the reactive update commits. The second comparison sees changes to their contents between assignment and commit, including during a batch.
+
 ## Await until a condition is met
 
 You can use the `until` method to wait for a signal to meet a specific condition:

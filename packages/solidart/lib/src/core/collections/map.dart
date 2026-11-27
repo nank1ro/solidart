@@ -46,12 +46,43 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   bool _compare(Map<K, V>? oldValue, Map<K, V>? newValue) {
     // skip if the value are equals
     if (equals) {
+      if (identical(oldValue, newValue)) return true;
+      if (oldValue is LinkedHashMap<K, V> &&
+          newValue is LinkedHashMap<K, V> &&
+          oldValue.runtimeType == _defaultMapType &&
+          newValue.runtimeType == _defaultMapType &&
+          oldValue.length == newValue.length &&
+          _orderedEntriesMatch(oldValue, newValue)) {
+        return true;
+      }
       return MapEquality<K, V>().equals(oldValue, newValue);
     }
 
     // return the [comparator] result
     return comparator(oldValue, newValue);
   }
+
+  // Match ordinary entries without hashing. Differently ordered maps and
+  // entries with user-defined equality still use MapEquality.
+  bool _orderedEntriesMatch(Map<K, V> oldValue, Map<K, V> newValue) {
+    final oldKeys = oldValue.keys.iterator;
+    final newKeys = newValue.keys.iterator;
+    final oldValues = oldValue.values.iterator;
+    final newValues = newValue.values.iterator;
+    while (oldKeys.moveNext()) {
+      newKeys.moveNext();
+      oldValues.moveNext();
+      newValues.moveNext();
+      if (!_samePrimitiveValue(oldKeys.current, newKeys.current) ||
+          !_samePrimitiveValue(oldValues.current, newValues.current)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool _samePrimitiveValue(Object? oldValue, Object? newValue) =>
+      _isValueKey(oldValue) && _isValueKey(newValue) && oldValue == newValue;
 
   @override
   Map<K, V> get _value {
@@ -87,6 +118,15 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
 
   @override
   void _setValueAndNotify(Map<K, V> newValue) {
+    if (_mutating case final map?) {
+      // Two distinct default maps have separate storage. A view can share
+      // storage with any map a callback is still mutating.
+      _mutatingOpaqueMap |= map.runtimeType != _defaultMapType;
+      _mutationReplacement =
+          _mutatingOpaqueMap || newValue.runtimeType != _defaultMapType
+          ? _snapshotReplacement(newValue)
+          : null;
+    }
     final baseline = _replacementBaseline;
     final old = _untrackedValue;
     final signal = _internalSignal;
@@ -125,6 +165,93 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     });
   }
 
+  // An outer view can still write to a default map after a nested assignment.
+  bool _mutatingOpaqueMap = false;
+  ({Map<K, V> map, Object before})? _mutationReplacement;
+
+  ({Map<K, V> map, Object before})? _snapshotReplacement(Map<K, V> map) {
+    try {
+      final before = untracked(() => _copyReplacementMap(map, null));
+      return (map: map, before: before);
+    } on Object {
+      // A cast view can enumerate keys even when a value cannot be read.
+      try {
+        final before = untracked(
+          () => [
+            for (final key in map.keys) (key: key, value: _readValue(map, key)),
+          ],
+        );
+        return (map: map, before: before);
+      } on Object {
+        return null;
+      }
+    }
+  }
+
+  @override
+  ({Map<K, V>? previous})? _changedReplacement(Map<K, V> collection) {
+    final replacement = _mutationReplacement;
+    if (_mutating == null) {
+      _mutationReplacement = null;
+      _mutatingOpaqueMap = false;
+    }
+    if (replacement == null ||
+        identical(replacement.map, collection) ||
+        !identical(replacement.map, _untrackedValue)) {
+      return null;
+    }
+    final before = replacement.before;
+    try {
+      final changed = untracked(() {
+        final map = replacement.map;
+        if (before is Map<K, V>) {
+          return before.length != map.length ||
+              _replacementEntriesChanged(map, before);
+        }
+        final entries = before as List<({K key, Object? value})>;
+        if (entries.length != map.length) return true;
+        var i = 0;
+        for (final key in map.keys) {
+          final entry = entries[i++];
+          if (!identical(entry.key, key) ||
+              !identical(entry.value, _readValue(map, key))) {
+            return true;
+          }
+        }
+        return i != entries.length;
+      });
+      if (!changed || !identical(replacement.map, _untrackedValue)) return null;
+    } on Object {
+      return null;
+    }
+    if (before is! Map<K, V>) return (previous: null);
+    var previous = before;
+    if (trackPreviousValue) {
+      try {
+        previous = untracked(() => _copyPrevious(before));
+      } on Object {
+        // The identity copy still holds history for keys that throw on hash.
+      }
+    }
+    return identical(replacement.map, _untrackedValue)
+        ? (previous: previous)
+        : null;
+  }
+
+  @override
+  void _reportChanged() {
+    final replacement = _mutationReplacement;
+    if (replacement != null && identical(replacement.map, _untrackedValue)) {
+      // A nested write can publish the replacement while the original map
+      // is still being mutated.
+      final snapshot = _snapshotReplacement(replacement.map);
+      if (identical(_mutationReplacement?.before, replacement.before)) {
+        _mutationReplacement = snapshot;
+      }
+    }
+    super._reportChanged();
+  }
+
   /// The value for the given [key], or `null` if [key] is not in the map.
   ///
   /// Some maps allow `null` as a value.
@@ -143,6 +270,13 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   // Only the default map shares key equality with the plain history copy.
   // Its type arguments must match the signal's.
   late final Type _defaultMapType = <K, V>{}.runtimeType;
+  late final bool _hasValueKeys = _hasValueKeyType<K>();
+  late final Type _unmodifiableMapType = Map<K, V>.unmodifiable({}).runtimeType;
+
+  bool _hasNativeUnmodifiableType(Map<K, V> map) {
+    final type = _unmodifiableMapType;
+    return (type != UnmodifiableMapView<K, V>) && map.runtimeType == type;
+  }
 
   bool _hasStableSlot(Map<K, V> map, K key) =>
       map.runtimeType == _defaultMapType && _isValueKey(key);
@@ -163,13 +297,32 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
 
   void _assignSlot(K key, V value, {required bool checkEquality}) {
     final map = _untrackedValue;
-    final old = map[key];
-    final defaultMap = trackPreviousValue && map.runtimeType == _defaultMapType;
+    var written = false;
+    void write(Map<K, V> map) {
+      map[key] = value;
+      written = true;
+    }
+
+    if (map is UnmodifiableMapView<K, V> &&
+        map.runtimeType == UnmodifiableMapView<K, V>) {
+      return write(map);
+    }
+    final old = trackPreviousValue ? map[key] : _readValue(map, key);
+    if (identical(old, _unreadable)) {
+      // A cast or custom map can reject the lookup but accept the write.
+      return _mutate(
+        write,
+        slotChanged: () => written || !identical(old, _readValue(map, key)),
+      );
+    }
+    final defaultMap =
+        map is LinkedHashMap<K, V> && map.runtimeType == _defaultMapType;
+    final lazyMap = trackPreviousValue && defaultMap;
     final rewindable = _canRewindSlot(map, key);
     final sameValue = identical(old, value);
     final present =
         old != null ||
-        ((defaultMap || sameValue || rewindable) && map.containsKey(key));
+        ((lazyMap || sameValue || rewindable) && map.containsKey(key));
     final checkEquivalent =
         checkEquality &&
         !sameValue &&
@@ -189,11 +342,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     // An overwrite keeps the caller's key in the undo step. The caller can
     // change a mutable key later, so only an immutable value key is lazy.
     // A new key is stored as it is, so only NaN cannot be undone.
-    final lazy = defaultMap && (present ? _isValueKey(key) : !_isNaN(key));
+    final lazy = lazyMap && (present ? _isValueKey(key) : !_isNaN(key));
     _mutateUnless(
       sameValue && present,
-      (map) => map[key] = value,
-      slotChanged: () => !identical(old, map[key]),
+      write,
+      // After a successful native write, the requested value is stored.
+      slotChanged: () => (defaultMap && written) || !identical(old, map[key]),
       replacementSlot: rewindable
           ? (key: key, value: old, present: present)
           : null,
@@ -257,6 +411,10 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     return _value.values;
   }
 
+  /// Applies [action] to each key/value pair in the map.
+  @override
+  void forEach(void Function(K key, V value) action) => _value.forEach(action);
+
   /// Removes [key] and its associated value, if present, from the map.
   ///
   /// Returns the value associated with `key` before it was removed.
@@ -272,6 +430,9 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   @override
   V? remove(Object? key) {
     final map = _untrackedValue;
+    if (!trackPreviousValue && _replacementBaseline == null) {
+      return _mutate((map) => map.remove(key));
+    }
     final present = map.containsKey(key);
     return _mutateUnless(
       !present,
@@ -406,13 +567,37 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// ```
   @override
   void addAll(Map<K, V> other) {
-    if (other.isEmpty) return _untrackedValue.addAll(other);
-    // Into an empty map, each new key changes the length.
-    if (_untrackedValue.isEmpty) return _mutate((map) => map.addAll(other));
-    _writeKeys(
-      _keysOf(() => other.keys.toList(growable: false)),
-      (map) => map.addAll(other),
-    );
+    // These SDK map types expose their length and keys without running
+    // source callbacks. A view can run code or yield different keys on replay.
+    final nativeInput =
+        other is LinkedHashMap<K, V> ||
+        other is HashMap<K, V> ||
+        other is SplayTreeMap<K, V> ||
+        _hasNativeUnmodifiableType(other);
+    final inputLength = nativeInput ? other.length : null;
+    final backing = _untrackedValue;
+    if (inputLength == 0) return backing.addAll(other);
+
+    // Forward the original map so the backing can use its fast copy.
+    void write(Map<K, V> map) => map.addAll(other);
+    final length = backing.length;
+    if (length == 0) return _mutate(write);
+    // Built-in key equality keeps the preflight lookup free of callbacks.
+    if (trackPreviousValue &&
+        inputLength == 1 &&
+        backing.runtimeType == _defaultMapType &&
+        other.runtimeType == _defaultMapType &&
+        _hasValueKeys) {
+      final MapEntry(:key, :value) = other.entries.first;
+      if (identical(backing[key], value) &&
+          (value != null || backing.containsKey(key))) {
+        return write(backing);
+      }
+    }
+    if (inputLength != null && inputLength <= length) {
+      return _writeKeys(other.keys.toList(growable: false), write);
+    }
+    _mutate(write, bulkCheck: _bulkChangeCheck);
   }
 
   /// Look up the value of [key], or add a new entry if it isn't there.
@@ -541,6 +726,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     final old = _readValue(map, key);
     final deferWrite = _deferCallbackWrite(map);
     final rewindable = deferWrite && _canRewindSlot(map, key);
+    var calledIfAbsent = false;
 
     return _mutate(
       (map) => map.update(
@@ -549,11 +735,19 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
             ? (value) =>
                   _beforeCallbackWrite(map, key, update(value), rewindable)
             : update,
-        ifAbsent: deferWrite && ifAbsent != null
-            ? () => _beforeCallbackWrite(map, key, ifAbsent(), rewindable)
-            : ifAbsent,
+        ifAbsent: ifAbsent == null
+            ? null
+            : () {
+                calledIfAbsent = true;
+                final next = ifAbsent();
+                return deferWrite
+                    ? _beforeCallbackWrite(map, key, next, rewindable)
+                    : next;
+              },
       ),
-      slotChanged: () => !identical(old, _readValue(map, key)),
+      slotChanged: () =>
+          !identical(old, _readValue(map, key)) ||
+          (calledIfAbsent && map.containsKey(key)),
       copyReplacementBaseline: equals ? _copyReplacementMap : null,
       bulkVersion: _pointCallbackVersion(map),
       deferReplacementWrite: deferWrite,
@@ -683,7 +877,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
 
   @override
   String toString() =>
-      '''MapSignal<$K, $V>(value: $_value, previousValue: $_previousValue)''';
+      '''MapSignal<$K, $V>(value: $_value, previousValue: $_previousDescription)''';
 
   // A cast view can reject a read even when the backing write is valid.
   static final _unreadable = Object();
@@ -696,20 +890,8 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     }
   }
 
-  /// The keys that [list] returns, or null if listing them throws. Then the
-  /// backing call meets the same error after its own partial writes.
-  List<K>? _keysOf(List<K> Function() list) {
-    try {
-      return list();
-    } on Object {
-      return null;
-    }
-  }
-
-  /// Runs [write], which can change only the values of [keys]. Without
-  /// [keys], compares the whole map.
-  R _writeKeys<R>(List<K>? keys, R Function(Map<K, V>) write) {
-    if (keys == null) return _mutate(write, bulkCheck: _bulkChangeCheck);
+  /// Runs [write], which can change only the slots for [keys].
+  R _writeKeys<R>(List<K> keys, R Function(Map<K, V>) write) {
     final map = _untrackedValue;
     final before = List<Object?>.filled(keys.length, null);
     for (var i = 0; i < keys.length; i++) {
@@ -780,9 +962,27 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     Map<K, V>? previous, {
     void Function(Map<K, V> Function())? saveOriginal,
   }) {
+    // For small maps, unwinding the callback costs more than a full scan.
+    // Custom maps must finish forEach because they can throw after a change.
+    final canStop =
+        map is LinkedHashMap<K, V> &&
+        map.length >= 512 &&
+        map.runtimeType == _defaultMapType;
+
+    bool Function() stopOnChange(bool Function() check) {
+      if (!canStop) return check;
+      return () {
+        try {
+          return check();
+        } on _BulkMapChanged {
+          return true;
+        }
+      };
+    }
+
     if (previous != null && previous.length == map.length) {
       saveOriginal?.call(() => Map<K, V>.identity()..addAll(previous));
-      return () {
+      return stopOnChange(() {
         final keys = previous.keys.iterator;
         final values = previous.values.iterator;
         var changed = false;
@@ -791,11 +991,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
           values.moveNext();
           if (!identical(key, keys.current) ||
               !identical(value, values.current)) {
+            if (canStop) throw const _BulkMapChanged();
             changed = true;
           }
         });
         return changed;
-      };
+      });
     }
 
     // A plain history map can merge distinct keys from an identity map.
@@ -812,20 +1013,39 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       }
       return snapshot;
     });
-    return () {
+    return stopOnChange(() {
       var i = 0;
       var changed = false;
       map.forEach((key, value) {
         if (!identical(key, before[i]) || !identical(value, before[i + 1])) {
+          if (canStop) throw const _BulkMapChanged();
           changed = true;
         }
         i += 2;
       });
       return changed;
-    };
+    });
+  }
+
+  bool _replacementEntriesChanged(Map<K, V> map, Map<K, V> before) {
+    final keys = before.keys.iterator;
+    final values = before.values.iterator;
+    var changed = false;
+    map.forEach((key, value) {
+      keys.moveNext();
+      values.moveNext();
+      if (!identical(key, keys.current) || !identical(value, values.current)) {
+        changed = true;
+      }
+    });
+    return changed;
   }
 
   @override
   // ignore: overridden_fields
   final _id = ReactiveName.nameFor('MapSignal');
+}
+
+class _BulkMapChanged implements Exception {
+  const _BulkMapChanged();
 }
