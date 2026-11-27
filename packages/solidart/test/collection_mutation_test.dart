@@ -136,6 +136,24 @@ class _PointList extends DelegatingList<int> {
   }
 }
 
+class _CountedCastSource extends DelegatingList<Object> {
+  _CountedCastSource() : super([1, 'unread', 2]);
+
+  int reads = 0;
+
+  @override
+  Object operator [](int index) {
+    reads++;
+    return super[index];
+  }
+
+  @override
+  Iterator<Object> get iterator {
+    reads++;
+    return super.iterator;
+  }
+}
+
 class _CountingMap extends DelegatingMap<int, int> {
   _CountingMap([int entryCount = 100])
     : super({for (var i = 0; i < entryCount; i++) i: i});
@@ -875,6 +893,24 @@ void main() {
   });
 
   group('lazy collection history', () {
+    test('a custom append keeps history when it changes an existing slot', () {
+      final backing = _ReentrantList([1]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      final watch = _Watch<List<int>>(s, List.of);
+      backing.beforeAdd = () => backing[0] = 9;
+
+      s.add(2);
+
+      expect(watch.calls, [
+        [
+          [1],
+          [9, 2],
+        ],
+      ]);
+      expect(s.untrackedPreviousValue, [1]);
+    });
+
     for (final history in [false, true]) {
       test('a custom append keeps history before its nested write, '
           'history $history (#208 item 17)', () {
@@ -1094,17 +1130,25 @@ void main() {
       expect(s.untrackedPreviousValue, isEmpty);
     });
 
-    final writes = <(String, void Function(ListSignal<int>), int)>[
-      ('slot', (s) => s[40] = -1, 2),
-      ('first', (s) => s.first = -1, 2),
-      ('last', (s) => s.last = -1, 2),
-      // An opaque resize can change any existing slot before it throws.
-      ('add', (s) => s.add(-1), 100),
-      ('insert', (s) => s.insert(40, -1), 100),
-      ('removeAt', (s) => s.removeAt(40), 100),
-      ('removeLast', (s) => s.removeLast(), 100),
-    ];
-    for (final (name, write, maxReads) in writes) {
+    final writes =
+        <
+          (
+            String,
+            void Function(ListSignal<int>),
+            int, {
+            bool readsOnHistoryRead,
+          })
+        >[
+          ('slot', (s) => s[40] = -1, 2, readsOnHistoryRead: true),
+          ('first', (s) => s.first = -1, 2, readsOnHistoryRead: true),
+          ('last', (s) => s.last = -1, 2, readsOnHistoryRead: true),
+          // An opaque resize saves all existing slots before writing.
+          ('add', (s) => s.add(-1), 100, readsOnHistoryRead: false),
+          ('insert', (s) => s.insert(40, -1), 100, readsOnHistoryRead: false),
+          ('removeAt', (s) => s.removeAt(40), 100, readsOnHistoryRead: false),
+          ('removeLast', (s) => s.removeLast(), 100, readsOnHistoryRead: false),
+        ];
+    for (final (name, write, maxReads, :readsOnHistoryRead) in writes) {
       test('list $name builds lazy history once with at most $maxReads '
           'reads before it', () {
         final before = List.generate(100, (i) => i);
@@ -1112,11 +1156,17 @@ void main() {
         final s = ListSignal<int>([])..value = backing;
         addTearDown(s.dispose);
         write(s);
-        expect(backing.reads, lessThanOrEqualTo(maxReads));
+        final readsAfterWrite = backing.reads;
+        expect(readsAfterWrite, lessThanOrEqualTo(maxReads));
         final previous = s.previousValue;
         expect(previous, orderedEquals(before));
         final reads = backing.reads;
-        expect(reads, greaterThanOrEqualTo(backing.length));
+        expect(
+          reads,
+          readsOnHistoryRead
+              ? greaterThanOrEqualTo(backing.length)
+              : readsAfterWrite,
+        );
         expect(s.untrackedPreviousValue, same(previous));
         expect(backing.reads, reads);
       });
@@ -1395,7 +1445,7 @@ void main() {
       expect(set.previousValue, isEmpty);
     });
 
-    test('list add answers hasPreviousValue without a copy', () {
+    test('custom list add does not reread the backing for history', () {
       final backing = _PointList(List.generate(100, (i) => i));
       final s = ListSignal<int>([])..value = backing;
       addTearDown(s.dispose);
@@ -1405,7 +1455,7 @@ void main() {
       expect(s.hasPreviousValue, isTrue);
       expect(backing.reads, reads);
       expect(s.previousValue, orderedEquals(List.generate(100, (i) => i)));
-      expect(backing.reads, greaterThan(reads));
+      expect(backing.reads, reads);
     });
 
     test('default map answers hasPreviousValue without a copy', () {
@@ -2365,6 +2415,71 @@ void main() {
 
       expect(runs, 1);
     });
+
+    for (final history in [false, true]) {
+      test('an append writes to its original list after a snapshot replaces '
+          'it, history $history', () {
+        final original = _ReentrantList([1]);
+        final replacement = [20];
+        final s = ListSignal<int>([], trackPreviousValue: history)
+          ..value = original;
+        addTearDown(s.dispose);
+        final watch = _Watch(s, List<int>.of);
+        original.onRead = (_) {
+          original.onRead = null;
+          s.value = replacement;
+        };
+
+        s.add(2);
+
+        expect(original, [1, 2]);
+        expect(s.untrackedValue, same(replacement));
+        expect(replacement, [20]);
+        expect(s.untrackedPreviousValue, same(history ? original : null));
+        expect(watch.effectReruns, 1);
+        expect(watch.calls, hasLength(1));
+      });
+    }
+
+    for (final rejected in [false, true]) {
+      test(
+        'append change checks do not track backing reads, rejected $rejected',
+        () {
+          final reads = Signal(0);
+          addTearDown(reads.dispose);
+          final backing = _ReentrantList([1]);
+          final s = ListSignal<int>([], trackPreviousValue: false)
+            ..value = backing;
+          addTearDown(s.dispose);
+          var comparing = false;
+          backing.onRead = (_) {
+            if (!rejected || comparing) reads.value;
+          };
+          if (rejected) {
+            backing.afterAdd = () {
+              backing.length--;
+              comparing = true;
+              throw UnsupportedError('append');
+            };
+          }
+          var runs = 0;
+          final effect = Effect(() {
+            runs++;
+            if (rejected) {
+              expect(() => s.add(2), throwsUnsupportedError);
+            } else {
+              s.add(2);
+            }
+          });
+          addTearDown(effect.dispose);
+
+          reads.value = 1;
+
+          expect(runs, 1);
+          expect(backing, rejected ? [1] : [1, 2]);
+        },
+      );
+    }
     test('a partial change keeps its error when an effect also throws', () {
       final s = ListSignal([1]);
       addTearDown(s.dispose);
@@ -2453,8 +2568,9 @@ void main() {
     };
     for (final MapEntry(key: name, value: mutate) in resizes.entries) {
       test('$name of a cast list without history notifies once', () {
+        final source = _CountedCastSource();
         final s = ListSignal<int>([], trackPreviousValue: false)
-          ..value = <Object>[1, 'unread', 2].cast<int>();
+          ..value = List.castFrom<Object, int>(source);
         addTearDown(s.dispose);
         var runs = 0;
         final effect = Effect(() {
@@ -2465,8 +2581,57 @@ void main() {
 
         mutate(s);
 
+        expect(source.reads, 0);
         expect(runs, 2);
       });
+    }
+
+    test(
+      'removeAt reports a cast list write before its result fails the cast',
+      () {
+        final source = _CountedCastSource();
+        final s = ListSignal<int>([], trackPreviousValue: false)
+          ..value = List.castFrom<Object, int>(source);
+        addTearDown(s.dispose);
+        final seen = <int>[];
+        final effect = Effect(() => seen.add(s.length));
+        addTearDown(effect.dispose);
+
+        expect(() => s.removeAt(1), throwsA(isA<TypeError>()));
+
+        expect(source.reads, 0);
+        expect(seen, [3, 2]);
+      },
+    );
+
+    for (final (backing, element) in <(List<num>, num)>[
+      (<int>[1], 2),
+      (<double>[1], 2.5),
+    ]) {
+      test(
+        'numeric point resizes preserve a widened ${backing.runtimeType}',
+        () {
+          final s = ListSignal<num>([])..value = backing;
+          addTearDown(s.dispose);
+          final old = backing.single;
+          final w = _Watch<List<num>>(s, List.of);
+
+          s.add(element);
+          expect(s.removeLast(), element);
+
+          expect(s.untrackedValue, same(backing));
+          expect(w.calls, [
+            [
+              [old],
+              [old, element],
+            ],
+            [
+              [old, element],
+              [old],
+            ],
+          ]);
+        },
+      );
     }
 
     test('a resize that keeps the length without history does not notify', () {
@@ -2655,12 +2820,28 @@ void main() {
       });
     }
 
-    test('a rejected fill of a widened read-only view reads no slots', () {
+    test('a custom read-only view reports a partial fill before throwing', () {
+      final s = ListSignal<int>([])..value = _PartialFillView([1]);
+      addTearDown(s.dispose);
+      final watch = _Watch<List<int>>(s, List.of);
+
+      expect(() => s.fillRange(0, 1, 2), throwsUnsupportedError);
+
+      expect(watch.effectReruns, 1);
+      expect(watch.calls, [
+        [
+          [1],
+          [2],
+        ],
+      ]);
+    });
+
+    test('a rejected fill of an SDK read-only view reads no slots', () {
       final backing = _RegeneratingObjects();
-      final s = ListSignal<Object>([])
+      final s = ListSignal<_Same>([])
         ..value = UnmodifiableListView<_Same>(backing);
       addTearDown(s.dispose);
-      final watch = _Watch<List<Object>>(s, List.of);
+      final watch = _Watch<List<_Same>>(s, List.of);
 
       expect(() => s.fillRange(0, 2, _Same(9)), throwsUnsupportedError);
 
@@ -6012,7 +6193,150 @@ void main() {
       expect(runs, 2);
     });
 
+    test(
+      'larger addAll repairs an unreadable cast map value without history',
+      () {
+        final backing = <String, Object>{'a': 42}.cast<String, String>();
+        final map = MapSignal(backing, trackPreviousValue: false);
+        addTearDown(map.dispose);
+        final watch = _Watch(map, Map<String, String>.of);
+
+        map.addAll({'a': 'fixed', 'b': 'new'});
+
+        expect(map.untrackedValue, {'a': 'fixed', 'b': 'new'});
+        expect(watch.effectReruns, 1);
+        expect(watch.calls, [
+          [
+            null,
+            {'a': 'fixed', 'b': 'new'},
+          ],
+        ]);
+      },
+    );
+
+    test('addAll preserves existing history until an unreadable cast map '
+        'changes', () {
+      final backing = <String, Object>{'b': 0};
+      final map = MapSignal(
+        backing.cast<String, int>(),
+        trackPreviousValue: true,
+      );
+      addTearDown(map.dispose);
+      final watch = _Watch(map, Map<String, int>.of);
+      map.addAll({'b': 1});
+      backing['b'] = 'unreadable';
+
+      map.addAll(const MapView({}));
+
+      expect(map.untrackedPreviousValue, {'b': 0});
+      expect(watch.effectReruns, 1);
+      final input = _ThrowAfterFirstMap();
+      expect(() => map.addAll(input), throwsStateError);
+
+      expect(input.keyReads, 1);
+      expect(backing, {'b': 2});
+      expect(map.untrackedHasPreviousValue, isFalse);
+      expect(watch.effectReruns, 2);
+      expect(watch.calls.last, [
+        null,
+        {'b': 2},
+      ]);
+    });
+
     for (final history in [false, true]) {
+      test('addAll reports an unreadable value written by a throwing input, '
+          'history $history', () {
+        final backing = <String, Object>{'b': 2};
+        final map = MapSignal(
+          backing.cast<String, int>(),
+          trackPreviousValue: history,
+        );
+        addTearDown(map.dispose);
+        final watch = _Watch(map, (value) => value);
+        final input = _ThrowAfterFirstMap(() => backing['b'] = 'unreadable');
+
+        expect(() => map.addAll(input), throwsA(same(input.error)));
+
+        expect(input.keyReads, 1);
+        expect(backing, {'b': 'unreadable'});
+        expect(watch.effectReruns, 1);
+        expect(watch.calls.single.first, history ? {'b': 2} : null);
+      });
+
+      test('addAll repairs an unreadable numeric cast value, '
+          'history $history', () {
+        final backing = <String, num>{'a': 1.5};
+        final map = MapSignal(
+          backing.cast<String, int>(),
+          trackPreviousValue: history,
+        );
+        addTearDown(map.dispose);
+        final watch = _Watch(map, (value) => value);
+
+        map.addAll({'a': 1, 'b': 2});
+
+        expect(backing, {'a': 1, 'b': 2});
+        expect(watch.effectReruns, 1);
+        expect(watch.calls.single.first, isNull);
+      });
+
+      test('addAll keeps the original traversal error when a wider SDK cast '
+          'also throws, history $history', () {
+        final traversal =
+            _guarded(() => <Object>['bad'].cast<int>().first).error!
+                as TypeError;
+        var traversals = 0;
+        final source = _FailingMapTraversal(() {
+          if (++traversals == 1) throw traversal;
+          throw StateError('wider traversal');
+        });
+        final backing = Map.castFrom<String, int, String, int>(source);
+        final map = MapSignal(backing, trackPreviousValue: history);
+        addTearDown(map.dispose);
+
+        expect(() => map.addAll({'b': 2, 'c': 3}), throwsA(same(traversal)));
+        expect(traversals, 2);
+        expect(source.keys, ['a']);
+      });
+
+      test('addAll keeps a custom map traversal error with a shared '
+          'unreadable entry, history $history', () {
+        final traversal =
+            _guarded(() => <Object>['bad'].cast<int>().first).error!
+                as TypeError;
+        final raw = <Object?, Object?>{'a': 'bad'};
+        final backing = _SharedMapCast<String, int>(raw, traversal);
+        final map = MapSignal(backing, trackPreviousValue: history);
+        addTearDown(map.dispose);
+
+        expect(() => map.addAll({'b': 2, 'c': 3}), throwsA(same(traversal)));
+        expect(raw, {'a': 'bad'});
+        expect(backing.castCalls, 0);
+      });
+
+      final emptyViews = <String, Map<String, String>>{
+        'MapView': const MapView({}),
+        'UnmodifiableMapView': UnmodifiableMapView({}),
+      };
+      for (final MapEntry(key: name, value: input) in emptyViews.entries) {
+        test('addAll of an empty $name to a cast map is a no-op, history '
+            '$history', () {
+          final backing = <String, Object>{'unread': 42};
+          final map = MapSignal(
+            backing.cast<String, String>(),
+            trackPreviousValue: history,
+          );
+          addTearDown(map.dispose);
+          final watch = _Watch(map, (value) => value);
+
+          map.addAll(input);
+
+          expect(backing, {'unread': 42});
+          expect(watch.effectReruns, 0);
+          expect(watch.calls, isEmpty);
+        });
+      }
+
       test('addAll of an empty SDK map to a cast map is a no-op, history '
           '$history', () {
         final backing = <String, Object>{'unread': 42}.cast<String, String>();
@@ -6429,6 +6753,41 @@ void main() {
     });
 
     for (final history in [false, true]) {
+      for (final (label, originalEntries, input) in [
+        ('empty length', <int, int>{}, {1: 2}),
+        ('point length', {1: 1}, {1: 2}),
+        ('bulk length', {1: 1}, {1: 2, 2: 3}),
+        ('lookup', {1: 1}, {1: 2}),
+      ]) {
+        test('addAll writes to its original backing after a reentrant '
+            '$label, history $history', () {
+          final original = _AddAllBacking(originalEntries);
+          final replacement = {5: 5};
+          final signal = MapSignal<int, int>({}, trackPreviousValue: history)
+            ..value = original;
+          addTearDown(signal.dispose);
+          final watch = _Watch(signal, Map<int, int>.of);
+          void replace() => signal.value = replacement;
+          if (label == 'lookup') {
+            original.onLookup = replace;
+          } else {
+            original.onLength = replace;
+          }
+
+          signal.addAll(input);
+
+          expect(original, input);
+          expect(signal.untrackedValue, same(replacement));
+          expect(replacement, {5: 5});
+          expect(
+            signal.untrackedPreviousValue,
+            same(history ? original : null),
+          );
+          expect(watch.effectReruns, 1);
+          expect(watch.calls, hasLength(1));
+        });
+      }
+
       test('addAll from a large native map does not look up the input keys, '
           'history $history', () {
         final backing = _CountingMap(1);
@@ -6464,20 +6823,26 @@ void main() {
         if (history) expect(s.untrackedPreviousValue, isEmpty);
       });
 
-      test('addAll never probes a custom input for emptiness, history '
-          '$history', () {
-        final s = MapSignal({'a': 0, 'b': 0}, trackPreviousValue: history);
-        addTearDown(s.dispose);
-        final w = _Watch(s, Map<String, int>.of);
-        final input = _AddAllInput(() => s['a'] = -1);
+      final views = <String, Map<String, int> Function(Map<String, int>)>{
+        'custom input': (map) => map,
+        'MapView': MapView.new,
+        'UnmodifiableMapView': UnmodifiableMapView.new,
+      };
+      for (final MapEntry(key: name, value: wrap) in views.entries) {
+        test('addAll never probes $name for emptiness, history $history', () {
+          final s = MapSignal({'a': 0, 'b': 0}, trackPreviousValue: history);
+          addTearDown(s.dispose);
+          final w = _Watch(s, Map<String, int>.of);
+          final input = _AddAllInput(() => s['a'] = -1);
 
-        s.addAll(input);
+          s.addAll(wrap(input));
 
-        expect(w.calls, hasLength(1));
-        expect(w.calls.single.first, history ? {'a': 0, 'b': 0} : null);
-        expect(w.calls.single.last, {'a': 0, 'b': 1});
-        expect(w.effectReruns, 1);
-      });
+          expect(w.calls, hasLength(1));
+          expect(w.calls.single.first, history ? {'a': 0, 'b': 0} : null);
+          expect(w.calls.single.last, {'a': 0, 'b': 1});
+          expect(w.effectReruns, 1);
+        });
+      }
 
       test('addAll uses the first traversal of a combined map, history '
           '$history', () {
@@ -6557,15 +6922,44 @@ void main() {
   });
 }
 
-class _AddAllInput extends DelegatingMap<String, int> {
-  _AddAllInput(this.onIsEmpty) : super({'b': 1});
+class _AddAllBacking extends MapView<int, int> {
+  _AddAllBacking(super.map);
 
-  final void Function() onIsEmpty;
+  void Function()? onLength;
+  void Function()? onLookup;
+
+  @override
+  int get length {
+    final callback = onLength;
+    onLength = null;
+    callback?.call();
+    return super.length;
+  }
+
+  @override
+  int? operator [](Object? key) {
+    final callback = onLookup;
+    onLookup = null;
+    callback?.call();
+    return super[key];
+  }
+}
+
+class _AddAllInput extends DelegatingMap<String, int> {
+  _AddAllInput(this.onProbe) : super({'b': 1});
+
+  final void Function() onProbe;
 
   @override
   bool get isEmpty {
-    onIsEmpty();
+    onProbe();
     return super.isEmpty;
+  }
+
+  @override
+  int get length {
+    onProbe();
+    return super.length;
   }
 }
 
@@ -6592,6 +6986,35 @@ class _KeyCountingMap extends DelegatingMap<int, int> {
 
 class _UnmodifiableMapSubclass extends UnmodifiableMapView<Object, num> {
   _UnmodifiableMapSubclass(super.map);
+}
+
+class _FailingMapTraversal extends DelegatingMap<String, int> {
+  _FailingMapTraversal(this.onTraversal) : super({'a': 1});
+
+  final void Function() onTraversal;
+
+  @override
+  void forEach(void Function(String, int) action) => onTraversal();
+}
+
+class _SharedMapCast<K, V> extends DelegatingMap<K, V> {
+  _SharedMapCast(this.raw, [this.traversal]) : super(raw.cast<K, V>());
+
+  final Map<Object?, Object?> raw;
+  final TypeError? traversal;
+  int castCalls = 0;
+
+  @override
+  void forEach(void Function(K, V) action) {
+    if (traversal case final error?) throw error;
+    super.forEach(action);
+  }
+
+  @override
+  Map<RK, RV> cast<RK, RV>() {
+    castCalls++;
+    return _SharedMapCast<RK, RV>(raw);
+  }
 }
 
 class _HashKey {
@@ -6712,6 +7135,10 @@ class _NoSwapRandom implements Random {
 /// A map that yields the key 'b' and then throws, both from [keys] and
 /// from [forEach].
 class _ThrowAfterFirstMap extends MapBase<String, int> {
+  _ThrowAfterFirstMap([this.beforeThrow]);
+
+  final void Function()? beforeThrow;
+  final error = StateError('interrupted');
   int keyReads = 0;
 
   @override
@@ -6726,7 +7153,13 @@ class _ThrowAfterFirstMap extends MapBase<String, int> {
   @override
   Iterable<String> get keys {
     keyReads++;
-    return _throwAfter(['b']);
+    return _keys();
+  }
+
+  Iterable<String> _keys() sync* {
+    yield 'b';
+    beforeThrow?.call();
+    throw error;
   }
 
   @override
@@ -6879,6 +7312,18 @@ class _ReentrantFixedLengthList extends _ReentrantList {
 
 class _PartialFillList extends _FixedLengthList {
   _PartialFillList(super._elements);
+
+  @override
+  void fillRange(int start, int end, [int? fillValue]) {
+    _elements.fillRange(start, end, fillValue);
+    throw UnsupportedError('partial fill');
+  }
+}
+
+class _PartialFillView extends UnmodifiableListView<int> {
+  _PartialFillView(this._elements) : super(_elements);
+
+  final List<int> _elements;
 
   @override
   void fillRange(int start, int end, [int? fillValue]) {

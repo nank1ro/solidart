@@ -713,7 +713,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     return newValue;
   }
 
-  /// Runs [mutation] on the collection that holds the value.
+  /// Runs [mutation] on [backing] when supplied, or on the current value.
   ///
   /// If the collection changed, even when [mutation] throws, updates the
   /// previous value and notifies once. A point write saves [undo] until
@@ -728,6 +728,9 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// can notify separately. A restored list compares from the point at
   /// which the assignment restored it.
   ///
+  /// [copyPrevious] can return null when the original value cannot be copied.
+  /// A changed collection then has no previous value to report.
+  ///
   /// Length and nested writes are always checked. Use [slotChanged] for
   /// bounded writes or [bulkCheck] for a full comparison. A list mutation
   /// that can change the length can also move elements and then throw.
@@ -740,11 +743,13 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// goes to the current [Zone].
   R _mutate<R>(
     R Function(C collection) mutation, {
+    C? backing,
     bool Function() Function(C, C?)? bulkCheck,
     bool Function()? slotChanged,
     bool Function(C, C)? failedResizeChanged,
     C Function(C)? undo,
     C Function(C)? undoDuringWrite,
+    C? Function(C)? copyPrevious,
     C Function(C)? copyPreviousOnNestedWrite,
     bool Function()? failedSlotChanged,
     _CopyReplacementFrom<C>? copyReplacementBaseline,
@@ -756,7 +761,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     bool keepBulkVersion = false,
     bool comparesAllElements = false,
   }) {
-    final collection = _untrackedValue;
+    final collection = backing ?? _untrackedValue;
     final outer = _mutating;
     final nested = identical(collection, outer);
     final outerBaseline = _replacementBaseline;
@@ -773,7 +778,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
         ? null
         : () => bulkVersion(length);
     var previous = !nested && trackPreviousValue && undo == null
-        ? _copyPrevious(collection)
+        ? (copyPrevious ?? _copyPrevious)(collection)
         : null;
     final check = slotChanged ?? bulkCheck?.call(collection, previous);
     final outerChanged = _nestedChanged;
@@ -867,10 +872,10 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
         _setPreviousValue(restoration.snapshot);
       } else if (previous != null) {
         _setPreviousValue(previous);
-      } else if (undo != null && trackPreviousValue) {
-        // After an error or a nested write through the signal, [undo] no
-        // longer describes the change, so keep no previous value.
-        final exact = !errors.hasError && !nestedChanged;
+      } else if (trackPreviousValue && (undo != null || copyPrevious != null)) {
+        // An undo step keeps history only if the write succeeded without
+        // nested changes. An unreadable eager copy leaves history absent.
+        final exact = undo != null && !errors.hasError && !nestedChanged;
         _storedPreviousValue = null;
         _hasPreviousValue = exact;
         _pendingUndo = exact ? undo : null;

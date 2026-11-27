@@ -567,6 +567,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// ```
   @override
   void addAll(Map<K, V> other) {
+    final backing = _untrackedValue;
     // These SDK map types expose their length and keys without running
     // source callbacks. A view can run code or yield different keys on replay.
     final nativeInput =
@@ -575,13 +576,12 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
         other is SplayTreeMap<K, V> ||
         _hasNativeUnmodifiableType(other);
     final inputLength = nativeInput ? other.length : null;
-    final backing = _untrackedValue;
     if (inputLength == 0) return backing.addAll(other);
 
     // Forward the original map so the backing can use its fast copy.
     void write(Map<K, V> map) => map.addAll(other);
     final length = backing.length;
-    if (length == 0) return _mutate(write);
+    if (length == 0) return _mutate(write, backing: backing);
     // Built-in key equality keeps the preflight lookup free of callbacks.
     if (trackPreviousValue &&
         inputLength == 1 &&
@@ -595,9 +595,15 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       }
     }
     if (inputLength != null && inputLength <= length) {
-      return _writeKeys(other.keys.toList(growable: false), write);
+      return _writeKeys(backing, other.keys.toList(growable: false), write);
     }
-    _mutate(write, bulkCheck: _bulkChangeCheck);
+    _mutate(
+      write,
+      backing: backing,
+      bulkCheck: (map, previous) =>
+          _bulkChangeCheck(map, previous, allowWiderTypes: true),
+      copyPrevious: _copyAddAllPrevious,
+    );
   }
 
   /// Look up the value of [key], or add a new entry if it isn't there.
@@ -891,14 +897,15 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   }
 
   /// Runs [write], which can change only the slots for [keys].
-  R _writeKeys<R>(List<K> keys, R Function(Map<K, V>) write) {
-    final map = _untrackedValue;
+  R _writeKeys<R>(Map<K, V> map, List<K> keys, R Function(Map<K, V>) write) {
     final before = List<Object?>.filled(keys.length, null);
     for (var i = 0; i < keys.length; i++) {
       before[i] = _readValue(map, keys[i]);
     }
     return _mutate(
       write,
+      backing: map,
+      copyPrevious: _copyAddAllPrevious,
       slotChanged: () {
         for (var i = 0; i < keys.length; i++) {
           if (!identical(before[i], _readValue(map, keys[i]))) return true;
@@ -913,6 +920,60 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
 
   @override
   Map<K, V> _copyPrevious(Map<K, V> map) => Map<K, V>.of(map);
+
+  late final Set<Type> _sdkCastMapTypes = _buildSdkCastMapTypes();
+
+  Set<Type> _buildSdkCastMapTypes() {
+    // Cast views reify both their source and destination types.
+    const empty = <Never, Never>{};
+    final types = <Type>{};
+    void addSourceValues<SK>() {
+      types
+        ..add(Map.castFrom<SK, V, K, V>(empty).runtimeType)
+        ..add(Map.castFrom<SK, V?, K, V>(empty).runtimeType)
+        ..add(Map.castFrom<SK, Object, K, V>(empty).runtimeType)
+        ..add(Map.castFrom<SK, Object?, K, V>(empty).runtimeType)
+        ..add(Map.castFrom<SK, dynamic, K, V>(empty).runtimeType)
+        ..add(Map.castFrom<SK, num, K, V>(empty).runtimeType)
+        ..add(Map.castFrom<SK, num?, K, V>(empty).runtimeType);
+    }
+
+    addSourceValues<K>();
+    addSourceValues<K?>();
+    addSourceValues<Object>();
+    addSourceValues<Object?>();
+    addSourceValues<dynamic>();
+    addSourceValues<num>();
+    addSourceValues<num?>();
+    return types;
+  }
+
+  Map<Object?, Object?>? _widerMapEntries(Map<K, V> map) {
+    if (!_sdkCastMapTypes.contains(map.runtimeType)) return null;
+    final wider = map.cast<Object?, Object?>();
+    // A cast view can also propagate an unrelated error from its source.
+    var unreadable = false;
+    wider.forEach((key, value) {
+      unreadable |= key is! K || value is! V;
+    });
+    return unreadable ? wider : null;
+  }
+
+  Map<K, V>? _copyAddAllPrevious(Map<K, V> map) {
+    try {
+      return _copyPrevious(map);
+      // ignore: avoid_catching_errors
+    } on TypeError catch (error, stack) {
+      // A cast map can have entries that the public history type cannot hold.
+      // Still run addAll so a no-op does not require a typed history copy.
+      try {
+        if (_widerMapEntries(map) != null) return null;
+      } on Object {
+        Error.throwWithStackTrace(error, stack);
+      }
+      rethrow;
+    }
+  }
 
   _ReplacementSlot _readReplacementSlot(Map<K, V> map, Object? key) {
     final value = map[key];
@@ -961,6 +1022,7 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     Map<K, V> map,
     Map<K, V>? previous, {
     void Function(Map<K, V> Function())? saveOriginal,
+    bool allowWiderTypes = false,
   }) {
     // For small maps, unwinding the callback costs more than a full scan.
     // Custom maps must finish forEach because they can throw after a change.
@@ -980,32 +1042,62 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       };
     }
 
+    Map<Object?, Object?>? widerEntries;
+    T readEntries<T>(T Function(Map<Object?, Object?>) read) {
+      if (!allowWiderTypes) return read(map);
+      final wider = widerEntries;
+      if (wider != null) return read(wider);
+      try {
+        return read(map);
+        // ignore: avoid_catching_errors
+      } on TypeError catch (error, stack) {
+        // A wider cast can visit the original entries without per-key lookups.
+        try {
+          final entries = _widerMapEntries(map);
+          if (entries != null) {
+            final result = read(entries);
+            widerEntries = entries;
+            return result;
+          }
+        } on Object {
+          Error.throwWithStackTrace(error, stack);
+        }
+        rethrow;
+      }
+    }
+
     if (previous != null && previous.length == map.length) {
       saveOriginal?.call(() => Map<K, V>.identity()..addAll(previous));
-      return stopOnChange(() {
-        final keys = previous.keys.iterator;
-        final values = previous.values.iterator;
-        var changed = false;
-        map.forEach((key, value) {
-          keys.moveNext();
-          values.moveNext();
-          if (!identical(key, keys.current) ||
-              !identical(value, values.current)) {
-            if (canStop) throw const _BulkMapChanged();
-            changed = true;
-          }
-        });
-        return changed;
-      });
+      return stopOnChange(
+        () => readEntries((entries) {
+          final keys = previous.keys.iterator;
+          final values = previous.values.iterator;
+          var changed = false;
+          entries.forEach((key, value) {
+            keys.moveNext();
+            values.moveNext();
+            if (!identical(key, keys.current) ||
+                !identical(value, values.current)) {
+              if (canStop) throw const _BulkMapChanged();
+              changed = true;
+            }
+          });
+          return changed;
+        }),
+      );
     }
 
     // A plain history map can merge distinct keys from an identity map.
     final before = List<Object?>.filled(2 * map.length, null);
-    var i = 0;
-    map.forEach((key, value) {
-      before[i++] = key;
-      before[i++] = value;
-    });
+    void capture(Map<Object?, Object?> entries) {
+      var i = 0;
+      entries.forEach((key, value) {
+        before[i++] = key;
+        before[i++] = value;
+      });
+    }
+
+    readEntries(capture);
     saveOriginal?.call(() {
       final snapshot = Map<K, V>.identity();
       for (var i = 0; i < before.length; i += 2) {
@@ -1013,18 +1105,20 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       }
       return snapshot;
     });
-    return stopOnChange(() {
-      var i = 0;
-      var changed = false;
-      map.forEach((key, value) {
-        if (!identical(key, before[i]) || !identical(value, before[i + 1])) {
-          if (canStop) throw const _BulkMapChanged();
-          changed = true;
-        }
-        i += 2;
-      });
-      return changed;
-    });
+    return stopOnChange(
+      () => readEntries((entries) {
+        var i = 0;
+        var changed = false;
+        entries.forEach((key, value) {
+          if (!identical(key, before[i]) || !identical(value, before[i + 1])) {
+            if (canStop) throw const _BulkMapChanged();
+            changed = true;
+          }
+          i += 2;
+        });
+        return changed;
+      }),
+    );
   }
 
   bool _replacementEntriesChanged(Map<K, V> map, Map<K, V> before) {

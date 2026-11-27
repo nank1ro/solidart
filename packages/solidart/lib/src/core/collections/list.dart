@@ -931,31 +931,40 @@ class ListSignal<E> extends Signal<List<E>>
     List<E> Function(List<E>)? undo,
     bool savePreviousOnNestedWrite = false,
   }) {
-    if ((_backing ?? _backingOf(_untrackedValue)) != _ListBacking.opaque) {
-      return _mutate(write, undo: undo);
+    final list = _untrackedValue;
+    if ((_backing ?? _backingOf(list)) != _ListBacking.opaque ||
+        (!trackPreviousValue && _castListTypes.contains(list.runtimeType))) {
+      return _mutate(write, backing: list, undo: undo);
     }
-    return _opaquePointResize(write, undo, savePreviousOnNestedWrite);
+    return _opaquePointResize(list, write, undo, savePreviousOnNestedWrite);
   }
 
   R _opaquePointResize<R>(
+    List<E> list,
     R Function(List<E>) write,
     List<E> Function(List<E>)? undo,
     bool savePreviousOnNestedWrite,
   ) {
-    final list = _untrackedValue;
     if (identical(_mutating, list) && _mutatingPrevious != null) {
       // The enclosing mutation checks its copy against the final contents.
-      return _mutate(write, undo: undo, failedResizeChanged: _elementsDiffer);
+      return _mutate(
+        write,
+        backing: list,
+        undo: undo,
+        failedResizeChanged: _elementsDiffer,
+      );
     }
-    // A custom resize can change any slot. Keep the same snapshot for the
-    // change check and for history reads from a callback.
-    final (before, readable) = _saveResize(list);
+    // A custom resize can change any slot. Share the snapshot between the
+    // change check and the history reads during and after the write.
+    final (before, readable) = untracked(() => _saveResize(list));
     List<E> restorePrevious(List<E> _) => before.cast<E>();
     final restore = trackPreviousValue && readable ? restorePrevious : null;
     return _mutate(
       write,
-      undo: undo,
-      slotChanged: () => _rangeChanged(list, 0, before.length, before, 0),
+      backing: list,
+      undo: restore ?? undo,
+      slotChanged: () =>
+          untracked(() => _rangeChanged(list, 0, before.length, before, 0)),
       undoDuringWrite: restore,
       copyPreviousOnNestedWrite: savePreviousOnNestedWrite ? restore : null,
     );
@@ -974,6 +983,27 @@ class ListSignal<E> extends Signal<List<E>>
   late final Type _fixedListType = List<E>.empty().runtimeType;
   late final Type _unmodifiableListType = List<E>.unmodifiable(const [])
       .runtimeType;
+
+  // Exact SDK types keep custom lists on the snapshot path.
+  static final _nativeNumericListTypes = <Type>{
+    <int>[].runtimeType,
+    <int?>[].runtimeType,
+    <double>[].runtimeType,
+    <double?>[].runtimeType,
+    <num>[].runtimeType,
+    <num?>[].runtimeType,
+  };
+
+  // Keep length-only resizes for SDK casts from broad element types when
+  // history is off. The view can contain elements that fail a cast on read.
+  late final _castListTypes = <Type>{
+    List.castFrom<Object, E>(const []).runtimeType,
+    List.castFrom<Object?, E>(const []).runtimeType,
+    List.castFrom<dynamic, E>(const []).runtimeType,
+    List.castFrom<num, E>(const []).runtimeType,
+    List.castFrom<num?, E>(const []).runtimeType,
+  };
+
   bool _hasStableLength(List<E> list) {
     final type = list.runtimeType;
     return type == _defaultListType ||
@@ -1009,10 +1039,12 @@ class ListSignal<E> extends Signal<List<E>>
     }
     final type = list.runtimeType;
     // Some backends use the same runtime type for all native lists.
-    if (type == _defaultListType || type == _fixedListType) {
+    if (type == _defaultListType ||
+        type == _fixedListType ||
+        _nativeNumericListTypes.contains(type)) {
       return _ListBacking.plain;
     }
-    if (type == _unmodifiableListType || list is UnmodifiableListView<E>) {
+    if (type == _unmodifiableListType || type == UnmodifiableListView<E>) {
       return _ListBacking.unmodifiable;
     }
     return _ListBacking.opaque;
