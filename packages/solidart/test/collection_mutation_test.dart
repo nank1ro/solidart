@@ -141,6 +141,8 @@ class _CountingMap extends DelegatingMap<int, int> {
     : super({for (var i = 0; i < entryCount; i++) i: i});
   int scans = 0;
   int reads = 0;
+  int entriesVisited = 0;
+  bool rejectEntries = false;
 
   @override
   int? operator [](Object? key) {
@@ -151,6 +153,7 @@ class _CountingMap extends DelegatingMap<int, int> {
   @override
   Iterable<MapEntry<int, int>> get entries {
     scans++;
+    if (rejectEntries) throw StateError('entries accessed');
     return super.entries;
   }
 
@@ -169,7 +172,10 @@ class _CountingMap extends DelegatingMap<int, int> {
   @override
   void forEach(void Function(int, int) action) {
     scans++;
-    super.forEach(action);
+    super.forEach((key, value) {
+      entriesVisited++;
+      action(key, value);
+    });
   }
 }
 
@@ -2295,17 +2301,30 @@ void main() {
       expect(w.effectReruns, 1);
     });
 
-    test('updateAll that changes nothing does not notify', () {
-      final s = MapSignal({'a': 1, 'b': 2});
-      final w = watch(s);
+    for (final history in [false, true]) {
+      test(
+        'large map updateAll only notifies for a change, history $history',
+        () {
+          final backing = {for (var i = 0; i < 1024; i++) i: i};
+          final s = MapSignal(backing, trackPreviousValue: history);
+          addTearDown(s.dispose);
+          final seen = <int?>[];
+          final effect = Effect(() => seen.add(s[0]));
+          addTearDown(effect.dispose);
 
-      s.updateAll((k, v) => v);
+          s.updateAll((key, value) => value);
 
-      expect(s.untrackedValue, {'a': 1, 'b': 2});
-      expect(w.calls, isEmpty);
-      expect(w.effectReruns, 0);
-      expect(s.untrackedHasPreviousValue, isFalse);
-    });
+          expect(seen, [0]);
+          expect(s.untrackedHasPreviousValue, isFalse);
+
+          s.updateAll((key, value) => key == 0 ? -1 : value);
+
+          expect(seen, [0, -1]);
+          expect(s.untrackedPreviousValue?[0], history ? 0 : null);
+          expect(s.untrackedPreviousValue?[1023], history ? 1023 : null);
+        },
+      );
+    }
 
     test('update without history whose callback writes another key '
         'and returns a new value notifies once', () {
@@ -4835,6 +4854,47 @@ void main() {
       expect(s.untrackedValue, isEmpty);
       expect(runs, 2);
     });
+  });
+
+  group('bulk collection comparisons', () {
+    test('sets with different lengths do not hash the old elements', () {
+      var hashes = 0;
+      final keys = List.generate(100, (_) => _HashKey(() => hashes++));
+      final s = SetSignal(keys, equals: true);
+      addTearDown(s.dispose);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(s.length));
+      addTearDown(effect.dispose);
+      hashes = 0;
+
+      s.value = {};
+
+      expect(seen, [100, 0]);
+      expect(hashes, 0);
+    });
+
+    for (final history in [false, true]) {
+      test('a bulk comparison visits every custom map entry via forEach, '
+          'history $history', () {
+        final backing = _CountingMap(1024);
+        final s = MapSignal(backing, trackPreviousValue: history);
+        addTearDown(s.dispose);
+        final seen = <int?>[];
+        final effect = Effect(() => seen.add(s[0]));
+        addTearDown(effect.dispose);
+
+        s.updateAll((key, value) {
+          if (key != 0) return value;
+          backing
+            ..entriesVisited = 0
+            ..rejectEntries = true;
+          return -1;
+        });
+
+        expect(seen, [0, -1]);
+        expect(backing.entriesVisited, backing.length);
+      });
+    }
   });
 
   group('edge cases of typed lists and cast maps (#208)', () {
