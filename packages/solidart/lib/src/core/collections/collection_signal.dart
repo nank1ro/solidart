@@ -742,9 +742,11 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// [copyPrevious] can return null when the original value cannot be copied.
   /// A changed collection then has no previous value to report.
   ///
-  /// Length and nested writes are always checked. Use [slotChanged] for
-  /// bounded writes or [bulkCheck] for a full comparison. A list mutation
-  /// that can change the length can also move elements and then throw.
+  /// Nested writes are always checked. Use [slotChanged] for bounded writes
+  /// or [bulkCheck] for a full comparison. Pass [initialLength] if the caller
+  /// reads the length before sampling a slot. A sample with a null value
+  /// skips the length comparison. A list resize can move elements and then
+  /// throw.
   /// Set [comparesAllElements] if the bulk check also covers nested resizes.
   /// In that case, [failedResizeChanged] compares the elements with the
   /// history copy, if one exists. A nested mutation leaves that check to the
@@ -755,6 +757,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   R _mutate<R>(
     R Function(C collection) mutation, {
     C? backing,
+    ({int? value})? initialLength,
     bool Function() Function(C, C?)? bulkCheck,
     bool Function()? slotChanged,
     bool Function(C, C)? failedResizeChanged,
@@ -784,8 +787,10 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
         equivalent: equivalentReplacementWrite,
       );
     }
-    final length = _lengthOf(collection);
-    final readBulkVersion = bulkVersion == null
+    final length = initialLength == null
+        ? _lengthOf(collection)
+        : initialLength.value;
+    final readBulkVersion = bulkVersion == null || length == null
         ? null
         : () => bulkVersion(length);
     var previous = !nested && trackPreviousValue && undo == null
@@ -812,7 +817,9 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
           ? null
           : _ReplacementBaseline(
               () =>
-                  length == _lengthOf(collection) && !(check?.call() ?? false),
+                  length != null &&
+                  length == _lengthOf(collection) &&
+                  !(check?.call() ?? false),
               collection,
               copyReplacementBaseline,
               copyOriginalReplacementBaseline,
@@ -862,7 +869,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
       final before = previous;
       changed =
           nestedChanged ||
-          length != _lengthOf(collection) ||
+          (length != null && length != _lengthOf(collection)) ||
           (slotCheck?.call() ?? false) ||
           (!nested &&
               !comparesAllElements &&

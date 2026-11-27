@@ -981,6 +981,19 @@ class ListSignal<E> extends Signal<List<E>>
       version = _mutationVersion;
       (before, readable) = untracked(() => _saveResize(list));
     }
+    // Reading the length can itself run a write. Check it before accepting
+    // a snapshot or taking the fallback slot sample.
+    int? readLength() {
+      final version = _mutationVersion;
+      final length = list.length;
+      if (version == _mutationVersion) return length;
+
+      final retryVersion = _mutationVersion;
+      final retry = list.length;
+      return retryVersion == _mutationVersion ? retry : null;
+    }
+
+    var length = readLength();
     List<E> restorePrevious(List<E> _) => before.cast<E>();
     final stable = version == _mutationVersion;
     final restore = trackPreviousValue && readable && stable
@@ -1006,7 +1019,9 @@ class ListSignal<E> extends Signal<List<E>>
 
       final slotVersion = _mutationVersion;
       final oldSlot = untracked(readSlot);
-      if (slotVersion == _mutationVersion && oldSlot != null) {
+      if (slotVersion != _mutationVersion) {
+        length = readLength();
+      } else if (oldSlot != null) {
         failedSlotChanged = () => untracked(() {
           if (slotVersion != _mutationVersion) return false;
           final newSlot = readSlot();
@@ -1020,6 +1035,7 @@ class ListSignal<E> extends Signal<List<E>>
     return _mutate(
       write,
       backing: list,
+      initialLength: (value: length),
       undo: restore,
       copyPrevious: restore == null ? (_) => null : null,
       slotChanged: stable

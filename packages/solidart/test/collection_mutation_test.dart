@@ -324,6 +324,7 @@ class _ReentrantList extends ListBase<int> {
 
   final List<int> _elements;
   void Function(int)? onRead;
+  void Function()? onLength;
   void Function()? beforeAdd;
   void Function()? afterAdd;
   void Function()? onWrite;
@@ -338,7 +339,12 @@ class _ReentrantList extends ListBase<int> {
   }
 
   @override
-  int get length => _elements.length;
+  int get length {
+    final callback = onLength;
+    onLength = null;
+    callback?.call();
+    return _elements.length;
+  }
 
   @override
   set length(int newLength) => _elements.length = newLength;
@@ -386,6 +392,19 @@ class _RejectingRemovalList extends _ReentrantList {
 
   @override
   int removeLast() => removeAt(length - 1);
+}
+
+class _StaleLengthRemovalList extends _RejectingRemovalList {
+  _StaleLengthRemovalList(super._elements) : super(changesSlot: false);
+
+  @override
+  int get length {
+    final length = _elements.length;
+    final callback = onLength;
+    onLength = null;
+    callback?.call();
+    return length;
+  }
 }
 
 class _UnstableLengthRemovalList extends _RejectingRemovalList {
@@ -1009,6 +1028,146 @@ void main() {
   });
 
   group('lazy collection history', () {
+    for (final changesSlot in [false, true]) {
+      test('rejected removal samples the slot after the initial length read, '
+          'changed $changesSlot', () {
+        final backing = _RejectingRemovalList([1, 2], changesSlot: changesSlot);
+        final s = ListSignal<int>([])..value = backing;
+        addTearDown(s.dispose);
+        final seen = <List<int>>[];
+        final effect = Effect(() {
+          s.value;
+          seen.add(List.of(backing._elements));
+        });
+        addTearDown(effect.dispose);
+        var writes = 0;
+        backing.onRead = (index) {
+          if (index != 1 || writes == 2) return;
+          s[0] = 7 + writes++;
+          if (writes == 2) backing.onLength = () => s[0] = 10;
+        };
+
+        expect(() => s.removeAt(1), throwsA(same(backing.error)));
+        backing.onRead = null;
+
+        expect(seen, [
+          [1, 2],
+          [7, 2],
+          [8, 2],
+          [10, 2],
+          if (changesSlot) [10, 9],
+        ]);
+        expect(s.untrackedPreviousValue, changesSlot ? null : [8, 2]);
+      });
+    }
+
+    for (final growable in [false, true]) {
+      test('an append discards a snapshot invalidated by the length read, '
+          'growable $growable', () {
+        final backing = _ReentrantList(
+          List<int>.of([1, 2], growable: growable),
+        );
+        final s = ListSignal<int>([])..value = backing;
+        addTearDown(s.dispose);
+        final seen = <List<int>>[];
+        final effect = Effect(() {
+          s.value;
+          seen.add(List.of(backing._elements));
+        });
+        addTearDown(effect.dispose);
+        backing.onRead = (index) {
+          if (index != 1) return;
+          backing
+            ..onRead = null
+            ..onLength = () => s[0] = 7;
+        };
+
+        if (growable) {
+          s.add(3);
+        } else {
+          expect(() => s.add(3), throwsUnsupportedError);
+        }
+
+        expect(seen, [
+          [1, 2],
+          [7, 2],
+          if (growable) [7, 2, 3],
+        ]);
+        expect(s.untrackedPreviousValue, growable ? null : [1, 2]);
+      });
+    }
+
+    for (final lengthWrites in [1, 2]) {
+      test('a rejected removal disregards a length invalidated by a write, '
+          'length writes $lengthWrites', () {
+        final backing = _StaleLengthRemovalList([1, 2]);
+        final s = ListSignal<int>([])..value = backing;
+        addTearDown(s.dispose);
+        final seen = <List<int>>[];
+        final effect = Effect(() {
+          s.value;
+          seen.add(List.of(backing._elements));
+        });
+        addTearDown(effect.dispose);
+        var writes = 0;
+        void appendFromLength() {
+          s.add(3 + writes++);
+          if (writes < lengthWrites) backing.onLength = appendFromLength;
+        }
+
+        backing.onRead = (index) {
+          if (index != 1) return;
+          backing
+            ..onRead = null
+            ..onLength = appendFromLength;
+        };
+
+        expect(() => s.removeAt(0), throwsA(same(backing.error)));
+
+        expect(seen, [
+          [1, 2],
+          [1, 2, 3],
+          if (lengthWrites == 2) [1, 2, 3, 4],
+        ]);
+        expect(
+          s.untrackedPreviousValue,
+          lengthWrites == 1 ? [1, 2] : [1, 2, 3],
+        );
+      });
+    }
+
+    test('a resize during the slot sample does not notify twice', () {
+      final backing = _RejectingRemovalList([1, 2], changesSlot: false);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      final seen = <List<int>>[];
+      final effect = Effect(() {
+        s.value;
+        seen.add(List.of(backing._elements));
+      });
+      addTearDown(effect.dispose);
+      var writes = 0;
+      backing.onRead = (index) {
+        if (index != 1) return;
+        if (writes < 2) {
+          s[0] = 7 + writes++;
+          return;
+        }
+        backing.onRead = null;
+        s.add(3);
+      };
+
+      expect(() => s.removeAt(1), throwsA(same(backing.error)));
+
+      expect(seen, [
+        [1, 2],
+        [7, 2],
+        [8, 2],
+        [8, 2, 3],
+      ]);
+      expect(s.untrackedPreviousValue, [8, 2]);
+    });
+
     test('history is unavailable during an active nested setter', () {
       final backing = _ReentrantList([1, 2]);
       final s = ListSignal<int>([])..value = backing;
