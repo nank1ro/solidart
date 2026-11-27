@@ -46,6 +46,8 @@ class SetSignal<E> extends Signal<Set<E>>
   bool _compare(Set<E>? oldValue, Set<E>? newValue) {
     // skip if the value are equals
     if (equals) {
+      if (identical(oldValue, newValue)) return true;
+      if (oldValue?.length != newValue?.length) return false;
       return SetEquality<E>().equals(oldValue, newValue);
     }
 
@@ -81,7 +83,7 @@ class SetSignal<E> extends Signal<Set<E>>
   @override
   bool add(E value) {
     final set = _untrackedValue;
-    if (set.contains(value)) return set.add(value);
+    if (trackPreviousValue && set.contains(value)) return set.add(value);
     // Only a default set shares its equality with the rebuilt history set.
     // NaN is not equal to itself, so it cannot be found to skip it.
     final lazy =
@@ -97,6 +99,8 @@ class SetSignal<E> extends Signal<Set<E>>
   // A default set has the same equality as a new `<E>{}`. Its type
   // arguments must match the signal's.
   late final Type _defaultSetType = <E>{}.runtimeType;
+  late final Type _defaultListType = <E>[].runtimeType;
+  late final bool _hasValueElements = _hasValueKeyType<E>();
 
   /// [set] without [element], the new element that `add` stored. A copy of
   /// the set would be sized for a table that may have grown for it.
@@ -120,6 +124,18 @@ class SetSignal<E> extends Signal<Set<E>>
   @override
   void addAll(Iterable<E> elements) {
     if (_isEmptyCollection(elements)) return _untrackedValue.addAll(elements);
+    if (trackPreviousValue) {
+      final set = _untrackedValue;
+      if (set.runtimeType == _defaultSetType &&
+          _hasValueElements &&
+          ((elements is List<E> && elements.runtimeType == _defaultListType) ||
+              (elements is Set<E> &&
+                  elements.runtimeType == _defaultSetType)) &&
+          elements.length == 1 &&
+          set.contains(elements.first)) {
+        return set.addAll(elements);
+      }
+    }
     _mutate((set) => set.addAll(elements));
   }
 
@@ -214,7 +230,7 @@ class SetSignal<E> extends Signal<Set<E>>
   @override
   bool remove(Object? value) {
     return _mutateUnless(
-      !_untrackedValue.contains(value),
+      trackPreviousValue && !_untrackedValue.contains(value),
       (set) => set.remove(value),
     );
   }
@@ -257,23 +273,10 @@ class SetSignal<E> extends Signal<Set<E>>
     return _value.toSet();
   }
 
-  /// Provides a view of this set as a set of [R] instances.
+  /// Copies the elements into a new [SetSignal] of [R] instances.
   ///
-  /// If this set contains only instances of [R], all read operations
-  /// will work correctly. If any operation tries to access an element
-  /// that is not an instance of [R], the access will throw instead.
-  ///
-  /// Elements added to the set (e.g., by using [add] or [addAll])
-  /// must be instances of [R] to be valid arguments to the adding function,
-  /// and they must be instances of [E] as well to be accepted by
-  /// this set as well.
-  ///
-  /// Methods which accept one or more `Object?` as argument,
-  /// like [contains], [remove] and [removeAll],
-  /// will pass the argument directly to the this set's method
-  /// without any checks.
-  /// That means that you can do `setOfStrings.cast<int>().remove("a")`
-  /// successfully, even if it looks like it shouldn't have any effect.
+  /// This reads the entire set before returning. An element of another
+  /// type can throw while building the copy.
   @override
   Set<R> cast<R>() => SetSignal(_value.cast<R>());
 
@@ -449,7 +452,7 @@ class SetSignal<E> extends Signal<Set<E>>
 
   @override
   String toString() =>
-      '''SetSignal<$E>(value: $_value, previousValue: $_previousValue)''';
+      '''SetSignal<$E>(value: $_value, previousValue: $_previousDescription)''';
 
   @override
   int _lengthOf(Set<E> set) => set.length;
@@ -457,7 +460,12 @@ class SetSignal<E> extends Signal<Set<E>>
   /// `toSet` keeps the type and equality of the set. A linked or sorted
   /// set also keeps its order. A hash set has no defined order.
   @override
-  Set<E> _copyPrevious(Set<E> set) => set.toSet();
+  Set<E> _copyPrevious(Set<E> set) {
+    final copy = set.toSet();
+    if (copy.length == set.length) return copy;
+    // Set.castFrom without a factory can collapse distinct equal elements.
+    return Set<E>.identity()..addAll(set);
+  }
 
   @override
   // ignore: overridden_fields

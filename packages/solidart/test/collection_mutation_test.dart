@@ -136,11 +136,31 @@ class _PointList extends DelegatingList<int> {
   }
 }
 
+class _CountedCastSource extends DelegatingList<Object> {
+  _CountedCastSource() : super([1, 'unread', 2]);
+
+  int reads = 0;
+
+  @override
+  Object operator [](int index) {
+    reads++;
+    return super[index];
+  }
+
+  @override
+  Iterator<Object> get iterator {
+    reads++;
+    return super.iterator;
+  }
+}
+
 class _CountingMap extends DelegatingMap<int, int> {
   _CountingMap([int entryCount = 100])
     : super({for (var i = 0; i < entryCount; i++) i: i});
   int scans = 0;
   int reads = 0;
+  int entriesVisited = 0;
+  bool rejectEntries = false;
 
   @override
   int? operator [](Object? key) {
@@ -151,6 +171,7 @@ class _CountingMap extends DelegatingMap<int, int> {
   @override
   Iterable<MapEntry<int, int>> get entries {
     scans++;
+    if (rejectEntries) throw StateError('entries accessed');
     return super.entries;
   }
 
@@ -169,7 +190,10 @@ class _CountingMap extends DelegatingMap<int, int> {
   @override
   void forEach(void Function(int, int) action) {
     scans++;
-    super.forEach(action);
+    super.forEach((key, value) {
+      entriesVisited++;
+      action(key, value);
+    });
   }
 }
 
@@ -188,6 +212,37 @@ class _ReactiveMapView extends MapView<String, int> {
   void forEach(void Function(String, int) action) {
     dependency.value;
     super.forEach(action);
+  }
+}
+
+class _LateTraversalErrorView extends MapView<String, int> {
+  _LateTraversalErrorView(super.map);
+
+  bool fail = false;
+
+  @override
+  void forEach(void Function(String, int) action) {
+    super.forEach(action);
+    if (fail) throw StateError('late traversal error');
+  }
+}
+
+class _FailedReplacementReadView extends MapView<String, int> {
+  _FailedReplacementReadView(super.map, this.traversalError);
+
+  final TypeError traversalError;
+  bool fail = false;
+
+  @override
+  int? operator [](Object? key) {
+    if (fail && key == 'b') throw StateError('lookup failed');
+    return super[key];
+  }
+
+  @override
+  void forEach(void Function(String, int) action) {
+    super.forEach(action);
+    if (fail) throw traversalError;
   }
 }
 
@@ -234,21 +289,71 @@ class _FixedLengthList extends ListBase<int> {
   void operator []=(int index, int value) => _elements[index] = value;
 }
 
+class _LengthChangingList extends DelegatingList<int> {
+  _LengthChangingList() : super([0, 9]);
+
+  var _lengthReads = 0;
+
+  @override
+  int get length => _lengthReads++ == 0 ? 1 : super.length;
+}
+
+class _RegeneratingObjects extends ListBase<_Same> {
+  int reads = 0;
+
+  @override
+  int get length => 2;
+
+  @override
+  set length(int value) => throw UnsupportedError('fixed length');
+
+  @override
+  _Same operator [](int index) {
+    reads++;
+    return _Same(index);
+  }
+
+  @override
+  void operator []=(int index, _Same value) =>
+      throw UnsupportedError('read only');
+}
+
 /// A list whose slot write runs [onWrite] once after it writes.
 class _ReentrantList extends ListBase<int> {
   _ReentrantList(this._elements);
 
   final List<int> _elements;
+  void Function(int)? onRead;
+  void Function()? onLength;
+  void Function()? beforeAdd;
+  void Function()? afterAdd;
   void Function()? onWrite;
 
   @override
-  int get length => _elements.length;
+  void add(int value) {
+    final callback = beforeAdd;
+    beforeAdd = null;
+    callback?.call();
+    _elements.add(value);
+    afterAdd?.call();
+  }
+
+  @override
+  int get length {
+    final callback = onLength;
+    onLength = null;
+    callback?.call();
+    return _elements.length;
+  }
 
   @override
   set length(int newLength) => _elements.length = newLength;
 
   @override
-  int operator [](int index) => _elements[index];
+  int operator [](int index) {
+    onRead?.call(index);
+    return _elements[index];
+  }
 
   @override
   void operator []=(int index, int value) {
@@ -256,6 +361,104 @@ class _ReentrantList extends ListBase<int> {
     final callback = onWrite;
     onWrite = null;
     callback?.call();
+  }
+}
+
+class _ReentrantLengthList extends DelegatingList<int> {
+  _ReentrantLengthList(super.base);
+
+  void Function()? onLength;
+
+  @override
+  int get length {
+    final callback = onLength;
+    onLength = null;
+    callback?.call();
+    return super.length;
+  }
+}
+
+class _RejectingRemovalList extends _ReentrantList {
+  _RejectingRemovalList(super._elements, {required this.changesSlot});
+
+  final bool changesSlot;
+  final error = UnsupportedError('removal rejected');
+
+  @override
+  int removeAt(int index) {
+    if (changesSlot) _elements[index] = 9;
+    throw error;
+  }
+
+  @override
+  int removeLast() => removeAt(length - 1);
+}
+
+class _StaleLengthRemovalList extends _RejectingRemovalList {
+  _StaleLengthRemovalList(super._elements) : super(changesSlot: false);
+
+  @override
+  int get length {
+    final length = _elements.length;
+    final callback = onLength;
+    onLength = null;
+    callback?.call();
+    return length;
+  }
+}
+
+class _UnstableLengthRemovalList extends _RejectingRemovalList {
+  _UnstableLengthRemovalList(super._elements) : super(changesSlot: false);
+
+  var _readsAfterRejection = 0;
+  bool rejected = false;
+
+  @override
+  int get length => rejected && ++_readsAfterRejection > 1 ? 1 : super.length;
+
+  @override
+  int removeLast() {
+    rejected = true;
+    throw error;
+  }
+}
+
+class _RegeneratingRemovalList extends _RegeneratingObjects {
+  var _first = _Same(1);
+  void Function()? onRead;
+
+  @override
+  _Same operator [](int index) {
+    if (index == 0) return _first;
+    onRead?.call();
+    return super[index];
+  }
+
+  @override
+  void operator []=(int index, _Same value) => _first = value;
+
+  @override
+  _Same removeAt(int index) => throw UnsupportedError('removal rejected');
+}
+
+class _NestedRemoveList extends _ReentrantList {
+  _NestedRemoveList(super._elements, {required this.failure});
+
+  final bool failure;
+  void Function()? onRemove;
+  void Function()? onRemoveAt;
+
+  @override
+  bool remove(Object? value) {
+    onRemove?.call();
+    if (failure) throw StateError('remove failed');
+    return _elements.remove(value);
+  }
+
+  @override
+  int removeAt(int index) {
+    onRemoveAt?.call();
+    return _elements.removeAt(index);
   }
 }
 
@@ -825,6 +1028,558 @@ void main() {
   });
 
   group('lazy collection history', () {
+    for (final changesSlot in [false, true]) {
+      test('rejected removal samples the slot after the initial length read, '
+          'changed $changesSlot', () {
+        final backing = _RejectingRemovalList([1, 2], changesSlot: changesSlot);
+        final s = ListSignal<int>([])..value = backing;
+        addTearDown(s.dispose);
+        final seen = <List<int>>[];
+        final effect = Effect(() {
+          s.value;
+          seen.add(List.of(backing._elements));
+        });
+        addTearDown(effect.dispose);
+        var writes = 0;
+        backing.onRead = (index) {
+          if (index != 1 || writes == 2) return;
+          s[0] = 7 + writes++;
+          if (writes == 2) backing.onLength = () => s[0] = 10;
+        };
+
+        expect(() => s.removeAt(1), throwsA(same(backing.error)));
+        backing.onRead = null;
+
+        expect(seen, [
+          [1, 2],
+          [7, 2],
+          [8, 2],
+          [10, 2],
+          if (changesSlot) [10, 9],
+        ]);
+        expect(s.untrackedPreviousValue, changesSlot ? null : [8, 2]);
+      });
+    }
+
+    for (final growable in [false, true]) {
+      test('an append discards a snapshot invalidated by the length read, '
+          'growable $growable', () {
+        final backing = _ReentrantList(
+          List<int>.of([1, 2], growable: growable),
+        );
+        final s = ListSignal<int>([])..value = backing;
+        addTearDown(s.dispose);
+        final seen = <List<int>>[];
+        final effect = Effect(() {
+          s.value;
+          seen.add(List.of(backing._elements));
+        });
+        addTearDown(effect.dispose);
+        backing.onRead = (index) {
+          if (index != 1) return;
+          backing
+            ..onRead = null
+            ..onLength = () => s[0] = 7;
+        };
+
+        if (growable) {
+          s.add(3);
+        } else {
+          expect(() => s.add(3), throwsUnsupportedError);
+        }
+
+        expect(seen, [
+          [1, 2],
+          [7, 2],
+          if (growable) [7, 2, 3],
+        ]);
+        expect(s.untrackedPreviousValue, growable ? null : [1, 2]);
+      });
+    }
+
+    for (final lengthWrites in [1, 2]) {
+      test('a rejected removal disregards a length invalidated by a write, '
+          'length writes $lengthWrites', () {
+        final backing = _StaleLengthRemovalList([1, 2]);
+        final s = ListSignal<int>([])..value = backing;
+        addTearDown(s.dispose);
+        final seen = <List<int>>[];
+        final effect = Effect(() {
+          s.value;
+          seen.add(List.of(backing._elements));
+        });
+        addTearDown(effect.dispose);
+        var writes = 0;
+        void appendFromLength() {
+          s.add(3 + writes++);
+          if (writes < lengthWrites) backing.onLength = appendFromLength;
+        }
+
+        backing.onRead = (index) {
+          if (index != 1) return;
+          backing
+            ..onRead = null
+            ..onLength = appendFromLength;
+        };
+
+        expect(() => s.removeAt(0), throwsA(same(backing.error)));
+
+        expect(seen, [
+          [1, 2],
+          [1, 2, 3],
+          if (lengthWrites == 2) [1, 2, 3, 4],
+        ]);
+        expect(
+          s.untrackedPreviousValue,
+          lengthWrites == 1 ? [1, 2] : [1, 2, 3],
+        );
+      });
+    }
+
+    test('a resize during the slot sample does not notify twice', () {
+      final backing = _RejectingRemovalList([1, 2], changesSlot: false);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      final seen = <List<int>>[];
+      final effect = Effect(() {
+        s.value;
+        seen.add(List.of(backing._elements));
+      });
+      addTearDown(effect.dispose);
+      var writes = 0;
+      backing.onRead = (index) {
+        if (index != 1) return;
+        if (writes < 2) {
+          s[0] = 7 + writes++;
+          return;
+        }
+        backing.onRead = null;
+        s.add(3);
+      };
+
+      expect(() => s.removeAt(1), throwsA(same(backing.error)));
+
+      expect(seen, [
+        [1, 2],
+        [7, 2],
+        [8, 2],
+        [8, 2, 3],
+      ]);
+      expect(s.untrackedPreviousValue, [8, 2]);
+    });
+
+    test('history is unavailable during an active nested setter', () {
+      final backing = _ReentrantList([1, 2]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      s[0] = 3;
+      final watch = _Watch<List<int>>(s, List.of);
+      backing.onWrite = () {
+        backing.onWrite = () {
+          expect(s.untrackedPreviousValue, isNull);
+          expect(s.untrackedHasPreviousValue, isFalse);
+        };
+        s[1] = 5;
+      };
+
+      s[0] = 4;
+
+      expect(s.untrackedValue, [4, 5]);
+      expect(watch.effectReruns, 1);
+      expect(s.untrackedHasPreviousValue, isFalse);
+    });
+
+    test('a nested no-op leaves pending history available afterward', () {
+      final backing = _NestedRemoveList([1, 2], failure: false);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      s[0] = 3;
+      backing
+        ..onRemove = () {
+          expect(s.untrackedPreviousValue, isNull);
+          expect(s.untrackedHasPreviousValue, isFalse);
+        }
+        ..onWrite = () {
+          expect(s.remove(9), isFalse);
+          expect(s.untrackedPreviousValue, [1, 2]);
+        };
+
+      s[0] = 4;
+
+      expect(s.untrackedPreviousValue, [3, 2]);
+    });
+
+    test('append history reflects a write during the initial snapshot', () {
+      final backing = _ReentrantList([1, 2]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      final watch = _Watch<List<int>>(s, List.of);
+      backing.onRead = (index) {
+        if (index != 1) return;
+        backing.onRead = null;
+        s[0] = 7;
+      };
+
+      s.add(3);
+
+      expect(s.untrackedValue, [7, 2, 3]);
+      expect(s.untrackedPreviousValue, [7, 2]);
+      expect(watch.effectReruns, 2);
+    });
+
+    test('append drops history after two interrupted snapshots', () {
+      final backing = _ReentrantList([1, 2]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      var writes = 0;
+      backing.onRead = (index) {
+        if (index == 1) s[0] = 7 + writes++;
+      };
+
+      s.add(3);
+      backing.onRead = null;
+
+      expect(writes, 2);
+      expect(s.untrackedValue, [8, 2, 3]);
+      expect(s.untrackedHasPreviousValue, isFalse);
+    });
+
+    test('a rejected append after interrupted snapshots preserves history', () {
+      final backing = _ReentrantList(List<int>.of([1, 2], growable: false));
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(s.value[0]));
+      addTearDown(effect.dispose);
+      var writes = 0;
+      backing.onRead = (index) {
+        if (index == 1 && writes < 2) s[0] = 7 + writes++;
+      };
+
+      expect(() => s.add(3), throwsUnsupportedError);
+      backing.onRead = null;
+
+      expect(seen, [1, 7, 8]);
+      expect(s.untrackedPreviousValue, [7, 2]);
+    });
+
+    for (final history in [false, true]) {
+      test('removeLast keeps its backing when a length getter replaces it, '
+          'history $history', () {
+        final original = [1, 2];
+        final backing = _ReentrantLengthList(original);
+        final replacement = [9, 10, 11];
+        final s = ListSignal<int>([], trackPreviousValue: history)
+          ..value = backing;
+        addTearDown(s.dispose);
+        final w = _Watch<List<int>>(s, List.of);
+        backing.onLength = () => s.value = replacement;
+
+        expect(s.removeLast(), 2);
+
+        expect(original, [1]);
+        expect(s.untrackedValue, same(replacement));
+        expect(replacement, [9, 10, 11]);
+        expect(w.effectReruns, 1);
+        expect(s.untrackedPreviousValue, same(history ? backing : null));
+      });
+
+      for (final last in [false, true]) {
+        for (final changesSlot in [false, true]) {
+          test('a rejected removal after interrupted snapshots, '
+              'history $history, last $last, changed $changesSlot', () {
+            final backing = _RejectingRemovalList([
+              1,
+              2,
+            ], changesSlot: changesSlot);
+            final s = ListSignal<int>([], trackPreviousValue: history)
+              ..value = backing;
+            addTearDown(s.dispose);
+            final seen = <List<int>>[];
+            final effect = Effect(() {
+              s.value;
+              seen.add(List.of(backing._elements));
+            });
+            addTearDown(effect.dispose);
+            var writes = 0;
+            backing.onRead = (index) {
+              if (index == 1 && writes < 2) s[0] = 7 + writes++;
+            };
+
+            expect(
+              () => last ? s.removeLast() : s.removeAt(1),
+              throwsA(same(backing.error)),
+            );
+            backing.onRead = null;
+
+            expect(s.untrackedValue, changesSlot ? [8, 9] : [8, 2]);
+            expect(seen, [
+              [1, 2],
+              [7, 2],
+              [8, 2],
+              if (changesSlot) [8, 9],
+            ]);
+            expect(
+              s.untrackedPreviousValue,
+              history && !changesSlot ? [7, 2] : null,
+            );
+          });
+        }
+      }
+    }
+
+    for (final index in [1, 2]) {
+      test('an unavailable target slot preserves the original removal error, '
+          'index $index', () {
+        final backing = _RejectingRemovalList([1, 2], changesSlot: false);
+        final s = ListSignal<int>([])..value = backing;
+        addTearDown(s.dispose);
+        final seen = <int>[];
+        final effect = Effect(() => seen.add(s.value[0]));
+        addTearDown(effect.dispose);
+        var writes = 0;
+        backing.onRead = (readIndex) {
+          if (readIndex == 1 && writes < 3) s[0] = 7 + writes++;
+        };
+
+        expect(() => s.removeAt(index), throwsA(same(backing.error)));
+        backing.onRead = null;
+
+        expect(seen, [1, 7, 8, if (index == 1) 9]);
+        expect(s.untrackedPreviousValue, index == 1 ? [8, 2] : [7, 2]);
+      });
+    }
+
+    test(
+      'regenerated slot reads do not turn a rejected removal into a write',
+      () {
+        final backing = _RegeneratingRemovalList();
+        final s = ListSignal<_Same>([])..value = backing;
+        addTearDown(s.dispose);
+        final seen = <int>[];
+        final effect = Effect(() => seen.add(s.value[0].order));
+        addTearDown(effect.dispose);
+        var writes = 0;
+        backing.onRead = () {
+          if (writes < 2) s[0] = _Same(7 + writes++);
+        };
+
+        expect(() => s.removeAt(1), throwsUnsupportedError);
+        backing.onRead = null;
+
+        expect(seen, [1, 7, 8]);
+        expect(s.untrackedPreviousValue?.first.order, 7);
+      },
+    );
+
+    test('a rejected removeLast never compares two different target slots', () {
+      final backing = _UnstableLengthRemovalList([1, 2]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(s.value[0]));
+      addTearDown(effect.dispose);
+      var writes = 0;
+      backing.onRead = (index) {
+        if (index == 1 && writes < 2) s[0] = 7 + writes++;
+      };
+
+      expect(s.removeLast, throwsA(same(backing.error)));
+      backing
+        ..onRead = null
+        ..rejected = false;
+
+      expect(seen, [1, 7, 8]);
+      expect(s.untrackedPreviousValue, [7, 2]);
+    });
+
+    test('a shrinking nested setter write leaves no lazy history', () {
+      final backing = _ReentrantList([1, 2]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      s[0] = 3;
+      final watch = _Watch<List<int>>(s, List.of);
+      List<int>? insideSetter;
+      backing.onWrite = () {
+        s.removeLast();
+        insideSetter = s.previousValue;
+      };
+
+      s[1] = 9;
+
+      expect(insideSetter, isNull);
+      expect(s.untrackedHasPreviousValue, isFalse);
+      expect(watch.effectReruns, 1);
+      expect(watch.calls, [
+        [
+          null,
+          [3],
+        ],
+      ]);
+    });
+
+    test('a second nested setter cannot rebuild invalidated lazy history', () {
+      final backing = _ReentrantList([1, 2]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      s[1] = 3;
+      final watch = _Watch<List<int>>(s, List.of);
+      backing.onWrite = () {
+        s.removeLast();
+        backing.onWrite = () {
+          expect(s.previousValue, isNull);
+          expect(s.untrackedHasPreviousValue, isFalse);
+        };
+        s[0] = 5;
+      };
+
+      s[0] = 4;
+
+      expect(watch.effectReruns, 1);
+      expect(watch.calls, [
+        [
+          null,
+          [5],
+        ],
+      ]);
+    });
+
+    test('a custom append cannot invent history for a repaired slot', () {
+      final elements = <Object>[1, 'unread'];
+      final backing = _ReentrantList(elements.cast<int>());
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      final watch = _Watch<List<int>>(s, List.of);
+      backing.beforeAdd = () => elements[1] = 7;
+
+      s.add(3);
+
+      expect(s.untrackedHasPreviousValue, isFalse);
+      expect(watch.effectReruns, 1);
+      expect(watch.calls, [
+        [
+          null,
+          [1, 7, 3],
+        ],
+      ]);
+    });
+
+    test('a custom append keeps history when it changes an existing slot', () {
+      final backing = _ReentrantList([1]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      final watch = _Watch<List<int>>(s, List.of);
+      backing.beforeAdd = () => backing[0] = 9;
+
+      s.add(2);
+
+      expect(watch.calls, [
+        [
+          [1],
+          [9, 2],
+        ],
+      ]);
+      expect(s.untrackedPreviousValue, [1]);
+    });
+
+    for (final history in [false, true]) {
+      test('a custom append keeps history before its nested write, '
+          'history $history (#208 item 17)', () {
+        final backing = _ReentrantList([1]);
+        final s = ListSignal<int>([], trackPreviousValue: history)
+          ..value = backing;
+        addTearDown(s.dispose);
+        final watch = _Watch<List<int>>(s, List.of);
+        backing.beforeAdd = () => s[0] = 9;
+
+        s.add(2);
+
+        final before = history ? [1] : null;
+        expect(watch.calls, [
+          [
+            before,
+            [9, 2],
+          ],
+        ]);
+        expect(watch.effectReruns, 1);
+        expect(s.untrackedPreviousValue, before);
+      });
+
+      test('a custom setter reads history before its own write, '
+          'history $history (#208 item 20)', () {
+        final backing = _ReentrantList([1, 2]);
+        final s = ListSignal<int>([], trackPreviousValue: history)
+          ..value = backing;
+        addTearDown(s.dispose);
+        s.add(3);
+        List<int>? insideSetter;
+        backing.onWrite = () => insideSetter = s.previousValue;
+
+        s[0] = 9;
+
+        expect(insideSetter, history ? [1, 2] : null);
+        expect(s.untrackedValue, [9, 2, 3]);
+        expect(s.untrackedPreviousValue, history ? [1, 2, 3] : null);
+      });
+
+      test('a custom append reads earlier history after adding its element, '
+          'history $history', () {
+        final backing = _ReentrantList([1]);
+        final s = ListSignal<int>([], trackPreviousValue: history)
+          ..value = backing;
+        addTearDown(s.dispose);
+        s[0] = 9;
+        List<int>? insideAppend;
+        backing.afterAdd = () => insideAppend = s.previousValue;
+
+        s.add(2);
+
+        expect(insideAppend, history ? [1] : null);
+        expect(s.untrackedPreviousValue, history ? [9] : null);
+      });
+    }
+
+    test(
+      'a slot write after an append leaves a cast error to the history read',
+      () {
+        final backing = <Object>[1, 'unread'];
+        final s = ListSignal<int>([])..value = backing.cast<int>();
+        addTearDown(s.dispose);
+
+        s.add(3);
+        s[0] = 9;
+
+        expect(backing, [9, 'unread', 3]);
+        expect(() => s.untrackedPreviousValue, throwsA(isA<TypeError>()));
+      },
+    );
+
+    test('an unreadable cast does not block a nested write during append', () {
+      final elements = <Object>[1, 'unread'];
+      final backing = _ReentrantList(elements.cast<int>());
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      backing.beforeAdd = () => s[0] = 9;
+
+      s.add(3);
+
+      expect(elements, [9, 'unread', 3]);
+      expect(s.untrackedHasPreviousValue, isFalse);
+    });
+
+    test('a slot write after an append still reads only its slot', () {
+      final backing = _PointList(List.generate(100, (i) => i));
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      s.add(100);
+      backing.reads = 0;
+
+      s[50] = -1;
+
+      expect(backing.reads, lessThanOrEqualTo(2));
+      expect(s.untrackedPreviousValue, List.generate(101, (i) => i));
+    });
+
     test('a typed-list fill that the list converts keeps exact history', () {
       final s = ListSignal<int>([])..value = Uint8List.fromList([0, 1, 2]);
       addTearDown(s.dispose);
@@ -946,27 +1701,43 @@ void main() {
       expect(s.untrackedPreviousValue, isEmpty);
     });
 
-    final writes = <String, void Function(ListSignal<int>)>{
-      'slot': (s) => s[40] = -1,
-      'first': (s) => s.first = -1,
-      'last': (s) => s.last = -1,
-      'add': (s) => s.add(-1),
-      'insert': (s) => s.insert(40, -1),
-      'removeAt': (s) => s.removeAt(40),
-      'removeLast': (s) => s.removeLast(),
-    };
-    for (final entry in writes.entries) {
-      test('list ${entry.key} copies only at the first read', () {
+    final writes =
+        <
+          (
+            String,
+            void Function(ListSignal<int>),
+            int, {
+            bool readsOnHistoryRead,
+          })
+        >[
+          ('slot', (s) => s[40] = -1, 2, readsOnHistoryRead: true),
+          ('first', (s) => s.first = -1, 2, readsOnHistoryRead: true),
+          ('last', (s) => s.last = -1, 2, readsOnHistoryRead: true),
+          // An opaque resize saves all existing slots before writing.
+          ('add', (s) => s.add(-1), 100, readsOnHistoryRead: false),
+          ('insert', (s) => s.insert(40, -1), 100, readsOnHistoryRead: false),
+          ('removeAt', (s) => s.removeAt(40), 100, readsOnHistoryRead: false),
+          ('removeLast', (s) => s.removeLast(), 100, readsOnHistoryRead: false),
+        ];
+    for (final (name, write, maxReads, :readsOnHistoryRead) in writes) {
+      test('list $name builds lazy history once with at most $maxReads '
+          'reads before it', () {
         final before = List.generate(100, (i) => i);
         final backing = _PointList(before.toList());
         final s = ListSignal<int>([])..value = backing;
         addTearDown(s.dispose);
-        entry.value(s);
-        expect(backing.reads, lessThanOrEqualTo(2));
+        write(s);
+        final readsAfterWrite = backing.reads;
+        expect(readsAfterWrite, lessThanOrEqualTo(maxReads));
         final previous = s.previousValue;
         expect(previous, orderedEquals(before));
         final reads = backing.reads;
-        expect(reads, greaterThanOrEqualTo(backing.length));
+        expect(
+          reads,
+          readsOnHistoryRead
+              ? greaterThanOrEqualTo(backing.length)
+              : readsAfterWrite,
+        );
         expect(s.untrackedPreviousValue, same(previous));
         expect(backing.reads, reads);
       });
@@ -1023,6 +1794,130 @@ void main() {
       addTearDown(effect.dispose);
       dependency.value++;
       expect(runs, 1);
+    });
+
+    test('a recursive history read does not rebuild the same map again', () {
+      late final MapSignal<Object, int> s;
+      var hashes = 0;
+      Map<Object, int>? recursiveValue;
+      bool? recursiveHasPreviousValue;
+      final key = _HashKey(() {
+        if (++hashes == 1) {
+          recursiveHasPreviousValue = s.untrackedHasPreviousValue;
+          recursiveValue = s.untrackedPreviousValue;
+        }
+        return 1;
+      });
+      // Prevent reentry while building the initial map.
+      hashes = 1;
+      s = MapSignal({key: 0});
+      addTearDown(s.dispose);
+      s['new'] = 1;
+      hashes = 0;
+
+      final history = s.untrackedPreviousValue;
+
+      expect(hashes, 1);
+      expect(recursiveHasPreviousValue, isFalse);
+      expect(recursiveValue, isNull);
+      expect(history, {key: 0});
+      expect(s.untrackedPreviousValue, same(history));
+    });
+
+    test('a history read settles a newer write made during the rebuild', () {
+      late final MapSignal<Object, int> s;
+      var writeDuringRebuild = false;
+      final key = _HashKey(() {
+        if (writeDuringRebuild) {
+          writeDuringRebuild = false;
+          s['old'] = 2;
+        }
+        return 1;
+      });
+      s = MapSignal({'old': 1, key: 0});
+      addTearDown(s.dispose);
+      s['new'] = 3;
+      writeDuringRebuild = true;
+
+      final history = s.untrackedPreviousValue;
+
+      expect(s.untrackedValue, {'old': 2, key: 0, 'new': 3});
+      expect(s.untrackedHasPreviousValue, isTrue);
+      expect(history, {'old': 1, key: 0, 'new': 3});
+      expect(s.untrackedPreviousValue, same(history));
+    });
+
+    test('a history read retries at most one superseding write', () {
+      final backing = _ReentrantList([0, 1]);
+      final s = ListSignal<int>([])
+        ..value = backing
+        ..[1] = 2;
+      addTearDown(s.dispose);
+      var writes = 0;
+      backing.onRead = (index) {
+        // Cap the fixture so the regression also finishes before the fix.
+        if (index == 0 && writes < 3) s[1] = 3 + writes++;
+      };
+
+      final previous = s.untrackedPreviousValue;
+
+      expect(writes, 2);
+      expect(previous, isNull);
+      backing.onRead = null;
+      expect(s.untrackedPreviousValue, [0, 3]);
+    });
+
+    test(
+      'recursive reads leave superseding lazy history to the outer read',
+      () {
+        final backing = _ReentrantList([0, 1]);
+        final s = ListSignal<int>([])
+          ..value = backing
+          ..[1] = 2;
+        addTearDown(s.dispose);
+        final recursivePresence = <bool>[];
+        final recursiveHistory = <List<int>?>[];
+        var writes = 0;
+        backing.onRead = (index) {
+          // Bound recursion so this test also finishes before the fix.
+          if (index != 0 || writes >= 3) return;
+          s[1] = 3 + writes++;
+          recursivePresence.add(s.untrackedHasPreviousValue);
+          recursiveHistory.add(s.untrackedPreviousValue);
+        };
+
+        final previous = s.untrackedPreviousValue;
+
+        expect(writes, 2);
+        expect(recursivePresence, [false, false]);
+        expect(recursiveHistory, [null, null]);
+        expect(previous, isNull);
+        backing.onRead = null;
+        expect(s.untrackedPreviousValue, [0, 3]);
+      },
+    );
+
+    test('recursive reads see superseding stored history', () {
+      final backing = _ReentrantList([0, 1]);
+      final s = ListSignal<int>([])
+        ..value = backing
+        ..[1] = 2;
+      addTearDown(s.dispose);
+      bool? recursivePresence;
+      List<int>? recursiveHistory;
+      backing.onRead = (index) {
+        if (index != 0) return;
+        backing.onRead = null;
+        s.value = [9];
+        recursivePresence = s.untrackedHasPreviousValue;
+        recursiveHistory = s.untrackedPreviousValue;
+      };
+
+      final previous = s.untrackedPreviousValue;
+
+      expect(recursivePresence, isTrue);
+      expect(recursiveHistory, [0, 2]);
+      expect(previous, same(recursiveHistory));
     });
 
     test('custom and identity maps copy history before the write', () {
@@ -1121,7 +2016,7 @@ void main() {
       expect(set.previousValue, isEmpty);
     });
 
-    test('list add answers hasPreviousValue without a copy', () {
+    test('custom list add does not reread the backing for history', () {
       final backing = _PointList(List.generate(100, (i) => i));
       final s = ListSignal<int>([])..value = backing;
       addTearDown(s.dispose);
@@ -1131,7 +2026,7 @@ void main() {
       expect(s.hasPreviousValue, isTrue);
       expect(backing.reads, reads);
       expect(s.previousValue, orderedEquals(List.generate(100, (i) => i)));
-      expect(backing.reads, greaterThan(reads));
+      expect(backing.reads, reads);
     });
 
     test('default map answers hasPreviousValue without a copy', () {
@@ -1179,6 +2074,66 @@ void main() {
         ..add(5)
         ..value = [8];
       expect(s.previousValue, [1, 3, 5]);
+    });
+
+    test('toString summarizes a large previous list without reading items', () {
+      final item = _StringCountingElement();
+      final s = ListSignal(List.filled(100, item))..clear();
+      addTearDown(s.dispose);
+
+      final description = s.toString();
+
+      expect(item.stringReads, 0);
+      expect(description, contains('100 elements'));
+      expect(s.untrackedPreviousValue, hasLength(100));
+    });
+
+    test('toString leaves large lazy collection history pending', () {
+      var hashes = 0;
+      final key = _HashKey(() {
+        hashes++;
+        return -1;
+      });
+      final s = MapSignal<Object, int>({
+        key: 0,
+        for (var index = 0; index < 100; index++) index: index,
+      });
+      addTearDown(s.dispose);
+      s['new'] = 1;
+      hashes = 0;
+
+      final description = s.toString();
+
+      expect(hashes, 0);
+      expect(description, contains('lazy collection history'));
+      expect(s.untrackedPreviousValue, hasLength(101));
+    });
+
+    test('toString shows 20 previous items after an append', () {
+      final before = List.generate(20, (i) => i);
+      final s = ListSignal([...before])..add(20);
+      addTearDown(s.dispose);
+
+      expect(s.toString(), contains('previousValue: $before'));
+    });
+
+    test('toString keeps 21 previous items pending after a removal', () {
+      final before = List.generate(21, (i) => i);
+      final backing = _PointList([...before]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      s.removeLast();
+      backing
+        ..reads = 0
+        ..toString();
+      final currentReads = backing.reads;
+      backing.reads = 0;
+
+      final description = s.toString();
+
+      expect(description, contains('previousValue: <lazy collection history>'));
+      expect(backing.reads, currentReads);
+      expect(s.untrackedPreviousValue, before);
     });
 
     test('history reads track the signal once', () {
@@ -1467,6 +2422,125 @@ void main() {
       return _Watch<List<T>>(s, List<T>.of);
     }
 
+    test('restoration comparison preserves a replacement from a getter', () {
+      final backing = _ReentrantList([1]);
+      final s = ListSignal<int>([])..value = backing;
+      final w = watch(s);
+      final replacement = [8];
+      backing.afterAdd = () {
+        s
+          ..value = [9]
+          ..value = backing;
+        backing._elements[0] = 7;
+        backing.onRead = (_) {
+          backing.onRead = null;
+          s.value = replacement;
+        };
+      };
+
+      s.add(2);
+
+      expect(s.untrackedValue, same(replacement));
+      expect(s.untrackedPreviousValue, same(backing));
+      expect(w.effectReruns, 3);
+      expect(w.calls.map((call) => call[1]), [
+        [9],
+        [1, 2],
+        [8],
+      ]);
+    });
+
+    for (final failure in [false, true]) {
+      test(
+        'nested resize bookkeeping does not track reads, failure $failure',
+        () {
+          final dependency = Signal(0);
+          final backing = _NestedRemoveList([1], failure: failure);
+          final s = ListSignal<int>([], trackPreviousValue: false)
+            ..value = backing;
+          addTearDown(dependency.dispose);
+          addTearDown(s.dispose);
+          var duringComparison = false;
+          backing
+            ..onRead = (_) {
+              if (duringComparison == failure) dependency.value;
+            }
+            ..onRemove = () {
+              duringComparison = true;
+            }
+            ..afterAdd = () {
+              if (failure) {
+                expect(() => s.remove(9), throwsStateError);
+              } else {
+                expect(s.remove(9), isFalse);
+              }
+            };
+          var runs = 0;
+          final effect = Effect(() {
+            runs++;
+            s.add(2);
+          });
+          addTearDown(effect.dispose);
+
+          dependency.value++;
+
+          expect(runs, 1);
+        },
+      );
+    }
+
+    test('nested resize uses the backing captured before its snapshot', () {
+      final backing = _NestedRemoveList([1], failure: false);
+      final s = ListSignal<int>([], trackPreviousValue: false)..value = backing;
+      final w = watch(s);
+      final replacement = [1, 9];
+      backing.afterAdd = () {
+        backing.onRead = (_) {
+          backing.onRead = null;
+          s.value = replacement;
+        };
+        s.remove(1);
+      };
+
+      s.add(2);
+
+      expect(backing, [2]);
+      expect(s.untrackedValue, same(replacement));
+      expect(replacement, [1, 9]);
+      expect(w.effectReruns, 1);
+    });
+
+    test('deferred nested resize comparison does not track reads', () {
+      final dependency = Signal(0);
+      final backing = _NestedRemoveList([1, 2], failure: false);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(dependency.dispose);
+      addTearDown(s.dispose);
+      var comparing = false;
+      backing
+        ..onRead = (_) {
+          if (comparing) dependency.value;
+        }
+        ..onRemove = () {
+          expect(() => s.removeAt(0), throwsStateError);
+        }
+        ..onRemoveAt = () {
+          comparing = true;
+          throw StateError('removeAt failed');
+        };
+      var runs = 0;
+      final effect = Effect(() {
+        runs++;
+        comparing = false;
+        expect(s.remove(9), isFalse);
+      });
+      addTearDown(effect.dispose);
+
+      dependency.value++;
+
+      expect(runs, 1);
+    });
+
     test('a callback that assigns a value keeps the old list as previous', () {
       final s = ListSignal([1, 2]);
       final w = watch(s);
@@ -1481,6 +2555,101 @@ void main() {
       expect(s.untrackedValue, [9]);
       expect(s.previousValue, [1, 2]);
       expect(w.calls.single[0], [1, 2]);
+    });
+
+    for (final history in [false, true]) {
+      test('a callback that restores its backing keeps the two replacements, '
+          'history: $history', () {
+        final s = ListSignal([1], trackPreviousValue: history);
+        final original = s.untrackedValue;
+        final intermediate = [9];
+        final w = watch(s);
+
+        s.retainWhere((_) {
+          s
+            ..[0] = 7
+            ..value = intermediate
+            ..value = original;
+          return true;
+        });
+
+        expect(s.untrackedValue, same(original));
+        expect(s.untrackedPreviousValue, same(history ? intermediate : null));
+        expect(w.effectReruns, 2);
+        expect(w.calls.map((call) => call[1]), [
+          [9],
+          [7],
+        ]);
+        expect(
+          w.calls.map((call) => call[0]),
+          history
+              ? [
+                  [1],
+                  intermediate,
+                ]
+              : [null, null],
+        );
+      });
+
+      for (final remove in [false, true]) {
+        test('a write after restoring the backing still notifies '
+            '(remove: $remove, history: $history)', () {
+          final s = ListSignal([1], trackPreviousValue: history);
+          final original = s.untrackedValue;
+          final w = watch(s);
+
+          s.retainWhere((_) {
+            s
+              ..[0] = 7
+              ..value = [9]
+              ..value = original;
+            if (!remove) s[0] = 5;
+            return !remove;
+          });
+
+          final expected = remove ? <int>[] : [5];
+          expect(s.untrackedValue, same(original));
+          expect(s.untrackedValue, expected);
+          expect(s.untrackedPreviousValue, history ? [7] : null);
+          expect(w.effectReruns, 3);
+          expect(w.calls.map((call) => call[1]), [
+            [9],
+            [7],
+            expected,
+          ]);
+          expect(
+            w.calls.map((call) => call[0]),
+            history
+                ? [
+                    [1],
+                    [9],
+                    [7],
+                  ]
+                : [null, null, null],
+          );
+        });
+      }
+    }
+
+    test('a batched restoration delivers the earlier nested write', () {
+      final s = ListSignal([1]);
+      final original = s.untrackedValue;
+      final w = watch(s);
+
+      batch(() {
+        s.retainWhere((_) {
+          s
+            ..[0] = 7
+            ..value = [9]
+            ..value = original;
+          expect(s.value, same(original));
+          return true;
+        });
+        expect(w.effectReruns, 0);
+      });
+
+      expect(w.effectReruns, 1);
+      expect(w.calls.single[1], [7]);
     });
 
     for (final changed in [true, false]) {
@@ -1785,6 +2954,39 @@ void main() {
       expect(w.effectReruns, 1);
     });
 
+    for (final history in [false, true]) {
+      test('setAll lets a lazy list supply its length, history $history', () {
+        final plain = [0, 1]..setAll(0, _LengthChangingList());
+        final s = ListSignal([0, 1], trackPreviousValue: history);
+        addTearDown(s.dispose);
+        final watch = _Watch<List<int>>(s, List.of);
+
+        s.setAll(0, _LengthChangingList());
+
+        expect(s.untrackedValue, plain);
+        expect(watch.effectReruns, plain[1] == 1 ? 0 : 1);
+      });
+    }
+
+    test('a whole-list comparison covers a caught nested resize failure', () {
+      const length = 100;
+      final backing = _CountingList(length);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      final watch = _Watch<List<int>>(s, List.of);
+
+      Iterable<int> input() sync* {
+        expect(() => s.removeRange(-1, 0), throwsRangeError);
+        backing.reads = 0;
+        yield 0;
+      }
+
+      s.setAll(0, input());
+
+      expect(watch.effectReruns, 0);
+      expect(backing.reads, length);
+    });
+
     test('setAll consumes a lazy input once and reports a partial write', () {
       final s = ListSignal([1, 2, 3], trackPreviousValue: false);
       final w = watch(s);
@@ -1903,6 +3105,71 @@ void main() {
 
       expect(runs, 1);
     });
+
+    for (final history in [false, true]) {
+      test('an append writes to its original list after a snapshot replaces '
+          'it, history $history', () {
+        final original = _ReentrantList([1]);
+        final replacement = [20];
+        final s = ListSignal<int>([], trackPreviousValue: history)
+          ..value = original;
+        addTearDown(s.dispose);
+        final watch = _Watch(s, List<int>.of);
+        original.onRead = (_) {
+          original.onRead = null;
+          s.value = replacement;
+        };
+
+        s.add(2);
+
+        expect(original, [1, 2]);
+        expect(s.untrackedValue, same(replacement));
+        expect(replacement, [20]);
+        expect(s.untrackedPreviousValue, same(history ? original : null));
+        expect(watch.effectReruns, 1);
+        expect(watch.calls, hasLength(1));
+      });
+    }
+
+    for (final rejected in [false, true]) {
+      test(
+        'append change checks do not track backing reads, rejected $rejected',
+        () {
+          final reads = Signal(0);
+          addTearDown(reads.dispose);
+          final backing = _ReentrantList([1]);
+          final s = ListSignal<int>([], trackPreviousValue: false)
+            ..value = backing;
+          addTearDown(s.dispose);
+          var comparing = false;
+          backing.onRead = (_) {
+            if (!rejected || comparing) reads.value;
+          };
+          if (rejected) {
+            backing.afterAdd = () {
+              backing.length--;
+              comparing = true;
+              throw UnsupportedError('append');
+            };
+          }
+          var runs = 0;
+          final effect = Effect(() {
+            runs++;
+            if (rejected) {
+              expect(() => s.add(2), throwsUnsupportedError);
+            } else {
+              s.add(2);
+            }
+          });
+          addTearDown(effect.dispose);
+
+          reads.value = 1;
+
+          expect(runs, 1);
+          expect(backing, rejected ? [1] : [1, 2]);
+        },
+      );
+    }
     test('a partial change keeps its error when an effect also throws', () {
       final s = ListSignal([1]);
       addTearDown(s.dispose);
@@ -1991,8 +3258,9 @@ void main() {
     };
     for (final MapEntry(key: name, value: mutate) in resizes.entries) {
       test('$name of a cast list without history notifies once', () {
+        final source = _CountedCastSource();
         final s = ListSignal<int>([], trackPreviousValue: false)
-          ..value = <Object>[1, 'unread', 2].cast<int>();
+          ..value = List.castFrom<Object, int>(source);
         addTearDown(s.dispose);
         var runs = 0;
         final effect = Effect(() {
@@ -2003,8 +3271,62 @@ void main() {
 
         mutate(s);
 
+        expect(source.reads, 0);
         expect(runs, 2);
       });
+    }
+
+    test(
+      'removeAt reports a cast list write before its result fails the cast',
+      () {
+        final source = _CountedCastSource();
+        final s = ListSignal<int>([], trackPreviousValue: false)
+          ..value = List.castFrom<Object, int>(source);
+        addTearDown(s.dispose);
+        final seen = <int>[];
+        final effect = Effect(() => seen.add(s.length));
+        addTearDown(effect.dispose);
+
+        expect(() => s.removeAt(1), throwsA(isA<TypeError>()));
+
+        expect(source.reads, 0);
+        expect(seen, [3, 2]);
+      },
+    );
+
+    for (final (backing, element) in <(List<num>, num)>[
+      (<int>[1], 2),
+      (<double>[1], 2.5),
+    ]) {
+      test(
+        'numeric point resizes preserve a widened ${backing.runtimeType}',
+        () {
+          final s = ListSignal<num>([])..value = backing;
+          addTearDown(s.dispose);
+          final old = backing.single;
+          final w = _Watch<List<num>>(s, List.of);
+
+          s.add(element);
+          expect(s.removeLast(), element);
+          s.insert(0, element);
+
+          expect(s.untrackedValue, same(backing));
+          expect(w.calls, [
+            [
+              [old],
+              [old, element],
+            ],
+            [
+              [old, element],
+              [old],
+            ],
+            [
+              [old],
+              [element, old],
+            ],
+          ]);
+        },
+      );
     }
 
     test('a resize that keeps the length without history does not notify', () {
@@ -2033,6 +3355,241 @@ void main() {
       expect(w.effectReruns, 1);
       expect(s.hasPreviousValue, isFalse);
       expect(s.untrackedPreviousValue, isNull);
+    });
+
+    for (final history in [false, true]) {
+      test('a failed removeAt finds a shift past equal neighbours, history '
+          '$history', () {
+        final s = ListSignal<int>([0], trackPreviousValue: history)
+          ..add(0)
+          ..value = _FixedLengthList([1, 1, 3]);
+        final w = watch(s);
+
+        expect(() => s.removeAt(0), throwsUnsupportedError);
+
+        expect(s.untrackedValue, [1, 3, 3]);
+        expect(w.calls, [
+          [
+            null,
+            [1, 3, 3],
+          ],
+        ]);
+        expect(w.effectReruns, 1);
+        expect(s.hasPreviousValue, isFalse);
+      });
+    }
+
+    test(
+      'a failed removeAt with identical elements keeps previous history',
+      () {
+        final s = ListSignal<int>([])..value = _FixedLengthList([1, 1, 1]);
+        final previous = s.previousValue;
+        final w = watch(s);
+
+        expect(() => s.removeAt(0), throwsUnsupportedError);
+
+        expect(s.untrackedValue, [1, 1, 1]);
+        expect(w.calls, isEmpty);
+        expect(w.effectReruns, 0);
+        expect(s.previousValue, same(previous));
+      },
+    );
+
+    test('a failed add that overwrites an element drops history', () {
+      final s = ListSignal<int>([])..value = _PartialAddList([1, 2]);
+      final w = watch(s);
+
+      expect(() => s.add(9), throwsUnsupportedError);
+
+      expect(s.untrackedValue, [9, 2]);
+      expect(w.calls, [
+        [
+          null,
+          [9, 2],
+        ],
+      ]);
+      expect(w.effectReruns, 1);
+      expect(s.hasPreviousValue, isFalse);
+    });
+
+    test('a setter with a caught partial removal drops its lazy history', () {
+      final backing = _ReentrantFixedLengthList([1, 2, 3]);
+      final s = ListSignal<int>([])..value = backing;
+      final w = watch(s);
+      backing.onWrite = () => expect(() => s.remove(2), throwsUnsupportedError);
+
+      s[0] = 9;
+
+      expect(s.untrackedValue, [9, 3, 3]);
+      expect(w.calls, [
+        [
+          null,
+          [9, 3, 3],
+        ],
+      ]);
+      expect(w.effectReruns, 1);
+      expect(s.hasPreviousValue, isFalse);
+    });
+
+    test('a rejected removeLast on a custom list keeps its elements', () {
+      final s = ListSignal<int>([])..value = _FixedLengthList([1, 2]);
+      addTearDown(s.dispose);
+      final watch = _Watch<List<int>>(s, List.of);
+
+      expect(s.removeLast, throwsUnsupportedError);
+
+      expect(s.untrackedValue, [1, 2]);
+      expect(watch.effectReruns, 0);
+    });
+
+    test('a failed custom removeAt reports a write before its index', () {
+      final s = ListSignal<int>([])..value = _PartialRemoveAtList([1, 2, 3]);
+      addTearDown(s.dispose);
+      final watch = _Watch<List<int>>(s, List.of);
+
+      expect(() => s.removeAt(1), throwsUnsupportedError);
+
+      expect(s.untrackedValue, [9, 2, 3]);
+      expect(watch.effectReruns, 1);
+      expect(s.untrackedHasPreviousValue, isFalse);
+    });
+
+    for (final throws in [false, true]) {
+      test('an opaque fill can change an identical slot, throws $throws', () {
+        final s = ListSignal<int>([])..value = _ConvertingFillList([0], throws);
+        addTearDown(s.dispose);
+        final watch = _Watch<List<int>>(s, List.of);
+
+        if (throws) {
+          expect(() => s.fillRange(0, 1, 0), throwsUnsupportedError);
+        } else {
+          s.fillRange(0, 1, 0);
+        }
+
+        expect(s.untrackedValue, [1]);
+        expect(watch.effectReruns, 1);
+        expect(s.untrackedPreviousValue, [0]);
+      });
+    }
+
+    test('a range write with a caught partial removal keeps its copy', () {
+      final s = ListSignal<int>([])..value = _FixedLengthList([1, 1, 2, 7]);
+      final w = watch(s);
+      Iterable<int> input() sync* {
+        expect(() => s.removeAt(0), throwsUnsupportedError);
+        yield 7;
+      }
+
+      s.setRange(3, 4, input());
+
+      expect(s.untrackedValue, [1, 2, 7, 7]);
+      expect(w.calls, [
+        [
+          [1, 1, 2, 7],
+          [1, 2, 7, 7],
+        ],
+      ]);
+      expect(w.effectReruns, 1);
+    });
+
+    for (final cast in [false, true]) {
+      test('a converting fill checks the entire range without history '
+          '(cast: $cast)', () {
+        final typed = Uint8List.fromList([0, 17, 2]);
+        final s = ListSignal<num>([], trackPreviousValue: false)
+          ..value = cast ? typed.cast<num>() : typed;
+        final w = watch(s);
+
+        s
+          ..fillRange(0, 2, 256)
+          ..fillRange(0, 2, 512);
+
+        expect(s.untrackedValue, [0, 0, 2]);
+        expect(w.calls, [
+          [
+            null,
+            [0, 0, 2],
+          ],
+        ]);
+        expect(w.effectReruns, 1);
+      });
+    }
+
+    test('a custom read-only view reports a partial fill before throwing', () {
+      final s = ListSignal<int>([])..value = _PartialFillView([1]);
+      addTearDown(s.dispose);
+      final watch = _Watch<List<int>>(s, List.of);
+
+      expect(() => s.fillRange(0, 1, 2), throwsUnsupportedError);
+
+      expect(watch.effectReruns, 1);
+      expect(watch.calls, [
+        [
+          [1],
+          [2],
+        ],
+      ]);
+    });
+
+    test('a rejected fill of an SDK read-only view reads no slots', () {
+      final backing = _RegeneratingObjects();
+      final s = ListSignal<_Same>([])
+        ..value = UnmodifiableListView<_Same>(backing);
+      addTearDown(s.dispose);
+      final watch = _Watch<List<_Same>>(s, List.of);
+
+      expect(() => s.fillRange(0, 2, _Same(9)), throwsUnsupportedError);
+
+      expect(watch.effectReruns, 0);
+      expect(backing.reads, 0);
+    });
+
+    test('a direct typed fill delegates no-ops and rejected values', () {
+      final s = ListSignal<num>([], trackPreviousValue: false)
+        ..value = Uint8List(2);
+      addTearDown(s.dispose);
+      final watch = _Watch<List<num>>(s, List.of);
+
+      s.fillRange(0, 2, 0);
+      expect(() => s.fillRange(0, 2), throwsA(isA<Error>()));
+      expect(() => s.fillRange(0, 2, 0.5), throwsA(isA<Error>()));
+
+      expect(s.untrackedValue, [0, 0]);
+      expect(watch.effectReruns, 0);
+    });
+
+    test('a nested typed fill keeps the history of its enclosing write', () {
+      final s = ListSignal<int>([])..value = Uint8List.fromList([0, 7]);
+      addTearDown(s.dispose);
+
+      Iterable<int> input() sync* {
+        s.fillRange(1, 2, 256);
+        yield 0;
+      }
+
+      s.setAll(0, input());
+
+      expect(s.untrackedValue, [0, 0]);
+      expect(s.untrackedPreviousValue, [0, 7]);
+    });
+
+    test('a converting fill that throws keeps exact history', () {
+      final s = ListSignal<int>([])
+        ..value = _PartialFillList(Uint8List.fromList([0, 17, 2]));
+      final w = watch(s);
+
+      expect(() => s.fillRange(0, 2, 256), throwsUnsupportedError);
+      expect(() => s.fillRange(0, 2, 512), throwsUnsupportedError);
+
+      expect(s.untrackedValue, [0, 0, 2]);
+      expect(w.calls, [
+        [
+          [0, 17, 2],
+          [0, 0, 2],
+        ],
+      ]);
+      expect(w.effectReruns, 1);
+      expect(s.previousValue, [0, 17, 2]);
     });
 
     final shiftThenThrow = <String, void Function(ListSignal<int>)>{
@@ -2295,17 +3852,30 @@ void main() {
       expect(w.effectReruns, 1);
     });
 
-    test('updateAll that changes nothing does not notify', () {
-      final s = MapSignal({'a': 1, 'b': 2});
-      final w = watch(s);
+    for (final history in [false, true]) {
+      test(
+        'large map updateAll only notifies for a change, history $history',
+        () {
+          final backing = {for (var i = 0; i < 1024; i++) i: i};
+          final s = MapSignal(backing, trackPreviousValue: history);
+          addTearDown(s.dispose);
+          final seen = <int?>[];
+          final effect = Effect(() => seen.add(s[0]));
+          addTearDown(effect.dispose);
 
-      s.updateAll((k, v) => v);
+          s.updateAll((key, value) => value);
 
-      expect(s.untrackedValue, {'a': 1, 'b': 2});
-      expect(w.calls, isEmpty);
-      expect(w.effectReruns, 0);
-      expect(s.untrackedHasPreviousValue, isFalse);
-    });
+          expect(seen, [0]);
+          expect(s.untrackedHasPreviousValue, isFalse);
+
+          s.updateAll((key, value) => key == 0 ? -1 : value);
+
+          expect(seen, [0, -1]);
+          expect(s.untrackedPreviousValue?[0], history ? 0 : null);
+          expect(s.untrackedPreviousValue?[1023], history ? 1023 : null);
+        },
+      );
+    }
 
     test('update without history whose callback writes another key '
         'and returns a new value notifies once', () {
@@ -4328,6 +5898,202 @@ void main() {
       ]);
     });
 
+    for (final changed in [false, true]) {
+      test('a replacement view detects readable changes, changed $changed', () {
+        final backing = <String, Object>{
+          'good': 'old',
+          'bad': 42,
+        }.cast<String, String>();
+        final s = MapSignal(backing, trackPreviousValue: false);
+        addTearDown(s.dispose);
+        final seen = <String?>[];
+        final effect = Effect(() => seen.add(s['good']));
+        addTearDown(effect.dispose);
+        final replacement = MapView(s.untrackedValue);
+        final next = changed ? 'new' : 'old';
+
+        s.update('good', (_) {
+          s.value = replacement;
+          expect(seen, ['old', 'old']);
+          return next;
+        });
+
+        expect(s.untrackedValue, same(replacement));
+        expect(s.untrackedValue['good'], next);
+        expect(seen, ['old', 'old', if (changed) next]);
+        expect(s.untrackedPreviousValue, isNull);
+      });
+    }
+
+    for (final history in [false, true]) {
+      test('updateAll notifies when a replacement view shares its map, '
+          'history $history', () {
+        final s = MapSignal({'a': 1}, trackPreviousValue: history);
+        final w = watch(s);
+        final seen = <int?>[];
+        final effect = Effect(() => seen.add(s['a']));
+        addTearDown(effect.dispose);
+        final replacement = MapView(s.untrackedValue);
+
+        s.updateAll((_, value) {
+          s.value = replacement;
+          expect(seen, [1, 1]);
+          return value + 1;
+        });
+
+        expect(s.untrackedValue, same(replacement));
+        expect(s.untrackedValue['a'], 2);
+        expect(seen, [1, 1, 2]);
+        final previous = history ? {'a': 1} : null;
+        expect(w.calls, [
+          [
+            previous,
+            {'a': 1},
+          ],
+          [
+            previous,
+            {'a': 2},
+          ],
+        ]);
+      });
+
+      test('batch delivers the final contents of a replacement view, '
+          'history $history', () {
+        final s = MapSignal({'a': 1}, trackPreviousValue: history);
+        final selected = Computed(() => s['a']);
+        addTearDown(selected.dispose);
+        final seen = <int?>[];
+        final effect = Effect(() => seen.add(selected.value));
+        addTearDown(effect.dispose);
+
+        batch(() {
+          s.updateAll((_, value) {
+            s.value = MapView(s.untrackedValue);
+            expect(selected.value, 1);
+            return value + 1;
+          });
+
+          expect(selected.value, 2);
+          expect(seen, [1]);
+        });
+
+        expect(seen, [1, 2]);
+        expect(s.untrackedPreviousValue, history ? {'a': 1} : null);
+      });
+    }
+
+    for (final (independent, view) in [
+      (false, true),
+      (true, true),
+      (true, false),
+    ]) {
+      test('an unchanged replacement publishes once during updateAll, '
+          'independent $independent, view $view', () {
+        final backing = {'a': 1};
+        final s = MapSignal(backing);
+        final w = watch(s);
+        final next = independent ? {'a': 1} : backing;
+        final replacement = view ? MapView(next) : next;
+
+        s.updateAll((_, value) {
+          s.value = replacement;
+          expect(w.effectReruns, 1);
+          return independent ? value + 1 : value;
+        });
+        if (independent) backing['a'] = 9;
+
+        expect(s.untrackedValue, same(replacement));
+        expect(s.untrackedValue, {'a': 1});
+        expect(w.calls, [
+          [
+            {'a': 1},
+            {'a': 1},
+          ],
+        ]);
+        expect(w.effectReruns, 1);
+      });
+    }
+
+    test('updateAll can replace a view with its backing map', () {
+      final backing = {'a': 1};
+      final s = MapSignal(MapView(backing));
+      final seen = <int?>[];
+      final effect = Effect(() => seen.add(s['a']));
+      addTearDown(effect.dispose);
+
+      s.updateAll((_, value) {
+        s.value = backing;
+        return value + 1;
+      });
+
+      expect(s.untrackedValue, same(backing));
+      expect(seen, [1, 1, 2]);
+    });
+
+    for (final changed in [false, true]) {
+      test('updateAll compares with a nested published write to its '
+          'replacement view, changed $changed', () {
+        final s = MapSignal({'a': 1, 'b': 1});
+        final w = watch(s);
+        final seen = <int?>[];
+        final effect = Effect(() => seen.add(s['a']));
+        addTearDown(effect.dispose);
+
+        s.updateAll((key, value) {
+          if (key != 'a') return value;
+          s.value = MapView(s.untrackedValue);
+          s['a'] = 2;
+          return changed ? 3 : 2;
+        });
+
+        expect(seen, changed ? [1, 1, 2, 3] : [1, 1, 2]);
+        expect(w.calls, [
+          [
+            {'a': 1, 'b': 1},
+            {'a': 1, 'b': 1},
+          ],
+          [
+            {'a': 1, 'b': 1},
+            {'a': 2, 'b': 1},
+          ],
+          if (changed)
+            [
+              {'a': 2, 'b': 1},
+              {'a': 3, 'b': 1},
+            ],
+        ]);
+      });
+    }
+
+    test('a partial updateAll through a replacement view keeps its error', () {
+      final s = MapSignal({'a': 1, 'b': 1});
+      final w = watch(s);
+      final effect = Effect(() {
+        if (s['a'] == 2) throw StateError('effect');
+      });
+      addTearDown(effect.dispose);
+
+      _expectMutationErrorWins(() {
+        s.updateAll((key, value) {
+          if (key != 'a') return _throwAfter<int>([]).first;
+          s.value = MapView(s.untrackedValue);
+          return value + 1;
+        });
+      });
+
+      expect(s.untrackedValue, {'a': 2, 'b': 1});
+      expect(w.calls, [
+        [
+          {'a': 1, 'b': 1},
+          {'a': 1, 'b': 1},
+        ],
+        [
+          {'a': 1, 'b': 1},
+          {'a': 2, 'b': 1},
+        ],
+      ]);
+    });
+
     test('update whose callback changes a new map notifies for each', () {
       final s = MapSignal({'a': 1});
       final w = watch(s);
@@ -4691,6 +6457,22 @@ void main() {
       expect(w.effectReruns, 1);
     });
 
+    test('history keeps distinct equal entries of a cast identity set', () {
+      final first = _Same(1);
+      final second = _Same(2);
+      final backing = Set<_Same>.identity()..addAll([first, second]);
+      final s = SetSignal<Object>({})
+        ..value = Set.castFrom<_Same, Object>(backing);
+      addTearDown(s.dispose);
+
+      s.add(_Same(3));
+
+      final previous = s.untrackedPreviousValue!;
+      expect(previous, hasLength(2));
+      expect(previous.toList(), [same(first), same(second)]);
+      expect(previous.contains(_Same(4)), isFalse);
+    });
+
     test('the previous value keeps the equality of an identity set', () {
       final a = DateTime.fromMillisecondsSinceEpoch(0);
       final b = DateTime.fromMillisecondsSinceEpoch(0);
@@ -4802,6 +6584,23 @@ void main() {
       });
     }
 
+    test('restoring an unchanged set keeps the two assignments', () {
+      final s = SetSignal({1});
+      addTearDown(s.dispose);
+      final watch = _Watch<Set<int>>(s, Set.of);
+      final original = s.untrackedValue;
+
+      s.retainWhere((_) {
+        s
+          ..value = {2}
+          ..value = original;
+        return true;
+      });
+
+      expect(watch.effectReruns, 2);
+      expect(s.untrackedPreviousValue, {2});
+    });
+
     test('a nested reorder notifies once', () {
       final s = SetSignal({1, 2});
       addTearDown(s.dispose);
@@ -4837,7 +6636,323 @@ void main() {
     });
   });
 
+  group('bulk collection comparisons', () {
+    test('sets with different lengths do not hash the old elements', () {
+      var hashes = 0;
+      final keys = List.generate(100, (_) => _HashKey(() => hashes++));
+      final s = SetSignal(keys, equals: true);
+      addTearDown(s.dispose);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(s.length));
+      addTearDown(effect.dispose);
+      hashes = 0;
+
+      s.value = {};
+
+      expect(seen, [100, 0]);
+      expect(hashes, 0);
+    });
+
+    for (final history in [false, true]) {
+      test('a bulk comparison visits every custom map entry via forEach, '
+          'history $history', () {
+        final backing = _CountingMap(1024);
+        final s = MapSignal(backing, trackPreviousValue: history);
+        addTearDown(s.dispose);
+        final seen = <int?>[];
+        final effect = Effect(() => seen.add(s[0]));
+        addTearDown(effect.dispose);
+
+        s.updateAll((key, value) {
+          if (key != 0) return value;
+          backing
+            ..entriesVisited = 0
+            ..rejectEntries = true;
+          return -1;
+        });
+
+        expect(seen, [0, -1]);
+        expect(backing.entriesVisited, backing.length);
+      });
+    }
+  });
+
+  group('unchanged singleton addAll (#211)', () {
+    test(
+      'singleton map addAll distinguishes a null value from a missing key',
+      () {
+        final s = MapSignal<int, int?>({0: null});
+        addTearDown(s.dispose);
+        final w = _Watch<Map<int, int?>>(s, Map.of);
+
+        s.addAll({0: null});
+        expect(s.untrackedHasPreviousValue, isFalse);
+        expect(w.effectReruns, 0);
+
+        s.addAll({1: null});
+        expect(w.calls, [
+          [
+            {0: null},
+            {0: null, 1: null},
+          ],
+        ]);
+        expect(w.effectReruns, 1);
+      },
+    );
+
+    test('singleton set addAll keeps history for a new element only', () {
+      final s = SetSignal<int?>({null});
+      addTearDown(s.dispose);
+      final w = _Watch<Set<int?>>(s, Set.of);
+
+      s
+        ..addAll([null])
+        ..addAll({null});
+      expect(s.untrackedHasPreviousValue, isFalse);
+      expect(w.effectReruns, 0);
+
+      s.addAll([1]);
+      expect(w.calls, [
+        [
+          {null},
+          {null, 1},
+        ],
+      ]);
+      expect(w.effectReruns, 1);
+    });
+  });
+
+  group('bulk no-ops and invalid operations (#211)', () {
+    for (final history in [false, true]) {
+      test('setRange with an empty list preserves the backing error and '
+          'history ($history)', () {
+        final s = ListSignal([1, 2], trackPreviousValue: history)..[0] = 3;
+        addTearDown(s.dispose);
+        final previous = s.untrackedPreviousValue;
+        final w = _Watch<List<int>>(s, List.of);
+        final plain = _guarded(() => s.untrackedValue.setRange(0, 2, const []));
+        expect(plain.error, isNotNull);
+
+        for (final input in [const <int>[], <int>[], List<int>.empty()]) {
+          final failure = _guarded(() => s.setRange(0, 2, input)).error;
+          expect(failure.runtimeType, plain.error.runtimeType);
+          expect(failure.toString(), plain.error.toString());
+        }
+
+        expect(s.untrackedValue, [3, 2]);
+        expect(s.untrackedPreviousValue, same(previous));
+        expect(w.calls, isEmpty);
+        expect(w.effectReruns, 0);
+      });
+    }
+
+    test('setRange observes a custom input changing the range before it '
+        'throws', () {
+      final s = ListSignal([1, 2]);
+      addTearDown(s.dispose);
+      final w = _Watch<List<int>>(s, List.of);
+      final backing = s.untrackedValue;
+      final input = _CallbackLengthList(() => backing[0] = 3);
+
+      expect(() => s.setRange(0, 2, input), throwsStateError);
+
+      expect(w.calls, [
+        [
+          [1, 2],
+          [3, 2],
+        ],
+      ]);
+      expect(w.effectReruns, 1);
+      expect(input.lengthReads, 1);
+    });
+
+    test('setRange with an empty input tracks writes by a custom backing', () {
+      final s = ListSignal<int>([])..value = _PartialSetRangeList();
+      addTearDown(s.dispose);
+      final w = _Watch<List<int>>(s, List.of);
+
+      expect(() => s.setRange(0, 2, const []), throwsStateError);
+
+      expect(w.calls, [
+        [
+          [1, 2],
+          [3, 2],
+        ],
+      ]);
+      expect(w.effectReruns, 1);
+    });
+  });
+
   group('edge cases of typed lists and cast maps (#208)', () {
+    test(
+      'a verified cast change still notifies when only that slot changed',
+      () {
+        final raw = <String, Object>{'a': 1, 'b': 2};
+        final s = MapSignal({'a': 1, 'b': 2});
+        addTearDown(s.dispose);
+        final seen = <int?>[];
+        final effect = Effect(() => seen.add(s.value['a']));
+        addTearDown(effect.dispose);
+
+        s.updateAll((key, value) {
+          if (key == 'a') {
+            s.value = raw.cast<String, int>();
+            raw['b'] = 'bad';
+          }
+          return value;
+        });
+
+        expect(seen, [1, 1, 1]);
+        expect(s.untrackedPreviousValue, {'a': 1, 'b': 2});
+      },
+    );
+
+    test('a failed replacement lookup is not a map mutation', () {
+      final raw = {'a': 1, 'b': 2};
+      final traversalError =
+          _guarded(() => <Object>['bad'].cast<int>().first).error! as TypeError;
+      final view = _FailedReplacementReadView(raw, traversalError);
+      final s = MapSignal(raw);
+      addTearDown(s.dispose);
+      final seen = <int?>[];
+      final effect = Effect(() => seen.add(s.value['a']));
+      addTearDown(effect.dispose);
+
+      s.updateAll((key, value) {
+        if (key == 'a') {
+          s.value = view;
+          view.fail = true;
+        }
+        return value;
+      });
+
+      expect(seen, [1, 1]);
+    });
+
+    for (final history in [false, true]) {
+      test('empty SDK map views accept a Pattern cast destination, '
+          'history $history', () {
+        final raw = <String, Pattern>{'bad': 'x'};
+        final s = MapSignal(
+          raw.cast<String, RegExp>(),
+          trackPreviousValue: history,
+        );
+        addTearDown(s.dispose);
+        final watch = _Watch(s, (value) => value);
+
+        s.addAll(const MapView<String, RegExp>({}));
+
+        expect(raw, {'bad': 'x'});
+        expect(watch.effectReruns, 0);
+        expect(watch.calls, isEmpty);
+      });
+    }
+
+    for (final changed in [false, true]) {
+      test(
+        'shared map traversal preserves a known mismatch, changed $changed',
+        () {
+          final raw = {'a': 1, 'b': 2};
+          final view = _LateTraversalErrorView(raw);
+          final s = MapSignal(raw);
+          addTearDown(s.dispose);
+          final seen = <int?>[];
+          final effect = Effect(() => seen.add(s.value['a']));
+          addTearDown(effect.dispose);
+
+          s.updateAll((key, value) {
+            if (key != 'a') return value;
+            s.value = view;
+            view.fail = true;
+            return changed ? 3 : value;
+          });
+
+          expect(seen, [1, 1, if (changed) 3]);
+        },
+      );
+    }
+
+    for (final (history, unreadableFirst) in [
+      (false, false),
+      (true, false),
+      (false, true),
+      (true, true),
+    ]) {
+      test('a shared map replacement reports a mismatch with a cast error, '
+          'history $history, unreadable first $unreadableFirst', () {
+        final raw = unreadableFirst
+            ? <String, Object?>{'b': 2, 'a': 1}
+            : <String, Object?>{'a': 1, 'b': 2};
+        final s = MapSignal(raw, trackPreviousValue: history);
+        addTearDown(s.dispose);
+        final seen = <Object?>[];
+        final effect = Effect(() => seen.add(s.value['a']));
+        addTearDown(effect.dispose);
+
+        s.updateAll((key, value) {
+          if (key != 'a') return value;
+          s.value = raw.cast<String, int>();
+          raw['b'] = 'unreadable';
+          return 3;
+        });
+
+        expect(seen, [1, 1, 3]);
+        expect(s.untrackedPreviousValue, history ? {'a': 1, 'b': 2} : null);
+      });
+    }
+
+    final unmodifiableMaps = <String, Map<Object, num>>{
+      'view': UnmodifiableMapView({Object(): 1}),
+      'factory': Map<Object, int>.unmodifiable({Object(): 1}),
+      'cast view': Map.castFrom<Object, int, Object, num>(
+        UnmodifiableMapView({Object(): 1}),
+      ),
+      'view subclass': _UnmodifiableMapSubclass({Object(): 1}),
+    };
+    for (final entry in unmodifiableMaps.entries) {
+      test('${entry.key} rejects writes with an unhashable key', () {
+        final s = MapSignal(entry.value, trackPreviousValue: false);
+        addTearDown(s.dispose);
+        final watch = _Watch(s, Map<Object, num>.of);
+        final key = _HashKey(() => throw StateError('hash'));
+
+        expect(() => s[key] = 2, throwsUnsupportedError);
+        expect(() => s.remove(key), throwsUnsupportedError);
+        expect(watch.effectReruns, 0);
+        expect(watch.calls, isEmpty);
+      });
+    }
+
+    for (final history in [false, true]) {
+      test('update detects inserting a null when the length stays unchanged, '
+          'history $history', () {
+        final s = MapSignal<String, int?>(
+          {'old': 1},
+          trackPreviousValue: history,
+        );
+        addTearDown(s.dispose);
+        final watch = _Watch<Map<String, int?>>(s, Map.of);
+
+        s.update(
+          'new',
+          (value) => value,
+          ifAbsent: () {
+            s.untrackedValue.remove('old');
+            return null;
+          },
+        );
+
+        expect(watch.effectReruns, 1);
+        final previous = history ? {'old': 1} : null;
+        expect(watch.calls, [
+          [
+            previous,
+            {'new': null},
+          ],
+        ]);
+      });
+    }
+
     test('a rejected add to a fixed-length typed list without history '
         'does not rerun', () {
       final list = ListSignal<Float32x4>([], trackPreviousValue: false)
@@ -4853,6 +6968,24 @@ void main() {
       expect(() => list.add(Float32x4.zero()), throwsUnsupportedError);
 
       expect(runs, 1);
+    });
+
+    test('an assignment over an unreadable cast value notifies once', () {
+      final backing = <String, Object>{'unread': 42}.cast<String, String>();
+      final s = MapSignal(backing, trackPreviousValue: false);
+      addTearDown(s.dispose);
+      final watch = _Watch(s, Map<String, String>.of);
+
+      s['unread'] = 'ok';
+
+      expect(s.untrackedValue, {'unread': 'ok'});
+      expect(watch.effectReruns, 1);
+      expect(watch.calls, [
+        [
+          null,
+          {'unread': 'ok'},
+        ],
+      ]);
     });
 
     test('addAll over an unreadable value of a cast map notifies once', () {
@@ -4872,23 +7005,172 @@ void main() {
       expect(runs, 2);
     });
 
-    test('addAll of an empty map to a cast map is a no-op', () {
-      final backing = <String, Object>{'unread': 42}.cast<String, String>();
-      final map = MapSignal<String, String>(backing);
+    test(
+      'larger addAll repairs an unreadable cast map value without history',
+      () {
+        final backing = <String, Object>{'a': 42}.cast<String, String>();
+        final map = MapSignal(backing, trackPreviousValue: false);
+        addTearDown(map.dispose);
+        final watch = _Watch(map, Map<String, String>.of);
+
+        map.addAll({'a': 'fixed', 'b': 'new'});
+
+        expect(map.untrackedValue, {'a': 'fixed', 'b': 'new'});
+        expect(watch.effectReruns, 1);
+        expect(watch.calls, [
+          [
+            null,
+            {'a': 'fixed', 'b': 'new'},
+          ],
+        ]);
+      },
+    );
+
+    test('addAll preserves existing history until an unreadable cast map '
+        'changes', () {
+      final backing = <String, Object>{'b': 0};
+      final map = MapSignal(
+        backing.cast<String, int>(),
+        trackPreviousValue: true,
+      );
       addTearDown(map.dispose);
-      var runs = 0;
-      final effect = Effect(() {
-        map.value;
-        runs++;
-      });
-      addTearDown(effect.dispose);
+      final watch = _Watch(map, Map<String, int>.of);
+      map.addAll({'b': 1});
+      backing['b'] = 'unreadable';
 
-      map
-        ..addAll({})
-        ..addEntries(<MapEntry<String, String>>[]);
+      map.addAll(const MapView({}));
 
-      expect(runs, 1);
+      expect(map.untrackedPreviousValue, {'b': 0});
+      expect(watch.effectReruns, 1);
+      final input = _ThrowAfterFirstMap();
+      expect(() => map.addAll(input), throwsStateError);
+
+      expect(input.keyReads, 1);
+      expect(backing, {'b': 2});
+      expect(map.untrackedHasPreviousValue, isFalse);
+      expect(watch.effectReruns, 2);
+      expect(watch.calls.last, [
+        null,
+        {'b': 2},
+      ]);
     });
+
+    for (final history in [false, true]) {
+      test('addAll reports an unreadable value written by a throwing input, '
+          'history $history', () {
+        final backing = <String, Object>{'b': 2};
+        final map = MapSignal(
+          backing.cast<String, int>(),
+          trackPreviousValue: history,
+        );
+        addTearDown(map.dispose);
+        final watch = _Watch(map, (value) => value);
+        final input = _ThrowAfterFirstMap(() => backing['b'] = 'unreadable');
+
+        expect(() => map.addAll(input), throwsA(same(input.error)));
+
+        expect(input.keyReads, 1);
+        expect(backing, {'b': 'unreadable'});
+        expect(watch.effectReruns, 1);
+        expect(watch.calls.single.first, history ? {'b': 2} : null);
+      });
+
+      test('addAll repairs an unreadable numeric cast value, '
+          'history $history', () {
+        final backing = <String, num>{'a': 1.5};
+        final map = MapSignal(
+          backing.cast<String, int>(),
+          trackPreviousValue: history,
+        );
+        addTearDown(map.dispose);
+        final watch = _Watch(map, (value) => value);
+
+        map.addAll({'a': 1, 'b': 2});
+
+        expect(backing, {'a': 1, 'b': 2});
+        expect(watch.effectReruns, 1);
+        expect(watch.calls.single.first, isNull);
+      });
+
+      test('addAll keeps the original traversal error when a wider SDK cast '
+          'also throws, history $history', () {
+        final traversal =
+            _guarded(() => <Object>['bad'].cast<int>().first).error!
+                as TypeError;
+        var traversals = 0;
+        final source = _FailingMapTraversal(() {
+          if (++traversals == 1) throw traversal;
+          throw StateError('wider traversal');
+        });
+        final backing = Map.castFrom<String, int, String, int>(source);
+        final map = MapSignal(backing, trackPreviousValue: history);
+        addTearDown(map.dispose);
+
+        expect(() => map.addAll({'b': 2, 'c': 3}), throwsA(same(traversal)));
+        expect(traversals, 2);
+        expect(source.keys, ['a']);
+      });
+
+      test('addAll keeps a custom map traversal error with a shared '
+          'unreadable entry, history $history', () {
+        final traversal =
+            _guarded(() => <Object>['bad'].cast<int>().first).error!
+                as TypeError;
+        final raw = <Object?, Object?>{'a': 'bad'};
+        final backing = _SharedMapCast<String, int>(raw, traversal);
+        final map = MapSignal(backing, trackPreviousValue: history);
+        addTearDown(map.dispose);
+
+        expect(() => map.addAll({'b': 2, 'c': 3}), throwsA(same(traversal)));
+        expect(raw, {'a': 'bad'});
+        expect(backing.castCalls, 0);
+      });
+
+      final emptyViews = <String, Map<String, String>>{
+        'MapView': const MapView({}),
+        'UnmodifiableMapView': UnmodifiableMapView({}),
+      };
+      for (final MapEntry(key: name, value: input) in emptyViews.entries) {
+        test('addAll of an empty $name to a cast map is a no-op, history '
+            '$history', () {
+          final backing = <String, Object>{'unread': 42};
+          final map = MapSignal(
+            backing.cast<String, String>(),
+            trackPreviousValue: history,
+          );
+          addTearDown(map.dispose);
+          final watch = _Watch(map, (value) => value);
+
+          map.addAll(input);
+
+          expect(backing, {'unread': 42});
+          expect(watch.effectReruns, 0);
+          expect(watch.calls, isEmpty);
+        });
+      }
+
+      test('addAll of an empty SDK map to a cast map is a no-op, history '
+          '$history', () {
+        final backing = <String, Object>{'unread': 42}.cast<String, String>();
+        final map = MapSignal(backing, trackPreviousValue: history);
+        addTearDown(map.dispose);
+        var runs = 0;
+        final effect = Effect(() {
+          map.value;
+          runs++;
+        });
+        addTearDown(effect.dispose);
+
+        map
+          ..addAll({})
+          ..addAll(Map.identity())
+          ..addAll(HashMap())
+          ..addAll(SplayTreeMap())
+          ..addEntries(<MapEntry<String, String>>[]);
+
+        expect(runs, 1);
+      });
+    }
 
     test('an update of an unmodifiable map without history throws first', () {
       final map = MapSignal<String, int>(
@@ -5097,7 +7379,8 @@ void main() {
   });
 
   group('adversarial round 4', () {
-    test('fillRange without history keeps no per-slot buffer', () {
+    test('fillRange without history checks only the affected slots of a '
+        'custom backing', () {
       final backing = _CountingList(100);
       final s = ListSignal<int>([], trackPreviousValue: false)..value = backing;
       addTearDown(s.dispose);
@@ -5109,11 +7392,14 @@ void main() {
       addTearDown(effect.dispose);
       backing.reads = 0;
 
-      s.fillRange(0, 100, 7);
+      s.fillRange(40, 60, 7);
 
-      // The first slot of the range, and that slot again after the write.
-      expect(backing.reads, lessThanOrEqualTo(2));
-      expect(s.untrackedValue, List.filled(100, 7));
+      expect(backing.reads, lessThanOrEqualTo(41));
+      expect(s.untrackedValue, [
+        ...List.filled(40, 0),
+        ...List.filled(20, 7),
+        ...List.filled(40, 0),
+      ]);
       expect(runs, 2);
     });
 
@@ -5137,10 +7423,12 @@ void main() {
       expect(runs, 2);
     });
 
-    test('fillRange with history that changes nothing makes no copy', () {
+    test('a no-op opaque fill keeps its previous history', () {
       final backing = _CountingList(100);
       final s = ListSignal<int>([])..value = backing;
       addTearDown(s.dispose);
+      s[99] = 1;
+      final previous = s.untrackedPreviousValue;
       var runs = 0;
       final effect = Effect(() {
         s.value;
@@ -5151,8 +7439,9 @@ void main() {
 
       s.fillRange(0, 3, 0);
 
-      // The three slots of the range: no copy of the list.
-      expect(backing.reads, lessThanOrEqualTo(3));
+      // One history copy and a comparison of the three affected slots.
+      expect(backing.reads, lessThanOrEqualTo(103));
+      expect(s.untrackedPreviousValue, same(previous));
       expect(runs, 1);
     });
   });
@@ -5276,6 +7565,56 @@ void main() {
     });
 
     for (final history in [false, true]) {
+      for (final (label, originalEntries, input) in [
+        ('empty length', <int, int>{}, {1: 2}),
+        ('point length', {1: 1}, {1: 2}),
+        ('bulk length', {1: 1}, {1: 2, 2: 3}),
+        ('lookup', {1: 1}, {1: 2}),
+      ]) {
+        test('addAll writes to its original backing after a reentrant '
+            '$label, history $history', () {
+          final original = _AddAllBacking(originalEntries);
+          final replacement = {5: 5};
+          final signal = MapSignal<int, int>({}, trackPreviousValue: history)
+            ..value = original;
+          addTearDown(signal.dispose);
+          final watch = _Watch(signal, Map<int, int>.of);
+          void replace() => signal.value = replacement;
+          if (label == 'lookup') {
+            original.onLookup = replace;
+          } else {
+            original.onLength = replace;
+          }
+
+          signal.addAll(input);
+
+          expect(original, input);
+          expect(signal.untrackedValue, same(replacement));
+          expect(replacement, {5: 5});
+          expect(
+            signal.untrackedPreviousValue,
+            same(history ? original : null),
+          );
+          expect(watch.effectReruns, 1);
+          expect(watch.calls, hasLength(1));
+        });
+      }
+
+      test('addAll from a large native map does not look up the input keys, '
+          'history $history', () {
+        final backing = _CountingMap(1);
+        final s = MapSignal(backing, trackPreviousValue: history);
+        addTearDown(s.dispose);
+        final input = {for (var i = 0; i < 10000; i++) i: i + 1};
+
+        s.addAll(input);
+
+        expect(backing.reads, 0);
+        expect(backing.scans, 1);
+        expect(s.length, 10000);
+        expect(s.untrackedPreviousValue, history ? {0: 0} : null);
+      });
+
       test('addAll into an empty map does not list the input keys, history '
           '$history', () {
         final s = MapSignal<int, int>({}, trackPreviousValue: history);
@@ -5295,8 +7634,154 @@ void main() {
         expect(runs, 2);
         if (history) expect(s.untrackedPreviousValue, isEmpty);
       });
+
+      final views = <String, Map<String, int> Function(Map<String, int>)>{
+        'custom input': (map) => map,
+        'MapView': MapView.new,
+        'UnmodifiableMapView': UnmodifiableMapView.new,
+      };
+      for (final MapEntry(key: name, value: wrap) in views.entries) {
+        test('addAll never probes $name for emptiness, history $history', () {
+          final s = MapSignal({'a': 0, 'b': 0}, trackPreviousValue: history);
+          addTearDown(s.dispose);
+          final w = _Watch(s, Map<String, int>.of);
+          final input = _AddAllInput(() => s['a'] = -1);
+
+          s.addAll(wrap(input));
+
+          expect(w.calls, hasLength(1));
+          expect(w.calls.single.first, history ? {'a': 0, 'b': 0} : null);
+          expect(w.calls.single.last, {'a': 0, 'b': 1});
+          expect(w.effectReruns, 1);
+        });
+      }
+
+      test('addAll uses the first traversal of a combined map, history '
+          '$history', () {
+        final s = MapSignal({'a': 0, 'b': 0}, trackPreviousValue: history);
+        addTearDown(s.dispose);
+        final w = _Watch(s, Map<String, int>.of);
+        final view = _ReplayKeyMap();
+
+        s.addAll(CombinedMapView([view]));
+
+        expect(w.calls, hasLength(1));
+        expect(w.calls.single.first, history ? {'a': 0, 'b': 0} : null);
+        expect(w.calls.single.last, {'a': 1, 'b': 0});
+        expect(w.effectReruns, 1);
+        expect(view.keyReads, 1);
+      });
+
+      test('addAll notifies for a partial overwrite before a source error, '
+          'history $history', () {
+        final s = MapSignal({'b': 0}, trackPreviousValue: history);
+        addTearDown(s.dispose);
+        final w = _Watch(s, Map<String, int>.of);
+        final input = _ThrowAfterFirstMap();
+
+        expect(() => s.addAll(input), throwsStateError);
+
+        expect(input.keyReads, 1);
+        expect(w.calls, hasLength(1));
+        expect(w.calls.single.first, history ? {'b': 0} : null);
+        expect(w.calls.single.last, {'b': 2});
+        expect(w.effectReruns, 1);
+      });
     }
   });
+
+  group('point mutation hashing without history', () {
+    test('a native map overwrite hashes only for the lookup and write', () {
+      var hashes = 0;
+      final key = _HashKey(() {
+        hashes++;
+        return 1;
+      });
+      final s = MapSignal<Object, int>({key: 1}, trackPreviousValue: false);
+      addTearDown(s.dispose);
+      hashes = 0;
+
+      s[key] = 2;
+
+      expect(hashes, 2);
+      expect(s.untrackedValue[key], 2);
+    });
+
+    test('set add and remove do not hash keys before writing', () {
+      var hashes = 0;
+      final key = _HashKey(() {
+        hashes++;
+        return 1;
+      });
+      final existing = Object();
+      final plain = <Object>{existing};
+      final s = SetSignal<Object>({existing}, trackPreviousValue: false);
+      addTearDown(s.dispose);
+
+      plain.add(key);
+      final addHashes = hashes;
+      hashes = 0;
+      expect(s.add(key), isTrue);
+      expect(hashes, addHashes);
+
+      hashes = 0;
+      plain.remove(key);
+      final removeHashes = hashes;
+      hashes = 0;
+      expect(s.remove(key), isTrue);
+      expect(hashes, removeHashes);
+    });
+  });
+}
+
+class _AddAllBacking extends MapView<int, int> {
+  _AddAllBacking(super.map);
+
+  void Function()? onLength;
+  void Function()? onLookup;
+
+  @override
+  int get length {
+    final callback = onLength;
+    onLength = null;
+    callback?.call();
+    return super.length;
+  }
+
+  @override
+  int? operator [](Object? key) {
+    final callback = onLookup;
+    onLookup = null;
+    callback?.call();
+    return super[key];
+  }
+}
+
+class _AddAllInput extends DelegatingMap<String, int> {
+  _AddAllInput(this.onProbe) : super({'b': 1});
+
+  final void Function() onProbe;
+
+  @override
+  bool get isEmpty {
+    onProbe();
+    return super.isEmpty;
+  }
+
+  @override
+  int get length {
+    onProbe();
+    return super.length;
+  }
+}
+
+class _ReplayKeyMap extends DelegatingMap<String, int> {
+  _ReplayKeyMap() : super({'a': 1, 'b': 1});
+
+  int keyReads = 0;
+
+  @override
+  Iterable<String> get keys => ++keyReads < 3 ? ['a'] : ['b'];
 }
 
 /// A map that counts how often its keys are listed.
@@ -5311,6 +7796,39 @@ class _KeyCountingMap extends DelegatingMap<int, int> {
   }
 }
 
+class _UnmodifiableMapSubclass extends UnmodifiableMapView<Object, num> {
+  _UnmodifiableMapSubclass(super.map);
+}
+
+class _FailingMapTraversal extends DelegatingMap<String, int> {
+  _FailingMapTraversal(this.onTraversal) : super({'a': 1});
+
+  final void Function() onTraversal;
+
+  @override
+  void forEach(void Function(String, int) action) => onTraversal();
+}
+
+class _SharedMapCast<K, V> extends DelegatingMap<K, V> {
+  _SharedMapCast(this.raw, [this.traversal]) : super(raw.cast<K, V>());
+
+  final Map<Object?, Object?> raw;
+  final TypeError? traversal;
+  int castCalls = 0;
+
+  @override
+  void forEach(void Function(K, V) action) {
+    if (traversal case final error?) throw error;
+    super.forEach(action);
+  }
+
+  @override
+  Map<RK, RV> cast<RK, RV>() {
+    castCalls++;
+    return _SharedMapCast<RK, RV>(raw);
+  }
+}
+
 class _HashKey {
   _HashKey(this.hash);
 
@@ -5319,6 +7837,16 @@ class _HashKey {
   @override
   // ignore: hash_and_equals, avoid_equals_and_hash_code_on_mutable_classes
   int get hashCode => hash();
+}
+
+class _StringCountingElement {
+  int stringReads = 0;
+
+  @override
+  String toString() {
+    stringReads++;
+    return 'element';
+  }
 }
 
 class _CountedMapValue {
@@ -5419,6 +7947,12 @@ class _NoSwapRandom implements Random {
 /// A map that yields the key 'b' and then throws, both from [keys] and
 /// from [forEach].
 class _ThrowAfterFirstMap extends MapBase<String, int> {
+  _ThrowAfterFirstMap([this.beforeThrow]);
+
+  final void Function()? beforeThrow;
+  final error = StateError('interrupted');
+  int keyReads = 0;
+
   @override
   int? operator [](Object? key) => key == 'b' ? 2 : null;
 
@@ -5429,7 +7963,16 @@ class _ThrowAfterFirstMap extends MapBase<String, int> {
   void clear() => throw UnimplementedError();
 
   @override
-  Iterable<String> get keys => _throwAfter(['b']);
+  Iterable<String> get keys {
+    keyReads++;
+    return _keys();
+  }
+
+  Iterable<String> _keys() sync* {
+    yield 'b';
+    beforeThrow?.call();
+    throw error;
+  }
 
   @override
   int get length => 2;
@@ -5537,5 +8080,95 @@ class _InsertingAddList extends ListSignal<int> {
   void add(int element) {
     addCalls++;
     insert(length, element);
+  }
+}
+
+class _PartialAddList extends _FixedLengthList {
+  _PartialAddList(super._elements);
+
+  @override
+  void add(int value) {
+    this[0] = value;
+    throw UnsupportedError('cannot append');
+  }
+}
+
+class _PartialRemoveAtList extends _FixedLengthList {
+  _PartialRemoveAtList(super._elements);
+
+  @override
+  int removeAt(int index) {
+    this[0] = 9;
+    throw UnsupportedError('cannot remove');
+  }
+}
+
+class _ConvertingFillList extends _FixedLengthList {
+  _ConvertingFillList(super._elements, this.throws);
+
+  final bool throws;
+
+  @override
+  void fillRange(int start, int end, [int? value]) {
+    _elements.fillRange(start, end, value! + 1);
+    if (throws) throw UnsupportedError('partial fill');
+  }
+}
+
+class _ReentrantFixedLengthList extends _ReentrantList {
+  _ReentrantFixedLengthList(super._elements);
+
+  @override
+  set length(int newLength) => throw UnsupportedError('fixed length');
+}
+
+class _PartialFillList extends _FixedLengthList {
+  _PartialFillList(super._elements);
+
+  @override
+  void fillRange(int start, int end, [int? fillValue]) {
+    _elements.fillRange(start, end, fillValue);
+    throw UnsupportedError('partial fill');
+  }
+}
+
+class _PartialFillView extends UnmodifiableListView<int> {
+  _PartialFillView(this._elements) : super(_elements);
+
+  final List<int> _elements;
+
+  @override
+  void fillRange(int start, int end, [int? fillValue]) {
+    _elements.fillRange(start, end, fillValue);
+    throw UnsupportedError('partial fill');
+  }
+}
+
+class _CallbackLengthList extends DelegatingList<int> {
+  _CallbackLengthList(this.onLength) : super(const []);
+
+  final void Function() onLength;
+  int lengthReads = 0;
+
+  @override
+  int get length {
+    lengthReads++;
+    onLength();
+    return super.length;
+  }
+}
+
+class _PartialSetRangeList extends DelegatingList<int> {
+  _PartialSetRangeList() : super([1, 2]);
+
+  @override
+  void setRange(
+    int start,
+    int end,
+    Iterable<int> iterable, [
+    int skipCount = 0,
+  ]) {
+    this[start] = 3;
+    throw StateError('interrupted');
   }
 }

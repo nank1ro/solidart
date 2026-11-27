@@ -162,6 +162,10 @@ class Signal<T> extends ReadableSignal<T> implements ValueNotifier<T> {
 
   /// Calls a function with the current value and assigns the result as the
   /// new value.
+  ///
+  /// List, map and set signals pass a detached copy to [callback]. Creating
+  /// the copy visits the collection. Assign an existing replacement to
+  /// [value] directly to avoid this copy.
   T updateValue(T Function(T value) callback) =>
       value = callback(_untrackedValue);
 

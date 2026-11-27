@@ -121,6 +121,22 @@ SolidartConfig.trackPreviousValue = false;
 // do it before runApp()
 ```
 
+### Collection history
+
+Some point writes on collection signals save only the information needed to rebuild the previous value. The first history read can then visit all entries to build that value. `toString()` summarizes a large previous collection and can leave a large lazy snapshot pending.
+
+For `ListSignal<T>`, point resizes use bounded checks for native backings with matching type arguments and for growable numeric lists assigned to a wider signal. Other backings may require an element comparison to detect partial writes. The constructor uses `values.toList()`, which may preserve an element type narrower than `T`.
+
+For `fillRange`, SDK `UnmodifiableListView<T>` backings with matching element types take a path that reads no elements. Subclasses and views with narrower element types use the element comparison path. Reads that create a new object each time can report a change on that path even when a write throws.
+
+With history off, point resizes on SDK cast views from `Object`, `Object?`, `dynamic`, `num`, or `num?` to `T` check the length and nested writes. This lets the backing operation proceed without reading existing elements. A custom backing also uses those checks if signal writes interrupt both snapshot attempts or invalidate the copy during the pre-write length read. If signal writes also interrupt both length reads, there is no length comparison. A rejected removal can still compare its target slot. The two reads before the attempt must agree, the two reads after it must agree, all reads must refer to the same slot, and no signal write can intervene. Changes these checks cannot observe may escape detection.
+
+`MapSignal.addAll` can run when an SDK cast map has entries that its public type cannot read. Recovery covers source keys and values typed as the destination type, its nullable form, `Object`, `Object?`, `dynamic`, `num`, or `num?`, and source values typed as `Pattern`. If the write changes the map and its prior contents cannot be copied, the change has no previous value. An empty input view may still require a destination snapshot because the backing map controls when it reads the input.
+
+On the Dart VM, a map or set can keep storage from entries you deleted. A history copy may visit that storage even when the collection now holds few entries. A lazy snapshot after an insertion rebuilds a compact table. That can hash the live keys or elements again. Keep their equality and hash codes stable while they belong to the collection. A hash callback that throws can also make a history read throw.
+
+With `equals: true`, assigning a replacement can compare the collections again when the reactive update commits. The second comparison sees changes to their contents between assignment and commit, including during a batch.
+
 ## Await until a condition is met
 
 You can use the `until` method to wait for a signal to meet a specific condition:
