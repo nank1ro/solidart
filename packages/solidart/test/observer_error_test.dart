@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:solidart/solidart.dart';
 import 'package:test/test.dart';
 
+import 'devtools_test_harness.dart';
+
 /// Runs [body] in a zone. Returns the error that [body] throws and the
 /// messages of the errors that are reported to the zone.
 ({Object? error, List<String> reported}) _guarded(void Function() body) {
@@ -82,9 +84,6 @@ void main() {
 
   setUp(() {
     log = [];
-    final devToolsEnabled = SolidartConfig.devToolsEnabled;
-    addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
-    SolidartConfig.devToolsEnabled = true;
   });
 
   group('a throwing DevTools eligibility check', () {
@@ -99,7 +98,7 @@ void main() {
       });
     });
 
-    test('keeps an earlier effect error', () {
+    testWithDevTools('keeps an earlier effect error', (_) {
       final effect = Effect(() {
         if (signal.value == 0) return;
         signal.failTracking = true;
@@ -116,7 +115,7 @@ void main() {
       expect(result.reported, ['tracking metadata']);
     });
 
-    test('keeps an earlier observer error', () {
+    testWithDevTools('keeps an earlier observer error', (_) {
       observe(_Observer(log, 'first', fails: true, removeOnUpdate: true));
       observe(_Observer(log, 'second'));
       signal.failTracking = true;
@@ -133,7 +132,9 @@ void main() {
   });
 
   group('a throwing effect', () {
-    test('does not skip the observers and DevTools of a Signal', () {
+    testWithDevTools('does not skip the observers and DevTools of a Signal', (
+      _,
+    ) {
       observe(_Observer(log, 'observer'));
       final s = Signal(_Probe([]));
       addTearDown(s.dispose);
@@ -152,21 +153,24 @@ void main() {
       expect(result.reported, isEmpty);
     });
 
-    test('does not skip the observers and DevTools of a collection', () {
-      observe(_Observer(log, 'observer'));
-      final s = ListSignal<Object>([]);
-      addTearDown(s.dispose);
-      final effect = Effect(() {
-        if (s.value.isNotEmpty) throw StateError('effect');
-      });
-      addTearDown(effect.dispose);
+    testWithDevTools(
+      'does not skip the observers and DevTools of a collection',
+      (_) {
+        observe(_Observer(log, 'observer'));
+        final s = ListSignal<Object>([]);
+        addTearDown(s.dispose);
+        final effect = Effect(() {
+          if (s.value.isNotEmpty) throw StateError('effect');
+        });
+        addTearDown(effect.dispose);
 
-      final result = _guarded(() => s.value = [_Probe(log)]);
+        final result = _guarded(() => s.value = [_Probe(log)]);
 
-      expect((result.error! as StateError).message, 'effect');
-      expect(log, ['observer', 'devtools']);
-      expect(result.reported, isEmpty);
-    });
+        expect((result.error! as StateError).message, 'effect');
+        expect(log, ['observer', 'devtools']);
+        expect(result.reported, isEmpty);
+      },
+    );
 
     test('does not skip the observers of a collection assigned in a '
         'mutation callback', () {
@@ -192,7 +196,9 @@ void main() {
   });
 
   group('a throwing observer', () {
-    test('can unregister itself without skipping later updates', () {
+    testWithDevTools('can unregister itself without skipping later updates', (
+      _,
+    ) {
       final first = _Observer(log, 'first', fails: true, removeOnUpdate: true);
       observe(first);
       observe(_Observer(log, 'second'));
@@ -210,9 +216,9 @@ void main() {
       expect(SolidartConfig.observers, isNot(contains(first)));
     });
 
-    test(
+    testWithDevTools(
       'can unregister itself after a throwing effect enables delivery',
-      () {
+      (_) {
         SolidartConfig.devToolsEnabled = false;
         final initial = _Probe([]);
         final s = Signal(initial, trackInDevTools: true);
@@ -237,7 +243,7 @@ void main() {
       },
     );
 
-    test('does not skip later observers and DevTools', () {
+    testWithDevTools('does not skip later observers and DevTools', (_) {
       observe(_Observer(log, 'first', fails: true));
       observe(_Observer(log, 'second', fails: true));
       observe(_Observer(log, 'third'));
