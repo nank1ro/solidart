@@ -1,3 +1,7 @@
+## 3.0.0-dev.6
+
+- **FIX**: An in-place change releases a replaced backing collection once it is no longer needed for history, including when the last subscriber leaves during a batch ([#211](https://github.com/nank1ro/solidart/issues/211)).
+
 ## 3.0.0-dev.5
 
 - **CHORE**: Require `alien_signals` 2.5.0 or later. Disposing a `Computed` with child effects now stops those effects in reverse creation order, which can change the order in which their signals auto-dispose. When an effect stops itself during a rerun, it immediately unlinks dependencies it has yet to read in that run. Later reads in the stopped callback leave it unsubscribed.
