@@ -53,6 +53,78 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     return comparator(oldValue, newValue);
   }
 
+  @override
+  Map<K, V> get _value {
+    final baseline = _replacementBaseline;
+    final previousTail = baseline == null ? null : _internalSignal.subsTail;
+    final value = super._value;
+    final observer = baseline == null ? null : reactiveSystem.activeSub;
+    if (baseline != null &&
+        observer != null &&
+        identical(value, _mutating) &&
+        !disposed) {
+      final tail = _internalSignal.subsTail;
+      final newSubscription =
+          previousTail != null &&
+              tail != null &&
+              identical(tail.prevSub, previousTail) &&
+              identical(tail.sub, observer)
+          ? tail
+          : null;
+      baseline.recordRead(
+        _internalSignal,
+        value,
+        _compare,
+        _replacementSlotsMatch,
+        _readReplacementSlot,
+        firstObserver: previousTail == null,
+        observer: observer,
+        newSubscription: newSubscription,
+      );
+    }
+    return value;
+  }
+
+  @override
+  void _setValueAndNotify(Map<K, V> newValue) {
+    final baseline = _replacementBaseline;
+    final old = _untrackedValue;
+    final signal = _internalSignal;
+    final committed = signal.currentValue;
+    if (baseline == null ||
+        !identical(old, _mutating) ||
+        !identical(old, committed.safeUnwrap())) {
+      super._setValueAndNotify(newValue);
+      return;
+    }
+
+    reactiveSystem._runThen(() => super._setValueAndNotify(newValue), () {
+      // Effects can commit the replacement synchronously. A batch or a
+      // lazy computed can leave the comparison until after the backing write.
+      if (signal.forceDirty || !identical(signal.currentValue, committed)) {
+        return;
+      }
+      final snapshot = baseline.capture(committed);
+      if (!signal.forceDirty && identical(signal.currentValue, committed)) {
+        final comparison = baseline.replacementComparison(
+          snapshot,
+          signal,
+          _compare,
+        );
+        if (signal.forceDirty || !identical(signal.currentValue, committed)) {
+          return;
+        }
+        if (comparison.notify) {
+          // A subscriber read an intermediate change, or a nested write
+          // changed a map whose original state could not be copied.
+          signal.forceDirty = true;
+        } else if (comparison.snapshot case final observed?) {
+          signal.currentValue = Some(observed);
+        }
+      }
+    });
+  }
+
   /// The value for the given [key], or `null` if [key] is not in the map.
   ///
   /// Some maps allow `null` as a value.
@@ -72,18 +144,48 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   // Its type arguments must match the signal's.
   late final Type _defaultMapType = <K, V>{}.runtimeType;
 
+  bool _hasStableSlot(Map<K, V> map, K key) =>
+      map.runtimeType == _defaultMapType && _isValueKey(key);
+
+  bool _canRewindSlot(Map<K, V> map, K key) =>
+      _replacementBaseline != null &&
+      identical(_mutating, map) &&
+      !_internalSignal.forceDirty &&
+      _hasStableSlot(map, key);
+
   /// Associates the [key] with the given [value].
   ///
   /// If the key was already in the map, its associated value is changed.
   /// Otherwise the key/value pair is added to the map.
   @override
-  void operator []=(K key, V value) {
+  void operator []=(K key, V value) =>
+      _assignSlot(key, value, checkEquality: true);
+
+  void _assignSlot(K key, V value, {required bool checkEquality}) {
     final map = _untrackedValue;
     final old = map[key];
     final defaultMap = trackPreviousValue && map.runtimeType == _defaultMapType;
+    final rewindable = _canRewindSlot(map, key);
     final sameValue = identical(old, value);
     final present =
-        old != null || ((defaultMap || sameValue) && map.containsKey(key));
+        old != null ||
+        ((defaultMap || sameValue || rewindable) && map.containsKey(key));
+    final checkEquivalent =
+        checkEquality &&
+        !sameValue &&
+        present &&
+        _replacementBaseline != null &&
+        identical(_mutating, map);
+    var equivalent = false;
+    if (checkEquivalent) {
+      final comparison = _compareReplacementValue(old, value);
+      if (comparison.changed) {
+        // Equality can change the slot or replace the backing before the write.
+        _assignSlot(key, value, checkEquality: false);
+        return;
+      }
+      equivalent = comparison.equivalent;
+    }
     // An overwrite keeps the caller's key in the undo step. The caller can
     // change a mutable key later, so only an immutable value key is lazy.
     // A new key is stored as it is, so only NaN cannot be undone.
@@ -92,6 +194,10 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       sameValue && present,
       (map) => map[key] = value,
       slotChanged: () => !identical(old, map[key]),
+      replacementSlot: rewindable
+          ? (key: key, value: old, present: present)
+          : null,
+      equivalentReplacementWrite: equivalent,
       undo: lazy
           ? (map) {
               if (present) return _copyPrevious(map)..[key] = old as V;
@@ -165,9 +271,14 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// ```
   @override
   V? remove(Object? key) {
+    final map = _untrackedValue;
+    final present = map.containsKey(key);
     return _mutateUnless(
-      !_untrackedValue.containsKey(key),
+      !present,
       (map) => map.remove(key),
+      replacementSlot: present && key is K && _canRewindSlot(map, key)
+          ? (key: key, value: map[key], present: true)
+          : null,
     );
   }
 
@@ -327,9 +438,21 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   @override
   V putIfAbsent(K key, V Function() ifAbsent) {
     // A new key changes the length.
-    return _mutateUnless(
-      _untrackedValue.containsKey(key),
-      (map) => map.putIfAbsent(key, ifAbsent),
+    final map = _untrackedValue;
+    if (map.containsKey(key)) return map.putIfAbsent(key, ifAbsent);
+    final deferWrite = _deferCallbackWrite(map);
+    final rewindable = deferWrite && _canRewindSlot(map, key);
+    return _mutate(
+      (map) => map.putIfAbsent(
+        key,
+        deferWrite
+            ? () => _beforeCallbackWrite(map, key, ifAbsent(), rewindable)
+            : ifAbsent,
+      ),
+      copyReplacementBaseline: equals ? _copyReplacementMap : null,
+      bulkVersion: _pointCallbackVersion(map),
+      deferReplacementWrite: deferWrite,
+      keepBulkVersion: deferWrite,
     );
   }
 
@@ -341,7 +464,48 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// ```
   @override
   void removeWhere(bool Function(K key, V value) test) {
-    _mutate((map) => map.removeWhere(test));
+    final backing = _untrackedValue;
+    if (!equals) return _mutate((map) => map.removeWhere(test));
+    if (identical(backing, _mutating)) {
+      var accepted = false;
+      return _mutate(
+        (map) => map.removeWhere((key, value) {
+          final remove = test(key, value);
+          if (remove && !accepted && identical(map, _untrackedValue)) {
+            accepted = true;
+            _rememberReplacementWrite(map, null);
+          }
+          return remove;
+        }),
+        bulkVersion: (length) => length - backing.length,
+        deferReplacementWrite: true,
+      );
+    }
+    // The backing can remove an entry before calling the next predicate.
+    // Keep the accepted entries until a read or replacement needs them.
+    final removed = <Object?>[];
+    _mutate(
+      (map) => map.removeWhere((key, value) {
+        final remove = test(key, value);
+        if (remove) {
+          removed
+            ..add(key)
+            ..add(value);
+        }
+        return remove;
+      }),
+      copyReplacementBaseline: _copyReplacementMap,
+      copyOriginalReplacementBaseline: (slots) {
+        if (removed.isEmpty) return _copyReplacementMap(backing, slots);
+        final original = _copyReplacementMap(backing, null);
+        for (var i = 0; i < removed.length; i += 2) {
+          original[removed[i] as K] = removed[i + 1] as V;
+        }
+        return slots == null ? original : _copyReplacementMap(original, slots);
+      },
+      // Some maps apply their removals only after the last predicate.
+      bulkVersion: (length) => removed.isEmpty ? 0 : length - backing.length,
+    );
   }
 
   /// Updates the value for the provided [key].
@@ -375,10 +539,70 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       return map.update(key, update);
     }
     final old = _readValue(map, key);
+    final deferWrite = _deferCallbackWrite(map);
+    final rewindable = deferWrite && _canRewindSlot(map, key);
+
     return _mutate(
-      (map) => map.update(key, update, ifAbsent: ifAbsent),
+      (map) => map.update(
+        key,
+        deferWrite
+            ? (value) =>
+                  _beforeCallbackWrite(map, key, update(value), rewindable)
+            : update,
+        ifAbsent: deferWrite && ifAbsent != null
+            ? () => _beforeCallbackWrite(map, key, ifAbsent(), rewindable)
+            : ifAbsent,
+      ),
       slotChanged: () => !identical(old, _readValue(map, key)),
+      copyReplacementBaseline: equals ? _copyReplacementMap : null,
+      bulkVersion: _pointCallbackVersion(map),
+      deferReplacementWrite: deferWrite,
+      keepBulkVersion: deferWrite,
     );
+  }
+
+  bool _deferCallbackWrite(Map<K, V> map) =>
+      _replacementBaseline != null && identical(map, _mutating);
+
+  // A point callback returns before the backing writes its slot.
+  // Nested writes that can change the comparison invalidate it separately.
+  int Function(int)? _pointCallbackVersion(Map<K, V> map) =>
+      equals && !identical(map, _mutating) ? (_) => 0 : null;
+
+  V _beforeCallbackWrite(Map<K, V> map, K key, V next, bool rewindable) {
+    // The callback may already have replaced the backing map.
+    if (!identical(map, _untrackedValue)) return next;
+    var previous = _readSlotForWrite(map, key);
+    var equivalent = false;
+    if (previous != null &&
+        previous.present &&
+        !identical(previous.value, next)) {
+      final comparison = _compareReplacementValue(previous.value, next);
+      if (comparison.changed) {
+        if (!identical(map, _untrackedValue)) return next;
+        previous = _readSlotForWrite(map, key);
+      }
+      equivalent = comparison.equivalent;
+    }
+    if (previous == null ||
+        !previous.present ||
+        !identical(previous.value, next)) {
+      _rememberReplacementWrite(
+        map,
+        rewindable ? previous : null,
+        equivalent: equivalent,
+      );
+    }
+    return next;
+  }
+
+  _ReplacementSlot? _readSlotForWrite(Map<K, V> map, K key) {
+    try {
+      return untracked(() => _readReplacementSlot(map, key));
+    } on Object {
+      // An unreadable slot still needs the normal fallback before a write.
+      return null;
+    }
   }
 
   /// Updates all values.
@@ -392,7 +616,69 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   /// ```
   @override
   void updateAll(V Function(K key, V value) update) {
-    _mutate((map) => map.updateAll(update), bulkCheck: _bulkChangeCheck);
+    if (!equals) {
+      return _mutate(
+        (map) => map.updateAll(update),
+        bulkCheck: _bulkChangeCheck,
+      );
+    }
+
+    final nested = identical(_untrackedValue, _mutating);
+    late Map<K, V> Function() copyOriginal;
+    var version = 0;
+    var savedBaseline = false;
+    _mutate(
+      (map) => map.updateAll((key, value) {
+        final baseline = _replacementBaseline;
+        final writeVersion = baseline?.writeVersion;
+        final next = update(key, value);
+        if (!identical(map, _untrackedValue)) return next;
+        // A nested write can overwrite this key before the callback returns.
+        final before = writeVersion == baseline?.writeVersion
+            ? value
+            : untracked(() => _readValue(map, key));
+        if (!identical(before, next)) {
+          final equivalent = _compareReplacementValue(before, next).equivalent;
+          if (nested && !savedBaseline) {
+            _rememberReplacementWrite(map, null, equivalent: equivalent);
+            savedBaseline = !equivalent;
+          }
+          if (!equivalent) version++;
+        }
+        return next;
+      }),
+      bulkCheck: nested
+          ? _bulkChangeCheck
+          : (map, previous) => _bulkChangeCheck(
+              map,
+              previous,
+              saveOriginal: (copy) => copyOriginal = copy,
+            ),
+      copyReplacementBaseline: _copyReplacementMap,
+      copyOriginalReplacementBaseline: (_) => copyOriginal(),
+      bulkVersion: (_) => version,
+      deferReplacementWrite: true,
+    );
+  }
+
+  ({bool equivalent, bool changed}) _compareReplacementValue(
+    Object? before,
+    V after,
+  ) {
+    final baseline = _replacementBaseline;
+    final map = _untrackedValue;
+    final writes = baseline?.writeVersion;
+    var equal = false;
+    try {
+      equal = untracked(() => before == after);
+    } on Object {
+      // Comparing an intermediate value must not interrupt the backing write.
+    }
+    final changed =
+        !identical(_replacementBaseline, baseline) ||
+        !identical(_untrackedValue, map) ||
+        baseline?.writeVersion != writes;
+    return (equivalent: equal && !changed, changed: changed);
   }
 
   @override
@@ -446,8 +732,56 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
   @override
   Map<K, V> _copyPrevious(Map<K, V> map) => Map<K, V>.of(map);
 
-  bool Function() _bulkChangeCheck(Map<K, V> map, Map<K, V>? previous) {
+  _ReplacementSlot _readReplacementSlot(Map<K, V> map, Object? key) {
+    final value = map[key];
+    return (
+      key: key,
+      value: value,
+      present: value != null || map.containsKey(key),
+    );
+  }
+
+  bool _replacementSlotsMatch(
+    Map<K, V> map,
+    Iterable<_ReplacementSlot> slots,
+  ) {
+    for (final slot in slots) {
+      final present = map.containsKey(slot.key);
+      if (present != slot.present || (present && slot.value != map[slot.key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Map<K, V> _copyReplacementMap(
+    Map<K, V> map,
+    Map<Object?, _ReplacementSlot>? slots,
+  ) {
+    // An identity copy preserves distinct equal keys in custom backings.
+    final copy = Map<K, V>.identity();
+    if (slots == null) return copy..addAll(map);
+    map.forEach((key, value) {
+      final original = _isValueKey(key) ? slots.remove(key) : null;
+      if (original == null) {
+        copy[key] = value;
+      } else if (original.present) {
+        copy[key] = original.value as V;
+      }
+    });
+    for (final original in slots.values) {
+      if (original.present) copy[original.key as K] = original.value as V;
+    }
+    return copy;
+  }
+
+  bool Function() _bulkChangeCheck(
+    Map<K, V> map,
+    Map<K, V>? previous, {
+    void Function(Map<K, V> Function())? saveOriginal,
+  }) {
     if (previous != null && previous.length == map.length) {
+      saveOriginal?.call(() => Map<K, V>.identity()..addAll(previous));
       return () {
         final keys = previous.keys.iterator;
         final values = previous.values.iterator;
@@ -470,6 +804,13 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
     map.forEach((key, value) {
       before[i++] = key;
       before[i++] = value;
+    });
+    saveOriginal?.call(() {
+      final snapshot = Map<K, V>.identity();
+      for (var i = 0; i < before.length; i += 2) {
+        snapshot[before[i] as K] = before[i + 1] as V;
+      }
+      return snapshot;
     });
     return () {
       var i = 0;

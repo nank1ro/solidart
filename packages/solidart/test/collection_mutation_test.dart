@@ -137,7 +137,8 @@ class _PointList extends DelegatingList<int> {
 }
 
 class _CountingMap extends DelegatingMap<int, int> {
-  _CountingMap() : super({for (var i = 0; i < 100; i++) i: i});
+  _CountingMap([int entryCount = 100])
+    : super({for (var i = 0; i < entryCount; i++) i: i});
   int scans = 0;
   int reads = 0;
 
@@ -160,8 +161,32 @@ class _CountingMap extends DelegatingMap<int, int> {
   }
 
   @override
+  Iterable<int> get values {
+    scans++;
+    return super.values;
+  }
+
+  @override
   void forEach(void Function(int, int) action) {
     scans++;
+    super.forEach(action);
+  }
+}
+
+class _ReactiveMapView extends MapView<String, int> {
+  _ReactiveMapView(super.map, this.dependency);
+
+  final Signal<int> dependency;
+
+  @override
+  Iterable<String> get keys {
+    dependency.value;
+    return super.keys;
+  }
+
+  @override
+  void forEach(void Function(String, int) action) {
+    dependency.value;
     super.forEach(action);
   }
 }
@@ -311,6 +336,483 @@ void main() {
       addTearDown(s.dispose);
       s.removeWhere((_, _) => false);
       expect(backing.scans, reference.scans);
+    });
+
+    test('observed map removeWhere with equality adds no scans', () {
+      bool remove(int key, int _) => key.isEven;
+      final reference = _CountingMap()..removeWhere(remove);
+      final backing = _CountingMap();
+      final s = MapSignal(backing, equals: true, trackPreviousValue: false);
+      addTearDown(s.dispose);
+      var length = 0;
+      final effect = Effect(() => length = s.length);
+      addTearDown(effect.dispose);
+
+      s.removeWhere(remove);
+
+      expect(length, reference.length);
+      expect(backing.scans, reference.scans);
+    });
+
+    test(
+      'tracked reads after one map removal do not compare the whole map',
+      () {
+        var hashes = 0;
+        final s = MapSignal(
+          {
+            for (var i = 0; i < 128; i++)
+              i: _CountedMapValue(i, () => hashes++),
+          },
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        final effect = Effect(() {
+          s.removeWhere((key, value) {
+            if (key != 0) expect(s[key], same(value));
+            return key == 0;
+          });
+        });
+        addTearDown(effect.dispose);
+
+        expect(s.untrackedValue.length, 127);
+        expect(hashes, 0);
+      },
+    );
+
+    for (final removes in [false, true]) {
+      test(
+        'tracked reads from a nested no-op '
+        '${removes ? 'removeWhere' : 'updateAll'} do bounded comparisons',
+        () {
+          const count = 128;
+          var hashes = 0;
+          final s = MapSignal(
+            {
+              for (var i = 0; i < count; i++)
+                i: _CountedMapValue(i, () => hashes++),
+            },
+            equals: true,
+            trackPreviousValue: false,
+          );
+          addTearDown(s.dispose);
+          final effect = Effect(() {
+            s.value;
+            s.update(0, (current) {
+              if (removes) {
+                s.removeWhere((key, value) {
+                  expect(s[key], same(value));
+                  return false;
+                });
+              } else {
+                s.updateAll((key, value) => s[key]!);
+              }
+              return current;
+            });
+          });
+          addTearDown(effect.dispose);
+
+          expect(hashes, lessThanOrEqualTo(8 * count));
+        },
+      );
+    }
+
+    for (final (name, outer, bulk, sameValue) in [
+      ('updateAll', false, true, true),
+      ('a point update', true, false, true),
+      ('a nested updateAll', true, true, true),
+      ('updateAll', false, true, false),
+      ('a point update', true, false, false),
+    ]) {
+      for (final opaque in [false, true]) {
+        test('equal point callbacks in $name do bounded comparisons '
+            '(identical: $sameValue, opaque: $opaque)', () {
+          const count = 128;
+          var comparisons = 0;
+          _CountedMapValue valueOf(int key) => _CountedMapValue(
+            key,
+            () => comparisons++,
+            onEquals: () => comparisons++,
+          );
+          final backing = {for (var i = 0; i < count; i++) i: valueOf(i)};
+          final original = backing[1];
+          final s = MapSignal(
+            opaque ? MapView(backing) : backing,
+            equals: true,
+            trackPreviousValue: false,
+          );
+          addTearDown(s.dispose);
+          _CountedMapValue read(int key) => s.update(key, (_) {
+            final observed = s[key]!;
+            return sameValue ? observed : valueOf(observed.key);
+          });
+          void updateAll() => s.updateAll((key, _) => read(key));
+          final effect = Effect(() {
+            s.value;
+            if (!outer) return updateAll();
+            s.update(0, (value) {
+              if (bulk) {
+                updateAll();
+              } else {
+                for (var key = 0; key < count; key++) {
+                  read(key);
+                }
+              }
+              return value;
+            });
+          });
+          addTearDown(effect.dispose);
+
+          expect(comparisons, lessThanOrEqualTo(8 * count));
+          expect(identical(backing[1], original), sameValue);
+        });
+      }
+    }
+
+    for (final firstValueBeforeRead in [false, true]) {
+      for (final opaque in [false, true]) {
+        test('equal updateAll results keep reads bounded '
+            '(first value before read: $firstValueBeforeRead, '
+            'opaque: $opaque)', () {
+          const count = 128;
+          var comparisons = 0;
+          _CountedMapValue valueOf(int key) => _CountedMapValue(
+            key,
+            () => comparisons++,
+            onEquals: () => comparisons++,
+          );
+          final backing = {for (var i = 0; i < count; i++) i: valueOf(i)};
+          final s = MapSignal(
+            opaque ? MapView(backing) : backing,
+            equals: true,
+            trackPreviousValue: false,
+          );
+          addTearDown(s.dispose);
+          _CountedMapValue replace(int key) =>
+              s.update(key, (_) => valueOf(s[key]!.key));
+          final effect = Effect(() {
+            s.value;
+            if (firstValueBeforeRead) {
+              s.updateAll(
+                (key, value) => key == 0 ? valueOf(value.key) : replace(key),
+              );
+            } else {
+              s.update(count - 1, (value) {
+                s.updateAll((key, old) {
+                  replace(key);
+                  return old;
+                });
+                return value;
+              });
+            }
+          });
+          addTearDown(effect.dispose);
+
+          expect(comparisons, lessThanOrEqualTo(8 * count));
+        });
+      }
+    }
+
+    for (final (bulk, opaque, history, identicalValue) in [
+      (false, false, false, false),
+      (true, false, false, false),
+      (false, true, false, false),
+      (true, true, false, false),
+      (true, true, true, true),
+    ]) {
+      test(
+        'equal point writes reuse a first observer snapshot (bulk: $bulk, '
+        'opaque: $opaque, history: $history, identical: $identicalValue)',
+        () {
+          const count = 128;
+          var hashes = 0;
+          _CountedMapValue valueOf(int key) =>
+              _CountedMapValue(key, () => hashes++);
+          final backing = {for (var i = 0; i < count; i++) i: valueOf(i)};
+          final s = MapSignal(
+            opaque ? MapView(backing) : backing,
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          if (bulk) {
+            final effect = Effect(() {
+              s.updateAll((key, value) {
+                if (key == 0) return valueOf(-1);
+                return s.update(key, (_) {
+                  final current = s[key]!;
+                  return identicalValue ? current : valueOf(current.key);
+                });
+              });
+            });
+            addTearDown(effect.dispose);
+          } else {
+            s.update(0, (value) {
+              s.addAll({1: valueOf(-1)});
+              final effect = Effect(() => s[0]);
+              addTearDown(effect.dispose);
+              for (var key = 0; key < count; key++) {
+                s.update(key, (current) {
+                  effect.run();
+                  return valueOf(current.key);
+                });
+              }
+              return value;
+            });
+          }
+
+          expect(hashes, 0);
+        },
+      );
+    }
+
+    for (final useSameValue in [true, false]) {
+      for (final history in [false, true]) {
+        test('tracked reads from equal updateAll callbacks do not hash the '
+            'map (identical: $useSameValue, history: $history)', () {
+          var hashes = 0;
+          _CountedMapValue valueOf(int key) =>
+              _CountedMapValue(key, () => hashes++);
+          final s = MapSignal(
+            {for (var i = 0; i < 128; i++) i: valueOf(i)},
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          var runs = 0;
+          final effect = Effect(() {
+            runs++;
+            s.updateAll((key, value) {
+              final observed = s[key]!;
+              return useSameValue ? observed : valueOf(observed.key);
+            });
+          });
+          addTearDown(effect.dispose);
+
+          expect(hashes, 0);
+          final previousRuns = runs;
+          s[0] = valueOf(-1);
+          expect(runs, greaterThan(previousRuns));
+        });
+      }
+    }
+
+    for (final restore in [false, true]) {
+      test('native point writes reuse a captured bulk snapshot '
+          '(restored: $restore)', () {
+        const count = 128;
+        var hashes = 0;
+        _CountedMapValue valueOf(int key) =>
+            _CountedMapValue(key, () => hashes++);
+        final s = MapSignal(
+          {for (var i = 0; i < count; i++) i: valueOf(i)},
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        final effect = Effect(() {
+          s.updateAll((key, _) {
+            if (key == 0) return valueOf(-1);
+            final current = s[key]!;
+            if (restore) {
+              s
+                ..update(key, (_) => valueOf(-2))
+                ..update(key, (_) => current);
+            } else {
+              s[key] = valueOf(current.key);
+            }
+            return current;
+          });
+        });
+        addTearDown(effect.dispose);
+
+        expect(hashes, 0);
+      });
+    }
+
+    test('native point reads reuse a snapshot after a full match', () {
+      const count = 128;
+      var hashes = 0;
+      _CountedMapValue valueOf(int key) =>
+          _CountedMapValue(key, () => hashes++);
+      final s = MapSignal(
+        {for (var i = 0; i < count; i++) i: valueOf(i)},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      var hashesAfterMatch = 0;
+      final effect = Effect(() {
+        final original = s[1]!;
+        s.update(0, (current) {
+          s
+            ..addAll({1: valueOf(-1)})
+            ..addAll({1: original})
+            ..value;
+          hashesAfterMatch = hashes;
+          for (var key = 0; key < count; key++) {
+            final previous = s[key]!;
+            s
+              ..update(key, (_) => valueOf(-1))
+              ..update(key, (_) => previous)
+              ..value;
+          }
+          return current;
+        });
+      });
+      addTearDown(effect.dispose);
+
+      expect(hashesAfterMatch, greaterThan(0));
+      expect(hashes, hashesAfterMatch);
+    });
+
+    test('a divergent native reader rechecks only journaled slots', () {
+      var hashes = 0;
+      _CountedMapValue valueOf(int key) =>
+          _CountedMapValue(key, () => hashes++);
+      final original = valueOf(0);
+      final s = MapSignal(
+        {for (var i = 0; i < 10000; i++) i: original},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      final incumbent = Effect(() => s.value[0]);
+      addTearDown(incumbent.dispose);
+
+      s.update(0, (current) {
+        s[1] = valueOf(1);
+        final reader = Effect(() => s.value[1]);
+        s
+          ..[2] = valueOf(2)
+          ..[2] = original;
+        reader
+          ..run()
+          ..dispose();
+        return current;
+      });
+
+      expect(hashes, 0);
+    });
+
+    for (final history in [false, true]) {
+      test('a sparse reader releases restored slots outside its observation '
+          '(history: $history)', () {
+        const count = 512;
+        var comparisons = 0;
+        _CountedMapValue valueOf(int key) => _CountedMapValue(
+          key,
+          () => comparisons++,
+          onEquals: () => comparisons++,
+        );
+        final initial = {for (var i = 0; i <= count; i++) i: valueOf(0)};
+        final s = MapSignal(
+          Map.of(initial),
+          equals: true,
+          trackPreviousValue: history,
+        );
+        addTearDown(s.dispose);
+        final incumbentValues = <int>[];
+        final incumbent = Effect(() => incumbentValues.add(s.value[0]!.key));
+        addTearDown(incumbent.dispose);
+        final laterValues = <int>[];
+        late int comparisonsDuringReads;
+
+        batch(() {
+          s.update(0, (current) {
+            s[0] = valueOf(1);
+            final reader = Effect(() => s.value[0]);
+            comparisons = 0;
+            for (var key = 1; key <= count; key++) {
+              s
+                ..update(key, (_) => valueOf(2))
+                ..update(key, (_) => valueOf(0));
+              reader.run();
+            }
+            comparisonsDuringReads = comparisons;
+            reader.dispose();
+            s[0] = current;
+            final later = Effect(() => laterValues.add(s.value[0]!.key));
+            addTearDown(later.dispose);
+            s
+              ..[0] = valueOf(2)
+              ..value = initial;
+            return current;
+          });
+        });
+
+        expect(comparisonsDuringReads, lessThanOrEqualTo(8 * count));
+        expect(incumbentValues, [0]);
+        expect(laterValues, [0]);
+      });
+
+      for (final opaque in [false, true]) {
+        test('equal slot assignments keep tracked rereads bounded '
+            '(history: $history, opaque: $opaque)', () {
+          const count = 128;
+          var hashes = 0;
+          _CountedMapValue valueOf(int key) =>
+              _CountedMapValue(key, () => hashes++);
+          final backing = {for (var i = 0; i < count; i++) i: valueOf(i)};
+          final original = backing[1];
+          final s = MapSignal(
+            opaque ? MapView(backing) : backing,
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          var runs = 0;
+          final incumbent = Effect(() {
+            s.value;
+            runs++;
+          });
+          addTearDown(incumbent.dispose);
+
+          s.update(0, (current) {
+            for (var key = 1; key < count; key++) {
+              s[key] = valueOf(key);
+              incumbent.run();
+            }
+            return current;
+          });
+
+          expect(hashes, 0);
+          expect(runs, count + 1);
+          expect(s.untrackedValue[1], isNot(same(original)));
+          expect(s.untrackedPreviousValue?[1], same(history ? original : null));
+        });
+      }
+    }
+
+    test('tracked reads release slots restored by nested point callbacks', () {
+      const count = 256;
+      var comparisons = 0;
+      _CountedMapValue valueOf(int key) => _CountedMapValue(
+        key,
+        () => comparisons++,
+        onEquals: () => comparisons++,
+      );
+      final s = MapSignal(
+        {for (var i = 0; i < count; i++) i: valueOf(0)},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      final effect = Effect(() {
+        s.value;
+        s.update(0, (current) {
+          for (var key = 0; key < count; key++) {
+            s
+              ..update(key, (_) => valueOf(1))
+              ..update(key, (_) => valueOf(0))
+              ..value;
+          }
+          return current;
+        });
+      });
+      addTearDown(effect.dispose);
+
+      expect(comparisons, lessThanOrEqualTo(8 * count));
     });
 
     test('list fillRange reads only the affected slots', () {
@@ -2036,6 +2538,1735 @@ void main() {
       expect(w.effectReruns, 1);
     });
 
+    for (final history in [false, true]) {
+      test('a replacement matching the retired map still delivers a nested '
+          'write at batch flush, history $history', () {
+        final s = MapSignal(
+          {'a': 1, 'b': 1},
+          equals: true,
+          trackPreviousValue: history,
+        );
+        final w = watch(s);
+
+        batch(() {
+          s.update('a', (_) {
+            s['b'] = 2;
+            s.value = {'a': 2, 'b': 2};
+            return 2;
+          });
+          expect(w.effectReruns, 0);
+          expect(w.calls, isEmpty);
+        });
+
+        expect(w.effectReruns, 1);
+        final previous = history ? {'a': 1, 'b': 1} : null;
+        expect(w.calls, [
+          [
+            previous,
+            {'a': 2, 'b': 2},
+          ],
+        ]);
+      });
+
+      test('batched update with an equal replacement notifies once, '
+          'history $history', () {
+        final backing = {'a': 1};
+        final s = MapSignal(backing, equals: true, trackPreviousValue: history);
+        addTearDown(s.dispose);
+        final changed = <int?>[];
+        final effect = Effect(() => changed.add(s.value['a']));
+        addTearDown(effect.dispose);
+        final replacement = {'a': 2};
+
+        batch(() {
+          s.update('a', (_) {
+            s.value = replacement;
+            return 2;
+          });
+          expect(changed, [1]);
+        });
+
+        expect(backing, {'a': 2});
+        expect(s.untrackedValue, same(replacement));
+        expect(changed, [1, 2]);
+        expect(s.untrackedPreviousValue, history ? {'a': 1} : null);
+
+        backing['a'] = 3;
+        expect(s.value, same(replacement));
+        expect(changed, [1, 2]);
+      });
+
+      test('batched update can restore equal contents, history $history', () {
+        final backing = {'a': 1};
+        final s = MapSignal(backing, equals: true, trackPreviousValue: history);
+        final w = watch(s);
+
+        batch(() {
+          s.update('a', (value) {
+            s.value = {'a': 1};
+            return value;
+          });
+        });
+        expect(s.untrackedValue, same(backing));
+        expect(s.untrackedHasPreviousValue, isFalse);
+
+        batch(() {
+          s.update('a', (_) {
+            s
+              ..value = {'a': 2}
+              ..value = {'a': 1};
+            return 2;
+          });
+        });
+
+        expect(backing, {'a': 2});
+        expect(s.untrackedValue, {'a': 1});
+        expect(w.effectReruns, 0);
+        expect(w.calls, isEmpty);
+      });
+
+      test('batched update can restore equal contents after nested writes, '
+          'history $history', () {
+        final s = MapSignal(
+          {'a': 1, 'b': 1},
+          equals: true,
+          trackPreviousValue: history,
+        );
+        final w = watch(s);
+
+        batch(() {
+          s.update('a', (value) {
+            s
+              ..['b'] = 2
+              ..['b'] = 1
+              ..value = {'a': 2, 'b': 1}
+              ..value = {'a': 1, 'b': 1};
+            return value;
+          });
+        });
+
+        expect(s.untrackedValue, {'a': 1, 'b': 1});
+        expect(w.effectReruns, 0);
+        expect(w.calls, isEmpty);
+      });
+    }
+
+    test(
+      'a nested replacement rewinds the first value of each written slot',
+      () {
+        final initial = <String, int?>{'a': 1, 'b': null, 'f': 9};
+        final s = MapSignal(
+          Map.of(initial),
+          equals: true,
+          trackPreviousValue: false,
+        );
+        final w = watch(s);
+
+        batch(() {
+          s.update('a', (value) {
+            s
+              ..remove('b')
+              ..putIfAbsent('b', () => 2)
+              ..putIfAbsent('c', () => 3)
+              ..update('c', (_) => 4)
+              ..update('d', (_) => 5, ifAbsent: () => 5)
+              ..['e'] = null
+              ..remove('f')
+              ..value = initial;
+            return value;
+          });
+        });
+
+        expect(s.untrackedValue, initial);
+        expect(w.effectReruns, 0);
+        expect(w.calls, isEmpty);
+      },
+    );
+
+    test('a nested replacement rewinds equal keys in a default map', () {
+      final initial = <num, int>{0: 1, 1.0: 7};
+      final s = MapSignal(
+        Map.of(initial),
+        equals: true,
+        trackPreviousValue: false,
+      );
+      final w = watch(s);
+
+      batch(() {
+        s.update(0, (value) {
+          s
+            ..remove(1.0)
+            ..[1] = 2
+            ..value = initial;
+          return value;
+        });
+      });
+
+      expect(w.effectReruns, 0);
+      expect(w.calls, isEmpty);
+    });
+
+    for (final opaque in [false, true]) {
+      for (final history in [false, true]) {
+        test('shouldUpdate sees a nested write before a replacement without '
+            'subscribers (opaque: $opaque, history: $history)', () {
+          final initial = {'a': 1, 'b': 1};
+          final s = MapSignal(
+            opaque ? MapView(initial) : initial,
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+
+          batch(() {
+            s.update('a', (_) {
+              s
+                ..['b'] = 2
+                ..value = {'a': 3, 'b': 2}
+                ..value = {'a': 1, 'b': 2};
+              return 2;
+            });
+          });
+
+          expect(s.listenerCount, 0);
+          expect(s.shouldUpdate(), isTrue);
+          expect(s.value, {'a': 1, 'b': 2});
+        });
+      }
+    }
+
+    test('an unobserved bulk write after a nested slot write keeps the raw '
+        'replacement comparison', () {
+      final s = MapSignal(
+        {'a': 1, 'b': 1, 'c': 1},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+
+      batch(() {
+        s.update('a', (_) {
+          s
+            ..['b'] = 2
+            ..updateAll((key, value) => key == 'c' ? 3 : value)
+            ..value = {'a': 1, 'b': 1, 'c': 3};
+          return 2;
+        });
+      });
+
+      expect(s.shouldUpdate(), isTrue);
+      expect(s.value, {'a': 1, 'b': 1, 'c': 3});
+    });
+
+    test('a nested replacement preserves distinct equal identity keys', () {
+      final first = _Same(1);
+      final second = _Same(2);
+      final initial = Map<_Same, int>.identity()
+        ..[first] = 1
+        ..[second] = 2;
+      final s = MapSignal(
+        Map<_Same, int>.identity()..addAll(initial),
+        equals: true,
+        trackPreviousValue: false,
+      );
+      var runs = 0;
+      final effect = Effect(() {
+        s.value;
+        runs++;
+      });
+      addTearDown(effect.dispose);
+      addTearDown(s.dispose);
+
+      batch(() {
+        s.update(first, (value) {
+          s
+            ..[second] = 3
+            ..value = initial;
+          return value;
+        });
+      });
+
+      expect(s.untrackedValue.length, 2);
+      expect(runs, 1);
+    });
+
+    for (final (opaque, restoresInitial) in [
+      (false, false),
+      (false, true),
+      (true, true),
+    ]) {
+      test('a subscriber added during a nested write sees the replacement, '
+          'opaque: $opaque, restores initial: $restoresInitial', () {
+        final initial = {'a': 1, 'b': 1};
+        final s = MapSignal(
+          opaque ? MapView(initial) : initial,
+          equals: true,
+          trackPreviousValue: false,
+        );
+        watch(s);
+        final seen = <Map<String, int>>[];
+        final next = restoresInitial ? {'a': 1, 'b': 1} : {'a': 2, 'b': 2};
+
+        batch(() {
+          s.update('a', (_) {
+            s['b'] = 2;
+            final effect = Effect(() => seen.add(Map.of(s.value)));
+            addTearDown(effect.dispose);
+            s.value = next;
+            return next['a']!;
+          });
+          expect(seen, [
+            {'a': 1, 'b': 2},
+          ]);
+        });
+
+        expect(seen, [
+          {'a': 1, 'b': 2},
+          next,
+        ]);
+      });
+    }
+
+    for (final opaque in [false, true]) {
+      for (final history in [false, true]) {
+        test('a first subscriber after an unobserved nested write sees the '
+            'replacement (opaque: $opaque, history: $history)', () {
+          final initial = {'a': 1, 'b': 1};
+          final s = MapSignal(
+            opaque ? MapView(initial) : initial,
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final seen = <int?>[];
+
+          batch(() {
+            s.update('a', (_) {
+              if (opaque) {
+                s['b'] = 2;
+              } else {
+                s.addAll({'b': 2});
+              }
+              final effect = Effect(() => seen.add(s.value['b']));
+              addTearDown(effect.dispose);
+              s
+                ..['b'] = 3
+                ..value = {'a': 2, 'b': 3};
+              return 2;
+            });
+            expect(seen, [2]);
+          });
+
+          expect(seen, [2, 3]);
+          expect(s.previousValue, history ? {'a': 1, 'b': 1} : null);
+        });
+      }
+    }
+
+    for (final opaque in [false, true]) {
+      for (final history in [false, true]) {
+        test('a first subscriber during a nested bulk write sees the final '
+            'map (opaque: $opaque, history: $history)', () {
+          final initial = {'a': 1, 'b': 1, 'c': 1};
+          final s = MapSignal(
+            opaque ? MapView(initial) : initial,
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final seen = <int?>[];
+          final next = opaque ? {'a': 1, 'c': 1} : {'a': 2, 'b': 2, 'c': 2};
+
+          void subscribe() {
+            final effect = Effect(() => seen.add(s.value['b']));
+            addTearDown(effect.dispose);
+          }
+
+          batch(() {
+            s.update('a', (_) {
+              if (opaque) {
+                s.removeWhere((key, value) {
+                  if (key != 'b') return false;
+                  subscribe();
+                  return true;
+                });
+              } else {
+                s.updateAll((key, value) {
+                  if (key == 'b') subscribe();
+                  return 2;
+                });
+              }
+              s
+                ..value = {...next, 'a': 3}
+                ..value = next;
+              return next['a']!;
+            });
+            expect(seen, [1]);
+          });
+
+          expect(seen, [1, next['b']]);
+        });
+      }
+    }
+
+    for (final history in [false, true]) {
+      for (final keepReader in [false, true]) {
+        test('a restored replacement updates a live intermediate reader '
+            '(history: $history, live: $keepReader)', () {
+          final s = MapSignal(
+            {'x': 0},
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final incumbentValues = <int>[];
+          final incumbent = Effect(() => incumbentValues.add(s['x']!));
+          addTearDown(incumbent.dispose);
+          final readerValues = <int>[];
+
+          batch(() {
+            s.update('x', (current) {
+              s['x'] = 1;
+              final transient = Effect(() => s['x']);
+              if (keepReader) {
+                final reader = Effect(() => readerValues.add(s['x']!));
+                addTearDown(reader.dispose);
+              }
+              transient.dispose();
+              s.value = {'x': 0};
+              return current;
+            });
+          });
+
+          expect(incumbentValues, [0, if (keepReader) 0]);
+          expect(readerValues, [
+            if (keepReader) ...[1, 0],
+          ]);
+        });
+      }
+    }
+
+    for (final history in [false, true]) {
+      for (final opaque in [false, true]) {
+        test('a computed establishes a new observation after reattaching '
+            '(history: $history, opaque: $opaque)', () {
+          final backing = {'x': 0};
+          final s = MapSignal(
+            opaque ? MapView(backing) : backing,
+            equals: true,
+            trackPreviousValue: history,
+            autoDispose: false,
+          );
+          addTearDown(s.dispose);
+          final gate = Signal(true, autoDispose: false);
+          addTearDown(gate.dispose);
+          final computed = Computed(
+            () => gate.value ? s.value['x']! : -1,
+            autoDispose: false,
+          );
+          addTearDown(computed.dispose);
+          expect(computed.value, 0);
+          final seen = <int>[];
+
+          batch(() {
+            s.update('x', (current) {
+              s['x'] = 1;
+              final survivor = Effect(() => seen.add(s.value['x']!));
+              addTearDown(survivor.dispose);
+              gate.value = false;
+              expect(computed.value, -1);
+              expect(s.listenerCount, 1);
+              gate.value = true;
+              expect(computed.value, 1);
+              expect(s.listenerCount, 2);
+              s
+                ..['x'] = 2
+                ..value = {'x': 1};
+              return current;
+            });
+          });
+
+          expect(seen, [1]);
+          expect(computed.value, 1);
+        });
+
+        for (final (incumbent, repeat, distinct) in [
+          (true, false, false),
+          (false, true, false),
+          (false, true, true),
+        ]) {
+          test(
+            'surviving maps agree by contents (history: $history, '
+            'opaque: $opaque, incumbent: $incumbent, distinct: $distinct)',
+            () {
+              final backing = {'x': 0};
+              final s = MapSignal(
+                opaque ? MapView(backing) : backing,
+                equals: true,
+                trackPreviousValue: history,
+              );
+              addTearDown(s.dispose);
+              var first = incumbent ? Effect(() => s['x']) : null;
+              final seen = <int>[];
+              final later = <int>[];
+              final laterValue = distinct ? 4 : 1;
+
+              batch(() {
+                s.update('x', (current) {
+                  if (!incumbent) {
+                    s['x'] = 2;
+                    first = Effect(() => s['x']);
+                  }
+                  s['x'] = 1;
+                  final survivor = Effect(() => seen.add(s['x']!));
+                  addTearDown(survivor.dispose);
+                  if (repeat) {
+                    s
+                      ..['x'] = 3
+                      ..['x'] = laterValue;
+                    final another = Effect(() => later.add(s['x']!));
+                    addTearDown(another.dispose);
+                  }
+                  first!.dispose();
+                  s
+                    ..['x'] = 2
+                    ..value = {'x': 1};
+                  return current;
+                });
+              });
+
+              expect(seen, [1, if (distinct) 1]);
+              expect(later, [if (repeat) laterValue, if (distinct) 1]);
+            },
+          );
+        }
+
+        for (final (keepAnchor, reread) in [
+          (false, false),
+          (true, false),
+          (false, true),
+        ]) {
+          test('surviving observers keep their own observed contents '
+              '(history: $history, opaque: $opaque, anchor: $keepAnchor, '
+              'reread: $reread)', () {
+            final backing = {'x': 0};
+            final s = MapSignal(
+              opaque ? MapView(backing) : backing,
+              equals: true,
+              trackPreviousValue: history,
+            );
+            addTearDown(s.dispose);
+            final seen = <int>[];
+            final alsoSeen = <int>[];
+            final anchorValues = <int>[];
+
+            batch(() {
+              s.update('x', (current) {
+                s['x'] = 1;
+                final first = Effect(() => s['x']);
+                if (keepAnchor) {
+                  final anchor = Effect(() => anchorValues.add(s['x']!));
+                  addTearDown(anchor.dispose);
+                }
+                s['x'] = 0;
+                final survivor = Effect(() => seen.add(s['x']!));
+                addTearDown(survivor.dispose);
+                final alsoSurvives = Effect(() => alsoSeen.add(s['x']!));
+                addTearDown(alsoSurvives.dispose);
+                first.dispose();
+                if (reread) {
+                  s
+                    ..['x'] = 2
+                    ..['x'] = 0;
+                  survivor.run();
+                }
+                s['x'] = 2;
+                if (reread) survivor.run();
+                s.value = {'x': 0};
+                return current;
+              });
+            });
+
+            expect(seen, [
+              0,
+              if (reread) ...[0, 2],
+              if (keepAnchor || reread) 0,
+            ]);
+            expect(alsoSeen, [0, if (keepAnchor || reread) 0]);
+            expect(anchorValues, [
+              if (keepAnchor) ...[1, 0],
+            ]);
+          });
+        }
+      }
+
+      test('a tracked read sees writes made by its equality check '
+          '(history: $history)', () {
+        late final MapSignal<String, _CountedMapValue> s;
+        _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+        var write = false;
+        final original = _CountedMapValue(
+          0,
+          () {},
+          onEquals: () {
+            if (!write) return;
+            write = false;
+            s['x'] = valueOf(2);
+          },
+        );
+        s = MapSignal(
+          {'x': original},
+          equals: true,
+          trackPreviousValue: history,
+        );
+        addTearDown(s.dispose);
+        final seen = <int>[];
+        final effect = Effect(() => seen.add(s.value['x']!.key));
+        addTearDown(effect.dispose);
+
+        batch(() {
+          s.update('x', (current) {
+            s
+              ..['x'] = valueOf(1)
+              ..['x'] = valueOf(0);
+            write = true;
+            effect.run();
+            s.value = {'x': valueOf(0)};
+            return current;
+          });
+        });
+
+        expect(seen, [0, 2, 0]);
+      });
+    }
+
+    for (final restore in [false, true]) {
+      test('an opaque write can invalidate a saved slot comparison '
+          '(restored: $restore)', () {
+        final s = MapSignal(
+          {'x': 0, 'y': 0},
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        final incumbent = Effect(() => s.value['x']);
+        addTearDown(incumbent.dispose);
+        final seen = <(int, int)>[];
+
+        batch(() {
+          s.update('x', (current) {
+            s['x'] = 1;
+            final survivor = Effect(() {
+              final map = s.value;
+              seen.add((map['x']!, map['y']!));
+            });
+            addTearDown(survivor.dispose);
+            incumbent.dispose();
+            s.addAll({'y': 2});
+            if (restore) s.addAll({'y': 0});
+            survivor.run();
+            s
+              ..['x'] = 2
+              ..value = {'x': 1, 'y': 0};
+            return current;
+          });
+        });
+
+        final reread = restore ? 0 : 2;
+        expect(seen, [(1, 0), (1, reread), if (!restore) (1, 0)]);
+      });
+    }
+
+    test('a replacement preserves the observed presence of nullable slots', () {
+      final s = MapSignal(
+        <String, int?>{'outer': 0, 'removed': 1},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      final incumbent = Effect(() => s.value['outer']);
+      addTearDown(incumbent.dispose);
+      final seen = <(bool, bool)>[];
+
+      batch(() {
+        s.update('outer', (current) {
+          s
+            ..['added'] = null
+            ..remove('removed');
+          final survivor = Effect(() {
+            final map = s.value;
+            seen.add((map.containsKey('added'), map.containsKey('removed')));
+          });
+          addTearDown(survivor.dispose);
+          incumbent.dispose();
+          s
+            ..remove('added')
+            ..['removed'] = 1
+            ..value = {'outer': 0, 'added': null};
+          return current;
+        });
+      });
+
+      expect(seen, [(true, false)]);
+    });
+
+    test('an incumbent that reorders its dependencies keeps delivery', () {
+      final s = MapSignal({'x': 0}, equals: true, trackPreviousValue: false);
+      addTearDown(s.dispose);
+      final other = Signal(0);
+      addTearDown(other.dispose);
+      var mapFirst = false;
+      final seen = <int>[];
+      final incumbent = Effect(() {
+        if (!mapFirst) other.value;
+        seen.add(s.value['x']!);
+        if (mapFirst) other.value;
+      });
+      addTearDown(incumbent.dispose);
+
+      batch(() {
+        s.update('x', (current) {
+          s['x'] = 1;
+          mapFirst = true;
+          incumbent.run();
+          s
+            ..['x'] = 2
+            ..value = {'x': 1};
+          return current;
+        });
+      });
+
+      expect(seen, [0, 1, 1]);
+    });
+
+    for (final reenter in [false, true]) {
+      test('surviving map comparison handles a user hash callback '
+          '(reentrant: $reenter)', () {
+        _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+        final s = MapSignal(
+          {'x': valueOf(0)},
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        var check = false;
+        final observed = _CountedMapValue(1, () {
+          if (!check) return;
+          check = false;
+          if (!reenter) throw StateError('cannot compare observed maps');
+          s
+            ..value = {'x': valueOf(9)}
+            ..value;
+        });
+        final first = Effect(() => s.value['x']);
+        final seen = <int>[];
+        final later = <int>[];
+
+        batch(() {
+          s.update('x', (current) {
+            s['x'] = observed;
+            final survivor = Effect(() => seen.add(s.value['x']!.key));
+            addTearDown(survivor.dispose);
+            s
+              ..['x'] = valueOf(3)
+              ..['x'] = valueOf(1);
+            final another = Effect(() => later.add(s.value['x']!.key));
+            addTearDown(another.dispose);
+            first.dispose();
+            s['x'] = valueOf(2);
+            check = true;
+            s.value = {'x': valueOf(1)};
+            if (reenter) expect(s.shouldUpdate(), isFalse);
+            return current;
+          });
+        });
+
+        expect(check, isFalse);
+        final finalValue = reenter ? 9 : 1;
+        expect(seen, [1, finalValue]);
+        expect(later, seen);
+      });
+    }
+
+    for (final reentrantRead in [false, true]) {
+      test('a comparison can replace a map during a tracked read '
+          '(reentrant read: $reentrantRead)', () {
+        _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+        late final MapSignal<String, _CountedMapValue> s;
+        late final Effect incumbent;
+        var replace = false;
+        final original = _CountedMapValue(
+          0,
+          () {},
+          onEquals: () {
+            if (!replace) return;
+            replace = false;
+            if (reentrantRead) incumbent.run();
+            s.value = {'x': valueOf(0)};
+          },
+        );
+        s = MapSignal(
+          {'x': original},
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        final seen = <int>[];
+        incumbent = Effect(() => seen.add(s.value['x']!.key));
+        addTearDown(incumbent.dispose);
+
+        batch(() {
+          s.update('x', (current) {
+            s['x'] = valueOf(1);
+            replace = true;
+            if (reentrantRead) {
+              Effect(() => s.value['x']).dispose();
+            } else {
+              incumbent.run();
+            }
+            return current;
+          });
+        });
+
+        expect(seen, [0, 1, 0]);
+      });
+    }
+
+    test('a failed observation comparison keeps deferred delivery', () {
+      var failHash = false;
+      final original = _CountedMapValue(0, () {
+        if (!failHash) return;
+        failHash = false;
+        throw StateError('cannot compare the intermediate map');
+      });
+      final intermediate = _CountedMapValue(1, () {});
+      final s = MapSignal(
+        {'x': original},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      final seen = <int>[];
+      final incumbent = Effect(() => seen.add(s.value['x']!.key));
+      addTearDown(incumbent.dispose);
+
+      Iterable<MapEntry<String, _CountedMapValue>> writes() sync* {
+        s['x'] = intermediate;
+        yield MapEntry('x', intermediate);
+      }
+
+      batch(() {
+        s.update('x', (current) {
+          s.addEntries(writes());
+          failHash = true;
+          Effect(() => s.value['x']).dispose();
+          s.value = {'x': original};
+          return current;
+        });
+      });
+
+      expect(failHash, isFalse);
+      expect(seen, [0, 0]);
+    });
+
+    test('a tracked point read after a nested write does not scan the map', () {
+      var hashCalls = 0;
+      _HashKey value(int hash) => _HashKey(() {
+        hashCalls++;
+        return hash;
+      });
+
+      final s = MapSignal(
+        {for (var i = 0; i < 10000; i++) i: value(i)},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      final next = value(-1);
+      s.update(0, (old) {
+        s[1] = next;
+        final effect = Effect(() => s.value[1]);
+        addTearDown(effect.dispose);
+        return old;
+      });
+
+      expect(s.value[1], same(next));
+      expect(hashCalls, 0);
+    });
+
+    test('a subscriber added after a nested restoration sees one value', () {
+      final s = MapSignal(
+        {'a': 1, 'b': 1},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      final w = watch(s);
+      final seen = <int?>[];
+
+      batch(() {
+        s.update('a', (value) {
+          s
+            ..['b'] = 2
+            ..['b'] = 1;
+          final effect = Effect(() => seen.add(s.value['b']));
+          addTearDown(effect.dispose);
+          s
+            ..value = {'a': 2, 'b': 1}
+            ..value = {'a': 1, 'b': 1};
+          return value;
+        });
+      });
+
+      expect(w.effectReruns, 0);
+      expect(seen, [1]);
+    });
+
+    for (final readIntermediate in [false, true]) {
+      test('the first subscriber uses the current map after an incumbent '
+          'detaches (read intermediate: $readIntermediate)', () {
+        final s = MapSignal(
+          {'a': 1, 'b': 1},
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        final incumbent = Effect(() => s.value['b']);
+        addTearDown(incumbent.dispose);
+        final seen = <int?>[];
+
+        batch(() {
+          s.update('a', (a) {
+            s.addAll({'b': 2});
+            if (readIntermediate) incumbent.run();
+            incumbent.dispose();
+            final successor = Effect(() => seen.add(s.value['b']));
+            addTearDown(successor.dispose);
+            s
+              ..value = {'a': 3, 'b': 2}
+              ..value = {'a': 1, 'b': 2};
+            return a;
+          });
+        });
+
+        expect(seen, [2]);
+      });
+    }
+
+    test('a synchronous replacement does not scan the outgoing map', () {
+      final backing = _CountingMap(100000);
+      final s = MapSignal(backing, equals: true, trackPreviousValue: false);
+      final lengths = <int>[];
+      final effect = Effect(() => lengths.add(s.value.length));
+      addTearDown(effect.dispose);
+      final scans = backing.scans;
+
+      s.update(0, (_) {
+        s.value = {0: 1};
+        return 1;
+      });
+
+      expect(lengths, [100000, 1]);
+      expect(backing.scans, scans);
+    });
+
+    for (final nested in ['update', 'putIfAbsent', 'update ifAbsent']) {
+      test('a synchronous replacement inside a nested $nested does not scan '
+          'the outgoing map', () {
+        final backing = _CountingMap(100000);
+        final s = MapSignal(backing, equals: true, trackPreviousValue: false);
+        addTearDown(s.dispose);
+        final lengths = <int>[];
+        final effect = Effect(() => lengths.add(s.value.length));
+        addTearDown(effect.dispose);
+
+        int replace() {
+          s.value = {0: 1};
+          return 1;
+        }
+
+        switch (nested) {
+          case 'putIfAbsent':
+            s.update(0, (value) {
+              s.putIfAbsent(-1, replace);
+              return value;
+            });
+          case 'update ifAbsent':
+            s.update(0, (value) {
+              s.update(-1, (value) => value, ifAbsent: replace);
+              return value;
+            });
+          default:
+            s.putIfAbsent(-1, () {
+              s.update(0, (_) => replace());
+              return -1;
+            });
+        }
+
+        expect(lengths, [100000, 1]);
+        expect(backing.scans, 0);
+      });
+    }
+
+    for (final removes in [false, true]) {
+      final operation = removes ? 'removeWhere' : 'updateAll';
+      test('synchronous replacement in nested $operation adds no scan', () {
+        final backing = _CountingMap(100000);
+        final s = MapSignal(backing, equals: true, trackPreviousValue: false);
+        addTearDown(s.dispose);
+        final lengths = <int>[];
+        final effect = Effect(() => lengths.add(s.value.length));
+        addTearDown(effect.dispose);
+
+        void replace(int key) {
+          if (key != 0) return;
+          s.update(0, (value) {
+            s.value = {0: 1};
+            return value;
+          });
+        }
+
+        s.update(0, (value) {
+          if (removes) {
+            s.removeWhere((key, value) {
+              replace(key);
+              return false;
+            });
+          } else {
+            s.updateAll((key, value) {
+              replace(key);
+              return value;
+            });
+          }
+          return value;
+        });
+
+        expect(lengths, [100000, 1]);
+        expect(backing.scans, removes ? 0 : 1);
+      });
+    }
+
+    test('an equal nested update stores the new value and notifies', () {
+      final old = _CountedMapValue(2, () {});
+      final next = _CountedMapValue(2, () {});
+      final s = MapSignal({'a': old, 'b': old}, equals: true);
+      final w = watch(s);
+
+      s.update('a', (value) {
+        s.update('b', (_) => next);
+        return value;
+      });
+
+      expect(w.effectReruns, 1);
+      expect(s.previousValue!['b'], same(old));
+      expect(s.value['b'], same(next));
+    });
+
+    for (final history in [false, true]) {
+      for (final opaque in [false, true]) {
+        test('an equivalent nested point write preserves a later replacement '
+            '(history: $history, opaque: $opaque)', () {
+          _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+          final backing = {'a': valueOf(0)};
+          final s = MapSignal(
+            opaque ? MapView(backing) : backing,
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final seen = <int>[];
+          final effect = Effect(() => seen.add(s.value['a']!.key));
+          addTearDown(effect.dispose);
+
+          batch(() {
+            s.update('a', (value) {
+              s
+                ..update('a', (current) => valueOf(current.key))
+                ..value = {'a': valueOf(1)};
+              return valueOf(1);
+            });
+            expect(seen, [0]);
+          });
+
+          expect(seen, [0, 1]);
+          expect(s.untrackedPreviousValue?['a']?.key, history ? 0 : null);
+        });
+      }
+
+      for (final finalValue in [0, 2]) {
+        test('reentrant equality keeps the point write visible '
+            '(history: $history, final value: $finalValue)', () {
+          _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+          late final MapSignal<String, _CountedMapValue> s;
+          late Effect temporary;
+          var reenter = false;
+          final temporaryValues = <int>[];
+          final original = _CountedMapValue(
+            0,
+            () {},
+            onEquals: () {
+              if (!reenter) return;
+              reenter = false;
+              s['x'] = valueOf(2);
+              temporary = Effect(() => temporaryValues.add(s.value['x']!.key));
+            },
+          );
+          s = MapSignal(
+            {'x': original},
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final incumbent = Effect(() => s.value['x']);
+          addTearDown(incumbent.dispose);
+          final seen = <int>[];
+
+          batch(() {
+            s.update('x', (current) {
+              reenter = true;
+              s.update('x', (_) => valueOf(0));
+              final survivor = Effect(() => seen.add(s.value['x']!.key));
+              addTearDown(survivor.dispose);
+              incumbent.dispose();
+              temporary.dispose();
+              s
+                ..['x'] = valueOf(3)
+                ..value = {'x': valueOf(finalValue)};
+              return current;
+            });
+          });
+
+          expect(temporaryValues, [2]);
+          expect(seen, [0, if (finalValue != 0) finalValue]);
+        });
+      }
+
+      for (final callback in [false, true]) {
+        test('a point write refreshes its slot after reentrant equality '
+            '(history: $history, callback: $callback)', () {
+          _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+          late final MapSignal<String, _CountedMapValue> s;
+          var reenter = false;
+          var assigning = false;
+          var repeatedComparisons = 0;
+          var updateCalls = 0;
+          final first = <int>[];
+          final second = <int>[];
+          final restored = _CountedMapValue(
+            0,
+            () {},
+            onEquals: () {
+              if (assigning) repeatedComparisons++;
+            },
+          );
+          final original = _CountedMapValue(
+            2,
+            () {},
+            onEquals: () {
+              if (!reenter) return;
+              reenter = false;
+              s.updateAll((_, _) => restored);
+              final effect = Effect(() => first.add(s.value['x']!.key));
+              addTearDown(effect.dispose);
+            },
+          );
+          s = MapSignal(
+            {'x': original},
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+
+          batch(() {
+            s.update('x', (current) {
+              reenter = true;
+              assigning = true;
+              if (callback) {
+                s.update('x', (_) {
+                  updateCalls++;
+                  return valueOf(2);
+                });
+              } else {
+                s['x'] = valueOf(2);
+              }
+              assigning = false;
+              final effect = Effect(() => second.add(s.value['x']!.key));
+              addTearDown(effect.dispose);
+              s
+                ..['x'] = valueOf(3)
+                ..value = {'x': valueOf(0)};
+              return current;
+            });
+          });
+
+          expect(first, [0, 0]);
+          expect(second, [2, 0]);
+          expect(repeatedComparisons, 0);
+          expect(updateCalls, callback ? 1 : 0);
+          expect(
+            s.untrackedPreviousValue?['x'],
+            same(history ? original : null),
+          );
+        });
+      }
+
+      test('a slot assignment follows the backing selected by equality '
+          '(history: $history)', () {
+        _CountedMapValue valueOf(int key) => _CountedMapValue(key, () {});
+        late final MapSignal<String, _CountedMapValue> s;
+        var reenter = false;
+        final replacementValue = valueOf(2);
+        final replacement = {'outer': valueOf(0), 'key': replacementValue};
+        final original = _CountedMapValue(
+          0,
+          () {},
+          onEquals: () {
+            if (!reenter) return;
+            reenter = false;
+            s.value = replacement;
+          },
+        );
+        s = MapSignal(
+          {'outer': valueOf(0), 'key': original},
+          equals: true,
+          trackPreviousValue: history,
+        );
+        addTearDown(s.dispose);
+        final seen = <int>[];
+        final effect = Effect(() => seen.add(s.value['key']!.key));
+        addTearDown(effect.dispose);
+        final assigned = valueOf(0);
+
+        batch(() {
+          s.update('outer', (current) {
+            reenter = true;
+            s['key'] = assigned;
+            return current;
+          });
+        });
+
+        expect(s.untrackedValue, same(replacement));
+        expect(s.untrackedValue['key'], same(assigned));
+        expect(
+          s.untrackedPreviousValue?['key'],
+          same(history ? replacementValue : null),
+        );
+        expect(seen, [0, 0]);
+      });
+    }
+
+    test('a deferred replacement outside a batch updates a computed', () {
+      final s = MapSignal({'a': 1}, equals: true, trackPreviousValue: false);
+      final selected = Computed(() => s.value['a']);
+      addTearDown(selected.dispose);
+      expect(selected.value, 1);
+
+      s.update('a', (_) {
+        s.value = {'a': 2};
+        return 2;
+      });
+
+      expect(selected.value, 2);
+    });
+
+    for (final key in ['a', 'absent']) {
+      test('replacement bookkeeping does not track map reads for $key', () {
+        final mapDependency = Signal(0, autoDispose: false);
+        final callbackDependency = Signal(2, autoDispose: false);
+        final backing = _ReactiveMapView({'a': 1}, mapDependency);
+        final s = MapSignal(backing, equals: true, trackPreviousValue: false);
+        var runs = 0;
+        final effect = Effect(() {
+          if (++runs != 1) return;
+
+          int replace() {
+            final next = callbackDependency.value;
+            s.value = {'a': next, 'b': 3};
+            return next;
+          }
+
+          s.update(key, (_) => replace(), ifAbsent: replace);
+        });
+        addTearDown(effect.dispose);
+
+        mapDependency.value++;
+        expect(runs, 1);
+        callbackDependency.value++;
+        expect(runs, 2);
+      });
+    }
+
+    test(
+      'a computed can read a pending replacement before a batched update',
+      () {
+        final s = MapSignal({'a': 1}, equals: true, trackPreviousValue: false);
+        addTearDown(s.dispose);
+        final selected = Computed(() => s.value['a']);
+        addTearDown(selected.dispose);
+        final changed = <int?>[];
+        final effect = Effect(() => changed.add(selected.value));
+        addTearDown(effect.dispose);
+
+        final pending = {'a': 2};
+        batch(() {
+          s.value = pending;
+          expect(selected.value, 2);
+          s.update('a', (_) {
+            s.value = {'a': 3};
+            return 3;
+          });
+          expect(pending, {'a': 3});
+          expect(selected.value, 3);
+          expect(changed, [1]);
+        });
+
+        expect(changed, [1, 3]);
+      },
+    );
+
+    test('a replacement in a nested update notifies at batch flush', () {
+      final s = MapSignal({'a': 1, 'b': 1}, equals: true);
+      final w = watch(s);
+
+      batch(() {
+        s.update('b', (value) {
+          s.update('a', (_) {
+            s.value = {'a': 2, 'b': 1};
+            return 2;
+          });
+          return value;
+        });
+
+        expect(w.effectReruns, 0);
+      });
+
+      expect(w.effectReruns, 1);
+      expect(w.calls, [
+        [
+          {'a': 1, 'b': 1},
+          {'a': 2, 'b': 1},
+        ],
+      ]);
+    });
+
+    for (final history in [false, true]) {
+      for (final removes in [false, true]) {
+        final operation = removes ? 'removeWhere' : 'updateAll';
+        test(
+          'a nested update read sees earlier $operation '
+          'writes (history: $history)',
+          () {
+            final original = {'a': 1, 'b': 1, 'c': 1};
+            final backing = Map.of(original);
+            final s = MapSignal(
+              backing,
+              equals: true,
+              trackPreviousValue: history,
+            );
+            watch(s);
+            final seen = <int?>[];
+            final observer = Effect(() => seen.add(s.value['a']));
+            addTearDown(observer.dispose);
+            int? intermediate;
+
+            int readAndRestore(int value) {
+              intermediate = backing['a'];
+              observer.run();
+              s
+                ..value = {...original, 'a': 3}
+                ..value = original;
+              return value;
+            }
+
+            batch(() {
+              if (removes) {
+                s.removeWhere((key, value) {
+                  if (key == 'b') s.update(key, readAndRestore);
+                  return key == 'a';
+                });
+              } else {
+                s.updateAll((key, value) {
+                  if (key == 'b') return s.update(key, readAndRestore);
+                  return key == 'a' ? 2 : value;
+                });
+              }
+            });
+
+            expect(s.untrackedValue, original);
+            // Some backings apply accepted removals after all predicates run.
+            expect(seen, [1, intermediate, if (intermediate != 1) 1]);
+          },
+        );
+      }
+
+      for (final restored in [1, 2]) {
+        test('a first observer in updateAll sees the final point value '
+            '(history: $history, final: $restored)', () {
+          final s = MapSignal(
+            {'a': 1, 'b': 1},
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final seen = <int?>[];
+
+          batch(() {
+            s.updateAll((key, value) {
+              if (key == 'a') {
+                s['b'] = 2;
+                final observer = Effect(() => seen.add(s.value['b']));
+                addTearDown(observer.dispose);
+                s.update(key, (value) {
+                  s
+                    ..value = {'a': 3, 'b': restored}
+                    ..value = {'a': 1, 'b': restored};
+                  return value;
+                });
+              }
+              return value;
+            });
+          });
+
+          expect(seen, [2, if (restored != 2) restored]);
+        });
+      }
+
+      test('updateAll tracks a return that overwrites a nested same-key '
+          'write (history: $history)', () {
+        final s = MapSignal(
+          {'a': 2, 'b': 1},
+          equals: true,
+          trackPreviousValue: history,
+        );
+        addTearDown(s.dispose);
+        final seen = <int?>[];
+        final observer = Effect(() => seen.add(s.value['a']));
+        addTearDown(observer.dispose);
+
+        batch(() {
+          s.update('b', (value) {
+            s['a'] = 1;
+            s.updateAll((key, value) {
+              if (key == 'a') {
+                s['a'] = 2;
+                observer.run();
+              } else {
+                observer.run();
+                s.update(key, (value) {
+                  s.value = {'a': 2, 'b': 1};
+                  return value;
+                });
+              }
+              return value;
+            });
+            return value;
+          });
+        });
+
+        expect(seen, [2, 2, 1, 2]);
+      });
+
+      for (final restores in [false, true]) {
+        for (final removes in [false, true]) {
+          test('nested update inside ${removes ? 'removeWhere' : 'updateAll'} '
+              'compares with the committed map (history: $history, '
+              'restores: $restores)', () {
+            final initial = {'a': 1, 'b': 1, 'c': 1};
+            final backing = Map.of(initial);
+            final s = MapSignal(
+              backing,
+              equals: true,
+              trackPreviousValue: history,
+            );
+            addTearDown(s.dispose);
+            final seen = <Map<String, int>>[];
+            final effect = Effect(() => seen.add(Map.of(s.value)));
+            addTearDown(effect.dispose);
+            final outgoing = removes ? {'b': 2} : {'a': 2, 'b': 2, 'c': 2};
+            final next = restores ? initial : outgoing;
+
+            void replace() {
+              s.update('b', (_) {
+                s.value = next;
+                return 2;
+              });
+            }
+
+            batch(() {
+              if (removes) {
+                s.removeWhere((key, _) {
+                  if (key == 'b') {
+                    s['c'] = 2;
+                    replace();
+                  }
+                  return key != 'b';
+                });
+              } else {
+                s.updateAll((key, _) {
+                  if (key == 'b') replace();
+                  return 2;
+                });
+              }
+              expect(seen, [initial]);
+            });
+
+            expect(backing, outgoing);
+            expect(s.untrackedValue, next);
+            expect(seen, [initial, if (!restores) next]);
+            expect(s.untrackedPreviousValue, history ? initial : null);
+            expect(
+              s.untrackedPreviousValue?.keys,
+              history ? initial.keys : null,
+            );
+          });
+        }
+      }
+
+      test('nested update inside putIfAbsent compares with the committed '
+          'map (history: $history)', () {
+        final s = MapSignal(
+          {'a': 1},
+          equals: true,
+          trackPreviousValue: history,
+        );
+        final w = watch(s);
+
+        batch(() {
+          s.putIfAbsent('b', () {
+            s.update('a', (_) {
+              s.value = {'a': 2, 'b': 3};
+              return 2;
+            });
+            return 3;
+          });
+          expect(w.effectReruns, 0);
+        });
+
+        expect(s.untrackedValue, {'a': 2, 'b': 3});
+        expect(w.effectReruns, 1);
+      });
+
+      for (final alreadyObserved in [false, true]) {
+        test('a batch can restore the first observed stable write '
+            '(history: $history, already observed: $alreadyObserved)', () {
+          final s = MapSignal(
+            <String, int?>{'a': 1, 'b': 1},
+            equals: true,
+            trackPreviousValue: history,
+          );
+          addTearDown(s.dispose);
+          final seen = <(bool, int?)>[];
+          final earlier = <int?>[];
+          if (alreadyObserved) {
+            final effect = Effect(() => earlier.add(s.value['b']));
+            addTearDown(effect.dispose);
+          }
+
+          batch(() {
+            s.update('a', (a) {
+              s['b'] = null;
+              final effect = Effect(() {
+                final value = s.value;
+                seen.add((value.containsKey('b'), value['b']));
+              });
+              addTearDown(effect.dispose);
+              s
+                ..value = {'a': 3, 'b': null}
+                ..value = {'a': 1, 'b': null};
+              return a;
+            });
+            expect(seen, [(true, null)]);
+          });
+
+          expect(earlier, [
+            if (alreadyObserved) ...[1, null],
+          ]);
+          expect(seen, [(true, null), if (alreadyObserved) (true, null)]);
+        });
+      }
+    }
+
+    test('a subscriber during removeWhere sees a restored entry at flush', () {
+      final backing = {'a': 1, 'b': 1};
+      final s = MapSignal(backing, equals: true, trackPreviousValue: false);
+      addTearDown(s.dispose);
+      final earlier = Effect(() => s.value.length);
+      addTearDown(earlier.dispose);
+      final seen = <bool>[];
+      late bool presentDuringRemoval;
+
+      batch(() {
+        s.removeWhere((key, _) {
+          if (key == 'a') return true;
+          // The backing can remove 'a' now or after all predicates return.
+          presentDuringRemoval = backing.containsKey('a');
+          final observer = Effect(() => seen.add(s.value.containsKey('a')));
+          addTearDown(observer.dispose);
+          s.update('b', (value) {
+            s
+              ..value = {'a': 3, 'b': 1}
+              ..value = {'a': 1, 'b': 1};
+            return value;
+          });
+          return false;
+        });
+        expect(seen, [presentDuringRemoval]);
+      });
+
+      expect(backing, {'b': 1});
+      expect(s.untrackedValue, {'a': 1, 'b': 1});
+      expect(seen, [presentDuringRemoval, if (!presentDuringRemoval) true]);
+    });
+
+    for (final next in [1, 2]) {
+      test('first observation keeps the slot of an in-progress update '
+          '(final value: $next)', () {
+        final s = MapSignal(
+          {'a': 1, 'b': 1, 'c': 1},
+          equals: true,
+          trackPreviousValue: false,
+        );
+        addTearDown(s.dispose);
+        final seen = <int?>[];
+
+        batch(() {
+          s.update('a', (a) {
+            s['c'] = 2;
+            s.update('b', (_) {
+              final effect = Effect(() => seen.add(s.value['b']));
+              addTearDown(effect.dispose);
+              s
+                ..value = {'a': 3, 'b': next, 'c': 2}
+                ..value = {'a': 1, 'b': next, 'c': 2};
+              return 2;
+            });
+            return a;
+          });
+        });
+
+        expect(seen, [1, if (next != 1) next]);
+      });
+    }
+
+    test('a replacement notifies after a nested write repairs a cast map', () {
+      final backing = <String, Object>{'a': 1, 'bad': 'x'};
+      final s = MapSignal(
+        backing.cast<String, int>(),
+        equals: true,
+        trackPreviousValue: false,
+      );
+      addTearDown(s.dispose);
+      final seen = <int?>[];
+      final effect = Effect(() => seen.add(s.value['a']));
+      addTearDown(effect.dispose);
+
+      batch(() {
+        s.update('a', (_) {
+          s
+            ..addAll({'bad': 3})
+            ..value = {'a': 2, 'bad': 3};
+          return 2;
+        });
+        expect(seen, [1]);
+      });
+
+      expect(seen, [1, 2]);
+    });
+
+    test('a replacement in a nested update delivers an earlier ancestor '
+        'write', () {
+      final s = MapSignal({'a': 1, 'b': 1, 'c': 1}, equals: true);
+      final w = watch(s);
+
+      batch(() {
+        s.update('c', (c) {
+          s['b'] = 2;
+          s.update('b', (b) {
+            s.update('a', (_) {
+              s
+                ..value = {'a': 2, 'b': 2, 'c': 1}
+                ..value = {'a': 1, 'b': 2, 'c': 1};
+              return 1;
+            });
+            return b;
+          });
+          return c;
+        });
+      });
+
+      expect(w.effectReruns, 1);
+      expect(w.calls, [
+        [
+          {'a': 2, 'b': 2, 'c': 1},
+          {'a': 1, 'b': 2, 'c': 1},
+        ],
+      ]);
+    });
+
+    test(
+      'a batched replacement keeps the earlier committed map for comparison',
+      () {
+        final s = MapSignal({'a': 1}, equals: true, trackPreviousValue: false);
+        final w = watch(s);
+
+        batch(() {
+          s.value = {'a': 2};
+          s.update('a', (_) {
+            s.value = {'a': 1};
+            return 2;
+          });
+        });
+
+        expect(s.untrackedValue, {'a': 1});
+        expect(w.effectReruns, 0);
+      },
+    );
+
+    test('a batched replacement delivers a nested write made before it', () {
+      final s = MapSignal(
+        {'a': 1, 'b': 1},
+        equals: true,
+        trackPreviousValue: false,
+      );
+      final w = watch(s);
+
+      batch(() {
+        s.update('a', (_) {
+          s
+            ..['b'] = 2
+            ..value = {'a': 3, 'b': 2}
+            ..value = {'a': 1, 'b': 2};
+          return 2;
+        });
+      });
+
+      expect(s.untrackedValue, {'a': 1, 'b': 2});
+      expect(w.effectReruns, 1);
+    });
+
+    test('a custom comparator compares the original backing map', () {
+      final backing = {'a': 1};
+      final equivalent = {'a': 3};
+      final s = MapSignal(
+        backing,
+        comparator: (old, next) =>
+            identical(old, backing) && identical(next, equivalent),
+        trackPreviousValue: false,
+      );
+      final w = watch(s);
+
+      batch(() {
+        s.update('a', (_) {
+          s
+            ..value = {'a': 2}
+            ..value = equivalent;
+          return 2;
+        });
+      });
+
+      expect(s.untrackedValue, same(equivalent));
+      expect(w.effectReruns, 0);
+    });
+
     test('update whose callback changes another key notifies once', () {
       final s = MapSignal({'a': 1, 'b': 2});
       final w = watch(s);
@@ -2165,6 +4396,24 @@ void main() {
     // A cast map throws a TypeError when it reads the value of 'unread'.
     Map<String, String> castMap() =>
         <String, Object>{'a': 'x', 'unread': 42}.cast<String, String>();
+
+    test('a batched update can replace a cast map with a shorter map', () {
+      final s = MapSignal(castMap(), equals: true, trackPreviousValue: false);
+      addTearDown(s.dispose);
+      final changed = <String?>[];
+      final effect = Effect(() => changed.add(s.value['a']));
+      addTearDown(effect.dispose);
+
+      batch(() {
+        s.update('a', (_) {
+          s.value = {'a': 'y'};
+          return 'y';
+        });
+      });
+
+      expect(s.untrackedValue, {'a': 'y'});
+      expect(changed, ['x', 'y']);
+    });
 
     test('remove of an absent key returns null without reading values', () {
       final s = MapSignal(castMap());
@@ -3070,6 +5319,28 @@ class _HashKey {
   @override
   // ignore: hash_and_equals, avoid_equals_and_hash_code_on_mutable_classes
   int get hashCode => hash();
+}
+
+class _CountedMapValue {
+  _CountedMapValue(this.key, this.onHash, {this.onEquals});
+
+  final int key;
+  final void Function() onHash;
+  final void Function()? onEquals;
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode {
+    onHash();
+    return key;
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    onEquals?.call();
+    return other is _CountedMapValue && key == other.key;
+  }
 }
 
 class _ThrowingHash {
