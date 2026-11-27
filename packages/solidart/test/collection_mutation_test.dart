@@ -239,6 +239,7 @@ class _ReentrantList extends ListBase<int> {
   _ReentrantList(this._elements);
 
   final List<int> _elements;
+  void Function(int)? onRead;
   void Function()? onWrite;
 
   @override
@@ -248,7 +249,10 @@ class _ReentrantList extends ListBase<int> {
   set length(int newLength) => _elements.length = newLength;
 
   @override
-  int operator [](int index) => _elements[index];
+  int operator [](int index) {
+    onRead?.call(index);
+    return _elements[index];
+  }
 
   @override
   void operator []=(int index, int value) {
@@ -1074,6 +1078,26 @@ void main() {
       expect(s.untrackedHasPreviousValue, isTrue);
       expect(history, {'old': 1, key: 0, 'new': 3});
       expect(s.untrackedPreviousValue, same(history));
+    });
+
+    test('a history read retries at most one superseding write', () {
+      final backing = _ReentrantList([0, 1]);
+      final s = ListSignal<int>([])
+        ..value = backing
+        ..[1] = 2;
+      addTearDown(s.dispose);
+      var writes = 0;
+      backing.onRead = (index) {
+        // Cap the fixture so the regression also finishes before the fix.
+        if (index == 0 && writes < 3) s[1] = 3 + writes++;
+      };
+
+      final previous = s.untrackedPreviousValue;
+
+      expect(writes, 2);
+      expect(previous, isNull);
+      backing.onRead = null;
+      expect(s.untrackedPreviousValue, [0, 3]);
     });
 
     test('custom and identity maps copy history before the write', () {

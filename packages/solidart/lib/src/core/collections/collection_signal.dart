@@ -561,7 +561,9 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     final outerUndo = _settlingUndo;
     try {
       var step = undo;
-      while (true) {
+      // One retry settles a superseding write. Repeated writes leave the
+      // newest undo available to a later history read.
+      for (var attempt = 0; attempt < 2; attempt++) {
         _settlingUndo = step;
         final current = _untrackedValue;
         // A callback can read history while its outer mutation is in progress.
