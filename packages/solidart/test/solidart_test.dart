@@ -13,6 +13,8 @@ import 'package:solidart/src/extensions/until.dart';
 import 'package:solidart/src/utils.dart';
 import 'package:test/test.dart';
 
+import 'devtools_test_harness.dart';
+
 class MockCallbackFunction extends Mock {
   void call();
 }
@@ -3099,11 +3101,8 @@ void main() {
         ..dispose();
     });
 
-    test('disposing an uninitialized lazy signal with devtools enabled '
-        'does not throw', () {
-      final devToolsEnabled = SolidartConfig.devToolsEnabled;
-      addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
-      SolidartConfig.devToolsEnabled = true;
+    testWithDevTools('disposing an uninitialized lazy signal with devtools '
+        'enabled does not throw', (_) {
       final signal = Signal<int>.lazy(autoDispose: true);
       void listener() {}
 
@@ -3176,11 +3175,8 @@ void main() {
       c.dispose();
     });
 
-    test('an autoDispose Computed created and read in an Effect stays alive '
-        'with devtools enabled', () {
-      final devToolsEnabled = SolidartConfig.devToolsEnabled;
-      addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
-      SolidartConfig.devToolsEnabled = true;
+    testWithDevTools('an autoDispose Computed created and read in an Effect '
+        'stays alive with devtools enabled', (_) {
       late Computed<int> c;
 
       final dispose = Effect(() {
@@ -3194,18 +3190,18 @@ void main() {
       expect(c.disposed, isTrue);
     });
 
-    test('devtools serialize a signal that overrides untrackedHasValue', () {
-      final devToolsEnabled = SolidartConfig.devToolsEnabled;
-      addTearDown(() => SolidartConfig.devToolsEnabled = devToolsEnabled);
-      SolidartConfig.devToolsEnabled = true;
-      final probe = _JsonProbe();
-      final source = Signal(probe, trackInDevTools: false);
-      final forwarding = _ForwardingSignal(source);
+    testWithDevTools(
+      'devtools serialize a signal that overrides untrackedHasValue',
+      (_) {
+        final probe = _JsonProbe();
+        final source = Signal(probe, trackInDevTools: false);
+        final forwarding = _ForwardingSignal(source);
 
-      expect(forwarding.dispose, returnsNormally);
-      expect(probe.toJsonCalls, greaterThan(0));
-      source.dispose();
-    });
+        expect(forwarding.dispose, returnsNormally);
+        expect(probe.toJsonCalls, greaterThan(0));
+        source.dispose();
+      },
+    );
   });
 }
 
