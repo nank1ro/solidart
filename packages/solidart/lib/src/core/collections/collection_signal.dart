@@ -550,12 +550,17 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// through [_setPreviousValue], which clears it.
   C Function(C)? _pendingUndo;
 
+  /// The history step whose input an active nested write may have changed.
+  C Function(C)? _suspendedUndo;
+
   /// Whether a read is already rebuilding this signal's history.
   bool _settlingPreviousValue = false;
 
   @override
   bool get untrackedHasPreviousValue =>
-      (!_settlingPreviousValue || _pendingUndo == null) &&
+      (_pendingUndo == null ||
+          (!_settlingPreviousValue &&
+              !identical(_pendingUndo, _suspendedUndo))) &&
       super.untrackedHasPreviousValue;
 
   /// The collection length before the pending write.
@@ -577,7 +582,9 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     final undo = _pendingUndo;
     // A separate method, so a read with nothing pending allocates no
     // closure.
-    if (undo != null && !_settlingPreviousValue) {
+    if (undo != null &&
+        !_settlingPreviousValue &&
+        !identical(undo, _suspendedUndo)) {
       _applyPendingUndo(undo);
     }
   }
@@ -651,6 +658,9 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
   /// collection.
   bool _nestedChanged = false;
 
+  /// Counts writes that a reentrant collection snapshot must account for.
+  int _mutationVersion = 0;
+
   /// Saves the committed map while an update can still write to it.
   _ReplacementBaseline<C>? _replacementBaseline;
 
@@ -709,6 +719,7 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
         // An unreadable cast view can still be restored.
       }
     }
+    _mutationVersion++;
     _setValueAndNotify(newValue);
     return newValue;
   }
@@ -787,6 +798,8 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
     final outerUndo = _mutatingUndo;
     final outerCopy = _copyPreviousOnNestedWrite;
     final outerResizeCheck = _nestedResizeCheck;
+    final outerSuspendedUndo = _suspendedUndo;
+    if (nested && _mutatingPrevious == null) _suspendedUndo = _pendingUndo;
     _nestedChanged = false;
     _nestedResizeCheck = null;
     _mutating = collection;
@@ -857,6 +870,8 @@ mixin _CollectionSignal<C extends Object> on Signal<C> {
               resizeCheck != null &&
               untracked(() => resizeCheck(collection, before)));
     });
+    _suspendedUndo = outerSuspendedUndo;
+    if (changed || replacementChange != null) _mutationVersion++;
     if (nested) {
       if (changed) {
         outerBaseline?.recordWriteResult(_internalSignal.currentValue);

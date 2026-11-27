@@ -957,16 +957,27 @@ class ListSignal<E> extends Signal<List<E>>
     }
     // A custom resize can change any slot. Share the snapshot between the
     // change check and the history reads during and after the write.
-    final (before, readable) = untracked(() => _saveResize(list));
+    var version = _mutationVersion;
+    var (before, readable) = untracked(() => _saveResize(list));
+    if (version != _mutationVersion && identical(list, _untrackedValue)) {
+      version = _mutationVersion;
+      (before, readable) = untracked(() => _saveResize(list));
+    }
     List<E> restorePrevious(List<E> _) => before.cast<E>();
-    final restore = trackPreviousValue && readable ? restorePrevious : null;
+    final stable = version == _mutationVersion;
+    final restore = trackPreviousValue && readable && stable
+        ? restorePrevious
+        : null;
     return _mutate(
       write,
       backing: list,
       undo: restore,
-      copyPrevious: readable ? null : (_) => null,
-      slotChanged: () =>
-          untracked(() => _rangeChanged(list, 0, before.length, before, 0)),
+      copyPrevious: restore == null ? (_) => null : null,
+      slotChanged: stable
+          ? () => untracked(
+              () => _rangeChanged(list, 0, before.length, before, 0),
+            )
+          : null,
       undoDuringWrite: restore,
       copyPreviousOnNestedWrite: savePreviousOnNestedWrite ? restore : null,
     );

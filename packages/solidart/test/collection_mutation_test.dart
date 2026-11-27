@@ -227,6 +227,25 @@ class _LateTraversalErrorView extends MapView<String, int> {
   }
 }
 
+class _FailedReplacementReadView extends MapView<String, int> {
+  _FailedReplacementReadView(super.map, this.traversalError);
+
+  final TypeError traversalError;
+  bool fail = false;
+
+  @override
+  int? operator [](Object? key) {
+    if (fail && key == 'b') throw StateError('lookup failed');
+    return super[key];
+  }
+
+  @override
+  void forEach(void Function(String, int) action) {
+    super.forEach(action);
+    if (fail) throw traversalError;
+  }
+}
+
 class _CountingSet extends DelegatingSet<int> {
   _CountingSet() : super({for (var i = 0; i < 100; i++) i});
   int scans = 0;
@@ -926,6 +945,101 @@ void main() {
   });
 
   group('lazy collection history', () {
+    test('history is unavailable during an active nested setter', () {
+      final backing = _ReentrantList([1, 2]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      s[0] = 3;
+      final watch = _Watch<List<int>>(s, List.of);
+      backing.onWrite = () {
+        backing.onWrite = () {
+          expect(s.untrackedPreviousValue, isNull);
+          expect(s.untrackedHasPreviousValue, isFalse);
+        };
+        s[1] = 5;
+      };
+
+      s[0] = 4;
+
+      expect(s.untrackedValue, [4, 5]);
+      expect(watch.effectReruns, 1);
+      expect(s.untrackedHasPreviousValue, isFalse);
+    });
+
+    test('a nested no-op leaves pending history available afterward', () {
+      final backing = _NestedRemoveList([1, 2], failure: false);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      s[0] = 3;
+      backing
+        ..onRemove = () {
+          expect(s.untrackedPreviousValue, isNull);
+          expect(s.untrackedHasPreviousValue, isFalse);
+        }
+        ..onWrite = () {
+          expect(s.remove(9), isFalse);
+          expect(s.untrackedPreviousValue, [1, 2]);
+        };
+
+      s[0] = 4;
+
+      expect(s.untrackedPreviousValue, [3, 2]);
+    });
+
+    test('append history reflects a write during the initial snapshot', () {
+      final backing = _ReentrantList([1, 2]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      final watch = _Watch<List<int>>(s, List.of);
+      backing.onRead = (index) {
+        if (index != 1) return;
+        backing.onRead = null;
+        s[0] = 7;
+      };
+
+      s.add(3);
+
+      expect(s.untrackedValue, [7, 2, 3]);
+      expect(s.untrackedPreviousValue, [7, 2]);
+      expect(watch.effectReruns, 2);
+    });
+
+    test('append drops history after two interrupted snapshots', () {
+      final backing = _ReentrantList([1, 2]);
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      var writes = 0;
+      backing.onRead = (index) {
+        if (index == 1) s[0] = 7 + writes++;
+      };
+
+      s.add(3);
+      backing.onRead = null;
+
+      expect(writes, 2);
+      expect(s.untrackedValue, [8, 2, 3]);
+      expect(s.untrackedHasPreviousValue, isFalse);
+    });
+
+    test('a rejected append after interrupted snapshots preserves history', () {
+      final backing = _ReentrantList(List<int>.of([1, 2], growable: false));
+      final s = ListSignal<int>([])..value = backing;
+      addTearDown(s.dispose);
+      final seen = <int>[];
+      final effect = Effect(() => seen.add(s.value[0]));
+      addTearDown(effect.dispose);
+      var writes = 0;
+      backing.onRead = (index) {
+        if (index == 1 && writes < 2) s[0] = 7 + writes++;
+      };
+
+      expect(() => s.add(3), throwsUnsupportedError);
+      backing.onRead = null;
+
+      expect(seen, [1, 7, 8]);
+      expect(s.untrackedPreviousValue, [7, 2]);
+    });
+
     test('a shrinking nested setter write leaves no lazy history', () {
       final backing = _ReentrantList([1, 2]);
       final s = ListSignal<int>([])..value = backing;
@@ -6317,6 +6431,70 @@ void main() {
   });
 
   group('edge cases of typed lists and cast maps (#208)', () {
+    test(
+      'a verified cast change still notifies when only that slot changed',
+      () {
+        final raw = <String, Object>{'a': 1, 'b': 2};
+        final s = MapSignal({'a': 1, 'b': 2});
+        addTearDown(s.dispose);
+        final seen = <int?>[];
+        final effect = Effect(() => seen.add(s.value['a']));
+        addTearDown(effect.dispose);
+
+        s.updateAll((key, value) {
+          if (key == 'a') {
+            s.value = raw.cast<String, int>();
+            raw['b'] = 'bad';
+          }
+          return value;
+        });
+
+        expect(seen, [1, 1, 1]);
+        expect(s.untrackedPreviousValue, {'a': 1, 'b': 2});
+      },
+    );
+
+    test('a failed replacement lookup is not a map mutation', () {
+      final raw = {'a': 1, 'b': 2};
+      final traversalError =
+          _guarded(() => <Object>['bad'].cast<int>().first).error! as TypeError;
+      final view = _FailedReplacementReadView(raw, traversalError);
+      final s = MapSignal(raw);
+      addTearDown(s.dispose);
+      final seen = <int?>[];
+      final effect = Effect(() => seen.add(s.value['a']));
+      addTearDown(effect.dispose);
+
+      s.updateAll((key, value) {
+        if (key == 'a') {
+          s.value = view;
+          view.fail = true;
+        }
+        return value;
+      });
+
+      expect(seen, [1, 1]);
+    });
+
+    for (final history in [false, true]) {
+      test('empty SDK map views accept a Pattern cast destination, '
+          'history $history', () {
+        final raw = <String, Pattern>{'bad': 'x'};
+        final s = MapSignal(
+          raw.cast<String, RegExp>(),
+          trackPreviousValue: history,
+        );
+        addTearDown(s.dispose);
+        final watch = _Watch(s, (value) => value);
+
+        s.addAll(const MapView<String, RegExp>({}));
+
+        expect(raw, {'bad': 'x'});
+        expect(watch.effectReruns, 0);
+        expect(watch.calls, isEmpty);
+      });
+    }
+
     for (final changed in [false, true]) {
       test(
         'shared map traversal preserves a known mismatch, changed $changed',

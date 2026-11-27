@@ -935,7 +935,8 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
         ..add(Map.castFrom<SK, Object?, K, V>(empty).runtimeType)
         ..add(Map.castFrom<SK, dynamic, K, V>(empty).runtimeType)
         ..add(Map.castFrom<SK, num, K, V>(empty).runtimeType)
-        ..add(Map.castFrom<SK, num?, K, V>(empty).runtimeType);
+        ..add(Map.castFrom<SK, num?, K, V>(empty).runtimeType)
+        ..add(Map.castFrom<SK, Pattern, K, V>(empty).runtimeType);
     }
 
     addSourceValues<K>();
@@ -1141,9 +1142,23 @@ class MapSignal<K, V> extends Signal<Map<K, V>>
       final sameKeys = const IterableEquality<Object?>(
         IdentityEquality(),
       ).equals(before.keys, map.keys);
-      return !sameKeys ||
+      if (!sameKeys) return true;
+      var needsWiderRead = false;
+      for (final entry in before.entries) {
+        try {
+          if (!identical(map[entry.key], entry.value)) return true;
+          // ignore: avoid_catching_errors
+        } on TypeError {
+          needsWiderRead = true;
+        } on Object {
+          // A failed lookup does not establish a change to this entry.
+        }
+      }
+      if (!needsWiderRead) return false;
+      final wider = _widerMapEntries(map);
+      return wider != null &&
           before.entries.any(
-            (entry) => !identical(_readValue(map, entry.key), entry.value),
+            (entry) => !identical(wider[entry.key], entry.value),
           );
     } on Object {
       // A comparison failure cannot erase a mismatch already observed.
